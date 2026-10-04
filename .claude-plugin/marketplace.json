@@ -1,5 +1,5 @@
 {
-  "name": "anthropic-agent-skills",
+  "name": "ade0605-skills",
   "owner": {
     "name": "Keith Lazuka",
     "email": "klazuka@anthropic.com"
@@ -42,7 +42,7 @@
       ]
     },
     {
-      "name": "claude-api",
+      "name": "api-docs",
       "description": "Claude API and SDK documentation skill for building LLM-powered applications",
       "source": "./",
       "strict": false,
