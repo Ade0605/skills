@@ -1,5 +1,6 @@
 {
   "name": "social-sdk",
+  "version": "0.5.0",
   "description": "Skill for integrating the OpenCore Social SDK: mock-first publishing, account connections, per-target delivery outcomes, verified webhooks, and integration tests.",
   "author": {
     "name": "OpenCore",
@@ -7,5 +8,11 @@
   },
   "license": "MIT",
   "homepage": "https://github.com/opencoredev/social-sdk",
-  "keywords": ["social", "sdk", "publishing", "webhooks", "oauth"]
+  "keywords": [
+    "social",
+    "sdk",
+    "publishing",
+    "webhooks",
+    "oauth"
+  ]
 }
