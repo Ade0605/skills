@@ -27,6 +27,7 @@ Many skills in this repo are open source (Apache 2.0). We've also included the d
 - [./skills](./skills): Skill examples for Creative & Design, Development & Technical, Enterprise & Communication, and Document Skills
 - [./spec](./spec): The Agent Skills specification
 - [./template](./template): Skill template
+- [./plugins/linkedin-skills](./plugins/linkedin-skills): Third-party LinkedIn marketing skills (MIT, vendored from [sergebulaev/linkedin-skills](https://github.com/sergebulaev/linkedin-skills)); install with `/plugin install linkedin-skills@anthropic-agent-skills`
 
 # Try in Claude Code, Claude.ai, and the API
 
