@@ -54,30 +54,13 @@
       "name": "linkedin-skills",
       "description": "12 LinkedIn marketing skills by Serge Bulaev (vendored from github.com/sergebulaev/linkedin-skills @ 2f00424): post writer, comment drafter, reply handler, humanizer, hook extractor, content planner, profile optimizer, repurposer, employee advocacy, thread monitor, engager analytics, interviewer.",
       "source": "./plugins/linkedin-skills",
-      "strict": false,
-      "skills": [
-        "./skills/linkedin-comment-drafter",
-        "./skills/linkedin-content-planner",
-        "./skills/linkedin-employee-advocacy",
-        "./skills/linkedin-engager-analytics",
-        "./skills/linkedin-hook-extractor",
-        "./skills/linkedin-humanizer",
-        "./skills/linkedin-interviewer",
-        "./skills/linkedin-post-writer",
-        "./skills/linkedin-profile-optimizer",
-        "./skills/linkedin-reply-handler",
-        "./skills/linkedin-repurposer",
-        "./skills/linkedin-thread-monitor"
-      ]
+      "strict": true
     },
     {
       "name": "social-sdk",
       "description": "Social SDK integration skill by OpenCore (vendored from github.com/opencoredev/social-sdk @ a76fb61): mock-first publishing, account connection flow, delivery outcome rendering, verified webhooks, integration tests.",
       "source": "./plugins/social-sdk",
-      "strict": false,
-      "skills": [
-        "./skills/integrate-social-sdk"
-      ]
+      "strict": true
     }
   ]
 }
