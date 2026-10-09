@@ -22,7 +22,11 @@
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 3;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 4;         // state shape; migrate() upgrades older saves
+  // Game RULES version. A life plays by the rules it started under, so a
+  // recorded life replays identically after later updates add new systems.
+  // 5 = v0.5 rules; 6 adds love and family.
+  var RULES = 6;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -51,7 +55,9 @@
     detty:       'Survived Detty December',
     promoted:    'Promoted at work',
     debt_free:   'Debt free: cleared every loan',
-    top:         'Top of the ladder in a career'
+    top:         'Top of the ladder in a career',
+    wedding:     'Wedding bells: got married',
+    parent:      'Proud parent: welcomed a child'
   };
 
   /* ---------- small helpers ---------- */
@@ -264,6 +270,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -292,7 +299,7 @@
     s.stats.weekStartWorth = netWorth(s);
     // Everything needed to rebuild this life from scratch: the seed, the
     // starting choices, and every player call in order (see recorded()).
-    s.replay = { seed: seed, goal: s.goal, origin: opts.origin || null, acts: [] };
+    s.replay = { seed: seed, goal: s.goal, origin: opts.origin || null, rules: s.rules, acts: [] };
     log(s, o.text, 'story');
     log(s, 'Rent is due every Saturday at noon. Lagos no dey carry last.', 'info');
     return s;
@@ -351,6 +358,7 @@
       if (f.lvl > 0 && f.seen >= 0 && d - f.seen > 3) f.lvl = Math.max(0, f.lvl - 1);
     });
     if (dow(s) === 0) onNewWeek(s);
+    if (s.rules >= 6) dailyLove(s);
     dailyEvent(s);
   }
 
@@ -375,6 +383,7 @@
     weeklyAjo(s);
     weeklyLoans(s);
     weeklyProperty(s);
+    if (s.rules >= 6) weeklyFamily(s);
     resolvePonzi(s);
 
     if (s.econ.policyWeeks > 0 && --s.econ.policyWeeks === 0) {
@@ -403,14 +412,20 @@
 
   /* ---------- rent & housing ---------- */
 
+  function rentShare(s) {
+    // A spouse pays half the rent.
+    return s.rules >= 6 && s.partner && s.partner.stage === 'married' ? roundTo(s.rentRate / 2, 50) : s.rentRate;
+  }
+
   function collectRent(s) {
     if (!s.rentRate) return;
-    if (pay(s, s.rentRate, 'Rent: ' + homeDef(s).name)) {
+    var due = rentShare(s);
+    if (pay(s, due, 'Rent: ' + homeDef(s).name + (due < s.rentRate ? ' (your half)' : ''))) {
       s.rentLate = 0;
       log(s, 'Rent paid. Landlord is smiling.', 'info');
       return;
     }
-    s.arrears += s.rentRate;
+    s.arrears += due;
     s.rentLate++;
     s.needs.stress = clamp(s.needs.stress + 20, 0, 100);
     if (s.rentLate >= 3) {
@@ -511,7 +526,7 @@
     var shift = shiftAction(s);
     if (shift) list.push(shift);
     (D.PLACE_ACTIONS[s.loc] || []).forEach(function (a) { list.push(a); });
-    list = list.concat(npcActions(s));
+    list = list.concat(npcActions(s)).concat(loveActions(s));
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
     return list.map(function (a) { return describe(s, a); });
   }
@@ -915,6 +930,10 @@
     if (dow(s) === 4) pool.push(['owambe', 3]);
     var offer = jobOfferNpc(s);
     if (offer) pool.push(['offer', 1.5]);
+    if (s.rules >= 6) {
+      if (!s.partner && s.needs.social >= 40) pool.push(['crush', 1.4]);
+      if (s.partner && s.partner.stage === 'dating' && s.partner.aff >= 60) pool.push(['intro', 2]);
+    }
     var total = pool.reduce(function (a, p) { return a + p[1]; }, 0);
     var r = rand(s) * total, ev = pool[0][0];
     for (var i = 0; i < pool.length; i++) { r -= pool[i][1]; if (r <= 0) { ev = pool[i][0]; break; } }
@@ -949,6 +968,14 @@
         break;
       case 'owambe':
         queue(s, { id: 'owambe', title: 'Owambe invite', text: 'Your friend\'s mum is 60 on Saturday. Aso-ebi is ' + naira(price(s, 12000)) + '. Owambe runs 12:00–19:00 in Surulere.', options: ['Buy the aso-ebi', 'Go in your own clothes'], amt: price(s, 12000) });
+        break;
+      case 'crush':
+        var nm = pick(s, PARTNER_NAMES), where = pick(s, ['a friend\'s birthday', 'church', 'the gym', 'a wedding in Surulere', 'a tech meetup in Yaba', 'the danfo to Oshodi', 'Balogun market']);
+        queue(s, { id: 'crush', title: 'Someone special', text: 'At ' + where + ', you and ' + nm + ' could not stop talking. Exchange numbers?', options: ['Collect the number', 'Not now'], name: nm });
+        break;
+      case 'intro':
+        var list = price(s, 300000);
+        queue(s, { id: 'intro', title: 'Meet the family', text: s.partner.name + '\'s family wants to meet you properly. The introduction "list" (drinks, gifts, kola) comes to ' + naira(list) + '.', options: ['Do the introduction (' + naira(list) + ')', 'Not yet'], amt: list });
         break;
       case 'offer':
         queue(s, { id: 'offer', title: D.NPCS[offer].name + ' has a job for you', text: D.NPCS[offer].name + ' can get you in as ' + D.CAREERS[D.NPCS[offer].career].titles[0] + ' (' + D.CAREERS[D.NPCS[offer].career].name + '). No interview.', options: ['Take it', 'Not now'], npc: offer });
@@ -1012,6 +1039,34 @@
           applyJob(s, cid, true);
           msg = 'You are now ' + D.CAREERS[cid].titles[0] + '. Report to ' + D.DISTRICTS[D.CAREERS[cid].district].name + '.';
         } else msg = 'Maybe another time.';
+        break;
+      case 'crush':
+        if (idx === 0) {
+          s.partner = { name: ev.name, aff: 30, stage: 'dating', met: day(s), contact: day(s), dated: -1, called: -1, since: -1 };
+          applyFx(s, { social: 10, fun: 10, stress: -5 });
+          msg = 'You and ' + ev.name + ' are talking. Call often and take ' + ev.name + ' out to keep it going.';
+        } else msg = 'Maybe another time.';
+        break;
+      case 'intro':
+        if (idx === 0 && pay(s, ev.amt, 'Introduction list')) {
+          s.partner.stage = 'introduced'; s.partner.aff = Math.min(100, s.partner.aff + 10);
+          applyFx(s, { social: 20, stress: 8 });
+          msg = 'The families got on well. Plan the wedding from the Me tab when you are ready.';
+        } else { s.partner.aff = Math.max(0, s.partner.aff - 10); msg = s.partner.name + ' is disappointed.'; }
+        break;
+      case 'baby':
+        if (idx === 0) {
+          s.kids.push({ born: day(s), school: null, nextFees: day(s) + 84 });
+          s.babyPause = week(s) + 10;
+          unlock(s, 'parent');
+          applyFx(s, { social: 20, fun: 15, stress: 10 });
+          msg = 'Congratulations! A baby has joined the family. Babies cost ' + naira(price(s, 4000)) + ' a week; school fees start in 12 weeks.';
+          log(s, msg, 'good');
+        } else { s.babyPause = week(s) + 8; msg = 'You agree to wait.'; }
+        break;
+      case 'school':
+        var kid = s.kids[ev.kid], tier = ['public', 'private', 'intl'][idx];
+        if (kid) { kid.school = tier; msg = 'You chose a ' + SCHOOLS[tier].name + '. Fees are ' + naira(price(s, SCHOOLS[tier].fee)) + ' a term.'; chargeFees(s, kid); }
         break;
       case 'police':
         if (idx === 0) { payPartial(s, price(s, 2000), 'Checkpoint "settlement"'); msg = 'He waves you through.'; }
@@ -1254,6 +1309,116 @@
     return finish(s, ok(fmtMins(mins) + ' passes.'));
   }
 
+  /* ---------- love and family (rules 6+) ---------- */
+
+  var PARTNER_NAMES = ['Tolu', 'Ifeoma', 'Kemi', 'Zara', 'Amaka', 'Funmi', 'Ngozi', 'Bola', 'Seun', 'Chidi', 'Dayo', 'Obinna', 'Tobi', 'Segun', 'Ike', 'Musa', 'Halima', 'Uche'];
+  var SCHOOLS = {
+    public:  { name: 'public school', fee: 15000 },
+    private: { name: 'private school', fee: 180000 },
+    intl:    { name: 'international school', fee: 1800000 }
+  };
+  var WEDDINGS = {
+    registry: { name: 'Registry wedding', price: 60000, aff: 5, social: 10 },
+    owambe:   { name: 'Owambe wedding', price: 1500000, aff: 15, social: 40 },
+    big:      { name: 'Big Lagos wedding', price: 8000000, aff: 25, social: 60 }
+  };
+  var DATE_SPOTS = {
+    vi:       { label: 'Dinner date', cost: 15000, mins: 120, aff: 12, fx: { fun: 20, social: 20, hunger: 50 }, when: { from: 18, to: 23 } },
+    lekki:    { label: 'Beach date', cost: 4000, mins: 180, aff: 10, fx: { fun: 30, social: 20 }, when: { from: 10, to: 18 } },
+    ikeja:    { label: 'Cinema date', cost: 8000, mins: 150, aff: 9, fx: { fun: 30, social: 15 }, when: { from: 12, to: 23 } },
+    surulere: { label: 'Suya and gist date', cost: 3000, mins: 90, aff: 6, fx: { fun: 15, social: 20, hunger: 25 }, when: { from: 17, to: 23 } },
+    ikoyi:    { label: 'Gallery date', cost: 5000, mins: 120, aff: 8, fx: { fun: 20, social: 15 }, when: { from: 10, to: 18 } }
+  };
+
+  function loveActions(s) {
+    var p = s.partner;
+    if (s.rules < 6 || !p) return [];
+    var out = [];
+    if (homeDistrict(s) === s.loc && p.stage !== 'married') out.push({ id: 'love_call', label: 'Call ' + p.name, mins: 30, fx: { social: 8, fun: 4 }, special: 'love_call' });
+    if (homeDistrict(s) === s.loc && p.stage === 'married') out.push({ id: 'love_home', label: 'Quality time with ' + p.name, mins: 60, fx: { social: 15, fun: 10, stress: -10 }, special: 'love_call' });
+    var spot = DATE_SPOTS[s.loc];
+    if (spot) out.push({ id: 'love_date', label: spot.label + ' with ' + p.name, mins: spot.mins, cost: spot.cost, fx: spot.fx, when: spot.when, special: 'love_date', aff: spot.aff });
+    return out;
+  }
+
+  specials.love_call = function (s) {
+    var p = s.partner;
+    if (p.called === day(s)) return 'You already talked today.';
+    p.called = day(s); p.contact = day(s);
+    p.aff = Math.min(100, p.aff + 4);
+    return p.name + ' was happy to hear from you (' + p.aff + '/100).';
+  };
+  specials.love_date = function (s, a) {
+    var p = s.partner;
+    var gain = p.dated === day(s) ? 2 : a.aff + Math.floor(skillLevel(s, 'charisma') / 2);
+    p.dated = day(s); p.contact = day(s);
+    p.aff = Math.min(100, p.aff + gain);
+    return 'Lovely time with ' + p.name + ' (' + p.aff + '/100).';
+  };
+
+  function dailyLove(s) {
+    var p = s.partner;
+    if (!p) return;
+    var quiet = day(s) - p.contact;
+    if (quiet > 2) p.aff = Math.max(0, p.aff - (p.stage === 'married' ? 1 : 3));
+    if (p.aff <= 0) {
+      log(s, p.stage === 'married' ? 'You and ' + p.name + ' have separated. The house feels empty.' : p.name + ' has stopped replying. It is over.', 'bad');
+      applyFx(s, { stress: p.stage === 'married' ? 30 : 15, social: -15 });
+      s.partner = null;
+    }
+  }
+
+  function weeklyFamily(s) {
+    s.kids.forEach(function (k, i) {
+      var cost = price(s, 4000);
+      if (!pay(s, cost, 'Childcare and food')) addDebt(s, cost, 'Childcare');
+      if (day(s) >= k.nextFees) {
+        if (!k.school) queue(s, { id: 'school', title: 'Choose a school', text: 'Your child is starting school. Fees are per 12-week term.', options: ['Public school (' + naira(price(s, SCHOOLS.public.fee)) + ')', 'Private school (' + naira(price(s, SCHOOLS.private.fee)) + ')', 'International school (' + naira(price(s, SCHOOLS.intl.fee)) + ')'], kid: i });
+        else chargeFees(s, k);
+      }
+    });
+    var p = s.partner;
+    if (p && p.stage === 'married' && s.kids.length < 3 && week(s) >= s.babyPause && week(s) - p.since >= 4 && rand(s) < 0.07) {
+      queue(s, { id: 'baby', title: 'Big news', text: p.name + ' thinks it is time to start a family. Ready?', options: ['We are ready', 'Not yet'] });
+    }
+  }
+
+  function chargeFees(s, k) {
+    var fee = price(s, SCHOOLS[k.school].fee);
+    if (!pay(s, fee, 'School fees (' + SCHOOLS[k.school].name + ')')) { addDebt(s, fee, 'School fees'); applyFx(s, { stress: 20 }); }
+    k.nextFees = day(s) + 84;
+  }
+
+  function weddingOptions(s) {
+    var p = s.partner;
+    return Object.keys(WEDDINGS).map(function (k) {
+      var w = WEDDINGS[k], cost = price(s, w.price), o = { id: k, name: w.name, cost: cost };
+      if (s.rules < 6 || !p) o.disabled = 'You are not in a relationship';
+      else if (p.stage === 'married') o.disabled = 'Already married';
+      else if (p.stage !== 'introduced') o.disabled = 'Do the family introduction first';
+      else if (p.aff < 75) o.disabled = p.name + ' is not ready yet (' + p.aff + '/75)';
+      else if (!canAfford(s, cost)) o.disabled = 'Costs ' + naira(cost);
+      return o;
+    });
+  }
+
+  function marry(s, kind) {
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var o = weddingOptions(s).filter(function (x) { return x.id === kind; })[0];
+    if (!o) return fail('Pick a wedding.');
+    if (o.disabled) return fail(o.disabled);
+    s.alerts = [];
+    if (!pay(s, o.cost, o.name)) return fail('Not enough money.');
+    var w = WEDDINGS[kind], p = s.partner;
+    advance(s, kind === 'registry' ? 180 : 600);
+    p.stage = 'married'; p.since = week(s); p.contact = day(s);
+    p.aff = Math.min(100, p.aff + w.aff);
+    applyFx(s, { social: w.social, fun: 40, stress: kind === 'big' ? 15 : 0 });
+    unlock(s, 'wedding');
+    log(s, 'You married ' + p.name + ' (' + o.name + '). ' + p.name + ' now pays half the rent.', 'good');
+    return finish(s, ok('Congratulations! You married ' + p.name + '.'));
+  }
+
   /* ---------- scoring & goals ---------- */
 
   function debts(s) {
@@ -1362,6 +1527,7 @@
     if (!s.history) s.history = [];
     if (s.report === undefined) s.report = null;
     if (s.replay === undefined) s.replay = null; // lives from before v0.5 cannot be replayed
+    if (!s.rules) { s.rules = 5; s.partner = null; s.kids = []; s.babyPause = -1; if (s.replay) s.replay.rules = 5; }
     s.sv = SCHEMA;
     return s;
   }
@@ -1539,6 +1705,15 @@
       out.push(calm ? { kind: 'info', text: (lowNeed === 'stress' ? 'Stress is high and your work suffers. ' : 'Stress is high because your ' + ({ social: 'social life', fun: 'enjoyment', hygiene: 'hygiene' })[lowNeed] + ' is low. ') + calm.label + (calm.price ? ' (' + naira(calm.price) + ')' : ' (free)') + '.', act: { type: 'act', id: calm.id } }
         : { kind: 'info', text: 'Stress is high and your work suffers. Worship on Lagos Island, a beach day or Nollywood at home will calm you down.' });
     }
+    if (s.rules >= 6 && s.partner) {
+      var pr = s.partner, la = loveActions(s).map(function (x) { return describe(s, x); }).filter(function (x) { return !x.disabled; });
+      if (pr.aff < 35 && pr.stage !== 'married') {
+        var lv = la.filter(function (x) { return x.id === 'love_date'; })[0] || la.filter(function (x) { return x.id === 'love_call' && pr.called !== day(s); })[0];
+        out.push({ kind: 'warn', text: pr.name + ' feels ignored (' + pr.aff + '/100). ' + (lv ? lv.label + '.' : 'Call from home or take ' + pr.name + ' on a date.'), act: lv ? { type: 'act', id: lv.id } : null });
+      } else if (pr.stage === 'introduced' && pr.aff >= 75 && weddingOptions(s).some(function (w) { return !w.disabled; })) {
+        out.push({ kind: 'go', text: pr.name + ' is ready to marry you. Plan the wedding on the Me tab.', act: { type: 'tab', id: 'me' } });
+      }
+    }
     if (s.goal === 'japa' && !s.edu.ieltsPassed && s.edu.ielts < 10 && s.job) out.push({ kind: 'info', text: 'Japa plan: IELTS prep classes in Yaba raise your pass chance (' + s.edu.ielts + ' of 10+ done).' });
     if (s.goal === 'landlord' && s.bank < 100000 && !s.ajo && s.job) out.push({ kind: 'info', text: 'Landlord plan: an ajo forces you to save. Join one in the Money tab.', act: { type: 'tab', id: 'money' } });
     var seenAct = {};
@@ -1554,7 +1729,8 @@
   // A scored summary of this life, for the hall of lives.
   function lifeSummary(s) {
     var weeks = week(s) + 1, worth = netWorth(s), achievements = Object.keys(s.ach).length;
-    var score = scoreOf({ worth: worth, weeks: weeks, achievements: achievements, won: !!s.won, level: s.job ? s.job.level : 0 });
+    var score = scoreOf({ worth: worth, weeks: weeks, achievements: achievements, won: !!s.won, level: s.job ? s.job.level : 0,
+      married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length });
     return {
       name: s.name, origin: s.origin, goal: s.goal, won: !!s.won, weeks: weeks, worth: worth,
       peak: s.stats.peakWorth, title: s.job ? D.CAREERS[s.job.id].titles[s.job.level] : null,
@@ -1568,20 +1744,22 @@
    * drop entries that no honest game could produce. A server-run engine is
    * the real fix (docs/REVIEW.md §5); this keeps casual edits off the board. */
 
-  var FAME_FIELDS = { weeks: 1, worth: 1, achievements: 1, level: 1, won: 1, origin: 1, goal: 1 };
+  var FAME_FIELDS = { weeks: 1, worth: 1, achievements: 1, level: 1, won: 1, origin: 1, goal: 1, married: 1, kids: 1 };
 
   function scoreOf(e) {
-    return Math.round(Math.max(0, e.worth) / 1000 + e.weeks * 10 + e.achievements * 50 + (e.won ? 500 : 0) + e.level * 40);
+    return Math.round(Math.max(0, e.worth) / 1000 + e.weeks * 10 + e.achievements * 50 + (e.won ? 500 : 0) + e.level * 40 +
+      (e.married ? 200 : 0) + (e.kids || 0) * 100);
   }
 
   function fameEntry(s) {
     var e = {
       v: 1, weeks: week(s) + 1, worth: netWorth(s), achievements: Object.keys(s.ach).length,
       level: s.job ? s.job.level : 0, won: !!s.won, origin: s.origin, goal: s.goal,
-      career: s.job ? s.job.id : null, home: s.home, seal: s.ledgerHash, lines: s.ledgerCount
+      career: s.job ? s.job.id : null, home: s.home, seal: s.ledgerHash, lines: s.ledgerCount,
+      married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length
     };
     e.score = scoreOf(e);
-    if (s.replay) e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, acts: s.replay.acts };
+    if (s.replay) e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, rules: s.replay.rules, acts: s.replay.acts };
     return e;
   }
 
@@ -1592,7 +1770,10 @@
     var int = function (v, lo, hi) { return typeof v === 'number' && isFinite(v) && Math.round(v) === v && v >= lo && v <= hi; };
     if (!int(raw.weeks, 1, 5200) || !int(raw.worth, -1e9, 1e12) || !int(raw.achievements, 0, Object.keys(ACHIEVEMENTS).length) || !int(raw.level, 0, 4)) return null;
     if (typeof raw.won !== 'boolean' || !D.ORIGINS[raw.origin] || !D.GOALS[raw.goal]) return null;
+    if (raw.married != null && typeof raw.married !== 'boolean') return null;
+    if (raw.kids != null && !int(raw.kids, 0, 3)) return null;
     Object.keys(FAME_FIELDS).forEach(function (k) { e[k] = raw[k]; });
+    e.married = !!raw.married; e.kids = raw.kids || 0;
     e.career = typeof raw.career === 'string' && D.CAREERS[raw.career] ? raw.career : null;
     e.home = typeof raw.home === 'string' && D.HOMES[raw.home] ? raw.home : null;
     // Ceiling on wealth: starting cash plus a generous ₦3m a week.
@@ -1614,7 +1795,9 @@
   function replayLife(rp) {
     if (!rp || typeof rp.seed !== 'number' || !Array.isArray(rp.acts) || rp.acts.length > MAX_ACTS) return null;
     if (!D.GOALS[rp.goal] || (rp.origin !== null && !D.ORIGINS[rp.origin])) return null;
-    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay' });
+    var rules = rp.rules == null ? 5 : rp.rules;
+    if (rules !== 5 && rules !== 6) return null;
+    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules });
     for (var i = 0; i < rp.acts.length; i++) {
       var a = rp.acts[i];
       if (!Array.isArray(a) || !RECORDED[a[0]]) return null;
@@ -1672,6 +1855,7 @@
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
+    marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
     CATEGORY_NAMES: CATEGORY_NAMES, category: category, SCHEMA: SCHEMA,

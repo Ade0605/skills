@@ -229,6 +229,32 @@
       });
   }
 
+  function familyView() {
+    if (S.rules < 6) return '<div class="section"><h3>Love and family</h3><p class="note">This life started before relationships came to Lagos. Your next life can fall in love, marry and raise children.</p></div>';
+    var p = S.partner, html = '<div class="section"><h3>Love and family</h3>';
+    if (!p) html += '<p class="note">Single. Keep your social life up and you may meet someone at a party, church, the gym or on the danfo.</p>';
+    else {
+      var stage = { dating: 'Dating', introduced: 'Families have met', married: 'Married' }[p.stage];
+      html += '<dl class="kv"><dt>Partner</dt><dd>' + esc(p.name) + '</dd><dt>Status</dt><dd>' + stage + '</dd><dt>Affection</dt><dd class="num">' + p.aff + ' / 100</dd>' +
+        (p.stage === 'married' ? '<dt>Rent</dt><dd>' + esc(p.name) + ' pays half</dd>' : '') + '</dl>' +
+        '<div class="progress"><i style="width:' + p.aff + '%"></i></div>' +
+        '<p class="note">' + (p.stage === 'married' ? 'Spend time together at home to keep the marriage strong.' : 'Call from home and go on dates. Silence for more than 2 days costs affection. At 60 the families meet; at 75 you can marry.') + '</p>';
+      if (p.stage !== 'married') {
+        html += '<div class="list">' + L.weddingOptions(S).map(function (w) {
+          return '<div class="item"><div><h3>' + esc(w.name) + '</h3><div class="meta"><span class="cost num">' + N(w.cost) + '</span></div>' + (w.disabled ? '<div class="why">' + esc(w.disabled) + '</div>' : '') + '</div>' +
+            '<button class="btn sm' + (w.disabled ? '' : ' go') + '" id="wed-' + w.id + '" data-wed="' + w.id + '"' + (w.disabled ? ' disabled' : '') + '>Marry</button></div>';
+        }).join('') + '</div>';
+      }
+    }
+    if (S.kids.length) {
+      html += '<h3>Children</h3><ul class="note">' + S.kids.map(function (k, i) {
+        var due = k.nextFees - L.day(S);
+        return '<li>Child ' + (i + 1) + ': ' + (k.school ? esc(L.SCHOOLS[k.school].name) + ', next fees in ' + Math.max(0, due) + ' days' : 'school starts in ' + Math.max(0, due) + ' days') + '</li>';
+      }).join('') + '</ul><p class="note">Each child costs ' + N(L.price(S, 4000)) + ' a week for food and care.</p>';
+    }
+    return html + '</div>';
+  }
+
   function fameView() {
     if (!online.db) return '';
     var rows = online.fame.slice(0, 10);
@@ -552,6 +578,7 @@
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
       (S.history.length ? '<details><summary>Show as table</summary><div class="stmt-wrap"><table class="stmt"><tbody>' + S.history.slice().reverse().map(function (h) { return '<tr><td>Week ' + h.w + '</td><td class="n num">' + N(h.worth) + '</td></tr>'; }).join('') + '</tbody></table></div></details>' : '') + '</div>';
+    html += familyView();
     html += fameView();
     var sum = L.lifeSummary(S), best = lives()[0];
     html += '<div class="section"><h3>Score so far: <span class="num">' + sum.score + '</span></h3><p class="note">Net worth ÷ ₦1,000, plus 10 a week survived, 50 an achievement, 40 a career level and 500 for your goal.' + (best ? ' Your best life scored ' + best.score + '.' : '') + '</p>' + (lives().length ? livesView(5) : '') + '</div>';
@@ -656,7 +683,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -708,6 +735,7 @@
     if (ds.car) { run(function () { return L.buyCar(S); }); return; }
     if (ds.choice) { run(function () { return L.resolveChoice(S, +ds.choice); }); return; }
     if (ds.wonok) { S.wonSeen = true; save(); render(); return; }
+    if (ds.wed) { run(function () { return L.marry(S, ds.wed); }); return; }
     if (ds.postfame) {
       t.disabled = true;
       postFame(L.fameEntry(S)).then(function (msg) { online.status = msg || ''; render(); });

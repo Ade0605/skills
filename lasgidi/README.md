@@ -45,6 +45,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Sleep with alarm:** wakes you in time to commute to your next shift.
 - **Weekly report card:** every Monday you see money in and out by category, the change in your net worth and a chart of it by week. A one-tap share text is ready for X or WhatsApp.
 - **Every district has a hustle,** so a broke player is never stranded.
+- **Love and family:** meet someone, keep the relationship alive with calls and dates around Lagos, pay the family introduction "list", then marry at the registry, at an owambe, or at a big Lagos wedding. A spouse pays half the rent. Children cost money every week, and school fees (public, private or international) come due each term.
 - **Hall of lives:** ending a life scores it (net worth, weeks survived, achievements, career level and goal) and keeps your best runs on the start screen.
 - **Sound (optional):** a bank-alert ding for money in, a low tone for money out, and a danfo horn when you travel.
 - **Keyboard:** number keys switch tabs, and A runs the advisor's top suggestion.
@@ -65,7 +66,7 @@ lasgidi/
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 
-The engine is deterministic: all randomness comes from a seeded PRNG kept in the save. Only `post()` can change cash or bank. That makes the engine ready to run on a server for a future multiplayer version (see the roadmap in the review).
+The engine is deterministic: all randomness comes from a seeded PRNG kept in the save. Each life also records the **rules version** it started under, so a life recorded under older rules replays identically after updates add new systems. `test/fixtures/v0.5-life.json` is a golden replay from the real v0.5 engine that every later version must still verify. Only `post()` can change cash or bank. That makes the engine ready to run on a server for a future multiplayer version (see the roadmap in the review).
 
 ## Disclaimer
 

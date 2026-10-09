@@ -408,3 +408,68 @@ test('replay verification catches edited numbers and edited action logs', () => 
   delete entry.replay;
   assert.equal(L.verifyFame(entry).reason, 'no replay');
 });
+
+// Golden replay: a life recorded by the real v0.5 engine. Every later
+// version must still verify it, or old Hall of Fame entries would break.
+test('a life recorded under v0.5 rules still verifies (golden replay)', () => {
+  const entry = require('./fixtures/v0.5-life.json');
+  const v = L.verifyFame(entry);
+  assert.ok(v.ok, v.reason);
+});
+
+function lovers(seed) {
+  const s = L.newGame({ seed, goal: 'freestyle', origin: 'nepo' });
+  s.pending.push({ id: 'crush', title: 'x', text: 'x', options: ['Collect', 'No'], name: 'Tolu' });
+  L.resolveChoice(s, 0);
+  return s;
+}
+
+test('dating raises affection, silence lowers it, and neglect ends it', () => {
+  const s = lovers(1);
+  assert.equal(s.partner.name, 'Tolu');
+  const call = L.availableActions(s).find(a => a.id === 'love_call');
+  assert.ok(call && !call.disabled);
+  const a0 = s.partner.aff;
+  L.doAction(s, 'love_call');
+  assert.ok(s.partner.aff > a0);
+  for (let i = 0; i < 22; i++) { while (s.pending.length) L.resolveChoice(s, 1); L.wait(s, 24 * 60); }
+  assert.equal(s.partner, null, 'a silent partner leaves');
+});
+
+test('introduction, wedding, half rent, baby and school fees', () => {
+  const s = lovers(2);
+  s.partner.aff = 60;                    // the introduction adds 10, leaving 70 of the 75 needed
+  s.pending.push({ id: 'intro', title: 'x', text: 'x', options: ['Yes', 'No'], amt: 300000 });
+  assert.ok(L.resolveChoice(s, 0).ok);
+  assert.equal(s.partner.stage, 'introduced');
+  assert.match(L.weddingOptions(s).find(w => w.id === 'registry').disabled || '', /not ready/);
+  s.partner.aff = 80;
+  assert.ok(L.marry(s, 'registry').ok);
+  assert.equal(s.partner.stage, 'married');
+  assert.equal(L.rentShare(s), Math.round(s.rentRate / 2 / 50) * 50);
+  assert.ok(s.ach.wedding);
+  s.pending.push({ id: 'baby', title: 'x', text: 'x', options: ['Yes', 'No'] });
+  L.resolveChoice(s, 0);
+  assert.equal(s.kids.length, 1);
+  s.kids[0].nextFees = L.day(s);   // fees due now
+  for (let i = 0; i < 10 && !(s.pending[0] && s.pending[0].id === 'school'); i++) {
+    while (s.pending.length && s.pending[0].id !== 'school') L.resolveChoice(s, 1);
+    if (!s.pending.length) L.wait(s, 24 * 60);
+  }
+  assert.equal(s.pending[0] && s.pending[0].id, 'school');
+  const before = s.cash + s.bank;
+  assert.ok(L.resolveChoice(s, 1).ok);   // private school
+  assert.equal(s.kids[0].school, 'private');
+  assert.ok(before - (s.cash + s.bank) >= 180000);
+  const e = L.fameEntry(s);
+  assert.ok(e.married && e.kids === 1);
+  assert.equal(L.checkFame(JSON.parse(JSON.stringify(e))).score, e.score);
+  sane(s);
+});
+
+test('v0.5-rules lives never meet anyone', () => {
+  const s = L.newGame({ seed: 4, goal: 'freestyle', rules: 5 });
+  for (let i = 0; i < 60; i++) { while (s.pending.length) { assert.notEqual(s.pending[0].id, 'crush'); L.resolveChoice(s, 1); } L.wait(s, 24 * 60); }
+  assert.equal(s.partner, null);
+  assert.equal(L.availableActions(s).some(a => /^love_/.test(a.id)), false);
+});
