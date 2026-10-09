@@ -343,3 +343,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   .mode { grid-template-columns: 64px 1fr auto; }
 }
 .ad-card .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 12.5px; color: var(--muted); }
+
+.squares { font-size: 30px; letter-spacing: 4px; margin: 0; line-height: 1.2; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.lottery.weekly { border-style: solid; border-color: var(--lagoon); }

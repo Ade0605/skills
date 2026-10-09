@@ -89,6 +89,8 @@ Reviewers note it is not deeper than The Sims. That comparison is a fight it can
 - **Transport:** BRT and the ferry run only between real stops. A keke cannot use the bridges. The 2022 okada ban areas carry a task-force risk. Third Mainland Bridge traffic peaks at rush hour, and floods hit the Island in the rainy season.
 - **Social and civic:** connects open jobs that are otherwise gated behind degrees. A governorship vote every four weeks enacts a policy (fare subsidy, okada ban expansion, tenancy reform or a power levy).
 
+**Later addition: Weekly Lagos.** This is the Wordle answer to retention. Each real-world week, every player gets the same seed for a short 4-week run, then shares a row of coloured squares. Shared seeds make results comparable and give people something to talk about. Replay verification keeps the weekly board honest.
+
 ## 4. Lasgidi v0.1: what was built
 
 | System | Detail |

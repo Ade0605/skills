@@ -2,22 +2,42 @@
 (function () {
   'use strict';
   var L = window.Lasgidi, D = L.DATA, N = L.naira;
-  var SAVE_KEY = 'lasgidi.save.v1';
+  var SAVE_KEY = 'lasgidi.save.v1', WEEKLY_KEY = 'lasgidi.weekly.v1';
   var app = document.getElementById('app');
   var ui = { tab: 'do', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0 }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
   var S = null;
 
   /* ---------- storage (best effort) ---------- */
+  // Two slots: your life, and this week's Lagos. They never overwrite each other.
   function save() {
     if (!S) return;
-    try { localStorage.setItem(SAVE_KEY, L.serialize(S)); } catch (e) { /* storage unavailable */ }
+    try { localStorage.setItem(S.challenge ? WEEKLY_KEY : SAVE_KEY, L.serialize(S)); } catch (e) { /* storage unavailable */ }
   }
-  function load() {
+  function load(key) {
     try {
-      var code = localStorage.getItem(SAVE_KEY);
-      if (code) return L.deserialize(code).state;
+      var code = localStorage.getItem(key || SAVE_KEY);
+      if (code) return L.migrate(L.deserialize(code).state);
     } catch (e) { /* ignore broken save */ }
     return null;
+  }
+  function thisWeek() { return L.challengeId(new Date()); }
+  // This week's run, if one is saved for the current week.
+  function weeklyRun() {
+    var w = load(WEEKLY_KEY);
+    return w && w.challenge && w.challenge.id === thisWeek() ? w : null;
+  }
+  function setMode(mode) { prefs.mode = mode; writeJSON(PREF_KEY, prefs); }
+  function playWeekly(fresh) {
+    if (S) save();
+    var w = fresh ? null : weeklyRun();
+    if (!w) w = L.newGame({ challenge: thisWeek(), name: (S && S.name) || ui.draftName || 'Ade' });
+    S = w; ui.tab = 'do'; ui.sel = null; ui.place = null; ui.board = null; online.wStatus = '';
+    setMode('weekly'); save(); render(); subscribeWeekly();
+  }
+  function backToLife() {
+    if (S) save();
+    S = load(SAVE_KEY); ui.tab = 'do'; ui.sel = null; ui.place = null; ui.board = null;
+    setMode('life'); render();
   }
 
   var LIVES_KEY = 'lasgidi.lives.v1', PREF_KEY = 'lasgidi.prefs.v1';
@@ -188,6 +208,7 @@
         scheduleRender();
       }, function () { online.sponsored = []; });
     });
+    window.claude.use('db').then(function (db) { if (db) subscribeWeekly(); });
     window.claude.use('room').then(function (room) {
       if (!room) return;
       online.room = room;
@@ -220,6 +241,69 @@
     online.room.presence({ d: d }).catch(function () {});
   }
 
+  /* ---------- Weekly Lagos board: same replay check, ranked by net worth ---------- */
+  var weeklyUnsub = null, weeklyFor = null, rawWeekly = [], wVerifying = false;
+  function boardWeek() { return S && S.challenge ? S.challenge.id : thisWeek(); }
+  function subscribeWeekly() {
+    if (!online.db) return;
+    var id = boardWeek();
+    if (weeklyFor === id) return;
+    if (weeklyUnsub) weeklyUnsub();
+    weeklyFor = id; rawWeekly = []; online.weekly = [];
+    try {
+      weeklyUnsub = online.db.collection('weekly').where('challenge', '==', id).limit(500).onSnapshot(function (snap) {
+        rawWeekly = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
+        rankWeekly();
+      }, function () { online.weekly = []; scheduleRender(); });
+    } catch (e) { weeklyUnsub = null; online.weekly = []; }
+  }
+  function rankWeekly() {
+    var id = weeklyFor, rows = [], pending = [];
+    rawWeekly.forEach(function (d) {
+      var r = d.raw;
+      if (!r || r.challenge !== id || typeof r.worth !== 'number' || typeof r.seal !== 'string') return;
+      var key = 'w:' + id + ':' + d.id + ':' + r.seal + ':' + r.lines, v = online.checked[key];
+      if (v === 'ok') rows.push({ id: d.id, worth: r.worth, origin: D.ORIGINS[r.origin] ? r.origin : null, career: D.CAREERS[r.career] ? r.career : null, level: r.level | 0 });
+      else if (!v) pending.push({ id: d.id, raw: r, key: key });
+    });
+    rows.sort(function (a, b) { return b.worth - a.worth; });
+    online.weekly = rows.slice(0, 10);
+    online.wPending = pending.length;
+    if (online.user && online.weekly.length) online.user.profiles(online.weekly.map(function (r) { return r.id; })).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+    scheduleRender();
+    if (wVerifying || !pending.length || Object.keys(online.checked).length > 60) return;
+    pending.sort(function (a, b) { return b.raw.worth - a.raw.worth; });
+    var next = pending[0];
+    wVerifying = true;
+    online.db.doc('weekly/' + next.id + '/proof/log').get().then(function (snap) {
+      var proof = snap.exists ? snap.data() : null;
+      online.checked[next.key] = proof && proof.seal === next.raw.seal && L.verifyChallenge(Object.assign({}, next.raw, { replay: proof.replay }), id).ok ? 'ok' : 'bad';
+    }, function () { online.checked[next.key] = 'bad'; }).then(function () { wVerifying = false; setTimeout(rankWeekly, 0); });
+  }
+  function postWeekly() {
+    if (!online.db || !online.me) return Promise.resolve('The weekly board works when the game is opened on claude.ai.');
+    if (!S || !S.challenge || !S.over) return Promise.resolve('Finish all 4 weeks first.');
+    if (S.tampered || !S.replay) return Promise.resolve('This run cannot be verified, so it cannot be posted.');
+    var e = L.challengeEntry(S);
+    var mine = rawWeekly.filter(function (d) { return d.id === online.me; })[0];
+    if (mine && mine.raw.challenge === e.challenge && mine.raw.worth >= e.worth) return Promise.resolve('Your best this week (' + N(mine.raw.worth) + ') stays on the board.');
+    var summary = { challenge: e.challenge, worth: e.worth, seal: e.seal, lines: e.lines, origin: e.origin, career: e.career, level: e.level, weeks: e.weeks, at: Date.now() };
+    return online.db.doc('weekly/' + online.me + '/proof/log').set({ seal: e.seal, lines: e.lines, replay: e.replay })
+      .then(function () { return online.db.doc('weekly/' + online.me).set(summary); })
+      .then(function () { return 'Posted ' + N(e.worth) + ' to the ' + e.challenge + ' board. Other players will replay it to check.'; },
+        function (err) { return err && err.code === 'invalid_argument' ? 'You need Contributor access to post.' : 'Could not post right now. Try again shortly.'; });
+  }
+  function weeklyBoardView() {
+    if (!online.db) return '<p class="note">The weekly board appears when the game is opened on claude.ai.</p>';
+    var rows = online.weekly || [];
+    var html = rows.length ? '<div class="stmt-wrap"><table class="stmt lives"><thead><tr><th>#</th><th>Lagosian</th><th>Ended as</th><th class="n">Net worth</th></tr></thead><tbody>' + rows.map(function (r, i) {
+      var mine = r.id === online.me, p = online.names[r.id];
+      return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + esc(mine ? 'You' : (p && p.name) || 'Someone') + ' <span class="ver">✓ replayed</span></td><td>' + esc(r.career ? D.CAREERS[r.career].titles[r.level] : 'Jobless') + '</td><td class="n num"><b>' + N(r.worth) + '</b></td></tr>';
+    }).join('') + '</tbody></table></div>' : '<p class="note">No verified runs yet this week. Be the first.</p>';
+    if (online.wPending) html += '<p class="note">Checking ' + online.wPending + ' more…</p>';
+    return html;
+  }
+
   function myFame() {
     for (var i = 0; i < online.fame.length; i++) if (online.fame[i].id === online.me) return online.fame[i];
     return null;
@@ -241,6 +325,18 @@
         if (err && err.code === 'invalid_argument') { online.canWrite = false; return 'You can read the Hall of Fame but not post to it. Ask the owner for Contributor access.'; }
         return 'Could not post right now. Try again in a moment.';
       });
+  }
+
+  function weeklyInviteView() {
+    var w = weeklyRun();
+    return '<div class="section"><h3>Weekly Lagos ' + esc(thisWeek()) + '</h3><p class="note">Everyone gets the same Lagos this week: same start, same events. 4 weeks, highest net worth wins. Your life here is saved and waits for you.</p>' +
+      '<div class="inline"><button class="btn sm go" id="w-play" data-wplay="1">' + (w ? (w.over ? 'See this week\'s result' : 'Resume this week\'s Lagos') : 'Play this week\'s Lagos') + '</button></div></div>';
+  }
+  function weeklyMeView() {
+    return '<div class="section"><h3>Weekly Lagos ' + esc(S.challenge.id) + '</h3><p class="note">' + (S.over ? 'Finished with ' + N(L.netWorth(S)) + '.' : 'Week ' + (L.week(S) + 1) + ' of ' + L.CHALLENGE_WEEKS + '. Net worth so far ' + N(L.netWorth(S)) + '.') + ' Your main life is saved and waiting.</p>' +
+      '<div class="inline"><button class="btn sm go" id="w-back" data-wlife="1">Back to your life</button>' + (S.over ? '<button class="btn sm" id="w-result" data-wresult="1">Show result</button>' : '') +
+      '<button class="btn sm ghost" id="w-restart" data-wrestart="1">Restart this week</button></div>' +
+      '<h3>This week\'s board</h3>' + weeklyBoardView() + '</div>';
   }
 
   function familyView() {
@@ -307,6 +403,7 @@
     if (e.flood) chips.push('<span class="chip off">Flooding on the Island</span>');
     if (L.isDecember(S)) chips.push('<span class="chip">Detty December</span>');
     if (e.policy) chips.push('<span class="chip">' + esc(D.POLICIES[e.policy].name) + ' · ' + e.policyWeeks + 'w</span>');
+    if (S.challenge) chips.unshift('<span class="chip off">Weekly Lagos ' + esc(S.challenge.id) + (S.over ? ' · finished' : ' · week ' + Math.min(L.CHALLENGE_WEEKS, L.week(S) + 1) + ' of ' + L.CHALLENGE_WEEKS) + '</span>');
     if (S.rentRate) {
       var due = L.minutesUntilRent(S), short = S.cash + S.bank < S.rentRate;
       chips.push('<span class="chip' + (short && due <= 2880 ? ' off' : '') + '">Rent ' + N(S.rentRate) + ' in ' + dur(due) + '</span>');
@@ -724,8 +821,8 @@
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
       (S.history.length ? '<details><summary>Show as table</summary><div class="stmt-wrap"><table class="stmt"><tbody>' + S.history.slice().reverse().map(function (h) { return '<tr><td>Week ' + h.w + '</td><td class="n num">' + N(h.worth) + '</td></tr>'; }).join('') + '</tbody></table></div></details>' : '') + '</div>';
-    html += familyView();
-    html += fameView();
+    html += S.challenge ? weeklyMeView() : weeklyInviteView() + familyView();
+    if (!S.challenge) html += fameView();
     var sum = L.lifeSummary(S), best = lives()[0];
     html += '<div class="section"><h3>Score so far: <span class="num">' + sum.score + '</span></h3><p class="note">Net worth ÷ ₦1,000, plus 10 a week survived, 50 an achievement, 40 a career level and 500 for your goal.' + (best ? ' Your best life scored ' + best.score + '.' : '') + '</p>' + (lives().length ? livesView(5) : '') + '</div>';
     html += '<div class="section"><h3>Share your life</h3>' + shareBlock() + '</div>';
@@ -757,6 +854,15 @@
 
   /* ---------- modal for choice events ---------- */
   function modal() {
+    if (S.over && !S.overSeen) {
+      var text = L.challengeShareText(S).split('\n');
+      return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ch-title"><div class="sheet"><span class="label">Weekly Lagos ' + esc(S.challenge.id) + ' · time up</span><h2 id="ch-title">' + N(L.netWorth(S)) + '</h2>' +
+        '<p class="squares" aria-label="Net worth by week">' + text[1] + '</p>' +
+        '<p>' + esc(D.ORIGINS[S.origin].name) + ', ' + esc(S.job ? D.CAREERS[S.job.id].titles[S.job.level] : 'job hunting') + '. Everyone played this same Lagos this week.</p>' +
+        shareBlock() + '<h3>This week\'s board</h3>' + weeklyBoardView() +
+        '<div class="opts"><button class="btn go" id="w-post" data-wpost="1">Post to this week\'s board</button>' + (online.wStatus ? '<p class="note">' + esc(online.wStatus) + '</p>' : '') +
+        '<button class="btn ghost" id="w-life" data-wlife="1">Back to your life</button><button class="btn ghost" id="w-close" data-wclose="1">Look around</button></div></div></div>';
+    }
     var ev = S.pending[0];
     if (ev) {
       return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ev-title"><div class="sheet"><span class="label">' + L.clockLabel(S) + ' · ' + esc(D.DISTRICTS[S.loc].name) + '</span><h2 id="ev-title">' + esc(ev.title) + '</h2><p>' + esc(ev.text) + '</p><div class="opts">' +
@@ -804,6 +910,8 @@
       '<div class="inline">' + (o ? '<button class="btn go" id="start" data-start="1">Start life in ' + esc(D.DISTRICTS[D.HOMES[o.home].district].name) + '</button>' : '<button class="btn go" id="roll" data-roll="1">Roll the birth lottery</button>') + '</div></div>' +
       (lives().length ? '<div class="field"><span class="label">Your past lives · best scores</span>' + livesView(5) + '</div>' : '') +
       (online.db && online.fame.length ? '<div class="field">' + fameView().replace('<div class="section">', '<div>') + '</div>' : '') +
+      '<div class="lottery weekly"><span class="label">Weekly Lagos ' + esc(thisWeek()) + '</span><b>Same Lagos for everybody</b><p style="margin:0">One shared seed this week: the same start, the same events. 4 weeks, highest net worth wins, and every run is replayed to check it.</p>' +
+      '<div class="inline"><button class="btn go" id="w-play-intro" data-wplay="1">' + (weeklyRun() ? 'Resume this week\'s Lagos' : 'Play this week\'s Lagos') + '</button></div></div>' +
       '<details class="import"><summary>Continue from a save code</summary><textarea id="import-code" aria-label="Paste save code" placeholder="LSG1...."></textarea><div class="inline"><button class="btn sm" id="import" data-import="1">Load save</button><span class="note">' + esc(ui.importMsg) + '</span></div></details>' +
       '<p class="note">Lasgidi is a work of fiction. In-game naira has no real value and cannot be bought or cashed out.</p>' +
       '</div>';
@@ -829,7 +937,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -859,7 +967,16 @@
       } catch (err) { ui.importMsg = err.message; render(); }
       return;
     }
+    if (ds.wplay) { introState(); playWeekly(false); return; }
     if (!S) return;
+    if (ds.wlife) { backToLife(); return; }
+    if (ds.wclose) { S.overSeen = true; save(); render(); return; }
+    if (ds.wresult) { S.overSeen = false; render(); return; }
+    if (ds.wrestart) {
+      if (!ui.confirmRestart) { ui.confirmRestart = true; ui.flash = 'Tap "Restart this week" again to start this week\'s Lagos over.'; render(); return; }
+      ui.confirmRestart = false; ui.flash = ''; playWeekly(true); return;
+    }
+    if (ds.wpost) { t.disabled = true; postWeekly().then(function (m) { online.wStatus = m; render(); }); return; }
     if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; render(); return; }
     if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
     if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
@@ -920,6 +1037,7 @@
     if (ds.new) {
       if (!ui.confirmNew) { ui.confirmNew = true; ui.flash = 'Tap "New life" again to end this life. It will be scored (' + L.lifeSummary(S).score + ' points) and kept in your hall of lives.'; render(); return; }
       ui.confirmNew = false; ui.flash = '';
+      if (S.challenge) { backToLife(); return; }
       if (S && !S.tampered) postFame(L.fameEntry(S), true);
       archiveLife();
       S = null;
@@ -966,7 +1084,7 @@
   }
 
   function start(data) {
-    S = L.migrate((data && data.state) || load());
+    S = (data && data.state) ? L.migrate(data.state) : (prefs.mode === 'weekly' && weeklyRun()) || load(SAVE_KEY);
     if (data && data.ui) Object.assign(ui, data.ui, { toasts: [] });
     render();
     initOnline();
