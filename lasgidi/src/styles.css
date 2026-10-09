@@ -351,3 +351,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .iv { position: relative; border-radius: 10px; overflow: hidden; background: var(--sunk); touch-action: none; }
 .iv-canvas { display: block; width: 100%; cursor: pointer; }
 .iv-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 12px; margin-top: 8px; border-radius: 10px; background: var(--sunk); font-size: 14px; }
+
+.lagosian { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; align-items: start; }
+.lagosian canvas { background: radial-gradient(circle at 50% 40%, var(--sunk), var(--surface)); border-radius: 12px; max-width: 100%; }
+.lg-ctl { display: grid; gap: 6px; min-width: 0; }
+.lg-ctl .pick-c { width: 30px; height: 30px; border-radius: 50%; }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 7px; vertical-align: -2px; border: 1px solid var(--line); }
+@media (max-width: 480px) { .lagosian { grid-template-columns: minmax(0, 1fr); justify-items: center; } }

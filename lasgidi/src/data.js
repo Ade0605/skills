@@ -328,6 +328,45 @@
     treadmill: { name: 'Treadmill', icon: '🏃', cat: 'Comfort', price: 1100000, w: 1, d: 2, h: 8, color: '#3a3d44', shape: 'box', fx: { stress: -2, energy: 2 }, needsPower: true, status: 2 }
   };
 
+  // Your Lagosian: looks you choose, and clothes you buy and wear.
+  var LOOKS = {
+    skin: ['#f1c9a5', '#d9a47a', '#b97b52', '#8d5a3b', '#6b4029', '#4a2c1d'],
+    hair: ['Low cut', 'Afro', 'Braids', 'Cornrows', 'Bantu knots', 'Locs', 'Bald', 'Short twists'],
+    shape: ['Slim', 'Average', 'Broad']
+  };
+  // slot: top | bottom | dress (covers top and bottom) | shoes | head | acc.
+  // fabric: plain | ankara | asooke | lace | denim. tags change what an outfit
+  // does: owambe, club, office, gym. Effects only apply while worn.
+  var CLOTHES = {
+    tee:        { name: 'Plain T-shirt', slot: 'top', fabric: 'plain', color: '#f4f3ec', price: 4000, tags: [] },
+    jersey:     { name: 'Super Eagles jersey', slot: 'top', fabric: 'plain', color: '#1d7a43', price: 15000, tags: ['gym'] },
+    ankara_sh:  { name: 'Ankara shirt', slot: 'top', fabric: 'ankara', color: '#d9822b', alt: '#2f6fa0', price: 25000, tags: ['owambe'] },
+    shirt:      { name: 'Office shirt', slot: 'top', fabric: 'plain', color: '#cfe0f0', price: 18000, tags: ['office'] },
+    blazer:     { name: 'Tailored blazer', slot: 'top', fabric: 'plain', color: '#1f2a44', price: 120000, tags: ['office', 'club'], status: 2 },
+    lace_top:   { name: 'Lace blouse', slot: 'top', fabric: 'lace', color: '#f2e6c9', price: 60000, tags: ['owambe'], status: 1 },
+    crop:       { name: 'Sequin top', slot: 'top', fabric: 'plain', color: '#c2417f', price: 45000, tags: ['club'], status: 1 },
+    jeans:      { name: 'Jeans', slot: 'bottom', fabric: 'denim', color: '#3d5a80', price: 20000, tags: [] },
+    trousers:   { name: 'Office trousers', slot: 'bottom', fabric: 'plain', color: '#2b2f3a', price: 22000, tags: ['office'] },
+    joggers:    { name: 'Joggers', slot: 'bottom', fabric: 'plain', color: '#4b4f55', price: 12000, tags: ['gym'] },
+    wrapper:    { name: 'Ankara wrapper', slot: 'bottom', fabric: 'ankara', color: '#c0392b', alt: '#f2b600', price: 18000, tags: ['owambe'] },
+    skirt:      { name: 'Pencil skirt', slot: 'bottom', fabric: 'plain', color: '#17181a', price: 25000, tags: ['office'] },
+    agbada:     { name: 'Aso-oke agbada', slot: 'dress', fabric: 'asooke', color: '#6b3fa0', alt: '#f2b600', price: 250000, tags: ['owambe'], status: 4 },
+    kaftan:     { name: 'Senator kaftan', slot: 'dress', fabric: 'plain', color: '#f4f3ec', price: 70000, tags: ['owambe', 'office'], status: 2 },
+    iro_buba:   { name: 'Lace iro and buba', slot: 'dress', fabric: 'lace', color: '#1d7a43', alt: '#f2e6c9', price: 220000, tags: ['owambe'], status: 4 },
+    gown:       { name: 'Ankara gown', slot: 'dress', fabric: 'ankara', color: '#0f6f78', alt: '#f2b600', price: 85000, tags: ['owambe', 'club'], status: 2 },
+    designer:   { name: 'Designer suit', slot: 'dress', fabric: 'plain', color: '#111214', price: 2500000, tags: ['office', 'club'], status: 15 },
+    slides:     { name: 'Slides', slot: 'shoes', fabric: 'plain', color: '#17181a', price: 3000, tags: [] },
+    sneakers:   { name: 'Sneakers', slot: 'shoes', fabric: 'plain', color: '#f4f3ec', price: 35000, tags: ['gym', 'club'], status: 1 },
+    loafers:    { name: 'Leather loafers', slot: 'shoes', fabric: 'plain', color: '#5a3b22', price: 60000, tags: ['office', 'owambe'], status: 1 },
+    heels:      { name: 'Heels', slot: 'shoes', fabric: 'plain', color: '#c0392b', price: 55000, tags: ['club', 'owambe'], status: 1 },
+    gele:       { name: 'Gele', slot: 'head', fabric: 'asooke', color: '#f2b600', alt: '#c2417f', price: 30000, tags: ['owambe'], status: 1 },
+    fila:       { name: 'Fila cap', slot: 'head', fabric: 'asooke', color: '#6b3fa0', alt: '#f2b600', price: 15000, tags: ['owambe'] },
+    cap:        { name: 'Face cap', slot: 'head', fabric: 'plain', color: '#17181a', price: 6000, tags: ['gym'] },
+    beads:      { name: 'Coral beads', slot: 'acc', fabric: 'plain', color: '#e2463f', price: 150000, tags: ['owambe'], status: 3 },
+    watch:      { name: 'Luxury watch', slot: 'acc', fabric: 'plain', color: '#c9a77a', price: 4000000, tags: ['office', 'club'], status: 20 },
+    chain:      { name: 'Iced-out chain', slot: 'acc', fabric: 'plain', color: '#d8dce2', price: 6500000, tags: ['club'], status: 25 }
+  };
+
   // Vehicles: road cars use the "Own car" travel mode with their own speed and
   // fuel; boats use the jetties; helicopters fly anywhere. Upkeep is weekly.
   var VEHICLES = {
@@ -489,7 +528,7 @@
     DISTRICTS: DISTRICTS, ROADS: ROADS, FERRY_STOPS: FERRY_STOPS, BRT_STOPS: BRT_STOPS,
     OKADA_BAN: OKADA_BAN, MODES: MODES, HOMES: HOMES, HOME_TYPES: HOME_TYPES, SKILLS: SKILLS, SKILL_XP: SKILL_XP,
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
-    ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES,
+    ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, BUSINESSES: BUSINESSES, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS

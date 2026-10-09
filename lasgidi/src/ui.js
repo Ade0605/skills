@@ -121,6 +121,7 @@
     });
     mountPlayground();
     mountInterior();
+    drawAvatar();
     syncResidence();
     if (focusId) { var f = document.getElementById(focusId); if (f) f.focus(); }
     syncPresence();
@@ -340,6 +341,38 @@
         if (err && err.code === 'invalid_argument') { online.canWrite = false; return 'You can read the Hall of Fame but not post to it. Ask the owner for Contributor access.'; }
         return 'Could not post right now. Try again in a moment.';
       });
+  }
+
+  var SLOT_NAMES = { top: 'Tops', bottom: 'Bottoms', dress: 'Dresses and agbada', shoes: 'Shoes', head: 'Headwear', acc: 'Accessories' };
+  var TAG_NAMES = { owambe: 'owambe', club: 'the club', office: 'the office', gym: 'the gym' };
+  var TAG_EFFECT = { owambe: 'better owambes', club: 'better club nights', office: 'better form at banking and tech jobs', gym: 'faster fitness' };
+  function lagosianView() {
+    var lk = S.look, tags = Object.keys(L.outfitTags(S));
+    var html = '<div class="section" style="padding-top:0"><h3>Your Lagosian</h3><div class="lagosian"><canvas id="avatar-canvas" width="180" height="260" role="img" aria-label="Your Lagosian in their current outfit"></canvas><div class="lg-ctl">' +
+      '<span class="label">Skin</span><div class="pick">' + D.LOOKS.skin.map(function (c, i) { return '<button type="button" class="pick-c' + (lk.skin === i ? ' on' : '') + '" id="sk-' + i + '" data-lookskin="' + i + '" aria-label="Skin tone ' + (i + 1) + '" aria-pressed="' + (lk.skin === i) + '" style="background:' + c + '"></button>'; }).join('') + '</div>' +
+      '<label class="label" for="look-hair">Hair</label><select id="look-hair">' + D.LOOKS.hair.map(function (h, i) { return '<option value="' + i + '"' + (lk.hair === i ? ' selected' : '') + '>' + esc(h) + '</option>'; }).join('') + '</select>' +
+      '<span class="label">Shape</span><div class="pick">' + D.LOOKS.shape.map(function (h, i) { return '<button type="button" class="pg-chip' + (lk.shape === i ? ' sel' : '') + '" id="sh-' + i + '" data-lookshape="' + i + '">' + esc(h) + '</button>'; }).join('') + '</div>' +
+      '<p class="note">' + (tags.length ? 'Dressed for ' + tags.map(function (t) { return TAG_NAMES[t]; }).join(', ') + ': ' + tags.map(function (t) { return TAG_EFFECT[t]; }).join('; ') + '.' : 'Dress for the occasion: owambe outfits, club fits, office wear and gym kit each help.') + '</p></div></div>';
+    // Wardrobe.
+    if (S.wardrobe.length) {
+      html += '<h3>Wardrobe</h3><div class="list">' + S.wardrobe.map(function (w) {
+        var c = D.CLOTHES[w.id], on = S.outfit[c.slot] === w.id;
+        return '<div class="item"><div><h3>' + esc(c.name) + (on ? ' <span class="gain">· wearing</span>' : '') + '</h3><div class="meta"><span>' + esc(SLOT_NAMES[c.slot]) + '</span>' + (c.tags.length ? '<span>' + esc(c.tags.join(', ')) + '</span>' : '') + '</div></div>' +
+          (on ? '<button class="btn sm ghost" id="off-' + w.id + '" data-takeoff="' + c.slot + '">Take off</button>' : '<button class="btn sm" id="wear-' + w.id + '" data-wear="' + w.id + '">Wear</button>') + '</div>';
+      }).join('') + '</div>';
+    }
+    var slot = ui.clothSlot || 'top';
+    html += '<h3>Clothes shop</h3><div class="pg-chips" style="padding:0">' + Object.keys(SLOT_NAMES).map(function (k) { return '<button type="button" class="pg-chip' + (k === slot ? ' sel' : '') + '" id="cs-' + k + '" data-clothslot="' + k + '">' + SLOT_NAMES[k] + '</button>'; }).join('') + '</div><div class="list">' +
+      Object.keys(D.CLOTHES).filter(function (k) { return D.CLOTHES[k].slot === slot; }).map(function (k) {
+        var c = D.CLOTHES[k], p = L.price(S, c.price), own = S.wardrobe.some(function (w) { return w.id === k; });
+        return '<div class="item"><div><h3><i class="swatch" style="background:' + c.color + (c.alt ? ';box-shadow:inset -6px 0 0 ' + c.alt : '') + '"></i>' + esc(c.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(c.fabric) + '</span>' + (c.tags.length ? '<span>for ' + esc(c.tags.map(function (t) { return TAG_NAMES[t]; }).join(', ')) + '</span>' : '') + (c.status ? '<span>+' + c.status + ' status</span>' : '') + '</div></div>' +
+          (own ? '<span class="muted">Owned</span>' : '<button class="btn sm" id="buyc-' + k + '" data-buycloth="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button>') + '</div>';
+      }).join('') + '</div></div>';
+    return html;
+  }
+  function drawAvatar() {
+    var cv = document.getElementById('avatar-canvas');
+    if (cv && window.LasgidiAvatar && S) window.LasgidiAvatar.draw(cv, S.look, S.outfit);
   }
 
   function weeklyInviteView() {
@@ -998,6 +1031,7 @@
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
       (S.history.length ? '<details><summary>Show as table</summary><div class="stmt-wrap"><table class="stmt"><tbody>' + S.history.slice().reverse().map(function (h) { return '<tr><td>Week ' + h.w + '</td><td class="n num">' + N(h.worth) + '</td></tr>'; }).join('') + '</tbody></table></div></details>' : '') + '</div>';
+    html += lagosianView();
     html += S.challenge ? weeklyMeView() : weeklyInviteView() + familyView();
     if (!S.challenge) html += fameView();
     var sum = L.lifeSummary(S), best = lives()[0];
@@ -1114,7 +1148,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1158,6 +1192,12 @@
     if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
     if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
     if (ds.place) { ui.place = ds.place; ui.board = null; ui.sel = null; render(); return; }
+    if (ds.lookskin !== undefined) { run(function () { return L.setLook(S, +ds.lookskin, S.look.hair, S.look.shape); }); return; }
+    if (ds.lookshape !== undefined) { run(function () { return L.setLook(S, S.look.skin, S.look.hair, +ds.lookshape); }); return; }
+    if (ds.wear) { run(function () { return L.wear(S, ds.wear); }); return; }
+    if (ds.takeoff) { run(function () { return L.takeOff(S, ds.takeoff); }); return; }
+    if (ds.clothslot) { ui.clothSlot = ds.clothslot; render(); return; }
+    if (ds.buycloth) { run(function () { return L.buyClothes(S, ds.buycloth); }); return; }
     if (ds.buyitem) { run(function () { var r = L.buyItem(S, ds.buyitem); if (r.ok) ui.itemSel = S.items.length - 1; return r; }); return; }
     if (ds.shopcat) { ui.shopCat = ds.shopcat; render(); return; }
     if (ds.vehkind) { ui.vehKind = ds.vehkind; render(); return; }
@@ -1252,6 +1292,7 @@
 
   document.addEventListener('change', function (e) {
     if (e.target && e.target.id === 'ad-slogan') { ui.ad.slogan = e.target.value; render(); }
+    if (e.target && e.target.id === 'look-hair' && S) { var hv = +e.target.value; run(function () { return L.setLook(S, S.look.skin, hv, S.look.shape); }); }
   });
 
   document.addEventListener('keydown', function (e) {

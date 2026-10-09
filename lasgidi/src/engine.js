@@ -22,7 +22,7 @@
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 5;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 6;         // state shape; migrate() upgrades older saves
   // Game RULES version. A life plays by the rules it started under, so a
   // recorded life replays identically after later updates add new systems.
   // 5 = v0.5 rules; 6 adds love and family.
@@ -274,7 +274,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [],
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 },
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -666,6 +666,7 @@
       applyFx(s, a.fx);
     }
     addXp(s, a.xp);
+    if (a.xp && a.xp.fitness && outfitTags(s).gym) addXp(s, { fitness: 1 }); // gym kit
 
     if (a.earn) {
       var got = gigPay(s, a.earn, 0.8 + rand(s) * 0.4);
@@ -709,9 +710,9 @@
         applyFx(s, { fun: 20, social: 20 });
         var k = pick(s, Object.keys(s.friends));
         befriend(s, k, 10);
-        return 'Your aso-ebi was the talk of the party. You bonded with ' + D.NPCS[k].name + '.';
+        return 'Your aso-ebi was the talk of the party. You bonded with ' + D.NPCS[k].name + '.' + dressBonus(s, 'owambe');
       }
-      return 'Jollof, small chops and plenty spraying.';
+      return 'Jollof, small chops and plenty spraying.' + dressBonus(s, 'owambe');
     },
     club: function (s) {
       if (rand(s) < 0.06) {
@@ -719,7 +720,7 @@
         if (lost) post(s, 'cash', -lost, 'Phone and wallet snatched');
         return 'Someone snatched your wallet outside the club.';
       }
-      return 'Great night.';
+      return 'Great night.' + dressBonus(s, 'club');
     },
     content: function (s) {
       var chance = 0.03 + skillLevel(s, 'charisma') * 0.01;
@@ -789,6 +790,7 @@
   function workShift(s, a) {
     var c = D.CAREERS[s.job.id];
     var perf = performance(s);
+    if ((s.job.id === 'bank' || s.job.id === 'tech') && outfitTags(s).office) perf = Math.min(1.2, perf * 1.06); // dressed for the office
     var late = a.late;
     // Mark the shift before advancing: a shift ending at midnight must not
     // count as missed by the midnight check it crosses.
@@ -1517,6 +1519,7 @@
   }
   function statusPoints(s) {
     var t = 0;
+    (s.wardrobe || []).forEach(function (w) { t += D.CLOTHES[w.id].status || 0; });
     (s.items || []).forEach(function (it) { t += D.FURNITURE[it.id].status || 0; });
     (s.vehicles || []).forEach(function (v) { t += D.VEHICLES[v.id].status || 0; });
     return t;
@@ -1557,6 +1560,49 @@
     s.items.splice(idx, 1);
     if (v) earn(s, v, 'Sold ' + D.FURNITURE[it.id].name);
     return finish(s, ok('Sold for ' + naira(v) + '.'));
+  }
+
+  /* ---------- your Lagosian: looks and wardrobe ---------- */
+
+  function outfitTags(s) {
+    var t = {};
+    Object.keys(s.outfit || {}).forEach(function (slot) { var c = D.CLOTHES[s.outfit[slot]]; if (c) c.tags.forEach(function (g) { t[g] = true; }); });
+    return t;
+  }
+  function dressBonus(s, tag) {
+    if (!outfitTags(s)[tag]) return '';
+    applyFx(s, tag === 'owambe' ? { fun: 15, social: 15 } : { fun: 15, social: 10 });
+    return tag === 'owambe' ? ' Your outfit turned heads.' : ' You were dressed for it: VIP section.';
+  }
+  function setLook(s, skin, hair, shape) {
+    if (!(skin >= 0 && skin < D.LOOKS.skin.length) || !(hair >= 0 && hair < D.LOOKS.hair.length) || !(shape >= 0 && shape < D.LOOKS.shape.length)) return fail('Pick from the options.');
+    s.look = { skin: skin | 0, hair: hair | 0, shape: shape | 0 };
+    return ok('Looking good.');
+  }
+  function buyClothes(s, id) {
+    var c = D.CLOTHES[id];
+    if (!c) return fail('No such item.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.wardrobe.some(function (w) { return w.id === id; })) return fail('You already own this.');
+    var cost = price(s, c.price);
+    s.alerts = [];
+    if (!pay(s, cost, 'Bought ' + c.name)) return fail(c.name + ' costs ' + naira(cost) + '.');
+    s.wardrobe.push({ id: id });
+    wear(s, id);
+    return finish(s, ok('You bought and put on the ' + c.name + '.'));
+  }
+  function wear(s, id) {
+    var c = D.CLOTHES[id];
+    if (!c || !s.wardrobe.some(function (w) { return w.id === id; })) return fail('You do not own that.');
+    if (c.slot === 'dress') { delete s.outfit.top; delete s.outfit.bottom; }
+    if (c.slot === 'top' || c.slot === 'bottom') delete s.outfit.dress;
+    s.outfit[c.slot] = id;
+    return ok('Wearing the ' + c.name + '.');
+  }
+  function takeOff(s, slot) {
+    if (!s.outfit || !s.outfit[slot]) return fail('Nothing to take off.');
+    delete s.outfit[slot];
+    return ok('Taken off.');
   }
 
   /* ---------- garage and hangar ---------- */
@@ -1783,6 +1829,9 @@
     if (s.replay === undefined) s.replay = null; // lives from before v0.5 cannot be replayed
     if (!s.items) s.items = [];
     if (!s.vehicles) s.vehicles = [];
+    if (!s.wardrobe) s.wardrobe = [];
+    if (!s.outfit) s.outfit = {};
+    if (!s.look) s.look = { skin: 2, hair: 0, shape: 1 };
     if (!s.rules) { s.rules = 5; s.partner = null; s.kids = []; s.babyPause = -1; if (s.replay) s.replay.rules = 5; }
     s.sv = SCHEMA;
     return s;
@@ -2169,6 +2218,7 @@
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
     buyItem: recorded('bi', buyItem), placeItem: recorded('pi', placeItem), storeItem: recorded('si', storeItem), sellItem: recorded('xi', sellItem),
+    setLook: recorded('lk', setLook), buyClothes: recorded('bc2', buyClothes), wear: recorded('wr', wear), takeOff: recorded('to', takeOff), outfitTags: outfitTags,
     buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle),
     roomSize: roomSize, fitsAt: fitsAt, statusPoints: statusPoints, furnitureSleep: furnitureSleep, furniturePower: furniturePower, furnitureGen: furnitureGen, furnitureDaily: furnitureDaily, bestCar: bestCar,
     buyPlot: recorded('bpl', buyPlot), plotCount: plotCount, plotXY: plotXY, plotTakenByNpc: plotTakenByNpc, myPlot: myPlot, ownsHome: ownsHome,

@@ -639,3 +639,20 @@ test('vehicles: own car speeds commutes, helicopter flies anywhere, upkeep is we
   assert.ok(s.ledger.some(l => l.memo === 'Upkeep: Helicopter' && -l.amt >= D.VEHICLES.heli.upkeep), 'weekly upkeep paid');
   sane(s);
 });
+
+test('wardrobe: buy and wear clothes, dresses replace top and bottom, outfits help', () => {
+  const s = L.newGame({ seed: 15, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(L.setLook(s, 4, 2, 0).ok);
+  assert.equal(L.setLook(s, 99, 0, 0).ok, false);
+  assert.ok(L.buyClothes(s, 'ankara_sh').ok && L.buyClothes(s, 'wrapper').ok);
+  assert.ok(L.outfitTags(s).owambe);
+  assert.ok(L.buyClothes(s, 'gown').ok);
+  assert.equal(s.outfit.top, undefined); assert.equal(s.outfit.bottom, undefined); assert.equal(s.outfit.dress, 'gown');
+  assert.ok(L.wear(s, 'ankara_sh').ok);
+  assert.equal(s.outfit.dress, undefined);
+  assert.equal(L.buyClothes(s, 'ankara_sh').ok, false, 'no duplicates');
+  assert.ok(L.takeOff(s, 'top').ok);
+  assert.ok(L.statusPoints(s) >= 2);
+  assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(s)))).ok, 'wardrobe replays');
+  sane(s);
+});

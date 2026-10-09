@@ -10,7 +10,7 @@ const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 const html = read('index.html');
 const fonts = html.match(/<link rel="stylesheet" href="https:\/\/fonts[^>]+>/)[0];
 const body = html.slice(html.indexOf('<body>') + 6, html.indexOf('<script'));
-const js = ['src/data.js', 'src/engine.js', 'src/playground.js', 'src/interior.js', 'src/ui.js'].map(read).join('\n');
+const js = ['src/data.js', 'src/engine.js', 'src/playground.js', 'src/interior.js', 'src/avatar.js', 'src/ui.js'].map(read).join('\n');
 const out = [
   '<title>Lasgidi</title>',
   fonts,
