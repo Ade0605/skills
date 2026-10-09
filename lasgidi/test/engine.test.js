@@ -473,3 +473,38 @@ test('v0.5-rules lives never meet anyone', () => {
   assert.equal(s.partner, null);
   assert.equal(L.availableActions(s).some(a => /^love_/.test(a.id)), false);
 });
+
+test('weekly challenge: same id, same Lagos; different week, different Lagos', () => {
+  const a = L.newGame({ challenge: '2026-W41' }), b = L.newGame({ challenge: '2026-W41' }), c = L.newGame({ challenge: '2026-W42' });
+  assert.equal(a.seed, b.seed);
+  assert.equal(a.origin, b.origin);
+  assert.notEqual(a.seed, c.seed);
+  assert.throws(() => L.newGame({ challenge: 'next week' }));
+  assert.equal(L.challengeId(new Date(Date.UTC(2026, 9, 9))), '2026-W41');
+  assert.equal(L.challengeId(new Date(Date.UTC(2021, 0, 3))), '2020-W53');
+});
+
+test('weekly challenge ends after 4 weeks, freezes, and verifies by replay', () => {
+  const s = playByAdvisor(L.newGame({ challenge: '2026-W41' }), 10);
+  assert.ok(s.over);
+  assert.equal(L.week(s), L.CHALLENGE_WEEKS);
+  const t0 = s.t, w0 = L.netWorth(s);
+  assert.equal(L.wait(s, 60).ok, false);
+  assert.equal(L.doAction(s, 'home_bath').ok, false);
+  assert.equal(s.t, t0); assert.equal(L.netWorth(s), w0);
+  assert.equal(L.advise(s).length, 0);
+  assert.match(L.shareText(s), /^Lasgidi Weekly 2026-W41 · /);
+  assert.equal([...L.shareText(s).split('\n')[1]].length, 4, 'one square per week');
+  const entry = JSON.parse(JSON.stringify(L.challengeEntry(s)));
+  assert.ok(L.verifyChallenge(entry, '2026-W41').ok);
+  assert.equal(L.verifyChallenge(entry, '2026-W42').ok, false, 'wrong week');
+  const richer = JSON.parse(JSON.stringify(entry)); richer.worth += 100000;
+  assert.equal(L.verifyChallenge(richer, '2026-W41').ok, false);
+  sane(s);
+});
+
+test('an unfinished challenge does not count', () => {
+  const s = playByAdvisor(L.newGame({ challenge: '2026-W41' }), 2);
+  assert.equal(s.over, false);
+  assert.equal(L.verifyChallenge(JSON.parse(JSON.stringify(L.challengeEntry(s))), '2026-W41').reason, 'not finished');
+});

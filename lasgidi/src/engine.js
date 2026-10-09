@@ -257,7 +257,10 @@
 
   function newGame(opts) {
     opts = opts || {};
-    var seed = (opts.seed == null ? Date.now() : opts.seed) | 0;
+    // A weekly challenge derives its seed from its id, so everyone who plays
+    // that week gets the same Lagos.
+    if (opts.challenge != null && !CHALLENGE_ID.test(opts.challenge)) throw new Error('Bad challenge id');
+    var seed = (opts.challenge ? parseInt(fnv('lasgidi-weekly:' + opts.challenge), 16) : opts.seed == null ? Date.now() : opts.seed) | 0;
     var s = {
       v: VERSION, seed: seed, rng: seed, t: 6 * 60,
       name: (opts.name || 'Ade').slice(0, 24), goal: opts.goal || 'freestyle',
@@ -299,7 +302,8 @@
     s.stats.weekStartWorth = netWorth(s);
     // Everything needed to rebuild this life from scratch: the seed, the
     // starting choices, and every player call in order (see recorded()).
-    s.replay = { seed: seed, goal: s.goal, origin: opts.origin || null, rules: s.rules, acts: [] };
+    if (opts.challenge) { s.challenge = { id: opts.challenge, weeks: CHALLENGE_WEEKS }; s.over = false; s.goal = 'freestyle'; }
+    s.replay = { seed: seed, goal: s.goal, origin: opts.origin || null, rules: s.rules, challenge: opts.challenge || null, acts: [] };
     log(s, o.text, 'story');
     log(s, 'Rent is due every Saturday at noon. Lagos no dey carry last.', 'info');
     return s;
@@ -326,6 +330,13 @@
       if (m === 18 * 60) businessPayout(s);
       if (m === 0) onNewDay(s);
       if (m === 12 * 60 && dow(s) === 5) collectRent(s);
+      if (s.challenge && m === 0 && dow(s) === 0 && week(s) >= s.challenge.weeks) {
+        // Time is up: freeze the life exactly at the start of the final Monday.
+        s.over = true;
+        s.pending = [];
+        log(s, 'Time up! Your Weekly Lagos ended with a net worth of ' + naira(netWorth(s)) + '.', 'ach');
+        break;
+      }
     }
   }
 
@@ -584,6 +595,7 @@
   }
 
   function blocker(s, a, cost) {
+    if (s.over) return 'This Weekly Lagos is over';
     if (s.pending.length) return 'Decide on the open event first';
     if (!inWindow(s, a.when)) return 'Only ' + windowLabel(a.when);
     if (a.req) {
@@ -849,6 +861,7 @@
       o.cost = id === 'trek' ? 0 : roundTo(fare * priceFactor(s), 50);
       o.risk = id === 'okada' && (okadaBanned(s, from) || okadaBanned(s, dest)) ? 'Okada is banned here. Task force may seize it.' : null;
       if (id === 'trek') o.energy = Math.round(m.energyPerKm * km);
+      if (!o.disabled && s.over) o.disabled = 'This Weekly Lagos is over';
       if (!o.disabled && s.pending.length) o.disabled = 'Decide on the open event first';
       if (!o.disabled && o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost);
       if (!o.disabled && id === 'trek' && s.needs.energy - o.energy - DECAY.energy * o.mins / 60 <= 5) o.disabled = 'Too tired to trek that far';
@@ -1463,7 +1476,8 @@
 
   // Runs after every player action.
   function finish(s, res) {
-    if (s.needs.hunger <= 0 || s.needs.energy <= 0) collapse(s, res);
+    if (!s.over && (s.needs.hunger <= 0 || s.needs.energy <= 0)) collapse(s, res);
+    if (s.over) res.over = true;
     var w = netWorth(s);
     if (w > s.stats.peakWorth) s.stats.peakWorth = w;
     if (w >= 1000000) unlock(s, 'millionaire');
@@ -1625,7 +1639,7 @@
   }
 
   function advise(s) {
-    if (s.pending.length) return [];
+    if (s.pending.length || s.over) return [];
     var out = [];
     if (s.needs.hunger < 30) out.push(foodHint(s));
     if (s.needs.energy < 25) {
@@ -1759,7 +1773,7 @@
       married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length
     };
     e.score = scoreOf(e);
-    if (s.replay) e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, rules: s.replay.rules, acts: s.replay.acts };
+    if (s.replay) e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, rules: s.replay.rules, challenge: s.replay.challenge || null, acts: s.replay.acts };
     return e;
   }
 
@@ -1797,7 +1811,8 @@
     if (!D.GOALS[rp.goal] || (rp.origin !== null && !D.ORIGINS[rp.origin])) return null;
     var rules = rp.rules == null ? 5 : rp.rules;
     if (rules !== 5 && rules !== 6) return null;
-    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules });
+    if (rp.challenge != null && !CHALLENGE_ID.test(rp.challenge)) return null;
+    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined });
     for (var i = 0; i < rp.acts.length; i++) {
       var a = rp.acts[i];
       if (!Array.isArray(a) || !RECORDED[a[0]]) return null;
@@ -1817,7 +1832,59 @@
     return { ok: same, entry: same ? got : e, reason: same ? null : 'does not match its replay' };
   }
 
+  /* ---------- Weekly Lagos challenge ---------- */
+
+  var CHALLENGE_ID = /^\d{4}-W\d{2}$/;
+  var CHALLENGE_WEEKS = 4;
+
+  // ISO-8601 week id for a real-world date, e.g. "2026-W41".
+  function challengeId(date) {
+    var d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    var dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    var wk = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+    return d.getUTCFullYear() + '-W' + String(wk).padStart(2, '0');
+  }
+
+  function challengeEntry(s) {
+    var e = fameEntry(s);
+    e.challenge = s.challenge ? s.challenge.id : null;
+    e.over = !!s.over;
+    return e;
+  }
+
+  // A weekly entry counts only if it is finished and replays to the same result.
+  function verifyChallenge(raw, id) {
+    if (!raw || raw.challenge !== id || !CHALLENGE_ID.test(id) || !raw.replay || raw.replay.challenge !== id) return { ok: false, reason: 'wrong week' };
+    if (typeof raw.worth !== 'number' || typeof raw.seal !== 'string') return { ok: false, reason: 'malformed' };
+    var s = replayLife(raw.replay);
+    if (!s || !s.over) return { ok: false, reason: 'not finished' };
+    var got = challengeEntry(s);
+    var ok = got.seal === raw.seal && got.lines === raw.lines && got.worth === raw.worth;
+    return { ok: ok, entry: ok ? got : null, reason: ok ? null : 'does not match its replay' };
+  }
+
+  // Wordle-style: one square per week by how net worth moved.
+  function challengeSquares(s) {
+    var prev = s.history.length ? null : null, out = '';
+    var start = D.ORIGINS[s.origin].cash;
+    var last = start;
+    s.history.forEach(function (h) {
+      var ch = (h.worth - last) / Math.max(1, Math.abs(last));
+      out += ch > 0.1 ? '🟩' : ch >= -0.02 ? '🟨' : '🟥';
+      last = h.worth;
+    });
+    return out;
+  }
+
+  function challengeShareText(s) {
+    var title = s.job ? D.CAREERS[s.job.id].titles[s.job.level] : 'job hunting';
+    return 'Lasgidi Weekly ' + s.challenge.id + ' · ' + naira(netWorth(s)) + ' · ' + D.ORIGINS[s.origin].name + ', ' + title + '\n' + challengeSquares(s) + (s.over ? '' : ' (in progress)');
+  }
+
   function shareText(s) {
+    if (s.challenge) return challengeShareText(s);
     var title = s.job ? D.CAREERS[s.job.id].titles[s.job.level] : 'job hunting';
     var got = Object.keys(s.ach).length, total = Object.keys(ACHIEVEMENTS).length;
     return 'Week ' + (week(s) + 1) + ' in #Lasgidi: ' + s.name + ', ' + D.ORIGINS[s.origin].name + ', now ' + title + ' living in ' + D.DISTRICTS[homeDistrict(s)].name +
@@ -1830,10 +1897,13 @@
   }
 
   // Every call that changes a life goes through recorded(), so the life can be replayed.
-  function recorded(code, fn) {
+  // A finished challenge is frozen: every recorded call becomes a no-op failure.
+  function recorded(code, raw) {
+    var fn = function (s) { return s.over ? fail('This Weekly Lagos is over. Start next week\'s, or go back to your life.') : raw.apply(null, arguments); };
     RECORDED[code] = { fn: fn };
     return function (s) {
       var args = Array.prototype.slice.call(arguments, 1);
+      if (s.over) return fn.apply(null, arguments); // frozen: refuse without recording
       if (s.replay && s.replay.acts.length < MAX_ACTS) s.replay.acts.push([code].concat(args));
       else if (s.replay) s.replay = null; // too long to verify; stop recording
       return fn.apply(null, arguments);
@@ -1857,6 +1927,7 @@
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
+    challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
     CATEGORY_NAMES: CATEGORY_NAMES, category: category, SCHEMA: SCHEMA,
     _advance: advance, _post: post
