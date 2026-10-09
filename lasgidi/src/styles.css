@@ -186,6 +186,7 @@ h1, h2, h3 { margin: 0; text-wrap: balance; }
 .lives th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 4px; }
 .lives th.n { text-align: right; }
 .lives tr.me td { background: color-mix(in srgb, var(--danfo) 16%, transparent); }
+.ver { font-size: 11px; font-weight: 700; color: var(--lagoon); white-space: nowrap; }
 .map .peers circle { fill: var(--lagoon); stroke: var(--surface); stroke-width: 1.5; }
 .map .peers text { font: 700 8px var(--font-data); fill: var(--surface); }
 

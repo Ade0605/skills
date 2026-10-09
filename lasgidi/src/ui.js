@@ -107,7 +107,56 @@
    * Both light up only inside claude.ai; the game is complete without them.
    * No chat and no free text travel between players: presence carries a
    * district key, the board carries numbers. */
-  var online = { db: null, user: null, room: null, me: null, fame: [], hidden: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '' };
+  var online = { db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {} };
+
+  // Each player's row is a small summary at fame/<id>; the replay log lives
+  // beside it at fame/<id>/proof/log. Load every summary (no ordering: a
+  // stored score is never trusted, so it cannot choose who gets loaded),
+  // rank by the rebuilt score, then fetch and replay proofs from the top
+  // down until the board has 10 verified lives.
+  var rawFame = [], verifying = false;
+  var BOARD = 10, MAX_PROOFS = 25;
+
+  function verdictKey(id, raw) { return id + ':' + raw.seal + ':' + raw.lines; }
+
+  function rankFame() {
+    var cands = [], hidden = 0, failed = 0;
+    rawFame.forEach(function (d) {
+      var e = L.checkFame(d.raw);
+      if (!e || typeof d.raw.seal !== 'string') { hidden++; return; }
+      cands.push({ id: d.id, raw: d.raw, e: e, key: verdictKey(d.id, d.raw) });
+    });
+    cands.sort(function (a, b) { return b.e.score - a.e.score; });
+    var rows = [], pending = 0;
+    cands.forEach(function (c) {
+      var v = online.checked[c.key];
+      if (v === 'ok') rows.push(Object.assign(c.e, { id: c.id }));
+      else if (v === 'bad') failed++;
+      else pending++;
+    });
+    online.fame = rows.slice(0, BOARD); online.hidden = hidden; online.unverified = failed;
+    online.pending = rows.length >= BOARD ? 0 : pending;
+    if (online.user && online.fame.length) {
+      online.user.profiles(online.fame.map(function (r) { return r.id; })).then(function (ps) { online.names = ps; scheduleRender(); });
+    }
+    scheduleRender();
+    if (!verifying && rows.length < BOARD) verifyNext(cands);
+  }
+
+  function verifyNext(cands) {
+    var next = null, fetched = Object.keys(online.checked).length;
+    for (var i = 0; i < cands.length; i++) if (!online.checked[cands[i].key]) { next = cands[i]; break; }
+    if (!next || fetched >= MAX_PROOFS) { online.pending = 0; scheduleRender(); return; }
+    verifying = true;
+    online.db.doc('fame/' + next.id + '/proof/log').get().then(function (snap) {
+      var proof = snap.exists ? snap.data() : null;
+      var ok = !!(proof && proof.seal === next.raw.seal && L.verifyFame(Object.assign({}, next.raw, { replay: proof.replay })).ok);
+      online.checked[next.key] = ok ? 'ok' : 'bad';
+    }, function () { online.checked[next.key] = 'bad'; }).then(function () {
+      verifying = false;
+      setTimeout(rankFame, 0);
+    });
+  }
 
   function initOnline() {
     if (!window.claude || typeof window.claude.use !== 'function') return;
@@ -120,18 +169,9 @@
     window.claude.use('db').then(function (db) {
       if (!db) return;
       online.db = db;
-      db.collection('fame').orderBy('score', 'desc').limit(60).onSnapshot(function (snap) {
-        var rows = [], hidden = 0;
-        snap.docs.forEach(function (d) {
-          var e = L.checkFame(d.data());
-          if (e) rows.push(Object.assign(e, { id: d.id })); else hidden++;
-        });
-        rows.sort(function (a, b) { return b.score - a.score; });
-        online.fame = rows; online.hidden = hidden;
-        if (online.user && rows.length) {
-          online.user.profiles(rows.map(function (r) { return r.id; })).then(function (ps) { online.names = ps; scheduleRender(); });
-        }
-        scheduleRender();
+      db.collection('fame').limit(500).onSnapshot(function (snap) {
+        rawFame = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
+        rankFame();
       }, function () { online.db = null; scheduleRender(); });
     });
     window.claude.use('room').then(function (room) {
@@ -174,10 +214,15 @@
   function postFame(entry, quiet) {
     if (!online.db || !online.me) return Promise.resolve(quiet ? null : 'The Hall of Fame is not available here.');
     if (S && S.tampered) return Promise.resolve('Edited saves cannot go on the Hall of Fame.');
+    if (!entry.replay) return Promise.resolve(quiet ? null : 'This life began before verified scores, so it cannot be checked. Start a new life to get on the board.');
     var mine = myFame();
     if (mine && mine.score >= entry.score) return Promise.resolve(quiet ? null : 'Your best on the board (' + mine.score + ') is higher. It stays.');
-    return online.db.doc('fame/' + online.me).set(Object.assign({}, entry, { at: Date.now() }))
-      .then(function () { return 'Posted ' + entry.score + ' points to the Hall of Fame.'; })
+    var summary = Object.assign({}, entry, { at: Date.now() });
+    delete summary.replay;
+    // Proof first, so a summary never points at a missing log.
+    return online.db.doc('fame/' + online.me + '/proof/log').set({ seal: entry.seal, lines: entry.lines, replay: entry.replay })
+      .then(function () { return online.db.doc('fame/' + online.me).set(summary); })
+      .then(function () { return 'Posted ' + entry.score + ' points to the Hall of Fame. Other players\' browsers will replay it to check.'; })
       .catch(function (err) {
         if (err && err.code === 'invalid_argument') { online.canWrite = false; return 'You can read the Hall of Fame but not post to it. Ask the owner for Contributor access.'; }
         return 'Could not post right now. Try again in a moment.';
@@ -187,16 +232,18 @@
   function fameView() {
     if (!online.db) return '';
     var rows = online.fame.slice(0, 10);
-    var html = '<div class="section"><h3>Lagos Hall of Fame</h3><p class="note">Everyone this game is shared with. Each person\'s best life; scores are rebuilt from the numbers, never taken on trust.' +
-      (online.hidden ? ' ' + online.hidden + ' implausible ' + (online.hidden === 1 ? 'entry is' : 'entries are') + ' hidden.' : '') + '</p>';
+    var html = '<div class="section"><h3>Lagos Hall of Fame</h3><p class="note">Everyone this game is shared with. Each person\'s best life. Every entry is replayed move by move in your browser, and only lives that replay to the same result are ranked.' +
+      (online.hidden + online.unverified ? ' ' + (online.hidden + online.unverified) + ' ' + (online.hidden + online.unverified === 1 ? 'entry failed' : 'entries failed') + ' the check and ' + (online.hidden + online.unverified === 1 ? 'is' : 'are') + ' hidden.' : '') +
+      (online.pending ? ' Checking ' + online.pending + '…' : '') + '</p>';
     if (!rows.length) html += '<p class="note">No one has posted yet. Post your life to be first.</p>';
     else html += '<div class="stmt-wrap"><table class="stmt lives"><thead><tr><th>#</th><th>Lagosian</th><th>Ended as</th><th class="n">Weeks</th><th class="n">Net worth</th><th class="n">Score</th></tr></thead><tbody>' + rows.map(function (r, i) {
       var p = online.names[r.id], mine = r.id === online.me;
       var who = mine ? 'You' : (p && p.name) || 'Someone';
       var title = r.career ? D.CAREERS[r.career].titles[r.level] : 'Jobless';
-      return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + esc(who) + ' <span class="muted">· ' + esc(D.ORIGINS[r.origin].name) + '</span>' + (r.won ? ' <span class="gain">✓ ' + esc(D.GOALS[r.goal].name) + '</span>' : '') + '</td><td>' + esc(title) + '</td><td class="n num">' + r.weeks + '</td><td class="n num">' + N(r.worth) + '</td><td class="n num"><b>' + r.score + '</b></td></tr>';
+      return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + esc(who) + ' <span class="muted">· ' + esc(D.ORIGINS[r.origin].name) + '</span> <span class="ver" title="Replayed and verified">✓ replayed</span>' + (r.won ? ' <span class="gain">✓ ' + esc(D.GOALS[r.goal].name) + '</span>' : '') + '</td><td>' + esc(title) + '</td><td class="n num">' + r.weeks + '</td><td class="n num">' + N(r.worth) + '</td><td class="n num"><b>' + r.score + '</b></td></tr>';
     }).join('') + '</tbody></table></div>';
-    if (S && online.me && online.canWrite !== false) html += '<div class="inline"><button class="btn sm" id="post-fame" data-postfame="1">Post this life (' + L.fameEntry(S).score + ')</button><span class="note">' + esc(online.status) + '</span></div>';
+    if (S && !S.replay) html += '<p class="note">This life began before verified scores, so it cannot be posted. Your next life can.</p>';
+    else if (S && online.me && online.canWrite !== false) html += '<div class="inline"><button class="btn sm" id="post-fame" data-postfame="1">Post this life (' + L.fameEntry(S).score + ')</button><span class="note">' + esc(online.status) + '</span></div>';
     else if (online.status) html += '<p class="note">' + esc(online.status) + '</p>';
     return html + '</div>';
   }
@@ -628,7 +675,12 @@
     if (ds.import) {
       try {
         var r = L.deserialize(document.getElementById('import-code').value);
-        S = r.state; if (r.tampered) { S.tampered = true; }
+        S = r.state;
+        if (!r.tampered && S.replay) {
+          var re = L.replayLife(S.replay);
+          if (!re || re.ledgerHash !== S.ledgerHash) r.tampered = true;
+        }
+        if (r.tampered) { S.tampered = true; }
         ui.importMsg = ''; ui.flash = r.tampered ? 'This save was edited outside the game. It loads, but it is marked as tampered.' : 'Save loaded.';
         save(); render();
       } catch (err) { ui.importMsg = err.message; render(); }
@@ -640,7 +692,7 @@
     if (ds.clearSel) { ui.sel = null; render(); return; }
     if (ds.travel) { run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; if (ui.tab === 'map') ui.tab = 'do'; } return r; }, 'travel'); return; }
     if (ds.act) { run(function () { return L.doAction(S, ds.act); }); return; }
-    if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; L._advance(S, 60); return { ok: true, msg: 'An hour passes.' }; }); return; }
+    if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { return L.applyJob(S, ds.apply); }); return; }
     if (ds.quit) { run(function () { return L.quitJob(S); }); return; }
     if (ds.bank) { var a = amount(); run(function () { return ds.bank === 'dep' ? L.deposit(S, a) : L.withdraw(S, a); }); return; }

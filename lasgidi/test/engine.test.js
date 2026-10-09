@@ -320,12 +320,19 @@ test('advisor offers a one-tap move when rent eats the pay', () => {
 
 test('advisor suggests a job near home when the commute is long', () => {
   const s = game('lapo');                // home Mushin
-  s.loc = 'vi'; s.friends.kunle.lvl = 60;
-  L.applyJob(s, 'bank');
+  s.loc = 'lekki'; s.skills.fitness = 10;
+  L.applyJob(s, 'fitness');              // ₦5,000/shift, 26 km away; the buka next door pays ₦4,200
   s.loc = 'mushin';
   s.t = 1440 * 5 + 14 * 60;              // Saturday afternoon, no shift
   const tip = L.advise(s).find(t => /commute/.test(t.text));
   assert.ok(tip && tip.act, JSON.stringify(L.advise(s)));
+  // A much better-paid far job is never traded for a junior local one.
+  const t = game('lapo');
+  t.loc = 'vi'; t.friends.kunle.lvl = 60;
+  L.applyJob(t, 'bank');                 // ₦9,000/shift
+  t.loc = 'mushin'; t.t = 1440 * 5 + 14 * 60;
+  assert.equal(L.advise(t).find(x => /commute/.test(x.text)), undefined);
+  assert.equal(L.applyJob(t, 'nope').ok, false);
 });
 
 test('life summary scores a run', () => {
@@ -350,4 +357,54 @@ test('hall of fame entries are rebuilt from fields and implausible ones dropped'
   assert.equal(L.checkFame(Object.assign({}, e, { origin: '<img>' })), null);
   assert.equal(L.checkFame(null), null);
   assert.equal(L.lifeSummary(s).score, e.score);
+});
+
+function playByAdvisor(s, weeks) {
+  let steps = 0;
+  while (L.week(s) < weeks && steps++ < 20000) {
+    while (s.pending.length) L.resolveChoice(s, steps % 2);
+    const tip = L.advise(s).find(t => t.act && t.act.type !== 'tab');
+    let r = null;
+    if (tip) {
+      const a = tip.act;
+      r = a.type === 'act' ? L.doAction(s, a.id) : a.type === 'travel' ? L.travel(s, a.dest, a.mode)
+        : a.type === 'move' ? L.moveHouse(s, a.id) : L.applyJob(s, a.id);
+    }
+    if (!r || !r.ok) {
+      const g = L.availableActions(s).find(x => !x.disabled && x.gig);
+      if (g) L.doAction(s, g.id); else L.wait(s, 60);
+    }
+  }
+  return s;
+}
+
+test('a recorded life replays to the identical ledger seal and score', () => {
+  const s = playByAdvisor(L.newGame({ seed: 77, goal: 'odogwu' }), 6);
+  L.deposit(s, Math.floor(s.cash / 2));
+  assert.ok(s.replay.acts.length > 100);
+  const entry = JSON.parse(JSON.stringify(L.fameEntry(s)));
+  const v = L.verifyFame(entry);
+  assert.ok(v.ok, v.reason);
+  assert.equal(v.entry.seal, s.ledgerHash);
+  assert.equal(v.entry.score, entry.score);
+});
+
+test('replay verification catches edited numbers and edited action logs', () => {
+  const s = playByAdvisor(L.newGame({ seed: 5, goal: 'freestyle' }), 4);
+  const entry = JSON.parse(JSON.stringify(L.fameEntry(s)));
+  // Inflate wealth (and fix up the score so it looks consistent).
+  const rich = JSON.parse(JSON.stringify(entry));
+  rich.worth += 500000; rich.score = L.scoreOf(rich);
+  assert.equal(L.verifyFame(rich).ok, false);
+  // Splice in actions that never happened.
+  const forged = JSON.parse(JSON.stringify(entry));
+  forged.replay.acts = forged.replay.acts.slice(0, 50);
+  assert.equal(L.verifyFame(forged).ok, false);
+  // Junk in the log.
+  const junk = JSON.parse(JSON.stringify(entry));
+  junk.replay.acts.push(['nope', 1]);
+  assert.equal(L.verifyFame(junk).ok, false);
+  // No log at all (a pre-v0.5 life).
+  delete entry.replay;
+  assert.equal(L.verifyFame(entry).reason, 'no replay');
 });

@@ -22,7 +22,7 @@
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 2;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 3;         // state shape; migrate() upgrades older saves
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -290,6 +290,9 @@
     if (originId === 'nepo') s.friends.kunle.lvl = 60; // Daddy's banker friend
     rollPower(s);
     s.stats.weekStartWorth = netWorth(s);
+    // Everything needed to rebuild this life from scratch: the seed, the
+    // starting choices, and every player call in order (see recorded()).
+    s.replay = { seed: seed, goal: s.goal, origin: opts.origin || null, acts: [] };
     log(s, o.text, 'story');
     log(s, 'Rent is due every Saturday at noon. Lagos no dey carry last.', 'info');
     return s;
@@ -700,6 +703,7 @@
 
   function jobEligibility(s, cid) {
     var c = D.CAREERS[cid];
+    if (!c) return { ok: false, reason: 'No such job' };
     var connect = connectFor(s, cid);
     if (s.job && s.job.id === cid) return { ok: false, reason: 'This is your job' };
     if (skillLevel(s, c.skill) < c.req[0] && !connect) return { ok: false, reason: 'Needs ' + D.SKILLS[c.skill] + ' ' + c.req[0] + ' or a connect' };
@@ -1242,6 +1246,14 @@
     return finish(s, ok('Car bought.'));
   }
 
+  function wait(s, mins) {
+    if (s.pending.length) return fail('Decide on the open event first.');
+    mins = Math.max(STEP, Math.min(24 * 60, ceilTo(mins | 0, STEP)));
+    s.alerts = [];
+    advance(s, mins);
+    return finish(s, ok(fmtMins(mins) + ' passes.'));
+  }
+
   /* ---------- scoring & goals ---------- */
 
   function debts(s) {
@@ -1349,6 +1361,7 @@
     if (!s.wk) s.wk = { inc: {}, out: {} };
     if (!s.history) s.history = [];
     if (s.report === undefined) s.report = null;
+    if (s.replay === undefined) s.replay = null; // lives from before v0.5 cannot be replayed
     s.sv = SCHEMA;
     return s;
   }
@@ -1428,6 +1441,8 @@
     Object.keys(D.CAREERS).forEach(function (cid) {
       var c = D.CAREERS[cid], connect = connectFor(s, cid);
       if (nearHome && ((s.job && s.job.id === cid) || distance(homeDistrict(s), c.district) > 6)) return;
+      // Never talk someone out of a better-paid career just to shorten the commute.
+      if (nearHome && s.job && c.pay[0] < D.CAREERS[s.job.id].pay[s.job.level] * 0.6) return;
       if (skillLevel(s, c.skill) < c.req[0] && !connect) return;
       if (c.degree && !s.edu.degree && !connect) return;
       var r = c.district === s.loc ? { mins: 0, cost: 0 } : route(s, c.district, 'cheap');
@@ -1566,6 +1581,7 @@
       career: s.job ? s.job.id : null, home: s.home, seal: s.ledgerHash, lines: s.ledgerCount
     };
     e.score = scoreOf(e);
+    if (s.replay) e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, acts: s.replay.acts };
     return e;
   }
 
@@ -1586,6 +1602,38 @@
     return e;
   }
 
+  /* ---------- replay verification ----------
+   * The engine is deterministic: seed + starting choices + the ordered list
+   * of player calls fully decide the outcome. A life that carries its log
+   * can be rebuilt by anyone, and its ledger seal must come out identical.
+   * Faking a score then means actually playing (or botting) it. */
+
+  var MAX_ACTS = 10000; // ~190 KB of log, under the 256 KB row limit (about 140 weeks of play)
+  var RECORDED = {}; // code -> engine function, filled in below
+
+  function replayLife(rp) {
+    if (!rp || typeof rp.seed !== 'number' || !Array.isArray(rp.acts) || rp.acts.length > MAX_ACTS) return null;
+    if (!D.GOALS[rp.goal] || (rp.origin !== null && !D.ORIGINS[rp.origin])) return null;
+    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay' });
+    for (var i = 0; i < rp.acts.length; i++) {
+      var a = rp.acts[i];
+      if (!Array.isArray(a) || !RECORDED[a[0]]) return null;
+      try { RECORDED[a[0]].fn.apply(null, [s].concat(a.slice(1))); } catch (e) { return null; }
+    }
+    return s;
+  }
+
+  // Rebuild an entry's life and check it lands exactly where it claims.
+  function verifyFame(raw) {
+    var e = checkFame(raw);
+    if (!e || !raw.replay) return { ok: false, entry: e, reason: e ? 'no replay' : 'malformed' };
+    var s = replayLife(raw.replay);
+    if (!s) return { ok: false, entry: e, reason: 'replay failed' };
+    var got = fameEntry(s);
+    var same = got.seal === raw.seal && got.lines === raw.lines && got.score === e.score && got.weeks === e.weeks && got.worth === e.worth;
+    return { ok: same, entry: same ? got : e, reason: same ? null : 'does not match its replay' };
+  }
+
   function shareText(s) {
     var title = s.job ? D.CAREERS[s.job.id].titles[s.job.level] : 'job hunting';
     var got = Object.keys(s.ach).length, total = Object.keys(ACHIEVEMENTS).length;
@@ -1598,21 +1646,33 @@
       s.cash >= 0 && s.bank >= 0;
   }
 
+  // Every call that changes a life goes through recorded(), so the life can be replayed.
+  function recorded(code, fn) {
+    RECORDED[code] = { fn: fn };
+    return function (s) {
+      var args = Array.prototype.slice.call(arguments, 1);
+      if (s.replay && s.replay.acts.length < MAX_ACTS) s.replay.acts.push([code].concat(args));
+      else if (s.replay) s.replay = null; // too long to verify; stop recording
+      return fn.apply(null, arguments);
+    };
+  }
+
   var API = {
     VERSION: VERSION, LOANS: LOANS, AJO_SIZES: AJO_SIZES, ACHIEVEMENTS: ACHIEVEMENTS, NEEDS: NEEDS, DATA: D,
-    newGame: newGame, availableActions: availableActions, doAction: doAction,
-    travelOptions: travelOptions, travel: travel, distance: distance,
-    resolveChoice: resolveChoice,
-    jobEligibility: jobEligibility, applyJob: applyJob, quitJob: quitJob, promotionNeeds: promotionNeeds,
-    deposit: deposit, withdraw: withdraw, joinAjo: joinAjo, takeLoan: takeLoan, repayLoan: repayLoan, loanLimit: loanLimit,
-    payArrears: payArrears, moveHouse: moveHouse, moveInCost: moveInCost,
-    buyBusiness: buyBusiness, sellBusiness: sellBusiness, visitBusinesses: visitBusinesses,
-    buyProperty: buyProperty, buyCar: buyCar,
+    newGame: newGame, availableActions: availableActions, doAction: recorded('a', doAction),
+    travelOptions: travelOptions, travel: recorded('t', travel), distance: distance,
+    resolveChoice: recorded('c', resolveChoice),
+    jobEligibility: jobEligibility, applyJob: recorded('j', applyJob), quitJob: recorded('q', quitJob), promotionNeeds: promotionNeeds,
+    deposit: recorded('d', deposit), withdraw: recorded('w', withdraw), joinAjo: recorded('aj', joinAjo), takeLoan: recorded('l', takeLoan), repayLoan: recorded('r', repayLoan), loanLimit: loanLimit,
+    payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
+    buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
+    buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
+    wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
     CATEGORY_NAMES: CATEGORY_NAMES, category: category, SCHEMA: SCHEMA,
     _advance: advance, _post: post

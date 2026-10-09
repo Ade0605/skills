@@ -131,6 +131,20 @@ The board is still client-reported, which was §3.1's original sin. Two mitigati
 
 A server-run engine (below) is the real fix.
 
+### v0.5: scores you can replay
+
+v0.5 closes most of that gap without a server. The engine is deterministic: the seed, the starting choices and the ordered list of player moves fully decide a life. So every life now records its moves (about 40 KB and 2,000 moves for 30 weeks, and the replay takes about 40 ms), and the Hall of Fame stores them as a proof beside each summary.
+
+Every reader's browser checks the board like this:
+- It loads all the summaries without sorting them, so a fake stored score can't push real players out.
+- It ranks them by recalculated score.
+- It fetches proofs from the top down and replays each life from scratch.
+- It ranks only lives that land on the identical ledger seal, line count, wealth and score.
+
+The tests check four kinds of forgery: inflated wealth with a "consistent" score, a truncated log, a junk move, and someone else's proof attached to a bigger claim. All four are rejected.
+
+What's left: a bot that plays well can still earn a high score. That's legitimate skill, not an exploit, and it's the same limit any replay-verified leaderboard has.
+
 ## 5. Roadmap: making it multiplayer without repeating the mistakes
 
 1. **Server-authoritative engine.** The engine is already pure and deterministic, so run it on the server and have clients send intents (`doAction(id)`), never balances. Persist the action log and replay it to audit any account.
