@@ -45,6 +45,9 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Sleep with alarm:** wakes you in time to commute to your next shift.
 - **Weekly report card:** every Monday you see money in and out by category, the change in your net worth and a chart of it by week. A one-tap share text is ready for X or WhatsApp.
 - **Every district has a hustle,** so a broke player is never stranded.
+- **Hall of lives:** ending a life scores it (net worth, weeks survived, achievements, career level and goal) and keeps your best runs on the start screen.
+- **Sound (optional):** a bank-alert ding for money in, a low tone for money out, and a danfo horn when you travel.
+- **Keyboard:** number keys switch tabs, and A runs the advisor's top suggestion.
 
 ## Layout
 

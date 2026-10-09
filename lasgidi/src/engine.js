@@ -1423,10 +1423,11 @@
     return { kind: 'info', text: 'Shift at ' + hhmm(st) + ' in ' + D.DISTRICTS[c.district].name + '. Leave by ' + hhmm(Math.max(0, st - r.mins)) + ' (' + D.MODES[r.mode].name + ', ' + fmtMins(r.mins) + ').' };
   }
 
-  function jobHint(s) {
+  function jobHint(s, nearHome) {
     var best = null;
     Object.keys(D.CAREERS).forEach(function (cid) {
       var c = D.CAREERS[cid], connect = connectFor(s, cid);
+      if (nearHome && ((s.job && s.job.id === cid) || distance(homeDistrict(s), c.district) > 6)) return;
       if (skillLevel(s, c.skill) < c.req[0] && !connect) return;
       if (c.degree && !s.edu.degree && !connect) return;
       var r = c.district === s.loc ? { mins: 0, cost: 0 } : route(s, c.district, 'cheap');
@@ -1436,7 +1437,7 @@
       var score = commuteKm * 8 - c.pay[0] / 100;
       if (!best || score < best.score) best = { score: score, cid: cid, r: r };
     });
-    if (!best) return { kind: 'info', text: 'No job will take you yet. Build Hustle with gigs like hawking in Oshodi.' };
+    if (!best) return nearHome ? null : { kind: 'info', text: 'No job will take you yet. Build Hustle with gigs like hawking in Oshodi.' };
     var c = D.CAREERS[best.cid];
     if (c.district === s.loc) return { kind: 'go', text: 'You have no job. ' + c.titles[0] + ' (' + naira(c.pay[0]) + '/shift) is hiring right here.', act: { type: 'apply', id: best.cid } };
     return { kind: 'go', text: 'You have no job. ' + c.titles[0] + ' in ' + D.DISTRICTS[c.district].name + ' will take you (' + naira(c.pay[0]) + '/shift). Apply in person.', act: { type: 'travel', dest: c.district, mode: best.r.mode } };
@@ -1481,11 +1482,20 @@
       if (s.rentRate > weekly * 0.45 && s.cash + s.bank < s.rentRate * 6) {
         var near = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && D.HOMES[k].rent * s.econ.infl <= weekly * 0.3; })
           .sort(function (x, y) { return distance(D.HOMES[x].district, jc.district) - distance(D.HOMES[y].district, jc.district); })[0];
-        if (near) out.push({ kind: 'warn', text: 'Rent (' + naira(s.rentRate) + ') eats most of your ' + naira(Math.round(weekly)) + ' weekly pay. ' + D.HOMES[near].name + ' is ' + naira(price(s, D.HOMES[near].rent)) + ' a week and close to work. Move-in costs ' + naira(moveInCost(s, near).total) + '.', act: { type: 'tab', id: 'money' } });
+        if (near && near !== s.home) {
+          var mc = moveInCost(s, near).total, canMove = !s.arrears && canAfford(s, mc);
+          out.push({ kind: 'warn', text: 'Rent (' + naira(s.rentRate) + ') eats most of your ' + naira(Math.round(weekly)) + ' weekly pay. ' + D.HOMES[near].name + ' is ' + naira(price(s, D.HOMES[near].rent)) + ' a week and close to work. Move-in costs ' + naira(mc) + '.',
+            act: canMove ? { type: 'move', id: near } : { type: 'tab', id: 'money' } });
+        }
       }
     }
     if (s.arrears) out.push({ kind: 'warn', text: 'You owe ' + naira(s.arrears) + ' in rent. Three missed rents and you are out.', act: { type: 'tab', id: 'money' } });
     if (!s.job) out.push(jobHint(s));
+    else if (distance(homeDistrict(s), D.CAREERS[s.job.id].district) > 12) {
+      // A long commute burns money and energy every day; a job near home may pay less but leave more.
+      var local = jobHint(s, true);
+      if (local && local.act) out.push(Object.assign(local, { kind: 'info', text: 'Your commute to ' + D.DISTRICTS[D.CAREERS[s.job.id].district].name + ' is ' + distance(homeDistrict(s), D.CAREERS[s.job.id].district) + ' km each way. ' + local.text.replace(/^You have no job\. /, 'Closer to home: ') }));
+    }
     if (s.loc !== homeDistrict(s) && !out.some(function (t) { return t.act; })) {
       var home = route(s, homeDistrict(s), 'cheap');
       if (home && home.mode === 'trek' && s.cash + s.bank < price(s, 300)) {
@@ -1526,6 +1536,17 @@
     }).slice(0, 3);
   }
 
+  // A scored summary of this life, for the hall of lives.
+  function lifeSummary(s) {
+    var weeks = week(s) + 1, worth = netWorth(s), achievements = Object.keys(s.ach).length;
+    var score = Math.round(Math.max(0, worth) / 1000 + weeks * 10 + achievements * 50 + (s.won ? 500 : 0) + (s.job ? s.job.level * 40 : 0));
+    return {
+      name: s.name, origin: s.origin, goal: s.goal, won: !!s.won, weeks: weeks, worth: worth,
+      peak: s.stats.peakWorth, title: s.job ? D.CAREERS[s.job.id].titles[s.job.level] : null,
+      home: s.home, achievements: achievements, score: score, tampered: !!s.tampered
+    };
+  }
+
   function shareText(s) {
     var title = s.job ? D.CAREERS[s.job.id].titles[s.job.level] : 'job hunting';
     var got = Object.keys(s.ach).length, total = Object.keys(ACHIEVEMENTS).length;
@@ -1553,7 +1574,7 @@
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
-    migrate: migrate, advise: advise, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
+    migrate: migrate, advise: advise, lifeSummary: lifeSummary, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
     CATEGORY_NAMES: CATEGORY_NAMES, category: category, SCHEMA: SCHEMA,
     _advance: advance, _post: post
   };

@@ -20,14 +20,57 @@
     return null;
   }
 
+  var LIVES_KEY = 'lasgidi.lives.v1', PREF_KEY = 'lasgidi.prefs.v1';
+  function readJSON(k, fallback) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
+  function writeJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
+  var prefs = readJSON(PREF_KEY, { sound: false });
+  function lives() { return readJSON(LIVES_KEY, []); }
+  function archiveLife() {
+    if (!S) return;
+    var list = lives();
+    list.push(Object.assign(L.lifeSummary(S), { ended: Date.now() }));
+    list.sort(function (a, b) { return b.score - a.score; });
+    writeJSON(LIVES_KEY, list.slice(0, 20));
+  }
+
+  /* ---------- sound: bank alerts and the danfo horn (off by default) ---------- */
+  var audio = null;
+  function ctx() {
+    if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; } }
+    if (audio && audio.state === 'suspended') audio.resume().catch(function () {});
+    return audio;
+  }
+  function tone(freq, start, len, type, vol) {
+    var a = ctx(); if (!a) return;
+    var o = a.createOscillator(), g = a.createGain(), t = a.currentTime + start;
+    o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + len + 0.02);
+  }
+  var sounds = {
+    credit: function () { tone(988, 0, 0.14); tone(1319, 0.13, 0.22); },
+    debit: function () { tone(440, 0, 0.18, 'triangle', 0.08); },
+    horn: function () { tone(370, 0, 0.12, 'square', 0.05); tone(370, 0.17, 0.2, 'square', 0.05); },
+    bad: function () { tone(330, 0, 0.2, 'triangle', 0.1); tone(247, 0.18, 0.35, 'triangle', 0.1); },
+    good: function () { tone(784, 0, 0.12); tone(988, 0.1, 0.12); tone(1175, 0.2, 0.25); }
+  };
+  function play(name) { if (prefs.sound && sounds[name]) { try { sounds[name](); } catch (e) { /* audio blocked */ } } }
+
   function esc(v) {
     return String(v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   }
   function dur(m) { return L.fmtMins(m); }
 
   /* ---------- run an engine call, then render ---------- */
-  function run(fn) {
+  function run(fn, kind) {
     var res = fn();
+    if (res && res.ok && kind === 'travel') play('horn');
+    else if (res && res.collapsed) play('bad');
+    else if (res && (res.won || /Promoted/.test(res.msg || ''))) play('good');
+    else if (S && S.alerts && S.alerts.length) {
+      var net = S.alerts.reduce(function (a, x) { return a + (x.memo === 'Transfer' ? 0 : x.amt); }, 0);
+      if (net > 0) play('credit'); else if (net < 0) play('debit');
+    }
     if (res && res.msg) ui.toasts.push({ msg: res.msg, ok: res.ok });
     (S.alerts || []).forEach(function (a) { ui.toasts.push({ alert: a }); });
     S.alerts = [];
@@ -75,6 +118,7 @@
       '<div class="brand">LASGIDI</div>' +
       '<div class="clock"><b>' + L.clockLabel(S) + '</b><span>' + L.dateLabel(S) + '</span></div>' +
       '<div class="chips">' + chips.join('') + '</div>' +
+      '<button class="chip chip-btn" id="sound" data-sound="1" aria-pressed="' + !!prefs.sound + '">' + (prefs.sound ? 'Sound on' : 'Sound off') + '</button>' +
       '<div class="wallet"><div><small>Cash</small><b>' + N(S.cash) + '</b></div><div><small>Bank</small><b>' + N(S.bank) + '</b></div></div>' +
       '</div></header>';
   }
@@ -188,6 +232,7 @@
       if (a && a.type === 'act') btn = '<button class="btn sm go" id="adv-' + i + '" data-act="' + a.id + '">Do it</button>';
       if (a && a.type === 'travel') btn = '<button class="btn sm go" id="adv-' + i + '" data-travel="' + a.dest + '" data-mode="' + a.mode + '">Go</button>';
       if (a && a.type === 'apply') btn = '<button class="btn sm go" id="adv-' + i + '" data-apply="' + a.id + '">Apply</button>';
+      if (a && a.type === 'move') btn = '<button class="btn sm go" id="adv-' + i + '" data-move="' + a.id + '">Move</button>';
       if (a && a.type === 'tab') btn = '<button class="btn sm ghost" id="adv-' + i + '" data-tab="' + a.id + '">Open ' + esc(a.id) + '</button>';
       return '<div class="tip ' + t.kind + '"><p>' + esc(t.text) + '</p>' + btn + '</div>';
     }).join('') + '</section>';
@@ -347,6 +392,8 @@
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
       (S.history.length ? '<details><summary>Show as table</summary><div class="stmt-wrap"><table class="stmt"><tbody>' + S.history.slice().reverse().map(function (h) { return '<tr><td>Week ' + h.w + '</td><td class="n num">' + N(h.worth) + '</td></tr>'; }).join('') + '</tbody></table></div></details>' : '') + '</div>';
+    var sum = L.lifeSummary(S), best = lives()[0];
+    html += '<div class="section"><h3>Score so far: <span class="num">' + sum.score + '</span></h3><p class="note">Net worth ÷ ₦1,000, plus 10 a week survived, 50 an achievement, 40 a career level and 500 for your goal.' + (best ? ' Your best life scored ' + best.score + '.' : '') + '</p>' + (lives().length ? livesView(5) : '') + '</div>';
     html += '<div class="section"><h3>Share your life</h3>' + shareBlock() + '</div>';
     html += '<div class="section"><h3>Skills</h3><div class="skills">' + Object.keys(D.SKILLS).map(function (k) {
       var lvl = L.skillLevel(S, k), xp = S.skills[k], lo = D.SKILL_XP[lvl], hi = D.SKILL_XP[lvl + 1] || lo;
@@ -363,7 +410,8 @@
     html += '<div class="section"><h3>Save</h3><p class="note">The game saves in this browser. Copy the save code to move to another device.</p>' +
       '<div class="inline"><button class="btn sm" id="copy-save" data-copy="1">Copy save code</button><button class="btn sm ghost" id="new-game" data-new="1">New life</button></div>' +
       '<textarea id="save-code" readonly rows="3" style="width:100%" aria-label="Save code">' + esc(L.serialize(S)) + '</textarea>' +
-      (ui.flash ? '<p class="note">' + esc(ui.flash) + '</p>' : '') + '</div>';
+      (ui.flash ? '<p class="note">' + esc(ui.flash) + '</p>' : '') + '</div>' +
+      '<div class="section"><h3>Keyboard</h3><p class="note">Number keys switch tabs in the order shown (1 is Do). A runs the top suggestion. Tab and Enter work everywhere, including the map.</p></div>';
     return html + '</div>';
   }
 
@@ -397,6 +445,14 @@
     return '';
   }
 
+  function livesView(limit) {
+    var list = lives().slice(0, limit || 5);
+    if (!list.length) return '';
+    return '<div class="stmt-wrap"><table class="stmt lives"><thead><tr><th>Life</th><th>Ended as</th><th class="n">Weeks</th><th class="n">Net worth</th><th class="n">Score</th></tr></thead><tbody>' + list.map(function (l) {
+      return '<tr><td>' + esc(l.name) + ' <span class="muted">· ' + esc(D.ORIGINS[l.origin] ? D.ORIGINS[l.origin].name : l.origin) + '</span>' + (l.won ? ' <span class="gain">✓ ' + esc(D.GOALS[l.goal].name) + '</span>' : '') + (l.tampered ? ' <span class="cost">edited save</span>' : '') + '</td><td>' + esc(l.title || 'Jobless') + '</td><td class="n num">' + l.weeks + '</td><td class="n num">' + N(l.worth) + '</td><td class="n num"><b>' + l.score + '</b></td></tr>';
+    }).join('') + '</tbody></table></div>';
+  }
+
   /* ---------- intro / new game ---------- */
   function introView() {
     var goals = Object.keys(D.GOALS).map(function (k, i) {
@@ -412,6 +468,7 @@
       (o ? '<b>' + esc(o.name) + '</b><p style="margin:0">' + esc(o.text) + '</p>' : '<p style="margin:0">Lagos decides where you start. The roll is random and happens once per life.</p>') +
       '<div class="odds"><span>LAPO Baby 50%</span><span>Ajepako 35%</span><span>Nepo Baby 15%</span></div>' +
       '<div class="inline">' + (o ? '<button class="btn go" id="start" data-start="1">Start life in ' + esc(D.DISTRICTS[D.HOMES[o.home].district].name) + '</button>' : '<button class="btn go" id="roll" data-roll="1">Roll the birth lottery</button>') + '</div></div>' +
+      (lives().length ? '<div class="field"><span class="label">Hall of lives · best scores</span>' + livesView(5) + '</div>' : '') +
       '<details class="import"><summary>Continue from a save code</summary><textarea id="import-code" aria-label="Paste save code" placeholder="LSG1...."></textarea><div class="inline"><button class="btn sm" id="import" data-import="1">Load save</button><span class="note">' + esc(ui.importMsg) + '</span></div></details>' +
       '<p class="note">Lasgidi is a work of fiction. In-game naira has no real value and cannot be bought or cashed out.</p>' +
       '</div>';
@@ -437,7 +494,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -466,7 +523,7 @@
     if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; render(); return; }
     if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; render(); return; }
     if (ds.clearSel) { ui.sel = null; render(); return; }
-    if (ds.travel) { run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; if (ui.tab === 'map') ui.tab = 'do'; } return r; }); return; }
+    if (ds.travel) { run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; if (ui.tab === 'map') ui.tab = 'do'; } return r; }, 'travel'); return; }
     if (ds.act) { run(function () { return L.doAction(S, ds.act); }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; L._advance(S, 60); return { ok: true, msg: 'An hour passes.' }; }); return; }
     if (ds.apply) { run(function () { return L.applyJob(S, ds.apply); }); return; }
@@ -484,6 +541,7 @@
     if (ds.car) { run(function () { return L.buyCar(S); }); return; }
     if (ds.choice) { run(function () { return L.resolveChoice(S, +ds.choice); }); return; }
     if (ds.wonok) { S.wonSeen = true; save(); render(); return; }
+    if (ds.sound) { prefs.sound = !prefs.sound; writeJSON(PREF_KEY, prefs); if (prefs.sound) { ctx(); play('credit'); } render(); return; }
     if (ds.repok) { S.reportSeen = S.report.w; save(); render(); return; }
     if (ds.copyshare) {
       var txt = L.shareText(S);
@@ -501,8 +559,9 @@
       return;
     }
     if (ds.new) {
-      if (!ui.confirmNew) { ui.confirmNew = true; ui.flash = 'Tap "New life" again to abandon this life and start over.'; render(); return; }
+      if (!ui.confirmNew) { ui.confirmNew = true; ui.flash = 'Tap "New life" again to end this life. It will be scored (' + L.lifeSummary(S).score + ' points) and kept in your hall of lives.'; render(); return; }
       ui.confirmNew = false; ui.flash = '';
+      archiveLife();
       S = null;
       try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }
       render();
@@ -510,6 +569,19 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    if (S && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target.matches && e.target.matches('input, textarea, select'))) {
+      var tabs = ['do', 'map', 'work', 'money', 'me', 'gist'];
+      var n = parseInt(e.key, 10);
+      if (n >= 1 && n <= 6 && !document.querySelector('.scrim')) {
+        var narrow = window.matchMedia('(max-width: 899px)').matches;
+        var list = narrow ? tabs : tabs.filter(function (t) { return t !== 'map'; });
+        if (list[n - 1]) { ui.tab = list[n - 1]; render(); var tb = document.getElementById('tab-' + ui.tab); if (tb) tb.focus(); e.preventDefault(); return; }
+      }
+      if ((e.key === 'a' || e.key === 'A') && !document.querySelector('.scrim')) {
+        var b = document.querySelector('.advice button:not([disabled])');
+        if (b) { b.click(); e.preventDefault(); return; }
+      }
+    }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-go]')) {
       e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     }

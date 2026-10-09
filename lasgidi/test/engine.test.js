@@ -304,3 +304,35 @@ test('a player who follows the advisor survives and gets promoted', () => {
   assert.ok(s.job && s.job.level >= 2, 'job: ' + JSON.stringify(s.job));
   assert.notEqual(s.home, 'squat');
 });
+
+test('advisor offers a one-tap move when rent eats the pay', () => {
+  const s = game('nepo');                // Lekki studio, ₦40,000/week
+  s.loc = 'mushin';
+  L.applyJob(s, 'buka');                 // ₦4,200/shift
+  L.withdraw(s, s.bank);
+  L._post(s, 'cash', -(s.cash - 120000), 'test drain');
+  const tip = L.advise(s).find(t => t.act && t.act.type === 'move');
+  assert.ok(tip, JSON.stringify(L.advise(s)));
+  assert.ok(L.moveHouse(s, tip.act.id).ok);
+  assert.ok(s.rentRate < 10000);
+  sane(s);
+});
+
+test('advisor suggests a job near home when the commute is long', () => {
+  const s = game('lapo');                // home Mushin
+  s.loc = 'vi'; s.friends.kunle.lvl = 60;
+  L.applyJob(s, 'bank');
+  s.loc = 'mushin';
+  s.t = 1440 * 5 + 14 * 60;              // Saturday afternoon, no shift
+  const tip = L.advise(s).find(t => /commute/.test(t.text));
+  assert.ok(tip && tip.act, JSON.stringify(L.advise(s)));
+});
+
+test('life summary scores a run', () => {
+  const s = game('mid');
+  const a = L.lifeSummary(s);
+  L._advance(s, 14 * 1440);
+  const b = L.lifeSummary(s);
+  assert.ok(b.weeks === a.weeks + 2 && b.score !== a.score);
+  assert.equal(typeof b.score, 'number');
+});
