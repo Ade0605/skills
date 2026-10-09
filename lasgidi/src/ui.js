@@ -99,6 +99,7 @@
       if (!el) return;
       if (el.type === 'radio') el.checked = true; else el.value = kept[id];
     });
+    mountPlayground();
     if (focusId) { var f = document.getElementById(focusId); if (f) f.focus(); }
     syncPresence();
   }
@@ -329,57 +330,47 @@
     }).join('') + '</div>';
     var body = { do: doView, map: function () { return mapBlock(); }, work: workView, money: moneyView, me: meView, gist: gistView }[ui.tab]();
     return '<div class="board">' +
-      '<section class="panel map-panel" aria-label="Map of Lagos">' + mapBlock() + '</section>' +
+      // One map per layout: the desktop panel, or the Map tab on phones.
+      (isNarrow ? '' : '<section class="panel map-panel" aria-label="Map of Lagos">' + mapBlock() + '</section>') +
       '<section class="panel work-panel">' + bar + '<div class="tab-body">' + body + '</div></section></div>';
   }
 
-  /* ---------- map ---------- */
-  function px(d) { return { x: 14 + D.DISTRICTS[d].x * 10, y: 16 + D.DISTRICTS[d].y * 10 }; }
-  function poly(pts) { return pts.map(function (p) { return (14 + p[0] * 10) + ',' + (16 + p[1] * 10); }).join(' '); }
+  /* ---------- map: the playground ---------- */
+  var playground = null;
+  function sceneFor() {
+    var banner = '';
+    if (S.econ.policy) banner = D.POLICIES[S.econ.policy].name + ' is law for ' + S.econ.policyWeeks + ' more week' + (S.econ.policyWeeks === 1 ? '' : 's');
+    else if (S.econ.fuelDays) banner = 'Fuel scarcity: fares are up 60%';
+    else if (S.econ.flood) banner = 'Flooding on the Island today';
+    else if (L.isDecember(S)) banner = 'Detty December: prices up, parties everywhere';
+    return {
+      loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
+      hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
+      flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others,
+      clock: L.clockLabel(S), banner: banner
+    };
+  }
+  function mountPlayground() {
+    if (!S || !window.LasgidiPlayground) return;
+    var narrow = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
+    var slot = document.querySelector(narrow ? '.tab-body .pg-slot' : '.map-panel .pg-slot');
+    if (!slot) return;
+    if (!playground) playground = window.LasgidiPlayground.create({ onSelect: function (k) { ui.sel = k === S.loc ? null : k; render(); } });
+    slot.appendChild(playground.el);
+    playground.update(sceneFor());
+  }
 
   function mapBlock() {
-    var lagoon = poly([[16.5, 6.5], [41, 6.5], [41.5, 19.5], [34, 21.2], [25, 19.6], [18.5, 19.2], [17, 17]]);
-    var harbour = poly([[13.2, 19.6], [18.5, 19.2], [17.6, 20.4], [15, 20.2], [13.8, 24], [12.2, 27.6], [10.8, 27.6]]);
-    var ocean = poly([[-1.4, 27.6], [41.5, 27.6], [41.5, 29], [-1.4, 29]]);
-    var roads = D.ROADS.map(function (r) {
-      var a = px(r[0]), b = px(r[1]);
-      return '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" opacity=".55"/>';
-    }).join('');
-    var ferryPairs = [['ikorodu', 'island'], ['ikorodu', 'ikoyi'], ['island', 'lekki'], ['ikoyi', 'lekki']];
-    var ferries = ferryPairs.map(function (r) {
-      var a = px(r[0]), b = px(r[1]);
-      return '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" stroke="var(--lagoon)" stroke-width="2" stroke-dasharray="5 4"/>';
-    }).join('');
-    var homeD = L.homeDef(S).district, jobD = S.job ? D.CAREERS[S.job.id].district : null;
-    var nodes = Object.keys(D.DISTRICTS).map(function (k) {
-      var p = px(k), here = k === S.loc, sel = k === ui.sel;
-      var below = ['festac', 'surulere', 'vi', 'ajah', 'lekki', 'island'].indexOf(k) >= 0;
-      var tags = [];
-      if (k === homeD) tags.push('HOME');
-      if (k === jobD) tags.push('WORK');
-      var tagSvg = tags.map(function (t, i) {
-        var w = t.length * 5.6 + 6, tx = p.x - 10 - w, ty = p.y - 5 + i * 13;
-        if (tx < 2) tx = p.x + 10;
-        return '<rect class="tagbg" x="' + tx + '" y="' + ty + '" width="' + w + '" height="11" rx="2"/><text class="tag" x="' + (tx + 3) + '" y="' + (ty + 8.5) + '">' + t + '</text>';
-      }).join('');
-      return '<g class="node' + (here ? ' here' : '') + (sel ? ' sel' : '') + '" data-go="' + k + '" tabindex="0" role="button" aria-label="' + esc(D.DISTRICTS[k].name) + (here ? ' (you are here)' : '') + '">' +
-        (here ? '<circle class="ring" cx="' + p.x + '" cy="' + p.y + '" r="8"/>' : '') +
-        '<circle class="dot" cx="' + p.x + '" cy="' + p.y + '" r="' + (here ? 8 : 6.5) + '"/>' +
-        (online.peers[k] ? '<g class="peers" aria-hidden="true"><circle cx="' + (p.x + 9) + '" cy="' + (p.y + 7) + '" r="6.5"/><text x="' + (p.x + 9) + '" y="' + (p.y + 10) + '" text-anchor="middle">' + Math.min(99, online.peers[k]) + '</text></g>' : '') +
-        '<circle cx="' + p.x + '" cy="' + p.y + '" r="16" fill="transparent"/>' +
-        '<text x="' + p.x + '" y="' + (below ? p.y + 21 : p.y - 12) + '" text-anchor="middle">' + esc(D.DISTRICTS[k].name) + '</text>' + tagSvg + '</g>';
-    }).join('');
-    var svg = '<svg viewBox="0 0 430 310" role="group" aria-label="Lagos districts. Select one to plan a trip.">' +
-      '<rect x="0" y="0" width="430" height="310" fill="var(--paper)"/>' +
-      '<polygon points="' + lagoon + '" fill="var(--water)"/><polygon points="' + harbour + '" fill="var(--water)"/><polygon points="' + ocean + '" fill="var(--water)"/>' +
-      '<text x="300" y="120" font-size="11" font-style="italic" fill="var(--lagoon)" text-anchor="middle">Lagos Lagoon</text>' +
-      '<text x="215" y="303" font-size="11" font-style="italic" fill="var(--lagoon)" text-anchor="middle">Atlantic Ocean</text>' +
-      roads + ferries + nodes + '</svg>';
     var d = D.DISTRICTS[S.loc];
+    var chips = '<div class="pg-chips" role="group" aria-label="Districts">' + Object.keys(D.DISTRICTS).map(function (k) {
+      var here = k === S.loc, sel = k === ui.sel;
+      return '<button type="button" class="pg-chip' + (here ? ' here' : '') + (sel ? ' sel' : '') + '" id="go-' + k + '" data-go="' + k + '"' + (here ? ' aria-current="true"' : '') + '>' + esc(D.DISTRICTS[k].name) +
+        (online.peers[k] ? ' <span class="num">· ' + online.peers[k] + '</span>' : '') + '</button>';
+    }).join('') + '</div>';
     return '<div class="panel-h"><h2>' + esc(d.name) + '</h2><span class="label">' + (d.side === 'island' ? 'Island' : 'Mainland') + '</span></div>' +
-      '<div class="map">' + svg + '</div>' +
+      '<div class="pg-slot"></div>' + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
-      '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) : '<p>' + esc(d.blurb) + ' Select a district to plan a trip.</p>') + '</div>';
+      '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) : '<p>' + esc(d.blurb) + ' Tap a district to plan a trip.</p>') + '</div>';
   }
 
   function travelView(dest) {
