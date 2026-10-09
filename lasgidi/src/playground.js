@@ -112,6 +112,39 @@
         wall: tower ? '#8fa2b3' : st.wall, glass: st.glass || tower, seed: hash(ix, iy, 17) });
     }
   }
+  // Housing estates: each home on the market gets its own plot of matching
+  // buildings. Clear the generic city off those plots first.
+  var MODELS = {
+    room:     { n: [3, 2], gap: 0.26, w: 0.2, d: 0.2, h: [4, 5], roof: ['#8f5a3c', '#7c8a8f'], wall: '#c9b49a' },
+    share:    { n: [2, 1], gap: 0.42, w: 0.32, d: 0.26, h: [12, 14], roof: ['#9aa3a8'], wall: '#d9cdb8' },
+    selfcon:  { n: [3, 1], gap: 0.3, w: 0.24, d: 0.24, h: [8, 9], roof: ['#a8826a'], wall: '#e0d3bd' },
+    miniflat: { n: [2, 2], gap: 0.32, w: 0.26, d: 0.24, h: [9, 11], roof: ['#7c8f4a'], wall: '#ddd3bf' },
+    flat2:    { n: [2, 1], gap: 0.42, w: 0.32, d: 0.3, h: [16, 18], roof: ['#b3a28a'], wall: '#d6c7ad' },
+    flat3:    { n: [3, 1], gap: 0.38, w: 0.3, d: 0.3, h: [20, 24], roof: ['#9fa8b0'], wall: '#cfc6b8' },
+    duplex:   { n: [2, 2], gap: 0.36, w: 0.26, d: 0.22, h: [8, 8], roof: ['#b44a3a', '#4b4f55'], wall: '#efe6d6', pitch: true, lawn: true },
+    luxury:   { n: [2, 1], gap: 0.46, w: 0.32, d: 0.32, h: [46, 58], roof: ['#9fb3c4'], wall: '#8fa2b3', glass: true },
+    mansion:  { n: [1, 1], gap: 0, w: 0.62, d: 0.44, h: [11, 11], roof: ['#3d4a52'], wall: '#f2ede4', pitch: true, lawn: true, pool: true }
+  };
+  var ESTATES = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && D.HOMES[k].x != null; }).map(function (k) {
+    var h = D.HOMES[k], m = MODELS[h.type] || MODELS.room;
+    return { id: k, x: h.x, y: h.y, type: h.type, k: h.district, m: m, r: Math.max(0.45, (Math.max(m.n[0], m.n[1]) * Math.max(m.gap, m.w)) / 2 + 0.25) };
+  });
+  function nearEstate(x, y) { return ESTATES.some(function (e) { return Math.hypot(e.x - x, e.y - y) < e.r + 0.2; }); }
+  var E = D.ESTATE, EX1 = E.x0 + E.cols * E.gap, EY1 = E.y0 + E.rows * E.gap;
+  function inMainlandEstate(x, y) { return x > E.x0 - 0.3 && x < EX1 + 0.3 && y > E.y0 - 0.3 && y < EY1 + 0.3; }
+  buildings = buildings.filter(function (b) { return !nearEstate(b.x, b.y) && !inMainlandEstate(b.x, b.y); });
+  trees = trees.filter(function (t) { return !nearEstate(t.x, t.y) && !inMainlandEstate(t.x, t.y); });
+  function plotXY(n) { return { x: E.x0 + (n % E.cols) * E.gap + E.gap / 2, y: E.y0 + Math.floor(n / E.cols) * E.gap + E.gap / 2 }; }
+  function npcPlot(n) { var h = Math.imul((n + 17) * 2654435761, 1597334677) >>> 0; return (h % 100) < 38; }
+  var ESTATE_ROOFS = ['#3f8f55', '#2f7a63', '#4a9a5a', '#b44a3a', '#4b4f55', '#2f6fa0'];
+  ESTATES.forEach(function (e, ei) {
+    var m = e.m, nx = m.n[0], ny = m.n[1];
+    for (var i = 0; i < nx; i++) for (var j = 0; j < ny; j++) {
+      var bx = e.x + (i - (nx - 1) / 2) * m.gap, by = e.y + (j - (ny - 1) / 2) * m.gap;
+      buildings.push({ x: bx, y: by, w: m.w, dep: m.d, h: m.h[0] + (m.h[1] - m.h[0]) * hash(ei, i * 7 + j, 51), k: e.k, estate: e.id,
+        roof: m.roof[(i + j) % m.roof.length], wall: m.wall, glass: m.glass, pitch: m.pitch });
+    }
+  });
   buildings.sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
   trees.sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
 
@@ -160,7 +193,8 @@
     var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var raf = 0, last = 0, clock = 0;
     var vehicles = [], boats = [];
-    var pins = [], placeHits = [], boardHits = [];
+    var pins = [], placeHits = [], boardHits = [], homeHits = [];
+    var HOME_ICON = { room: '🛏️', share: '👥', selfcon: '🚪', miniflat: '🏠', flat2: '🏢', flat3: '🏢', duplex: '🏡', luxury: '🌆', mansion: '🏰' };
 
     // Vehicles: danfos on roads, ferries on the lagoon.
     D.ROADS.forEach(function (r, i) {
@@ -200,6 +234,13 @@
       return true;
     }
 
+    function fromScreen(sx, sy) {
+      var sc = base.s * cam.z;
+      var ix = (sx - base.ox * cam.z + (W / 2) * (cam.z - 1) - cam.px) / sc;
+      var iy = (sy - base.oy * cam.z + (H / 2) * (cam.z - 1) - cam.py) / sc;
+      var a = ix / (TW / 2), b = iy / (TH / 2);
+      return { x: (a + b) / 2, y: (b - a) / 2 };
+    }
     function toScreen(x, y, z) {
       var p = iso(x, y), s = base.s * cam.z;
       return { x: (p.x * s) + base.ox * cam.z - (W / 2) * (cam.z - 1) + cam.px, y: ((p.y - (z || 0)) * s) + base.oy * cam.z - (H / 2) * (cam.z - 1) + cam.py };
@@ -234,7 +275,7 @@
     function drawStatic() {
       var night = nightLevel(scene.hour, scene.minute);
       var power = powerMap();
-      var key = [W, H, dpr, cam.z, cam.px | 0, cam.py | 0, theme.dark, Math.round(night * 10), JSON.stringify(power), scene.flood ? 1 : 0].join('|');
+      var key = [W, H, dpr, cam.z, cam.px | 0, cam.py | 0, theme.dark, Math.round(night * 10), JSON.stringify(power), scene.flood ? 1 : 0, scene.myPlot, scene.plotSel, JSON.stringify(scene.plotOwners || {})].join('|');
       if (key === staticKey && staticLayer) return;
       staticKey = key;
       if (!staticLayer) staticLayer = document.createElement('canvas');
@@ -288,6 +329,34 @@
       g.fillStyle = theme.dark ? '#3c6a3a' : '#6aa357'; g.fill();
       g.lineWidth = 3 * s; g.strokeStyle = theme.dark ? '#7b7f86' : '#d8d4c8'; g.stroke();
 
+      // Estate plots: a paved pad, lawns for duplexes and the mansion, a pool.
+      ESTATES.forEach(function (e) {
+        var r = e.r, pad = [[e.x - r, e.y - r], [e.x + r, e.y - r], [e.x + r, e.y + r], [e.x - r, e.y + r]];
+        g.beginPath(); pad.forEach(function (c, i) { var q = toScreen(c[0], c[1], 0); if (i) g.lineTo(q.x, q.y); else g.moveTo(q.x, q.y); }); g.closePath();
+        g.fillStyle = e.m.lawn ? (theme.dark ? '#2f4a2c' : '#8fbf6a') : (theme.dark ? '#3a3b38' : '#e3ddcc'); g.fill();
+        g.strokeStyle = theme.dark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)'; g.lineWidth = 1; g.stroke();
+        if (e.m.pool) {
+          var pl = [[e.x + 0.18, e.y + 0.26], [e.x + 0.48, e.y + 0.26], [e.x + 0.48, e.y + 0.44], [e.x + 0.18, e.y + 0.44]];
+          g.beginPath(); pl.forEach(function (c, i) { var q = toScreen(c[0], c[1], 0); if (i) g.lineTo(q.x, q.y); else g.moveTo(q.x, q.y); }); g.closePath();
+          g.fillStyle = '#3fb6d8'; g.fill(); g.strokeStyle = '#ffffff'; g.stroke();
+        }
+      });
+
+      // Mainland Estate: a fenced grid of plots.
+      (function () {
+        var c = [[E.x0 - 0.15, E.y0 - 0.15], [EX1 + 0.15, E.y0 - 0.15], [EX1 + 0.15, EY1 + 0.15], [E.x0 - 0.15, EY1 + 0.15]];
+        g.beginPath(); c.forEach(function (k, i) { var q = toScreen(k[0], k[1], 0); if (i) g.lineTo(q.x, q.y); else g.moveTo(q.x, q.y); }); g.closePath();
+        g.fillStyle = theme.dark ? '#33402f' : '#d4ddb8'; g.fill();
+        g.strokeStyle = theme.dark ? '#7b7f86' : '#9aa08c'; g.lineWidth = Math.max(1, 1.2 * s); g.stroke();
+        var pad = E.gap * 0.42;
+        for (var n = 0; n < E.cols * E.rows; n++) {
+          var p = plotXY(n), mine = scene.myPlot === n, sel = scene.plotSel === n;
+          var q = [[p.x - pad, p.y - pad], [p.x + pad, p.y - pad], [p.x + pad, p.y + pad], [p.x - pad, p.y + pad]];
+          g.beginPath(); q.forEach(function (k, i) { var t = toScreen(k[0], k[1], 0); if (i) g.lineTo(t.x, t.y); else g.moveTo(t.x, t.y); }); g.closePath();
+          g.fillStyle = mine ? theme.danfo : sel ? (theme.dark ? '#2b5f66' : '#bfe2e2') : (theme.dark ? '#3d3e3a' : '#ece8da'); g.fill();
+        }
+      })();
+
       // Roads (bridges included) between districts.
       g.lineCap = 'round';
       D.ROADS.forEach(function (r) {
@@ -308,6 +377,26 @@
       });
       g.setLineDash([]);
 
+      // Road names along the roads; minor roads and streets appear as you zoom in.
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      D.ROADS.forEach(function (r) {
+        var name = D.ROAD_NAMES[r[0] + '-' + r[1]];
+        if (!name || (cam.z < 1.4 && D.MAJOR_ROADS.indexOf(name) < 0)) return;
+        var a = D.DISTRICTS[r[0]], b = D.DISTRICTS[r[1]];
+        groundText(g, name, (a.x + b.x) / 2, (a.y + b.y) / 2, b.x - a.x, b.y - a.y, D.MAJOR_ROADS.indexOf(name) >= 0 ? 0.55 : 0.42, theme.dark ? 'rgba(235,235,225,.85)' : 'rgba(40,42,46,.85)', true);
+      });
+      if (cam.z >= 1.6) {
+        D.STREETS.forEach(function (st) {
+          var p = toScreen(st.a[0], st.a[1], 0), q = toScreen(st.b[0], st.b[1], 0);
+          g.strokeStyle = theme.road; g.lineWidth = Math.max(1.2, 1.6 * s); g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
+          groundText(g, st.name, (st.a[0] + st.b[0]) / 2, (st.a[1] + st.b[1]) / 2, st.b[0] - st.a[0], st.b[1] - st.a[1], 0.3, theme.dark ? 'rgba(235,235,225,.8)' : 'rgba(40,42,46,.8)', true);
+        });
+      }
+      // Area names painted on the ground.
+      D.AREA_LABELS.forEach(function (l) {
+        groundText(g, l[0], l[1], l[2], 1, 0, l[3], theme.dark ? 'rgba(255,255,255,.3)' : 'rgba(30,60,30,.34)', false, true);
+      });
+
       // Water labels.
       g.fillStyle = theme.dark ? 'rgba(160,210,214,.55)' : 'rgba(15,111,120,.55)';
       g.font = 'italic 600 ' + Math.max(9, 11 * Math.min(1.4, s)) + 'px ' + 'Atkinson Hyperlegible, sans-serif';
@@ -317,7 +406,14 @@
       var hb = toScreen(11.5, 24.5, 0); g.fillText('HARBOUR', hb.x, hb.y);
 
       // Trees and buildings, back to front.
-      var items = trees.map(function (t) { return { tree: t, z: t.x + t.y }; }).concat(buildings.map(function (b) { return { b: b, z: b.x + b.y }; }));
+      var houses = [];
+      for (var pn = 0; pn < E.cols * E.rows; pn++) {
+        if (!(npcPlot(pn) || (scene.plotOwners && scene.plotOwners[pn]) || scene.myPlot === pn)) continue;
+        var pp = plotXY(pn);
+        houses.push({ x: pp.x, y: pp.y, w: E.gap * 0.5, dep: E.gap * 0.42, h: 7 + hash(pn, 3, 61) * 3, k: E.district, pitch: true,
+          roof: scene.myPlot === pn ? '#f2b600' : ESTATE_ROOFS[Math.floor(hash(pn, 4, 62) * ESTATE_ROOFS.length)], wall: '#efe9dc' });
+      }
+      var items = trees.map(function (t) { return { tree: t, z: t.x + t.y }; }).concat(buildings.concat(houses).map(function (b) { return { b: b, z: b.x + b.y }; }));
       items.sort(function (a, b) { return a.z - b.z; });
       items.forEach(function (it) { if (it.tree) drawTree(g, it.tree, s); else drawBuilding(g, it.b, s, night, power[it.b.k]); });
 
@@ -326,8 +422,25 @@
       if (dusk > 0) { g.fillStyle = 'rgba(255,140,60,' + (dusk * 0.18).toFixed(3) + ')'; g.fillRect(0, 0, W, H); }
       if (night > 0) {
         g.fillStyle = 'rgba(8,14,40,' + (night * 0.5).toFixed(3) + ')'; g.fillRect(0, 0, W, H);
-        buildings.forEach(function (b) { drawWindows(g, b, s, power[b.k], night); });
+        buildings.concat(houses).forEach(function (b) { drawWindows(g, b, s, power[b.k], night); });
       }
+    }
+
+    // Text laid on the ground plane along direction (dx, dy), size in km.
+    function groundText(g, text, x, y, dx, dy, size, color, halo, bold) {
+      var o = toScreen(x, y, 0), sc = base.s * cam.z;
+      var len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+      // World unit vectors projected to screen (per km).
+      var ax = (ux - uy) * TW / 2 * sc, ay = (ux + uy) * TH / 2 * sc;
+      var bx = (-uy - ux) * TW / 2 * sc, by = (-uy + ux) * TH / 2 * sc;
+      if (ax < 0) { ax = -ax; ay = -ay; bx = -bx; by = -by; } // keep text left-to-right
+      g.save();
+      g.setTransform(dpr * ax, dpr * ay, dpr * bx, dpr * by, dpr * o.x, dpr * o.y);
+      g.font = (bold ? '800 ' : '700 ') + size + 'px Atkinson Hyperlegible, sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      if (halo) { g.lineWidth = size * 0.25; g.strokeStyle = theme.dark ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.75)'; g.strokeText(text, 0, 0); }
+      g.fillStyle = color; g.fillText(text, 0, 0);
+      g.restore();
     }
 
     function drawTree(g, t, s) {
@@ -351,8 +464,20 @@
       g.fillStyle = shade(b.wall, -0.28); g.fill();
       g.beginPath(); g.moveTo(f.p3.x, f.p3.y); g.lineTo(f.p2.x, f.p2.y); g.lineTo(f.p2.x, f.p2.y - up); g.lineTo(f.p3.x, f.p3.y - up); g.closePath();
       g.fillStyle = shade(b.wall, -0.1); g.fill();
-      g.beginPath(); g.moveTo(f.p0.x, f.p0.y - up); g.lineTo(f.p1.x, f.p1.y - up); g.lineTo(f.p2.x, f.p2.y - up); g.lineTo(f.p3.x, f.p3.y - up); g.closePath();
-      g.fillStyle = b.roof; g.fill();
+      if (b.pitch) {
+        // A gabled roof: ridge along x, two slopes and a gable end.
+        var rise = Math.max(3, b.dep * 30) * s;
+        var mL = { x: (f.p0.x + f.p3.x) / 2, y: (f.p0.y + f.p3.y) / 2 - up - rise }, mR = { x: (f.p1.x + f.p2.x) / 2, y: (f.p1.y + f.p2.y) / 2 - up - rise };
+        g.beginPath(); g.moveTo(f.p0.x, f.p0.y - up); g.lineTo(f.p1.x, f.p1.y - up); g.lineTo(mR.x, mR.y); g.lineTo(mL.x, mL.y); g.closePath();
+        g.fillStyle = shade(b.roof, -0.18); g.fill();
+        g.beginPath(); g.moveTo(f.p1.x, f.p1.y - up); g.lineTo(f.p2.x, f.p2.y - up); g.lineTo(mR.x, mR.y); g.closePath();
+        g.fillStyle = shade(b.wall, -0.2); g.fill();
+        g.beginPath(); g.moveTo(f.p3.x, f.p3.y - up); g.lineTo(f.p2.x, f.p2.y - up); g.lineTo(mR.x, mR.y); g.lineTo(mL.x, mL.y); g.closePath();
+        g.fillStyle = b.roof; g.fill();
+      } else {
+        g.beginPath(); g.moveTo(f.p0.x, f.p0.y - up); g.lineTo(f.p1.x, f.p1.y - up); g.lineTo(f.p2.x, f.p2.y - up); g.lineTo(f.p3.x, f.p3.y - up); g.closePath();
+        g.fillStyle = b.roof; g.fill();
+      }
       if (b.glass && up > 18 * s) {
         // Curtain-wall bands by day.
         g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = Math.max(0.5, 0.6 * s);
@@ -409,6 +534,40 @@
         ctx.fillStyle = theme.lagoon; ctx.fillRect(q.x - 1.2 * s, q.y - 2.4 * s, 2.4 * s, 1.4 * s);
       });
 
+      var labels = [];
+      // Estate badges: always for your home; for the rest when Homes is
+      // chosen or you zoom in.
+      homeHits = [];
+      var er = Math.max(6.5, Math.min(12, 6.5 * Math.sqrt(cam.z) * Math.min(1.3, Math.max(0.85, base.s))));
+      ESTATES.forEach(function (e) {
+        var mine = e.id === scene.homeId, sel = e.id === scene.homeSel;
+        if (!(mine || sel || scene.showHomes || cam.z >= 1.6)) return;
+        var p = toScreen(e.x, e.y, 0), cy = p.y - (MODELS[e.type].h[1] + 6) * s - er;
+        ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y - MODELS[e.type].h[1] * s * 0.5); ctx.lineTo(p.x, cy + er); ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x, cy, mine ? er + 2 : er, 0, Math.PI * 2); ctx.fillStyle = mine ? theme.danfo : '#ffffff'; ctx.fill();
+        ctx.lineWidth = sel ? 3 : 2; ctx.strokeStyle = sel ? theme.lagoon : (mine ? theme.danfoInk : '#5d5f63'); ctx.stroke();
+        var icon = HOME_ICON[e.type] || '🏠';
+        if (emojiOk) {
+          ctx.font = Math.round(er * 1.15) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(icon, p.x, cy + er * 0.08);
+        } else { glyph(ctx, 'dome', p.x, cy, er * 0.6); }
+        var n = scene.residents && scene.residents[e.id];
+        if (n) {
+          ctx.beginPath(); ctx.arc(p.x + er, cy - er * 0.6, 7, 0, Math.PI * 2); ctx.fillStyle = theme.lagoon; ctx.fill();
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.fillStyle = '#ffffff'; ctx.font = '700 9px IBM Plex Mono, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(Math.min(99, n)), p.x + er, cy - er * 0.6 + 0.5);
+        }
+        homeHits.push({ id: e.id, x: p.x, y: cy });
+        if (mine || sel) labels.push({ place: { name: mine ? 'Your home · ' + D.HOMES[e.id].name : D.HOMES[e.id].name, type: 'services' }, top: { x: p.x, y: cy + 4 }, pri: mine ? 2 : 1, sel: sel, homeTag: true });
+      });
+      if (scene.myPlot != null) {
+        var mp = plotXY(scene.myPlot), mq = toScreen(mp.x, mp.y, 0), my = mq.y - 14 * s - er;
+        ctx.beginPath(); ctx.arc(mq.x, my, er + 2, 0, Math.PI * 2); ctx.fillStyle = theme.danfo; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = theme.danfoInk; ctx.stroke();
+        if (emojiOk) { ctx.font = Math.round(er * 1.15) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🏡', mq.x, my + er * 0.08); }
+        labels.push({ place: { name: 'Your house · plot ' + (scene.myPlot + 1), type: 'services' }, top: { x: mq.x, y: my + 4 }, pri: 2, homeTag: true });
+      }
+      ctx.textBaseline = 'alphabetic';
+
       // Billboards: a panel on two posts; paid ads rotate every 15 s.
       boardHits = [];
       var slot = Math.floor(Date.now() / 15000);
@@ -443,7 +602,6 @@
 
       // Key places: a coloured badge per category with a small vector glyph.
       placeHits = [];
-      var labels = [];
       var pr = Math.max(6.5, Math.min(12, 6.5 * Math.sqrt(cam.z) * Math.min(1.3, Math.max(0.85, base.s))));
       (scene.places || []).forEach(function (pl) {
         var p = toScreen(pl.x, pl.y, 0), sel = pl.id === scene.place;
@@ -522,7 +680,7 @@
         taken.push(box);
         ctx.fillStyle = l.here ? theme.danfo : (theme.dark ? 'rgba(27,28,30,.9)' : 'rgba(255,255,255,.92)');
         roundRect(ctx, box.x, box.y, box.w, box.h, 8.5); ctx.fill();
-        if (l.place) { ctx.fillStyle = D.PLACE_TYPES[l.place.type].color; ctx.fillRect(box.x + 5, box.y + box.h / 2 - 3, 3, 6); }
+        if (l.place) { ctx.fillStyle = l.homeTag ? theme.danfo : D.PLACE_TYPES[l.place.type].color; ctx.fillRect(box.x + 5, box.y + box.h / 2 - 3, 3, 6); }
         if (l.sel) { ctx.strokeStyle = l.place ? theme.danfo : theme.lagoon; ctx.lineWidth = 2; roundRect(ctx, box.x, box.y, box.w, box.h, 8.5); ctx.stroke(); }
         ctx.fillStyle = l.here ? theme.danfoInk : theme.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(text, box.x + box.w / 2, box.y + box.h / 2 + 0.5);
@@ -612,10 +770,20 @@
         var dd = Math.min(Math.hypot(p.x - x, p.y - y), Math.hypot(p.gx - x, p.gy - y), Math.hypot(p.x - x, p.y - 19 - y));
         if (dd < bd) { bd = dd; best = p.k; }
       });
+      var bestHome = null, bh = 15;
+      homeHits.forEach(function (h) { var dd = Math.hypot(h.x - x, h.y - y); if (dd < bh) { bh = dd; bestHome = h.id; } });
+      if (bestHome && opts.onSelectHome) { opts.onSelectHome(bestHome); return; }
       var bestBoard = null;
       boardHits.forEach(function (b) { if (Math.abs(x - b.x) <= b.w / 2 + 3 && y >= b.y - b.h / 2 - 3 && y <= b.y + b.h / 2) bestBoard = b.id; });
       if (bestBoard && opts.onSelectBoard) { opts.onSelectBoard(bestBoard); return; }
       var bestPlace = null, bp = Math.min(bd, 16);
+      // Tap on the estate grid: work back from the screen to world km.
+      var w = fromScreen(x, y);
+      if (!bestHome && bd > 14 && w.x > E.x0 && w.x < EX1 && w.y > E.y0 && w.y < EY1 && opts.onSelectPlot) {
+        var col = Math.floor((w.x - E.x0) / E.gap), row = Math.floor((w.y - E.y0) / E.gap);
+        var hitPlace = placeHits.some(function (p) { return Math.hypot(p.x - x, p.y - y) < 14; });
+        if (!hitPlace) { opts.onSelectPlot(row * E.cols + col); return; }
+      }
       placeHits.forEach(function (p) { var dd = Math.hypot(p.x - x, p.y - y); if (dd < bp) { bp = dd; bestPlace = p.id; } });
       if (bestPlace && opts.onSelectPlace) opts.onSelectPlace(bestPlace);
       else if (best && opts.onSelect) opts.onSelect(best);
@@ -657,5 +825,5 @@
     };
   }
 
-  root.LasgidiPlayground = { create: create, isWater: isWater, nearestDistrict: nearestDistrict };
+  root.LasgidiPlayground = { create: create, isWater: isWater, nearestDistrict: nearestDistrict, ESTATES: ESTATES };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

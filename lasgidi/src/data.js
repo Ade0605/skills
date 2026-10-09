@@ -43,16 +43,43 @@
   };
 
   // Weekly rent. Move-in costs 4 weeks upfront + 10% agent fee (Lagos style).
+  // Weekly rent. Move-in costs 4 weeks upfront + 10% agent fee (Lagos style).
+  // type and x/y place each home's estate on the map. Only homes added in
+  // later versions carry a daily perk, so older lives replay unchanged.
+  var HOME_TYPES = {
+    room:     { name: 'Single room' },
+    share:    { name: 'Flat share' },
+    selfcon:  { name: 'Self-contained' },
+    miniflat: { name: 'Mini flat' },
+    flat2:    { name: '2-bedroom flat' },
+    flat3:    { name: '3-bedroom flat' },
+    duplex:   { name: 'Duplex' },
+    luxury:   { name: 'Luxury apartment' },
+    mansion:  { name: 'Mansion' }
+  };
   var HOMES = {
-    squat:    { name: "Squatting with a friend", district: 'mushin', rent: 0, power: 0.3, sleep: 0.6, hidden: true },
-    ikorodu_room: { name: 'Room in Ikorodu', district: 'ikorodu', rent: 2000, power: 0.4, sleep: 0.85 },
-    mushin_room:  { name: 'Face-me-I-face-you, Mushin', district: 'mushin', rent: 2500, power: 0.35, sleep: 0.8 },
-    yaba_selfcon: { name: 'Self-con, Yaba', district: 'yaba', rent: 7000, power: 0.5, sleep: 0.9 },
-    festac_flat:  { name: 'Mini-flat, Festac', district: 'festac', rent: 9000, power: 0.55, sleep: 0.95 },
-    suru_flat:    { name: 'Mini-flat, Surulere', district: 'surulere', rent: 12000, power: 0.55, sleep: 0.95 },
-    ajah_2bed:    { name: '2-bed, Ajah', district: 'ajah', rent: 18000, power: 0.6, sleep: 1 },
-    lekki_studio: { name: 'Studio, Lekki Phase 1', district: 'lekki', rent: 40000, power: 0.75, sleep: 1 },
-    ikoyi_apt:    { name: 'Serviced flat, Ikoyi', district: 'ikoyi', rent: 150000, power: 0.95, sleep: 1.1 }
+    squat:    { name: "Squatting with a friend", district: 'mushin', rent: 0, power: 0.3, sleep: 0.6, hidden: true, type: 'room' },
+    ikorodu_room: { name: 'Room in Ikorodu', district: 'ikorodu', rent: 2000, power: 0.4, sleep: 0.85, type: 'room', x: 29.6, y: 2.4 },
+    mushin_room:  { name: 'Face-me-I-face-you, Mushin', district: 'mushin', rent: 2500, power: 0.35, sleep: 0.8, type: 'room', x: 12.4, y: 12.9, perk: 'One room off a shared corridor. Shared toilet, shared kitchen, shared everything.' },
+    festac_room:  { name: 'Single room, Festac', district: 'festac', rent: 3000, power: 0.5, sleep: 0.85, type: 'room', x: 2.2, y: 18.4 },
+    suru_share:   { name: 'Flat-share room, Surulere', district: 'surulere', rent: 4000, power: 0.5, sleep: 0.85, type: 'share', x: 11.0, y: 17.0, daily: { social: 6 }, perk: 'Housemates: a little social life every day.' },
+    yaba_share:   { name: 'Flat-share room, Yaba', district: 'yaba', rent: 4500, power: 0.5, sleep: 0.85, type: 'share', x: 15.0, y: 16.6, daily: { social: 6 }, perk: 'Housemates from UNILAG and the tech hubs: a little social life every day.' },
+    suru_selfcon: { name: 'Self-con, Surulere', district: 'surulere', rent: 6000, power: 0.5, sleep: 0.9, type: 'selfcon', x: 8.8, y: 17.4 },
+    yaba_selfcon: { name: 'Self-con, Yaba', district: 'yaba', rent: 7000, power: 0.5, sleep: 0.9, type: 'selfcon', x: 13.9, y: 16.3 },
+    ikeja_selfcon:{ name: 'Self-con, Ikeja', district: 'ikeja', rent: 8000, power: 0.6, sleep: 0.9, type: 'selfcon', x: 12.0, y: 5.2 },
+    festac_flat:  { name: 'Mini-flat, Festac', district: 'festac', rent: 9000, power: 0.55, sleep: 0.95, type: 'miniflat', x: 1.2, y: 16.0 },
+    suru_flat:    { name: 'Mini-flat, Surulere', district: 'surulere', rent: 12000, power: 0.55, sleep: 0.95, type: 'miniflat', x: 8.6, y: 19.2 },
+    ajah_2bed:    { name: '2-bed, Ajah', district: 'ajah', rent: 18000, power: 0.6, sleep: 1, type: 'flat2', x: 37.6, y: 25.6 },
+    yaba_2bed:    { name: '2-bed flat, Yaba', district: 'yaba', rent: 20000, power: 0.6, sleep: 1, type: 'flat2', x: 13.6, y: 14.6 },
+    ikeja_gra:    { name: '3-bed flat, Ikeja GRA', district: 'ikeja', rent: 30000, power: 0.75, sleep: 1.05, type: 'flat3', x: 8.4, y: 4.4 },
+    lekki_studio: { name: 'Studio, Lekki Phase 1', district: 'lekki', rent: 40000, power: 0.75, sleep: 1, type: 'flat2', x: 29.4, y: 24.6 },
+    lekki_3bed:   { name: '3-bed flat, Lekki', district: 'lekki', rent: 60000, power: 0.8, sleep: 1.05, type: 'flat3', x: 30.0, y: 23.4, daily: { stress: -2 } },
+    ikeja_duplex: { name: 'Duplex, Ikeja GRA', district: 'ikeja', rent: 80000, power: 0.85, sleep: 1.1, type: 'duplex', x: 8.6, y: 2.6, daily: { stress: -3 }, perk: 'A quiet compound with its own generator.' },
+    lekki_duplex: { name: '4-bed duplex, Lekki', district: 'lekki', rent: 110000, power: 0.85, sleep: 1.1, type: 'duplex', x: 31.2, y: 24.4, daily: { stress: -3 }, perk: 'Gated estate with security and an inverter.' },
+    ikoyi_apt:    { name: 'Serviced flat, Ikoyi', district: 'ikoyi', rent: 150000, power: 0.95, sleep: 1.1, type: 'luxury', x: 19.2, y: 20.6 },
+    vi_penthouse: { name: 'Penthouse, Victoria Island', district: 'vi', rent: 260000, power: 0.98, sleep: 1.15, type: 'luxury', x: 20.8, y: 25.4, daily: { stress: -4, fun: 3 }, perk: '24-hour power, a gym and a view of the Atlantic.' },
+    estate_own:   { name: 'Your house, Mainland Estate', district: 'ikeja', rent: 0, power: 0.65, sleep: 1.05, type: 'duplex', owned: true, perk: 'Your own house: no rent, no landlord, an estate transformer.' },
+    banana:       { name: 'Mansion, Banana Island', district: 'ikoyi', rent: 600000, power: 0.99, sleep: 1.2, type: 'mansion', x: 22.4, y: 20.6, daily: { stress: -6, fun: 4 }, perk: 'Pool, staff quarters and 24-hour power on Lagos\'s most exclusive island.' }
   };
 
   var SKILLS = {
@@ -132,6 +159,7 @@
       { id: 'ikeja_cinema', label: 'Watch a film at the mall', mins: 150, cost: 4000, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
       { id: 'ikeja_ielts', label: 'Sit the IELTS exam', mins: 240, cost: 320000, special: 'ielts_exam', when: { days: [5], from: 8, to: 12 } },
       { id: 'ikeja_super', label: 'Supermarket shop at the mall (7 meals)', mins: 60, cost: 7000, special: 'pantry7', when: { from: 9, to: 21 } },
+      { id: 'ikeja_shrine', label: 'Live Afrobeat at the New Afrika Shrine', mins: 180, cost: 2000, fx: { fun: 40, social: 25, stress: -10, energy: -15 }, when: { days: [3,4,5,6], from: 20, to: 24 } },
       { id: 'ikeja_park', label: 'Picnic at Ndubuisi Kanu Park', mins: 90, fx: { fun: 15, social: 10, stress: -12 }, when: { from: 7, to: 19 } },
       { id: 'ikeja_suya', label: 'Suya by the roadside', mins: 30, cost: 1500, fx: { hunger: 35, fun: 5 }, when: { from: 17, to: 24 } }
     ],
@@ -205,6 +233,7 @@
   var PLACES = [
     { id: 'cv', icon: '📱', name: 'Computer Village', type: 'learn', glyph: 'phone', district: 'ikeja', x: 10.8, y: 4.6, acts: ['ikeja_cv_learn', 'ikeja_cv_gig'], text: 'West Africa\'s biggest phone and gadget market. Learn repairs or fix phones for cash.' },
     { id: 'ikeja_mall', icon: '🎬', name: 'Ikeja mall and cinema', type: 'culture', glyph: 'film', district: 'ikeja', x: 9.2, y: 3.4, acts: ['ikeja_cinema', 'ikeja_super'], text: 'Films, air-conditioning and a supermarket under one roof.' },
+    { id: 'shrine', icon: '🎷', name: 'New Afrika Shrine', type: 'nightlife', glyph: 'note', district: 'ikeja', x: 11.7, y: 3.2, acts: ['ikeja_shrine'], text: 'The home of Afrobeat, built in memory of Fela. Live bands Thursday to Sunday nights.' },
     { id: 'kanu_park', icon: '🌳', name: 'Ndubuisi Kanu Park', type: 'outdoors', glyph: 'tree', district: 'ikeja', x: 10.7, y: 3.1, acts: ['ikeja_park'], text: 'Green lawns in Alausa, busy with picnics at weekends.' },
     { id: 'ielts', icon: '📝', name: 'IELTS test centre', type: 'learn', glyph: 'cap', district: 'ikeja', x: 9.3, y: 4.9, acts: ['ikeja_ielts'], text: 'Saturday morning sittings. The first step to Japa.' },
     { id: 'allen', icon: '🍢', name: 'Allen Avenue suya spots', type: 'food', glyph: 'bowl', district: 'ikeja', x: 11.3, y: 4.0, acts: ['ikeja_suya'], text: 'Smoky suya after dark.' },
@@ -253,6 +282,35 @@
     { id: 'lekki_gym', icon: '🏋️', name: 'Lekki gym', type: 'outdoors', glyph: 'dumbbell', district: 'lekki', x: 28.7, y: 23.6, acts: ['lekki_gym'], text: 'Classes all day. Zainab trains here.' },
     { id: 'lekki_cafe', icon: '☕', name: 'Lekki cafés', type: 'food', glyph: 'bowl', district: 'lekki', x: 27.6, y: 23.7, acts: ['lekki_cafe', 'lekki_super', 'lekki_errands'], text: 'Brunch, a supermarket and errands for estate residents.' },
     { id: 'ajah_market', icon: '🧺', name: 'Ajah market', type: 'food', glyph: 'basket', district: 'ajah', x: 38.6, y: 24.6, acts: ['ajah_market', 'ajah_spot', 'ajah_shop'], text: 'Foodstuff, a local spot and your cousin\'s shop.' }
+  ];
+
+  // Mainland Estate: a grid of house plots north of the Lagoon. Plots marked
+  // taken by hash() are lived in already; the rest are for sale, one per player.
+  var ESTATE = { name: 'Mainland Estate', district: 'ikeja', x0: 13.6, y0: 0.4, cols: 18, rows: 6, gap: 0.5, home: 'estate_own', property: 'estate_house' };
+
+  // Named roads (by district pair) and streets inside districts.
+  var ROAD_NAMES = {
+    'ikeja-oshodi': 'Agege Motor Road', 'oshodi-mushin': 'Agege Motor Road', 'mushin-surulere': 'Funsho Williams Avenue',
+    'mushin-yaba': 'Herbert Macaulay Way', 'surulere-festac': 'Badagry Expressway', 'surulere-yaba': 'Ojuelegba Road',
+    'yaba-island': 'Third Mainland Bridge', 'ikeja-ikorodu': 'Kudirat Abiola Way', 'oshodi-festac': 'Apapa–Oshodi Expressway',
+    'island-ikoyi': 'Awolowo Road', 'ikoyi-vi': 'Falomo Bridge', 'island-vi': 'Ahmadu Bello Way', 'ikoyi-lekki': 'Lekki–Ikoyi Link Bridge',
+    'vi-lekki': 'Ozumba Mbadiwe Avenue', 'lekki-ajah': 'Lekki–Epe Expressway', 'ikorodu-yaba': 'Ikorodu Road'
+  };
+  var MAJOR_ROADS = ['Third Mainland Bridge', 'Lekki–Epe Expressway', 'Ikorodu Road'];
+  var STREETS = [
+    { name: 'Allen Avenue', a: [10.6, 4.4], b: [12.0, 3.9] },
+    { name: 'Obafemi Awolowo Way', a: [9.2, 2.6], b: [11.6, 2.4] },
+    { name: 'Herbert Macaulay Way', a: [14.2, 14.0], b: [15.8, 16.4] },
+    { name: 'Bode Thomas Street', a: [9.0, 17.6], b: [11.0, 18.4] },
+    { name: 'Broad Street', a: [15.0, 22.0], b: [17.0, 22.4] },
+    { name: 'Adeola Odeku Street', a: [18.0, 24.4], b: [20.0, 24.9] },
+    { name: 'Admiralty Way', a: [26.6, 23.0], b: [28.6, 23.2] },
+    { name: 'Bourdillon Road', a: [19.6, 20.4], b: [20.6, 22.0] }
+  ];
+  // Big names painted on the ground: [text, x, y, size in km].
+  var AREA_LABELS = [
+    ['MAINLAND', 6.5, 12.5, 1.2], ['THE ISLAND', 15.0, 25.6, 0.8], ['IKOYI', 20.6, 22.6, 0.55], ['BANANA ISLAND', 23.6, 21.2, 0.45],
+    ['LEKKI', 33.0, 24.8, 0.9], ['MAINLAND ESTATE', 18.0, 3.7, 0.55], ['AIRPORT', 6.4, 1.9, 0.5]
   ];
 
   // Ad boards at high-traffic spots. Players rent them with in-game naira.
@@ -336,7 +394,8 @@
   var PROPERTIES = {
     iko_plot:  { name: 'Plot of land, Ikorodu', price: 6000000, weekly: 0, house: false },
     iko_house: { name: 'Bungalow, Ikorodu', price: 35000000, weekly: 90000, house: true },
-    lekki_terrace: { name: 'Terrace, Lekki', price: 150000000, weekly: 450000, house: true }
+    lekki_terrace: { name: 'Terrace, Lekki', price: 150000000, weekly: 450000, house: true },
+    estate_house: { name: 'House in Mainland Estate', price: 12000000, weekly: 0, house: true, plot: true }
   };
 
   var CAR = { name: 'Tokunbo Corolla', price: 8000000 };
@@ -366,8 +425,9 @@
 
   var DATA = {
     DISTRICTS: DISTRICTS, ROADS: ROADS, FERRY_STOPS: FERRY_STOPS, BRT_STOPS: BRT_STOPS,
-    OKADA_BAN: OKADA_BAN, MODES: MODES, HOMES: HOMES, SKILLS: SKILLS, SKILL_XP: SKILL_XP,
+    OKADA_BAN: OKADA_BAN, MODES: MODES, HOMES: HOMES, HOME_TYPES: HOME_TYPES, SKILLS: SKILLS, SKILL_XP: SKILL_XP,
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
+    ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, BUSINESSES: BUSINESSES, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };

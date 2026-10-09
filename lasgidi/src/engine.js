@@ -349,6 +349,8 @@
   }
 
   function onNewDay(s) {
+    var hd = homeDef(s);
+    if (hd.daily) applyFx(s, hd.daily); // perks of homes added after v0.6
     var d = day(s), yesterday = d - 1, yDow = yesterday % 7;
     // Missed shift check.
     if (s.job) {
@@ -458,7 +460,13 @@
     return ok('Paid ' + naira(paid) + ' towards arrears.');
   }
 
+  function ownsHome(s, homeId) {
+    var h = D.HOMES[homeId];
+    return !!(h && h.owned && s.properties.some(function (p) { return p.id === D.ESTATE.property; }));
+  }
+
   function moveInCost(s, homeId) {
+    if (D.HOMES[homeId].owned) return { rent: 0, total: 0 };
     var rent = price(s, D.HOMES[homeId].rent);
     var cost = rent * 4 + roundTo(rent * 4 * 0.1, 50);
     if (s.econ.policy === 'tenancy') cost = roundTo(cost / 2, 50);
@@ -469,9 +477,10 @@
     var h = D.HOMES[homeId];
     if (!h || h.hidden) return fail('That place is not on the market.');
     if (homeId === s.home) return fail('You already live here.');
+    if (h.owned && !ownsHome(s, homeId)) return fail('Buy a plot in ' + D.ESTATE.name + ' first.');
     if (s.arrears) return fail('Clear your rent arrears first. No landlord will take you with debt.');
     var c = moveInCost(s, homeId);
-    if (!pay(s, c.total, 'Move-in: 4 weeks rent + agent fee')) return fail('Move-in needs ' + naira(c.total) + ' (4 weeks upfront plus agent fee).');
+    if (c.total && !pay(s, c.total, 'Move-in: 4 weeks rent + agent fee')) return fail('Move-in needs ' + naira(c.total) + ' (4 weeks upfront plus agent fee).');
     s.home = homeId; s.rentRate = c.rent; s.rentLate = 0;
     rollPower(s);
     log(s, 'You moved into ' + h.name + '. Weekly rent ' + naira(c.rent) + '.', 'good');
@@ -1433,6 +1442,39 @@
     return finish(s, ok('Congratulations! You married ' + p.name + '.'));
   }
 
+  /* ---------- Mainland Estate plots ---------- */
+
+  function plotCount() { return D.ESTATE.cols * D.ESTATE.rows; }
+  function plotXY(n) {
+    var c = n % D.ESTATE.cols, r = Math.floor(n / D.ESTATE.cols);
+    return { x: D.ESTATE.x0 + c * D.ESTATE.gap + D.ESTATE.gap / 2, y: D.ESTATE.y0 + r * D.ESTATE.gap + D.ESTATE.gap / 2 };
+  }
+  // Plots lived in by Lagosians who are not players (fixed, the same for everyone).
+  function plotTakenByNpc(n) {
+    var h = Math.imul((n + 17) * 2654435761, 1597334677) >>> 0;
+    return (h % 100) < 38;
+  }
+  function myPlot(s) {
+    var p = s.properties.filter(function (x) { return x.id === D.ESTATE.property; })[0];
+    return p ? p.plot : null;
+  }
+  // The shared store decides who else owns a plot; the engine only refuses NPC
+  // plots and a second plot, and takes the money (a recorded, replayable debit).
+  function buyPlot(s, n) {
+    n = n | 0;
+    if (n < 0 || n >= plotCount()) return fail('No such plot.');
+    if (plotTakenByNpc(n)) return fail('Someone already lives on this plot.');
+    if (myPlot(s) != null) return fail('You already own a house in ' + D.ESTATE.name + '.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var cost = price(s, D.PROPERTIES[D.ESTATE.property].price);
+    s.alerts = [];
+    if (!pay(s, cost, 'Bought plot ' + (n + 1) + ', ' + D.ESTATE.name)) return fail('A house here costs ' + naira(cost) + '.');
+    s.properties.push({ id: D.ESTATE.property, value: cost, plot: n });
+    unlock(s, 'landlord');
+    log(s, 'You own a house on plot ' + (n + 1) + ' in ' + D.ESTATE.name + '. Move in from the Money tab: no rent, ever.', 'good');
+    return finish(s, ok('Plot ' + (n + 1) + ' is yours.'));
+  }
+
   /* ---------- billboards ----------
    * The engine only takes the rent (a recorded, replayable debit). What the
    * ad says lives in the shared store and is built from fixed parts. */
@@ -1975,6 +2017,7 @@
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
+    buyPlot: recorded('bpl', buyPlot), plotCount: plotCount, plotXY: plotXY, plotTakenByNpc: plotTakenByNpc, myPlot: myPlot, ownsHome: ownsHome,
     rentBoard: recorded('rb', rentBoard), boardRent: boardRent, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,

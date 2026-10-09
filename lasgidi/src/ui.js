@@ -120,6 +120,7 @@
       if (el.type === 'radio') el.checked = true; else el.value = kept[id];
     });
     mountPlayground();
+    syncResidence();
     if (focusId) { var f = document.getElementById(focusId); if (f) f.focus(); }
     syncPresence();
   }
@@ -209,6 +210,19 @@
       }, function () { online.sponsored = []; });
     });
     window.claude.use('db').then(function (db) { if (db) subscribeWeekly(); });
+    window.claude.use('db').then(function (db) {
+      if (!db) return;
+      db.collection('residents').limit(500).onSnapshot(function (snap) {
+        online.residents = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, home: r && typeof r.home === 'string' ? r.home : null }; });
+        var ids = online.residents.map(function (r) { return r.id; });
+        if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+        scheduleRender();
+      }, function () { online.residents = []; });
+      db.collection('plots').limit(500).onSnapshot(function (snap) {
+        online.plots = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, plot: r && typeof r.plot === 'number' ? r.plot | 0 : -1, at: r && typeof r.at === 'number' ? r.at : 0 }; });
+        scheduleRender();
+      }, function () { online.plots = []; });
+    });
     window.claude.use('room').then(function (room) {
       if (!room) return;
       online.room = room;
@@ -458,7 +472,9 @@
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
       flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others,
       clock: L.clockLabel(S), banner: banner,
-      places: ui.placeCat === 'boards' ? [] : D.PLACES.filter(function (p) { return !ui.placeCat || p.type === ui.placeCat; }), place: ui.place,
+      places: ui.placeCat === 'boards' || ui.placeCat === 'homes' ? [] : D.PLACES.filter(function (p) { return !ui.placeCat || p.type === ui.placeCat; }), place: ui.place,
+      homeId: S.home, homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
+      myPlot: L.myPlot(S), plotSel: ui.plotSel, plotOwners: plotOwners(),
       boards: boardAdsMap(), board: ui.board
     };
   }
@@ -550,6 +566,75 @@
       });
   }
 
+  /* ---------- homes and the Mainland Estate ---------- */
+  function clearPicks() { ui.sel = null; ui.place = null; ui.board = null; ui.homeSel = null; ui.plotSel = null; online.status = ''; }
+  function marketHomes() {
+    return Object.keys(D.HOMES).filter(function (k) { var h = D.HOMES[k]; return !h.hidden && (!h.owned || L.ownsHome(S, k)); })
+      .sort(function (a, b) { return D.HOMES[a].rent - D.HOMES[b].rent; });
+  }
+  function residentCounts() {
+    var m = {};
+    (online.residents || []).forEach(function (r) { if (r.id !== online.me && D.HOMES[r.home]) m[r.home] = (m[r.home] || 0) + 1; });
+    return m;
+  }
+  // Each plot belongs to whoever claimed it first in the shared store.
+  function plotOwnersById() {
+    var m = {};
+    (online.plots || []).slice().sort(function (a, b) { return a.at - b.at; }).forEach(function (p) {
+      if (p.plot >= 0 && p.plot < L.plotCount() && !L.plotTakenByNpc(p.plot) && !m[p.plot]) m[p.plot] = p.id;
+    });
+    return m;
+  }
+  function plotOwners() {
+    var m = {}, by = plotOwnersById();
+    Object.keys(by).forEach(function (n) { if (by[n] !== online.me) m[n] = 1; });
+    return m;
+  }
+  function firstFreePlot() {
+    var by = plotOwnersById();
+    for (var n = 0; n < L.plotCount(); n++) if (!L.plotTakenByNpc(n) && !by[n]) return n;
+    return 0;
+  }
+  function homeView(id) {
+    var h = D.HOMES[id];
+    if (!h) return '';
+    var c = L.moveInCost(S, id), here = S.home === id, n = residentCounts()[id] || 0;
+    var names = (online.residents || []).filter(function (r) { return r.home === id && r.id !== online.me; }).slice(0, 4)
+      .map(function (r) { return (online.names[r.id] && online.names[r.id].name) || 'A Lagosian'; });
+    var why = here ? 'You live here' : S.arrears ? 'Clear your rent arrears first' : (h.owned && !L.ownsHome(S, id)) ? 'Buy a plot first' : (S.cash + S.bank < c.total) ? 'Move-in needs ' + N(c.total) : null;
+    return '<div class="inline" style="justify-content:space-between"><h3>' + esc(h.name) + '</h3><button class="btn sm ghost" id="close-home" data-closepick="1">Close</button></div>' +
+      '<p class="note"><b>' + esc(D.HOME_TYPES[h.type].name) + '</b> · ' + esc(D.DISTRICTS[h.district].name) + (n ? ' · <span class="gain">' + n + ' Lagosian' + (n === 1 ? '' : 's') + ' live here' + (names.length ? ': ' + esc(names.join(', ')) : '') + '</span>' : '') + '</p>' +
+      (h.perk ? '<p>' + esc(h.perk) + '</p>' : '') +
+      '<dl class="kv"><dt>Rent</dt><dd class="num">' + (h.owned ? 'None, you own it' : N(c.rent) + ' a week') + '</dd><dt>Move-in</dt><dd class="num">' + (h.owned ? 'Free' : N(c.total) + ' (4 weeks + 10% agent fee)') + '</dd>' +
+      '<dt>Light</dt><dd>' + Math.round(h.power * 100) + '% of the time</dd><dt>Sleep</dt><dd>' + (h.sleep >= 1.1 ? 'Excellent' : h.sleep >= 1 ? 'Good' : h.sleep >= 0.9 ? 'Fair' : 'Rough') + '</dd>' +
+      (h.daily ? '<dt>Every day</dt><dd>' + Object.keys(h.daily).map(function (k) { return (h.daily[k] > 0 ? '+' : '') + h.daily[k] + ' ' + ({ stress: 'stress', social: 'social', fun: 'enjoyment' }[k] || k); }).join(', ') + '</dd>' : '') + '</dl>' +
+      '<div class="inline"><button class="btn go" id="move-' + id + '" data-move="' + id + '"' + (why ? ' disabled' : '') + '>' + (here ? 'Your home' : 'Move here') + '</button>' + (why && !here ? '<span class="why">' + esc(why) + '</span>' : '') + '</div>';
+  }
+  function plotView(n) {
+    var by = plotOwnersById(), owner = by[n], mine = L.myPlot(S) === n, npc = L.plotTakenByNpc(n);
+    var cost = L.price(S, D.PROPERTIES[D.ESTATE.property].price);
+    var html = '<div class="inline" style="justify-content:space-between"><h3>🏡 ' + esc(D.ESTATE.name) + ' · plot ' + (n + 1) + '</h3><button class="btn sm ghost" id="close-plot" data-closepick="1">Close</button></div>';
+    if (mine) {
+      return html + '<p>This is your house. No rent, no landlord, an estate transformer.</p><div class="inline">' +
+        (S.home === D.ESTATE.home ? '<span class="gain">You live here.</span>' : '<button class="btn go" id="move-estate" data-move="' + D.ESTATE.home + '">Move in (free)</button>') + '</div>';
+    }
+    if (npc) return html + '<p class="note">A Lagosian family already lives here. Free plots show as empty pads.</p>';
+    if (owner) return html + '<p class="note">Owned by ' + esc((online.names[owner] && online.names[owner].name) || 'another player') + '.</p>';
+    var have = L.myPlot(S) != null;
+    var why = have ? 'You already own plot ' + (L.myPlot(S) + 1) : (S.cash + S.bank < cost) ? 'You need ' + N(cost - S.cash - S.bank) + ' more' : null;
+    return html + '<p>For sale: a two-storey house on its own plot, north of the Lagoon. Buy it and live rent-free; it counts towards the Landlord goal. One plot each.</p>' +
+      '<dl class="kv"><dt>Price</dt><dd class="num">' + N(cost) + '</dd><dt>Rent</dt><dd>None</dd><dt>Light</dt><dd>65% (estate transformer)</dd></dl>' +
+      '<div class="inline"><button class="btn go" id="buy-plot" data-buyplot="' + n + '"' + (why ? ' disabled' : '') + '>Buy plot ' + (n + 1) + '</button>' + (why ? '<span class="why">' + esc(why) + '</span>' : '') +
+      (online.status ? '<span class="note">' + esc(online.status) + '</span>' : '') + '</div>';
+  }
+  function syncResidence() {
+    if (!online.db || !online.me || !S || S.challenge) return;
+    var key = S.home + ':' + L.myPlot(S);
+    if (online.sentHome === key) return;
+    online.sentHome = key;
+    online.db.doc('residents/' + online.me).set({ home: S.home, at: Date.now() }).catch(function () {});
+  }
+
   /* ---------- places ---------- */
   function placeView(id) {
     var pl = D.PLACES.filter(function (p) { return p.id === id; })[0];
@@ -585,8 +670,10 @@
     if (!slot) return;
     if (!playground) playground = window.LasgidiPlayground.create({
       onSelect: function (k) { ui.sel = k === S.loc ? null : k; ui.place = null; ui.board = null; render(); },
-      onSelectPlace: function (id) { ui.place = id; ui.board = null; ui.sel = null; render(); },
-      onSelectBoard: function (id) { ui.board = id; ui.place = null; ui.sel = null; render(); }
+      onSelectPlace: function (id) { clearPicks(); ui.place = id; render(); },
+      onSelectBoard: function (id) { clearPicks(); ui.board = id; render(); },
+      onSelectHome: function (id) { clearPicks(); ui.homeSel = id; render(); },
+      onSelectPlot: function (n) { clearPicks(); ui.plotSel = n; render(); }
     });
     slot.appendChild(playground.el);
     playground.update(sceneFor());
@@ -597,8 +684,14 @@
     var html = '<div class="pg-chips" role="group" aria-label="Show places"><span class="label">Places</span>' +
       '<button type="button" class="pg-chip' + (!ui.placeCat ? ' sel' : '') + '" id="pc-all" data-placecat="">All</button>' +
       cats.map(function (c) { return '<button type="button" class="pg-chip' + (ui.placeCat === c ? ' sel' : '') + '" id="pc-' + c + '" data-placecat="' + c + '"><i class="sw" style="background:' + D.PLACE_TYPES[c].color + '"></i>' + esc(D.PLACE_TYPES[c].name) + '</button>'; }).join('') +
-      '<button type="button" class="pg-chip' + (ui.placeCat === 'boards' ? ' sel' : '') + '" id="pc-boards" data-placecat="boards">📣 Billboards</button></div>';
-    if (ui.placeCat === 'boards') {
+      '<button type="button" class="pg-chip' + (ui.placeCat === 'boards' ? ' sel' : '') + '" id="pc-boards" data-placecat="boards">📣 Billboards</button>' +
+      '<button type="button" class="pg-chip' + (ui.placeCat === 'homes' ? ' sel' : '') + '" id="pc-homes" data-placecat="homes">🏠 Homes</button></div>';
+    if (ui.placeCat === 'homes') {
+      html += '<div class="pg-chips">' + marketHomes().map(function (k) {
+        var h = D.HOMES[k];
+        return '<button type="button" class="pg-chip' + (ui.homeSel === k ? ' sel' : '') + (S.home === k ? ' here' : '') + '" id="hm-' + k + '" data-homesel="' + k + '">' + esc(h.name) + ' <span class="num">· ' + N(L.price(S, h.rent)) + '/wk</span></button>';
+      }).join('') + '<button type="button" class="pg-chip" id="hm-estate" data-plotsel="' + (L.myPlot(S) != null ? L.myPlot(S) : firstFreePlot()) + '">🏡 ' + esc(D.ESTATE.name) + ' plots</button></div>';
+    } else if (ui.placeCat === 'boards') {
       html += '<div class="pg-chips">' + D.BILLBOARDS.map(function (b) {
         var n = paidAds(b.id).length + sponsoredAds(b.id).length;
         return '<button type="button" class="pg-chip' + (ui.board === b.id ? ' sel' : '') + '" id="bb-' + b.id + '" data-boardsel="' + b.id + '">' + esc(b.name) + (n ? ' <span class="onair">' + n + '</span>' : '') + '</button>';
@@ -622,7 +715,8 @@
       '<div class="pg-slot"></div>' + placeFilters() + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
       '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
-        : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : '<p>' + esc(d.blurb) + ' Tap a district, a place or a billboard.</p>') + '</div>';
+        : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : ui.homeSel ? homeView(ui.homeSel) : ui.plotSel != null ? plotView(ui.plotSel)
+        : '<p>' + esc(d.blurb) + ' Tap a district, a place, a home or a billboard.</p>') + '</div>';
   }
 
   function travelView(dest) {
@@ -764,7 +858,7 @@
 
     html += '<div class="section"><h3>Rent · ' + esc(h.name) + '</h3><dl class="kv"><dt>Weekly rent</dt><dd class="num">' + N(S.rentRate) + '</dd><dt>Due</dt><dd>Saturdays 12:00</dd><dt>Arrears</dt><dd class="num ' + (S.arrears ? 'cost' : '') + '">' + N(S.arrears) + (S.rentLate ? ' · strike ' + S.rentLate + '/3' : '') + '</dd><dt>Light</dt><dd>' + Math.round(h.power * 100) + '% of the time</dd></dl>' +
       (S.arrears ? '<div class="inline"><button class="btn sm" id="pay-arrears" data-arrears="1">Pay arrears</button></div>' : '') +
-      '<details><summary>Move house (4 weeks upfront + 10% agent fee)</summary><div class="list">' + Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden; }).map(function (k) {
+      '<details><summary>Move house (4 weeks upfront + 10% agent fee)</summary><div class="list">' + marketHomes().map(function (k) {
         var hm = D.HOMES[k], c = L.moveInCost(S, k);
         return '<div class="item"><div><h3>' + esc(hm.name) + '</h3><div class="meta"><span class="num">' + N(c.rent) + '/week</span><span>Light ' + Math.round(hm.power * 100) + '%</span><span class="cost num">Move-in ' + N(c.total) + '</span></div></div>' +
           '<button class="btn sm" id="move-' + k + '" data-move="' + k + '"' + (k === S.home ? ' disabled' : '') + '>' + (k === S.home ? 'Home' : 'Move') + '</button></div>';
@@ -937,7 +1031,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -981,6 +1075,19 @@
     if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
     if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
     if (ds.place) { ui.place = ds.place; ui.board = null; ui.sel = null; render(); return; }
+    if (ds.homesel) { clearPicks(); ui.homeSel = ds.homesel; render(); return; }
+    if (ds.plotsel !== undefined) { clearPicks(); ui.plotSel = +ds.plotsel; render(); return; }
+    if (ds.closepick) { clearPicks(); render(); return; }
+    if (ds.buyplot !== undefined) {
+      var pn = +ds.buyplot, by = plotOwnersById();
+      if (by[pn] && by[pn] !== online.me) { online.status = 'Someone just bought this plot. Pick another.'; render(); return; }
+      run(function () {
+        var r = L.buyPlot(S, pn);
+        if (r.ok && online.db && online.me) online.db.doc('plots/' + online.me).set({ plot: pn, at: Date.now() }).catch(function () {});
+        return r;
+      });
+      return;
+    }
     if (ds.boardsel) { ui.board = ds.boardsel; ui.place = null; ui.sel = null; online.status = ''; render(); return; }
     if (ds.closeplace) { ui.place = null; render(); return; }
     if (ds.closeboard) { ui.board = null; online.status = ''; render(); return; }

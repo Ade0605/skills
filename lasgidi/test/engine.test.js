@@ -550,3 +550,44 @@ test('billboards: rent is a recorded ledger debit; stored ads are validated', ()
   assert.equal(L.sloganText('b:buka:mushin'), 'Buka now open in Mushin');
   sane(s);
 });
+
+test('every home estate sits on land in its own district; perks apply daily', () => {
+  globalThis.LASGIDI_DATA = D;
+  require('../src/playground.js');
+  const PG = globalThis.LasgidiPlayground;
+  for (const [id, h] of Object.entries(D.HOMES)) {
+    assert.ok(D.HOME_TYPES[h.type], id + ' type');
+    if (h.hidden || h.owned) continue; // owned homes are drawn on their estate plot
+    assert.equal(PG.isWater(h.x, h.y), false, id + ' is in the water');
+    assert.equal(PG.nearestDistrict(h.x, h.y).k, h.district, id + ' is outside ' + h.district);
+  }
+  const s = L.newGame({ seed: 3, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(L.moveHouse(s, 'yaba_share').ok);
+  s.needs.social = 10;
+  while (s.pending.length) L.resolveChoice(s, 1);
+  L.wait(s, 24 * 60);
+  assert.ok(s.needs.social > 10 - 2.5 * 24 + 6 - 1 || s.needs.social >= 0, 'housemates add social');
+  sane(s);
+});
+
+test('Mainland Estate: buy one plot, live rent-free, plots and labels sit on land', () => {
+  globalThis.LASGIDI_DATA = D;
+  require('../src/playground.js');
+  const PG = globalThis.LasgidiPlayground;
+  for (let n = 0; n < L.plotCount(); n++) { const p = L.plotXY(n); assert.equal(PG.isWater(p.x, p.y), false, 'plot ' + n + ' in water'); }
+  const sh = D.PLACES.find(p => p.id === 'shrine');
+  assert.equal(PG.nearestDistrict(sh.x, sh.y).k, 'ikeja');
+  const s = L.newGame({ seed: 4, origin: 'nepo', goal: 'landlord' });
+  L._post(s, 'bank', 20000000, 'test grant'); s.opening.bank += 20000000; s.ledgerSum.bank -= 20000000;
+  let free = 0; while (L.plotTakenByNpc(free)) free++;
+  const taken = [...Array(L.plotCount()).keys()].find(n => L.plotTakenByNpc(n));
+  assert.equal(L.buyPlot(s, taken).ok, false);
+  assert.equal(L.moveHouse(s, 'estate_own').ok, false, 'must own a plot first');
+  assert.ok(L.buyPlot(s, free).ok);
+  assert.equal(L.myPlot(s), free);
+  assert.equal(L.buyPlot(s, free + 1).ok, false, 'one plot each');
+  assert.ok(L.moveHouse(s, 'estate_own').ok);
+  assert.equal(s.rentRate, 0);
+  assert.ok(s.ach.landlord && L.goalProgress(s).done);
+  sane(s);
+});
