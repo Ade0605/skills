@@ -39,7 +39,9 @@
     brt:   { name: 'BRT',   speed: 30, wait: 15, perKm: 40,  min: 400,  maxKm: 99, road: true,  weave: 0.3, stops: 'brt' },
     ferry: { name: 'Ferry', speed: 24, wait: 20, perKm: 0,   min: 1500, maxKm: 99, road: false, stops: 'ferry' },
     cab:   { name: 'Cab',   speed: 32, wait: 8,  perKm: 350, min: 1500, maxKm: 99, road: true },
-    car:   { name: 'Own car', speed: 32, wait: 0, perKm: 120, min: 0,   maxKm: 99, road: true, needsCar: true }
+    car:   { name: 'Own car', speed: 32, wait: 0, perKm: 120, min: 0,   maxKm: 99, road: true, needsCar: true },
+    boat:  { name: 'Own boat', speed: 45, wait: 5, perKm: 600, min: 0, maxKm: 99, road: false, stops: 'ferry', needsKind: 'boat' },
+    heli:  { name: 'Helicopter', speed: 200, wait: 15, perKm: 0, min: 250000, maxKm: 99, road: false, needsKind: 'heli' }
   };
 
   // Weekly rent. Move-in costs 4 weeks upfront + 10% agent fee (Lagos style).
@@ -159,6 +161,7 @@
       { id: 'ikeja_cinema', label: 'Watch a film at the mall', mins: 150, cost: 4000, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
       { id: 'ikeja_ielts', label: 'Sit the IELTS exam', mins: 240, cost: 320000, special: 'ielts_exam', when: { days: [5], from: 8, to: 12 } },
       { id: 'ikeja_super', label: 'Supermarket shop at the mall (7 meals)', mins: 60, cost: 7000, special: 'pantry7', when: { from: 9, to: 21 } },
+      { id: 'ikeja_dubai', label: 'Weekend in Dubai on your private jet', mins: 2880, cost: 2500000, fx: { fun: 80, social: 40, stress: -40 }, needsVehicle: 'jet' },
       { id: 'ikeja_shrine', label: 'Live Afrobeat at the New Afrika Shrine', mins: 180, cost: 2000, fx: { fun: 40, social: 25, stress: -10, energy: -15 }, when: { days: [3,4,5,6], from: 20, to: 24 } },
       { id: 'ikeja_park', label: 'Picnic at Ndubuisi Kanu Park', mins: 90, fx: { fun: 15, social: 10, stress: -12 }, when: { from: 7, to: 19 } },
       { id: 'ikeja_suya', label: 'Suya by the roadside', mins: 30, cost: 1500, fx: { hunger: 35, fun: 5 }, when: { from: 17, to: 24 } }
@@ -283,6 +286,65 @@
     { id: 'lekki_cafe', icon: '☕', name: 'Lekki cafés', type: 'food', glyph: 'bowl', district: 'lekki', x: 27.6, y: 23.7, acts: ['lekki_cafe', 'lekki_super', 'lekki_errands'], text: 'Brunch, a supermarket and errands for estate residents.' },
     { id: 'ajah_market', icon: '🧺', name: 'Ajah market', type: 'food', glyph: 'basket', district: 'ajah', x: 38.6, y: 24.6, acts: ['ajah_market', 'ajah_spot', 'ajah_shop'], text: 'Foodstuff, a local spot and your cousin\'s shop.' }
   ];
+
+  // Interiors: floor size (in furniture tiles) for each kind of home.
+  var ROOM_SIZES = {
+    room: [4, 3], share: [4, 3], selfcon: [5, 4], miniflat: [6, 5], flat2: [8, 6], flat3: [9, 7],
+    duplex: [10, 8], luxury: [10, 7], mansion: [14, 10]
+  };
+  // Furniture you buy, place and keep when you move. fx are what an item does
+  // while placed in your current home: sleep (added to sleep quality), power
+  // (added to the chance of light), gen (generator cost cut), daily needs, status.
+  var FURNITURE = {
+    foam:      { name: 'Foam mattress', icon: '🛏️', cat: 'Bedroom', price: 25000, w: 2, d: 1, h: 3, color: '#d8cbb0', shape: 'bed', fx: { sleep: 0.05 } },
+    ortho:     { name: 'Orthopaedic bed', icon: '🛏️', cat: 'Bedroom', price: 350000, w: 2, d: 2, h: 5, color: '#7a5bd0', shape: 'bed', fx: { sleep: 0.12 }, status: 2 },
+    king:      { name: 'King-size bed', icon: '👑', cat: 'Bedroom', price: 1200000, w: 3, d: 2, h: 6, color: '#6b3fa0', shape: 'bed', fx: { sleep: 0.2 }, status: 5 },
+    wardrobe:  { name: 'Wardrobe', icon: '🚪', cat: 'Bedroom', price: 180000, w: 2, d: 1, h: 16, color: '#8a6a4a', shape: 'box', status: 1 },
+    plastic:   { name: 'Plastic chairs', icon: '🪑', cat: 'Living room', price: 8000, w: 1, d: 1, h: 5, color: '#e2463f', shape: 'chair' },
+    sofa:      { name: '3-seater sofa', icon: '🛋️', cat: 'Living room', price: 450000, w: 3, d: 1, h: 6, color: '#a02b2b', shape: 'sofa', fx: { fun: 2 }, status: 2 },
+    sectional: { name: 'Leather sectional', icon: '🛋️', cat: 'Living room', price: 2500000, w: 3, d: 2, h: 6, color: '#2b2b2f', shape: 'sofa', fx: { fun: 3, stress: -2 }, status: 6 },
+    table:     { name: 'Centre table', icon: '🟫', cat: 'Living room', price: 90000, w: 2, d: 1, h: 3, color: '#c9a77a', shape: 'table' },
+    rug:       { name: 'Ankara rug', icon: '🟥', cat: 'Living room', price: 60000, w: 3, d: 2, h: 0, color: '#c0392b', shape: 'rug', fx: { stress: -1 }, status: 1 },
+    persian:   { name: 'Persian rug', icon: '🧶', cat: 'Living room', price: 1200000, w: 3, d: 2, h: 0, color: '#8e1b2b', shape: 'rug', fx: { stress: -2 }, status: 4 },
+    fan:       { name: 'Standing fan', icon: '🌀', cat: 'Comfort', price: 35000, w: 1, d: 1, h: 10, color: '#d0d4da', shape: 'pole', fx: { stress: -1 }, needsPower: true },
+    ac:        { name: 'Split AC', icon: '❄️', cat: 'Comfort', price: 650000, w: 1, d: 1, h: 14, color: '#f2f4f6', shape: 'wallbox', fx: { stress: -3, sleep: 0.06 }, needsPower: true, status: 2 },
+    plant:     { name: 'Potted plant', icon: '🪴', cat: 'Comfort', price: 15000, w: 1, d: 1, h: 8, color: '#3f8f55', shape: 'plant', fx: { stress: -1 } },
+    tv:        { name: '43-inch TV', icon: '📺', cat: 'Entertainment', price: 280000, w: 2, d: 1, h: 9, color: '#1c1d20', shape: 'tv', fx: { fun: 3 }, needsPower: true, status: 1 },
+    oled:      { name: '75-inch OLED TV', icon: '📺', cat: 'Entertainment', price: 3500000, w: 3, d: 1, h: 12, color: '#0c0d10', shape: 'tv', fx: { fun: 6 }, needsPower: true, status: 5 },
+    console:   { name: 'Game console', icon: '🎮', cat: 'Entertainment', price: 900000, w: 1, d: 1, h: 3, color: '#2b2f3a', shape: 'box', fx: { fun: 4 }, needsPower: true, status: 2 },
+    speaker:   { name: 'Sound system', icon: '🔊', cat: 'Entertainment', price: 600000, w: 1, d: 1, h: 12, color: '#222326', shape: 'box', fx: { fun: 3, social: 2 }, needsPower: true, status: 2 },
+    pool_tbl:  { name: 'Pool table', icon: '🎱', cat: 'Entertainment', price: 2200000, w: 3, d: 2, h: 6, color: '#1e7a43', shape: 'table', fx: { fun: 4, social: 3 }, status: 5 },
+    piano:     { name: 'Grand piano', icon: '🎹', cat: 'Entertainment', price: 18000000, w: 2, d: 2, h: 9, color: '#111214', shape: 'box', fx: { fun: 4, stress: -3 }, status: 12 },
+    cooker:    { name: 'Gas cooker', icon: '🔥', cat: 'Kitchen', price: 120000, w: 1, d: 1, h: 8, color: '#c8ccd2', shape: 'box', fx: { hunger: 2 } },
+    fridge:    { name: 'Fridge', icon: '🧊', cat: 'Kitchen', price: 450000, w: 1, d: 1, h: 16, color: '#e8ebee', shape: 'box', fx: { hunger: 3 }, needsPower: true, status: 1 },
+    dining:    { name: 'Dining set', icon: '🍽️', cat: 'Kitchen', price: 700000, w: 3, d: 2, h: 6, color: '#7a5a3a', shape: 'table', fx: { social: 2 }, status: 2 },
+    inverter:  { name: 'Inverter and batteries', icon: '🔋', cat: 'Power', price: 1800000, w: 1, d: 1, h: 10, color: '#2f6fa0', shape: 'box', fx: { power: 0.25 }, status: 2 },
+    solar:     { name: 'Solar system (roof panels)', icon: '☀️', cat: 'Power', price: 4500000, w: 1, d: 1, h: 6, color: '#1f3e5a', shape: 'box', fx: { power: 0.35, gen: 0.5 }, status: 4 },
+    gen_small: { name: '"I better pass my neighbour" gen', icon: '⛽', cat: 'Power', price: 250000, w: 1, d: 1, h: 7, color: '#d9a520', shape: 'box', fx: { gen: 0.4 } },
+    art:       { name: 'Ankara art print', icon: '🖼️', cat: 'Decor', price: 60000, w: 1, d: 1, h: 12, color: '#d9822b', shape: 'wallbox', fx: { stress: -1 }, status: 1 },
+    bronze:    { name: 'Benin-style bronze', icon: '🗿', cat: 'Decor', price: 1500000, w: 1, d: 1, h: 12, color: '#9a6a2a', shape: 'pole', status: 5 },
+    aquarium:  { name: 'Aquarium', icon: '🐠', cat: 'Decor', price: 900000, w: 2, d: 1, h: 10, color: '#3fb6d8', shape: 'box', fx: { stress: -2 }, needsPower: true, status: 3 },
+    chandelier:{ name: 'Crystal chandelier', icon: '💡', cat: 'Decor', price: 3000000, w: 1, d: 1, h: 20, color: '#f2e6b8', shape: 'pole', needsPower: true, status: 7 },
+    treadmill: { name: 'Treadmill', icon: '🏃', cat: 'Comfort', price: 1100000, w: 1, d: 2, h: 8, color: '#3a3d44', shape: 'box', fx: { stress: -2, energy: 2 }, needsPower: true, status: 2 }
+  };
+
+  // Vehicles: road cars use the "Own car" travel mode with their own speed and
+  // fuel; boats use the jetties; helicopters fly anywhere. Upkeep is weekly.
+  var VEHICLES = {
+    tokunbo:   { name: 'Tokunbo saloon', icon: '🚗', kind: 'car', price: 8000000, speed: 32, fuel: 120, upkeep: 6000, status: 2, color: '#c9ccd2' },
+    keke_own:  { name: 'Your own keke', icon: '🛺', kind: 'car', price: 3500000, speed: 22, fuel: 60, upkeep: 3000, status: 1, color: '#f2b600' },
+    muscle:    { name: '"Muscle" saloon', icon: '🚘', kind: 'car', price: 14000000, speed: 34, fuel: 140, upkeep: 12000, status: 4, color: '#1c1d20' },
+    powerbike: { name: 'Power bike', icon: '🏍️', kind: 'car', price: 12000000, speed: 40, fuel: 90, upkeep: 9000, status: 5, color: '#c0392b' },
+    suv:       { name: 'Luxury SUV', icon: '🚙', kind: 'car', price: 45000000, speed: 34, fuel: 200, upkeep: 40000, status: 8, color: '#f4f3ec' },
+    cruiser:   { name: 'Full-size 4x4', icon: '🚙', kind: 'car', price: 180000000, speed: 35, fuel: 260, upkeep: 120000, status: 14, color: '#2b2b2f' },
+    gclass:    { name: 'Boxy German 4x4', icon: '🚙', kind: 'car', price: 350000000, speed: 36, fuel: 300, upkeep: 240000, status: 22, color: '#17181a' },
+    supercar:  { name: 'Supercar', icon: '🏎️', kind: 'car', price: 600000000, speed: 42, fuel: 380, upkeep: 400000, status: 30, color: '#e5b400' },
+    limo:      { name: 'Ultra-luxury limousine', icon: '🚘', kind: 'car', price: 900000000, speed: 34, fuel: 340, upkeep: 600000, status: 40, color: '#3d2b4f' },
+    speedboat: { name: 'Speedboat', icon: '🚤', kind: 'boat', price: 60000000, speed: 50, fuel: 600, upkeep: 60000, status: 12, color: '#ffffff' },
+    yacht:     { name: 'Yacht', icon: '🛥️', kind: 'boat', price: 3500000000, speed: 40, fuel: 1500, upkeep: 2500000, status: 80, color: '#f4f3ec' },
+    heli:      { name: 'Helicopter', icon: '🚁', kind: 'heli', price: 2800000000, speed: 200, fuel: 0, trip: 250000, upkeep: 3000000, status: 90, color: '#2f6fa0' },
+    jet:       { name: 'Private jet', icon: '🛩️', kind: 'jet', price: 45000000000, speed: 0, fuel: 0, upkeep: 60000000, status: 250, color: '#f4f3ec' }
+  };
 
   // Mainland Estate: a grid of house plots north of the Lagoon. Plots marked
   // taken by hash() are lived in already; the rest are for sale, one per player.
@@ -427,6 +489,7 @@
     DISTRICTS: DISTRICTS, ROADS: ROADS, FERRY_STOPS: FERRY_STOPS, BRT_STOPS: BRT_STOPS,
     OKADA_BAN: OKADA_BAN, MODES: MODES, HOMES: HOMES, HOME_TYPES: HOME_TYPES, SKILLS: SKILLS, SKILL_XP: SKILL_XP,
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
+    ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, BUSINESSES: BUSINESSES, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS

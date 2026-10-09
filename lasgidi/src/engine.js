@@ -22,7 +22,7 @@
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 4;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 5;         // state shape; migrate() upgrades older saves
   // Game RULES version. A life plays by the rules it started under, so a
   // recorded life replays identically after later updates add new systems.
   // 5 = v0.5 rules; 6 adds love and family.
@@ -243,7 +243,7 @@
   function homeDistrict(s) { return homeDef(s).district; }
 
   function rollPower(s) {
-    var p = homeDef(s).power;
+    var p = homeDef(s).power + furniturePower(s);
     if (s.econ.policy === 'power') p += 0.25;
     if (s.econ.gridDown > 0) p *= 0.3;
     s.power = rand(s) < clamp(p, 0, 0.98);
@@ -274,7 +274,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [],
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -351,6 +351,8 @@
   function onNewDay(s) {
     var hd = homeDef(s);
     if (hd.daily) applyFx(s, hd.daily); // perks of homes added after v0.6
+    var fd = furnitureDaily(s);
+    if (fd) applyFx(s, fd);
     var d = day(s), yesterday = d - 1, yDow = yesterday % 7;
     // Missed shift check.
     if (s.job) {
@@ -393,6 +395,10 @@
     }
     if (s.econ.policy === 'power') pay(s, price(s, 1000), 'Power levy') || addDebt(s, price(s, 1000), 'Power levy');
     if (s.car) pay(s, price(s, 5000), 'Car maintenance') || addDebt(s, price(s, 5000), 'Mechanic');
+    (s.vehicles || []).forEach(function (v) {
+      var V = D.VEHICLES[v.id], fee = price(s, V.upkeep);
+      pay(s, fee, 'Upkeep: ' + V.name) || addDebt(s, fee, 'Upkeep: ' + V.name);
+    });
 
     weeklyAjo(s);
     weeklyLoans(s);
@@ -482,6 +488,8 @@
     var c = moveInCost(s, homeId);
     if (c.total && !pay(s, c.total, 'Move-in: 4 weeks rent + agent fee')) return fail('Move-in needs ' + naira(c.total) + ' (4 weeks upfront plus agent fee).');
     s.home = homeId; s.rentRate = c.rent; s.rentLate = 0;
+    var stored = relayout(s);
+    if (stored) log(s, stored + ' item' + (stored === 1 ? '' : 's') + ' did not fit in the new place and went into storage.', 'info');
     rollPower(s);
     log(s, 'You moved into ' + h.name + '. Weekly rent ' + naira(c.rent) + '.', 'good');
     return ok('Welcome to ' + D.DISTRICTS[h.district].name + '.');
@@ -511,7 +519,7 @@
     return parts.join(' ');
   }
 
-  function genCost(s) { return price(s, 1500 * s.econ.fuel); }
+  function genCost(s) { return price(s, 1500 * s.econ.fuel * (1 - furnitureGen(s))); }
 
   function npcActions(s) {
     return Object.keys(D.NPCS).filter(function (k) { return D.NPCS[k].district === s.loc; }).map(function (k) {
@@ -546,7 +554,10 @@
     var list = [];
     var shift = shiftAction(s);
     if (shift) list.push(shift);
-    (D.PLACE_ACTIONS[s.loc] || []).forEach(function (a) { list.push(a); });
+    (D.PLACE_ACTIONS[s.loc] || []).forEach(function (a) {
+      if (a.needsVehicle && !(s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === a.needsVehicle; })) return;
+      list.push(a);
+    });
     list = list.concat(npcActions(s)).concat(loveActions(s));
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
     return list.map(function (a) { return describe(s, a); });
@@ -647,7 +658,7 @@
 
     var msg = a.label + '.';
     if (a.special === 'sleep' || a.special === 'nap') {
-      var q = homeDef(s).sleep * (s.power ? 1 : 0.8);
+      var q = homeDef(s).sleep * (s.power ? 1 : 0.8) + furnitureSleep(s);
       advance(s, a.mins, { sleep: q });
       msg = s.power ? 'You slept well.' : 'NEPA took light. Heat and mosquitoes, you slept badly.';
     } else {
@@ -850,7 +861,9 @@
     return Object.keys(D.MODES).map(function (id) {
       var m = D.MODES[id];
       var o = { mode: id, name: m.name, km: km };
-      if (m.needsCar && !s.car) o.disabled = 'You do not own a car';
+      var ride = id === 'car' ? bestCar(s) : null;
+      if (m.needsCar && !s.car && !ride) o.disabled = 'You do not own a car';
+      else if (m.needsKind && !(s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === m.needsKind; })) o.disabled = m.needsKind === 'heli' ? 'You do not own a helicopter' : 'You do not own a boat';
       else if (m.stops === 'ferry' && (D.FERRY_STOPS.indexOf(from) < 0 || D.FERRY_STOPS.indexOf(dest) < 0)) o.disabled = 'No jetty on this route';
       else if (m.stops === 'brt' && (D.BRT_STOPS.indexOf(from) < 0 || D.BRT_STOPS.indexOf(dest) < 0)) o.disabled = 'No BRT on this route';
       else if (m.noBridge && crossing) o.disabled = 'Keke cannot use the bridges';
@@ -862,10 +875,11 @@
         if (flood) f *= 1.6;
       }
       o.traffic = Math.round(f * 10) / 10;
-      o.mins = Math.max(STEP, ceilTo(m.wait + km / m.speed * 60 * f, STEP));
+      var spd = ride ? Math.max(m.speed, ride.speed) : m.speed;
+      o.mins = Math.max(STEP, ceilTo(m.wait + km / spd * 60 * f, STEP));
       var fare;
       if (id === 'ferry') fare = m.min;
-      else fare = Math.max(m.min, m.perKm * km);
+      else fare = Math.max(m.min, (ride ? ride.fuel : m.perKm) * km);
       if (id !== 'trek') fare *= s.econ.fuel;
       if (s.econ.policy === 'fares' && id !== 'car' && id !== 'trek') fare *= 0.8;
       o.cost = id === 'trek' ? 0 : roundTo(fare * priceFactor(s), 50);
@@ -1442,6 +1456,138 @@
     return finish(s, ok('Congratulations! You married ' + p.name + '.'));
   }
 
+  /* ---------- your home: furniture ----------
+   * Items are owned, kept when you move, and only work while placed in your
+   * current home. Power-hungry items only work while there is light. */
+
+  function roomSize(s) { return D.ROOM_SIZES[homeDef(s).type] || D.ROOM_SIZES.room; }
+  function placed(s) { return (s.items || []).filter(function (it) { return it.x != null; }); }
+  function itemDims(it) { var f = D.FURNITURE[it.id]; return it.r ? [f.d, f.w] : [f.w, f.d]; }
+  function fitsAt(s, idx, x, y, r) {
+    var it = s.items[idx], f = D.FURNITURE[it.id], sz = roomSize(s);
+    var w = r ? f.d : f.w, d = r ? f.w : f.d;
+    if (x < 0 || y < 0 || x + w > sz[0] || y + d > sz[1]) return false;
+    for (var i = 0; i < s.items.length; i++) {
+      var o = s.items[i];
+      if (i === idx || o.x == null) continue;
+      var od = itemDims(o);
+      if (x < o.x + od[0] && x + w > o.x && y < o.y + od[1] && y + d > o.y) return false;
+    }
+    return true;
+  }
+  function firstSpot(s, idx) {
+    var sz = roomSize(s);
+    for (var r = 0; r < 2; r++) for (var y = 0; y < sz[1]; y++) for (var x = 0; x < sz[0]; x++) if (fitsAt(s, idx, x, y, r)) return { x: x, y: y, r: r };
+    return null;
+  }
+  // After a move, keep what still fits; store the rest. Returns how many were stored.
+  function relayout(s) {
+    var n = 0;
+    (s.items || []).forEach(function (it, i) {
+      if (it.x == null) return;
+      var x = it.x, y = it.y; it.x = null;
+      if (fitsAt(s, i, x, y, it.r)) { it.x = x; it.y = y; } else n++;
+    });
+    return n;
+  }
+  function fxSum(s, key, cap) {
+    var t = 0;
+    placed(s).forEach(function (it) { var f = D.FURNITURE[it.id]; if (f.fx && f.fx[key] && (!f.needsPower || s.power)) t += f.fx[key]; });
+    return cap == null ? t : Math.min(cap, t);
+  }
+  function furnitureSleep(s) { return fxSum(s, 'sleep', 0.3); }
+  function furniturePower(s) {
+    var t = 0;
+    placed(s).forEach(function (it) { var f = D.FURNITURE[it.id]; if (f.fx && f.fx.power) t += f.fx.power; });
+    return Math.min(0.45, t);
+  }
+  function furnitureGen(s) {
+    var t = 0;
+    placed(s).forEach(function (it) { var f = D.FURNITURE[it.id]; if (f.fx && f.fx.gen) t = Math.max(t, f.fx.gen); });
+    return t;
+  }
+  function furnitureDaily(s) {
+    if (!(s.items && s.items.length)) return null;
+    var out = null;
+    ['fun', 'stress', 'social', 'hunger', 'energy'].forEach(function (k) {
+      var v = fxSum(s, k, null);
+      if (v) { out = out || {}; out[k] = Math.max(-15, Math.min(15, v)); }
+    });
+    return out;
+  }
+  function statusPoints(s) {
+    var t = 0;
+    (s.items || []).forEach(function (it) { t += D.FURNITURE[it.id].status || 0; });
+    (s.vehicles || []).forEach(function (v) { t += D.VEHICLES[v.id].status || 0; });
+    return t;
+  }
+
+  function buyItem(s, id) {
+    var f = D.FURNITURE[id];
+    if (!f) return fail('No such item.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if ((s.items || []).length >= 60) return fail('Your storage is full. Sell something first.');
+    var cost = price(s, f.price);
+    s.alerts = [];
+    if (!pay(s, cost, 'Bought ' + f.name)) return fail(f.name + ' costs ' + naira(cost) + '.');
+    s.items.push({ id: id, x: null, y: null, r: 0, paid: cost });
+    var spot = firstSpot(s, s.items.length - 1);
+    if (spot) { var it = s.items[s.items.length - 1]; it.x = spot.x; it.y = spot.y; it.r = spot.r; }
+    return finish(s, ok(spot ? f.name + ' is in your home. Drag it where you like.' : f.name + ' is in storage: there is no room for it here.'));
+  }
+  function placeItem(s, idx, x, y, r) {
+    var it = s.items && s.items[idx];
+    if (!it) return fail('No such item.');
+    x = x | 0; y = y | 0; r = r ? 1 : 0;
+    if (!fitsAt(s, idx, x, y, r)) return fail('It does not fit there.');
+    it.x = x; it.y = y; it.r = r;
+    return ok('Placed.');
+  }
+  function storeItem(s, idx) {
+    var it = s.items && s.items[idx];
+    if (!it) return fail('No such item.');
+    it.x = null; it.y = null;
+    return ok(D.FURNITURE[it.id].name + ' is in storage.');
+  }
+  function sellItem(s, idx) {
+    var it = s.items && s.items[idx];
+    if (!it) return fail('No such item.');
+    var v = roundTo(it.paid * 0.4, 50);
+    s.alerts = [];
+    s.items.splice(idx, 1);
+    if (v) earn(s, v, 'Sold ' + D.FURNITURE[it.id].name);
+    return finish(s, ok('Sold for ' + naira(v) + '.'));
+  }
+
+  /* ---------- garage and hangar ---------- */
+
+  function bestCar(s) {
+    var best = null;
+    (s.vehicles || []).forEach(function (v) { var V = D.VEHICLES[v.id]; if (V.kind === 'car' && (!best || V.speed > best.speed)) best = V; });
+    return best;
+  }
+  function buyVehicle(s, id) {
+    var V = D.VEHICLES[id];
+    if (!V) return fail('No such vehicle.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if ((s.vehicles || []).length >= 12) return fail('Your garage is full.');
+    var cost = price(s, V.price);
+    s.alerts = [];
+    if (!pay(s, cost, 'Bought ' + V.name)) return fail(V.name + ' costs ' + naira(cost) + '.');
+    s.vehicles.push({ id: id, paid: cost });
+    log(s, 'You bought a ' + V.name + '. Upkeep is ' + naira(price(s, V.upkeep)) + ' a week.', 'good');
+    return finish(s, ok('Congratulations on your ' + V.name + '!'));
+  }
+  function sellVehicle(s, idx) {
+    var v = s.vehicles && s.vehicles[idx];
+    if (!v) return fail('No such vehicle.');
+    var val = roundTo(v.paid * 0.5, 1000);
+    s.alerts = [];
+    s.vehicles.splice(idx, 1);
+    earn(s, val, 'Sold ' + D.VEHICLES[v.id].name);
+    return finish(s, ok('Sold for ' + naira(val) + '.'));
+  }
+
   /* ---------- Mainland Estate plots ---------- */
 
   function plotCount() { return D.ESTATE.cols * D.ESTATE.rows; }
@@ -1535,6 +1681,8 @@
     s.businesses.forEach(function (b) { assets += roundTo(b.paid * 0.6, 50); });
     s.properties.forEach(function (p) { assets += p.value; });
     if (s.car) assets += roundTo(D.CAR.price * 0.5 * s.econ.infl, 1000);
+    (s.vehicles || []).forEach(function (v) { assets += roundTo(v.paid * 0.5, 1000); });
+    (s.items || []).forEach(function (it) { assets += roundTo(it.paid * 0.4, 50); });
     return assets - debts(s);
   }
 
@@ -1633,6 +1781,8 @@
     if (!s.history) s.history = [];
     if (s.report === undefined) s.report = null;
     if (s.replay === undefined) s.replay = null; // lives from before v0.5 cannot be replayed
+    if (!s.items) s.items = [];
+    if (!s.vehicles) s.vehicles = [];
     if (!s.rules) { s.rules = 5; s.partner = null; s.kids = []; s.babyPause = -1; if (s.replay) s.replay.rules = 5; }
     s.sv = SCHEMA;
     return s;
@@ -1836,7 +1986,7 @@
   function lifeSummary(s) {
     var weeks = week(s) + 1, worth = netWorth(s), achievements = Object.keys(s.ach).length;
     var score = scoreOf({ worth: worth, weeks: weeks, achievements: achievements, won: !!s.won, level: s.job ? s.job.level : 0,
-      married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length });
+      married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length, status: statusPoints(s) });
     return {
       name: s.name, origin: s.origin, goal: s.goal, won: !!s.won, weeks: weeks, worth: worth,
       peak: s.stats.peakWorth, title: s.job ? D.CAREERS[s.job.id].titles[s.job.level] : null,
@@ -1850,11 +2000,11 @@
    * drop entries that no honest game could produce. A server-run engine is
    * the real fix (docs/REVIEW.md §5); this keeps casual edits off the board. */
 
-  var FAME_FIELDS = { weeks: 1, worth: 1, achievements: 1, level: 1, won: 1, origin: 1, goal: 1, married: 1, kids: 1 };
+  var FAME_FIELDS = { weeks: 1, worth: 1, achievements: 1, level: 1, won: 1, origin: 1, goal: 1, married: 1, kids: 1, status: 1 };
 
   function scoreOf(e) {
     return Math.round(Math.max(0, e.worth) / 1000 + e.weeks * 10 + e.achievements * 50 + (e.won ? 500 : 0) + e.level * 40 +
-      (e.married ? 200 : 0) + (e.kids || 0) * 100);
+      (e.married ? 200 : 0) + (e.kids || 0) * 100 + Math.min(2000, (e.status || 0) * 2));
   }
 
   function fameEntry(s) {
@@ -1862,7 +2012,7 @@
       v: 1, weeks: week(s) + 1, worth: netWorth(s), achievements: Object.keys(s.ach).length,
       level: s.job ? s.job.level : 0, won: !!s.won, origin: s.origin, goal: s.goal,
       career: s.job ? s.job.id : null, home: s.home, seal: s.ledgerHash, lines: s.ledgerCount,
-      married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length
+      married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length, status: statusPoints(s)
     };
     e.score = scoreOf(e);
     if (s.replay) e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, rules: s.replay.rules, challenge: s.replay.challenge || null, acts: s.replay.acts };
@@ -1878,8 +2028,9 @@
     if (typeof raw.won !== 'boolean' || !D.ORIGINS[raw.origin] || !D.GOALS[raw.goal]) return null;
     if (raw.married != null && typeof raw.married !== 'boolean') return null;
     if (raw.kids != null && !int(raw.kids, 0, 3)) return null;
+    if (raw.status != null && !int(raw.status, 0, 100000)) return null;
     Object.keys(FAME_FIELDS).forEach(function (k) { e[k] = raw[k]; });
-    e.married = !!raw.married; e.kids = raw.kids || 0;
+    e.married = !!raw.married; e.kids = raw.kids || 0; e.status = raw.status || 0;
     e.career = typeof raw.career === 'string' && D.CAREERS[raw.career] ? raw.career : null;
     e.home = typeof raw.home === 'string' && D.HOMES[raw.home] ? raw.home : null;
     // Ceiling on wealth: starting cash plus a generous ₦3m a week.
@@ -2017,6 +2168,9 @@
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
+    buyItem: recorded('bi', buyItem), placeItem: recorded('pi', placeItem), storeItem: recorded('si', storeItem), sellItem: recorded('xi', sellItem),
+    buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle),
+    roomSize: roomSize, fitsAt: fitsAt, statusPoints: statusPoints, furnitureSleep: furnitureSleep, furniturePower: furniturePower, furnitureGen: furnitureGen, furnitureDaily: furnitureDaily, bestCar: bestCar,
     buyPlot: recorded('bpl', buyPlot), plotCount: plotCount, plotXY: plotXY, plotTakenByNpc: plotTakenByNpc, myPlot: myPlot, ownsHome: ownsHome,
     rentBoard: recorded('rb', rentBoard), boardRent: boardRent, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,

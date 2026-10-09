@@ -120,6 +120,7 @@
       if (el.type === 'radio') el.checked = true; else el.value = kept[id];
     });
     mountPlayground();
+    mountInterior();
     syncResidence();
     if (focusId) { var f = document.getElementById(focusId); if (f) f.focus(); }
     syncPresence();
@@ -446,13 +447,13 @@
   function board() {
     var isNarrow = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
     if (!isNarrow && ui.tab === 'map') ui.tab = 'do';
-    var tabs = [['do', 'Do'], ['map', 'Map'], ['work', 'Work'], ['money', 'Money'], ['me', 'Me'], ['gist', 'Gist']];
+    var tabs = [['do', 'Do'], ['map', 'Map'], ['home', 'Home'], ['work', 'Work'], ['money', 'Money'], ['me', 'Me'], ['gist', 'Gist']];
     var debt = L.debts(S) > 0;
     var bar = '<div class="tabs" role="tablist">' + tabs.map(function (t) {
       return '<button class="tab' + (t[0] === 'map' ? ' tab-map' : '') + '" role="tab" id="tab-' + t[0] + '" data-tab="' + t[0] + '" aria-selected="' + (ui.tab === t[0]) + '">' + t[1] +
         (t[0] === 'money' && debt ? '<span class="dot" title="You owe money"></span>' : '') + '</button>';
     }).join('') + '</div>';
-    var body = { do: doView, map: function () { return mapBlock(); }, work: workView, money: moneyView, me: meView, gist: gistView }[ui.tab]();
+    var body = { do: doView, map: function () { return mapBlock(); }, home: houseTab, work: workView, money: moneyView, me: meView, gist: gistView }[ui.tab]();
     return '<div class="board">' +
       // One map per layout: the desktop panel, or the Map tab on phones.
       (isNarrow ? '' : '<section class="panel map-panel" aria-label="Map of Lagos">' + mapBlock() + '</section>') +
@@ -564,6 +565,88 @@
       .then(function () { return res; }, function (err) {
         return { ok: false, msg: err && err.code === 'invalid_argument' ? 'Paid, but the board refused the ad: you need Contributor access.' : 'Paid, but the ad could not be posted. Try again in a moment.' };
       });
+  }
+
+  /* ---------- Home tab: interior, shop, garage ---------- */
+  var interior = null;
+  function mountInterior() {
+    if (!S || ui.tab !== 'home' || !window.LasgidiInterior) return;
+    var slot = document.querySelector('.tab-body .iv-slot');
+    if (!slot) return;
+    if (!interior) interior = window.LasgidiInterior.create({
+      onSelect: function (i) { ui.itemSel = i; render(); },
+      onPlace: function (i, x, y, r) { run(function () { var res = L.placeItem(S, i, x, y, r); if (res.ok) ui.itemSel = i; return res.ok ? { ok: true, msg: '' } : res; }); }
+    });
+    slot.appendChild(interior.el);
+    var h = L.homeDef(S);
+    interior.update({ size: L.roomSize(S), type: h.type || 'room', name: h.name, items: S.items, vehicles: S.vehicles, sel: ui.itemSel, power: S.power, hour: L.hour(S),
+      dark: document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) });
+  }
+  var FX_NAMES = { sleep: 'sleep', power: 'light', gen: 'gen cost', fun: 'enjoyment', stress: 'stress', social: 'social', hunger: 'belle', energy: 'energy' };
+  function fxText(f) {
+    var parts = [];
+    Object.keys(f.fx || {}).forEach(function (k) {
+      var v = f.fx[k];
+      if (k === 'sleep' || k === 'power') parts.push('+' + Math.round(v * 100) + '% ' + FX_NAMES[k]);
+      else if (k === 'gen') parts.push('−' + Math.round(v * 100) + '% gen cost');
+      else parts.push((v > 0 ? '+' : '') + v + ' ' + FX_NAMES[k] + '/day');
+    });
+    if (f.needsPower) parts.push('needs light');
+    if (f.status) parts.push('+' + f.status + ' status');
+    return parts.join(' · ');
+  }
+  function freeSpot(i) {
+    var sz = L.roomSize(S);
+    for (var r = 0; r < 2; r++) for (var y = 0; y < sz[1]; y++) for (var x = 0; x < sz[0]; x++) if (L.fitsAt(S, i, x, y, r)) return { x: x, y: y, r: r };
+    return null;
+  }
+  function houseTab() {
+    var h = L.homeDef(S), sz = L.roomSize(S), sel = ui.itemSel != null ? S.items[ui.itemSel] : null;
+    var html = '<div class="panel-h"><h2>' + esc(h.name) + '</h2><span class="muted">' + esc(D.HOME_TYPES[h.type || 'room'].name) + ' · ' + sz[0] + '×' + sz[1] + ' floor</span></div><div class="panel-b">';
+    html += '<div class="iv-slot"></div>';
+    if (sel) {
+      var f = D.FURNITURE[sel.id];
+      html += '<div class="iv-bar"><span><b>' + f.icon + ' ' + esc(f.name) + '</b> <span class="muted">' + esc(fxText(f)) + '</span></span><span class="inline">' +
+        (sel.x != null ? '<button class="btn sm" id="i-rot" data-irot="1">Rotate</button><button class="btn sm ghost" id="i-store" data-istore="1">Store</button>' : '<button class="btn sm" id="i-place" data-iplace="' + ui.itemSel + '">Place</button>') +
+        '<button class="btn sm ghost" id="i-sell" data-isell="1">Sell (40%)</button><button class="btn sm ghost" id="i-done" data-idone="1">Done</button></span></div>';
+    } else html += '<p class="note">Tap a piece to select it, then tap the floor or drag to move it.</p>';
+    var light = Math.round(Math.min(0.98, h.power + L.furniturePower(S)) * 100);
+    var daily = L.furnitureDaily(S);
+    html += '<div class="section"><h3>How your home works</h3><dl class="kv"><dt>Sleep quality</dt><dd class="num">' + Math.round((h.sleep + L.furnitureSleep(S)) * 100) + '%</dd><dt>Light</dt><dd class="num">' + light + '% of the time</dd>' +
+      '<dt>Gen fuel</dt><dd class="num">' + N(Math.round(1500 * S.econ.fuel * S.econ.infl * (1 - L.furnitureGen(S)) / 50) * 50) + ' per use</dd>' +
+      '<dt>Every day</dt><dd>' + (daily ? esc(Object.keys(daily).map(function (k) { return (daily[k] > 0 ? '+' : '') + daily[k] + ' ' + FX_NAMES[k]; }).join(', ')) : 'Nothing yet') + '</dd>' +
+      '<dt>Status</dt><dd class="num">' + L.statusPoints(S) + '</dd></dl></div>';
+    var stored = S.items.map(function (it, i) { return { it: it, i: i }; }).filter(function (o) { return o.it.x == null; });
+    if (stored.length) html += '<div class="section"><h3>In storage</h3><div class="list">' + stored.map(function (o) {
+      var f = D.FURNITURE[o.it.id];
+      return '<div class="item"><div><h3>' + f.icon + ' ' + esc(f.name) + '</h3><div class="meta"><span>' + f.w + '×' + f.d + '</span></div></div><span class="inline"><button class="btn sm" id="iplace-' + o.i + '" data-iplace="' + o.i + '">Place</button></span></div>';
+    }).join('') + '</div></div>';
+    // Furniture shop.
+    var cats = []; Object.keys(D.FURNITURE).forEach(function (k) { if (cats.indexOf(D.FURNITURE[k].cat) < 0) cats.push(D.FURNITURE[k].cat); });
+    var cat = ui.shopCat && cats.indexOf(ui.shopCat) >= 0 ? ui.shopCat : cats[0];
+    html += '<div class="section"><h3>Furniture shop</h3><div class="pg-chips" style="padding:0">' + cats.map(function (c) { return '<button type="button" class="pg-chip' + (c === cat ? ' sel' : '') + '" id="shop-' + c.replace(/\W+/g, '') + '" data-shopcat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div><div class="list">' +
+      Object.keys(D.FURNITURE).filter(function (k) { return D.FURNITURE[k].cat === cat; }).map(function (k) {
+        var f = D.FURNITURE[k], p = L.price(S, f.price), owned = S.items.filter(function (it) { return it.id === k; }).length;
+        return '<div class="item"><div><h3>' + f.icon + ' ' + esc(f.name) + (owned ? ' <span class="muted">· own ' + owned + '</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + f.w + '×' + f.d + '</span><span>' + esc(fxText(f)) + '</span></div></div>' +
+          '<button class="btn sm" id="buyi-' + k + '" data-buyitem="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button></div>';
+      }).join('') + '</div></div>';
+    // Garage and hangar.
+    html += '<div class="section"><h3>Garage and hangar</h3>';
+    if (S.vehicles.length) html += '<div class="list">' + S.vehicles.map(function (v, i) {
+      var V = D.VEHICLES[v.id];
+      return '<div class="item"><div><h3>' + V.icon + ' ' + esc(V.name) + '</h3><div class="meta"><span>Upkeep ' + N(L.price(S, V.upkeep)) + '/week</span><span>+' + V.status + ' status</span></div></div><button class="btn sm ghost" id="sellv-' + i + '" data-sellveh="' + i + '">Sell (50%)</button></div>';
+    }).join('') + '</div>';
+    else html += '<p class="note">' + (S.car ? 'You drive the ' + esc(D.CAR.name) + '. ' : '') + 'Cars drive you faster than danfo; a boat uses the jetties; a helicopter flies anywhere in minutes. Everything has weekly upkeep.</p>';
+    var kinds = [['car', 'Cars'], ['boat', 'Boats'], ['heli', 'Helicopters'], ['jet', 'Jets']];
+    var kind = ui.vehKind || 'car';
+    html += '<div class="pg-chips" style="padding:0">' + kinds.map(function (k) { return '<button type="button" class="pg-chip' + (k[0] === kind ? ' sel' : '') + '" id="vk-' + k[0] + '" data-vehkind="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div><div class="list">' +
+      Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind; }).map(function (k) {
+        var V = D.VEHICLES[k], p = L.price(S, V.price);
+        var what = V.kind === 'car' ? 'Top speed ' + V.speed + ' km/h on clear roads' : V.kind === 'boat' ? 'Use the jetties without waiting' : V.kind === 'heli' ? 'Anywhere in Lagos in about 30 minutes, ' + N(L.price(S, V.trip)) + ' a trip' : 'Weekends abroad from the airport';
+        return '<div class="item"><div><h3>' + V.icon + ' ' + esc(V.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(what) + '</span><span>Upkeep ' + N(L.price(S, V.upkeep)) + '/wk</span><span>+' + V.status + ' status</span></div></div>' +
+          '<button class="btn sm" id="buyv-' + k + '" data-buyveh="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button></div>';
+      }).join('') + '</div></div>';
+    return html + '</div>';
   }
 
   /* ---------- homes and the Mainland Estate ---------- */
@@ -898,7 +981,7 @@
         return '<div class="item"><div><h3>' + esc(p.name) + '</h3><div class="meta"><span class="cost num">' + N(pr) + '</span>' + (p.weekly ? '<span class="gain num">' + N(p.weekly) + '/week from tenants</span>' : '<span>Appreciates ~1.2%/week</span>') + '</div></div>' +
           '<button class="btn sm" id="buyp-' + k + '" data-buyp="' + k + '"' + (S.cash + S.bank >= pr ? '' : ' disabled') + '>Buy</button></div>';
       }).join('') +
-      '<div class="item"><div><h3>' + esc(D.CAR.name) + '</h3><div class="meta"><span class="cost num">' + N(L.price(S, D.CAR.price)) + '</span><span>₦5,000/week upkeep, fuel per km</span></div></div><button class="btn sm" id="buy-car" data-car="1"' + (S.car || S.cash + S.bank < L.price(S, D.CAR.price) ? ' disabled' : '') + '>' + (S.car ? 'Owned' : 'Buy') + '</button></div></div></div>';
+      '<div class="item"><div><h3>Cars, boats, helicopters and jets</h3><div class="meta"><span>' + (S.car ? esc(D.CAR.name) + ' owned · ' : '') + 'Your garage and hangar are on the Home tab</span></div></div><button class="btn sm" id="to-garage" data-tab="home">Open garage</button></div></div></div>';
 
     html += '<div class="section"><h3>Statement</h3><p class="note">Every naira in or out is a sealed line. Edited saves show up as tampered.</p><div class="stmt-wrap"><table class="stmt"><tbody>' +
       S.ledger.slice(0, 25).map(function (l) {
@@ -1031,7 +1114,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1075,6 +1158,20 @@
     if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
     if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
     if (ds.place) { ui.place = ds.place; ui.board = null; ui.sel = null; render(); return; }
+    if (ds.buyitem) { run(function () { var r = L.buyItem(S, ds.buyitem); if (r.ok) ui.itemSel = S.items.length - 1; return r; }); return; }
+    if (ds.shopcat) { ui.shopCat = ds.shopcat; render(); return; }
+    if (ds.vehkind) { ui.vehKind = ds.vehkind; render(); return; }
+    if (ds.buyveh) { run(function () { return L.buyVehicle(S, ds.buyveh); }); return; }
+    if (ds.sellveh !== undefined) { run(function () { return L.sellVehicle(S, +ds.sellveh); }); return; }
+    if (ds.idone) { ui.itemSel = null; render(); return; }
+    if (ds.irot) { var it0 = S.items[ui.itemSel]; run(function () { var r = L.placeItem(S, ui.itemSel, it0.x, it0.y, it0.r ? 0 : 1); return r.ok ? { ok: true, msg: 'Rotated.' } : { ok: false, msg: 'No room to rotate it here. Move it first.' }; }); return; }
+    if (ds.istore) { run(function () { return L.storeItem(S, ui.itemSel); }); return; }
+    if (ds.isell) { var si = ui.itemSel; ui.itemSel = null; run(function () { return L.sellItem(S, si); }); return; }
+    if (ds.iplace !== undefined) {
+      var pi = +ds.iplace, spot = freeSpot(pi);
+      run(function () { if (!spot) return { ok: false, msg: 'There is no space for it. Store or sell something first.' }; ui.itemSel = pi; return L.placeItem(S, pi, spot.x, spot.y, spot.r); });
+      return;
+    }
     if (ds.homesel) { clearPicks(); ui.homeSel = ds.homesel; render(); return; }
     if (ds.plotsel !== undefined) { clearPicks(); ui.plotSel = +ds.plotsel; render(); return; }
     if (ds.closepick) { clearPicks(); render(); return; }
@@ -1159,7 +1256,7 @@
 
   document.addEventListener('keydown', function (e) {
     if (S && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target.matches && e.target.matches('input, textarea, select'))) {
-      var tabs = ['do', 'map', 'work', 'money', 'me', 'gist'];
+      var tabs = ['do', 'map', 'home', 'work', 'money', 'me', 'gist'];
       var n = parseInt(e.key, 10);
       if (n >= 1 && n <= 6 && !document.querySelector('.scrim')) {
         var narrow = window.matchMedia('(max-width: 899px)').matches;

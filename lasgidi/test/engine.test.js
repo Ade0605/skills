@@ -591,3 +591,51 @@ test('Mainland Estate: buy one plot, live rent-free, plots and labels sit on lan
   assert.ok(s.ach.landlord && L.goalProgress(s).done);
   sane(s);
 });
+
+test('furniture: buy, auto-place, no overlaps, effects only while placed, kept on moving', () => {
+  const s = L.newGame({ seed: 12, origin: 'nepo', goal: 'freestyle' });
+  L._post(s, 'bank', 50000000, 'test grant');
+  const sleep0 = L.furnitureSleep(s), power0 = L.furniturePower(s);
+  assert.ok(L.buyItem(s, 'king').ok);
+  assert.ok(L.buyItem(s, 'inverter').ok);
+  assert.ok(L.furnitureSleep(s) > sleep0 && L.furniturePower(s) > power0);
+  const bed = s.items[0];
+  assert.notEqual(bed.x, null, 'auto-placed');
+  assert.equal(L.placeItem(s, 1, bed.x, bed.y, 0).ok, false, 'no overlap');
+  const sz = L.roomSize(s);
+  assert.equal(L.placeItem(s, 0, sz[0], 0, 0).ok, false, 'in bounds');
+  assert.ok(L.storeItem(s, 0).ok);
+  assert.equal(L.furnitureSleep(s), sleep0, 'stored items do nothing');
+  assert.ok(L.placeItem(s, 0, 0, 0, 1).ok);
+  // Move to a single room: the king bed (3x2) still fits a 4x3 room, the rest may not.
+  assert.ok(L.moveHouse(s, 'mushin_room').ok);
+  s.items.forEach((it, i) => { if (it.x != null) assert.ok(L.fitsAt(s, i, it.x, it.y, it.r)); });
+  const worth = L.netWorth(s);
+  assert.ok(L.sellItem(s, 0).ok);
+  assert.ok(L.netWorth(s) <= worth);
+  sane(s);
+  // Replays: buy and arrange affordable pieces with real starting money.
+  const r = L.newGame({ seed: 14, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(L.buyItem(r, 'ortho').ok && L.buyItem(r, 'plant').ok && L.buyItem(r, 'tv').ok);
+  assert.ok(L.storeItem(r, 1).ok && L.placeItem(r, 1, 0, 2, 0).ok);
+  L.wait(r, 24 * 60);
+  assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(r)))).ok, 'furniture replays');
+});
+
+test('vehicles: own car speeds commutes, helicopter flies anywhere, upkeep is weekly', () => {
+  const s = L.newGame({ seed: 13, origin: 'nepo', goal: 'freestyle' });
+  L._post(s, 'bank', 4000000000, 'test grant');
+  assert.match(L.travelOptions(s, 'ajah').find(o => o.mode === 'heli').disabled, /helicopter/);
+  const danfo = L.travelOptions(s, 'ikeja').find(o => o.mode === 'danfo').mins;
+  assert.ok(L.buyVehicle(s, 'supercar').ok);
+  const car = L.travelOptions(s, 'ikeja').find(o => o.mode === 'car');
+  assert.ok(!car.disabled && car.mins <= danfo);
+  assert.ok(L.buyVehicle(s, 'heli').ok);
+  const heli = L.travelOptions(s, 'ikorodu').find(o => o.mode === 'heli');
+  assert.ok(!heli.disabled && heli.mins <= 45, 'heli ' + heli.mins);
+  assert.ok(L.statusPoints(s) >= 120);
+  const before = s.cash + s.bank;
+  for (let i = 0; i < 7; i++) { while (s.pending.length) L.resolveChoice(s, 1); L.wait(s, 24 * 60); }
+  assert.ok(s.ledger.some(l => l.memo === 'Upkeep: Helicopter' && -l.amt >= D.VEHICLES.heli.upkeep), 'weekly upkeep paid');
+  sane(s);
+});
