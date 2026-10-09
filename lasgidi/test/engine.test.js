@@ -656,3 +656,36 @@ test('wardrobe: buy and wear clothes, dresses replace top and bottom, outfits he
   assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(s)))).ok, 'wardrobe replays');
   sane(s);
 });
+
+test('treasury bills: paid from savings, back with 1% after 7 days, counted in net worth, replayable', () => {
+  const s = L.newGame({ seed: 21, origin: 'nepo', goal: 'freestyle' });
+  assert.equal(L.buyBond(s, 5000).ok, false, 'minimum 10k');
+  assert.equal(L.buyBond(s, s.bank + 1).ok, false, 'only from savings');
+  const amt = Math.floor(s.bank / 2), nw = L.netWorth(s), bank = s.bank;
+  assert.ok(L.buyBond(s, amt).ok);
+  assert.equal(s.bank, bank - amt);
+  assert.equal(L.netWorth(s), nw, 'a bill is still yours');
+  for (let i = 0; i < 8; i++) { while (s.pending.length) L.resolveChoice(s, 1); L.wait(s, 24 * 60); }
+  assert.equal(s.bonds.length, 0);
+  assert.ok(s.ledger.some(l => l.memo === 'Treasury bill interest' && l.amt === Math.floor(amt * L.BOND_RATE)));
+  assert.equal(L.category('Treasury bill interest', 1), 'savings');
+  assert.equal(L.category('Hospital bill', -1), 'health');
+  const r = L.replayLife(s.replay);
+  assert.equal(r.ledgerHash, s.ledgerHash);
+  sane(s);
+});
+
+test('driving: pick which car you drive; selling keeps the pick right', () => {
+  const s = L.newGame({ seed: 22, origin: 'nepo', goal: 'freestyle' });
+  L._post(s, 'bank', 2000000000, 'test grant');
+  assert.ok(L.buyVehicle(s, 'tokunbo').ok && L.buyVehicle(s, 'supercar').ok && L.buyVehicle(s, 'speedboat').ok);
+  const fast = L.travelOptions(s, 'ikeja').find(o => o.mode === 'car').mins;
+  assert.equal(L.driveVehicle(s, 2).ok, false, 'a boat is not a car');
+  assert.ok(L.driveVehicle(s, 0).ok);
+  assert.ok(L.travelOptions(s, 'ikeja').find(o => o.mode === 'car').mins >= fast);
+  assert.ok(L.driveVehicle(s, 1).ok);
+  L.sellVehicle(s, 0);
+  assert.equal(s.driving, 0, 'pick follows the supercar');
+  L.sellVehicle(s, 0);
+  assert.equal(s.driving, -1);
+});

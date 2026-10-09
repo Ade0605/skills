@@ -663,23 +663,42 @@
         return '<div class="item"><div><h3>' + f.icon + ' ' + esc(f.name) + (owned ? ' <span class="muted">· own ' + owned + '</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + f.w + '×' + f.d + '</span><span>' + esc(fxText(f)) + '</span></div></div>' +
           '<button class="btn sm" id="buyi-' + k + '" data-buyitem="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button></div>';
       }).join('') + '</div></div>';
-    // Garage and hangar.
-    html += '<div class="section"><h3>Garage and hangar</h3>';
-    if (S.vehicles.length) html += '<div class="list">' + S.vehicles.map(function (v, i) {
-      var V = D.VEHICLES[v.id];
-      return '<div class="item"><div><h3>' + V.icon + ' ' + esc(V.name) + '</h3><div class="meta"><span>Upkeep ' + N(L.price(S, V.upkeep)) + '/week</span><span>+' + V.status + ' status</span></div></div><button class="btn sm ghost" id="sellv-' + i + '" data-sellveh="' + i + '">Sell (50%)</button></div>';
-    }).join('') + '</div>';
-    else html += '<p class="note">' + (S.car ? 'You drive the ' + esc(D.CAR.name) + '. ' : '') + 'Cars drive you faster than danfo; a boat uses the jetties; a helicopter flies anywhere in minutes. Everything has weekly upkeep.</p>';
-    var kinds = [['car', 'Cars'], ['boat', 'Boats'], ['heli', 'Helicopters'], ['jet', 'Jets']];
-    var kind = ui.vehKind || 'car';
-    html += '<div class="pg-chips" style="padding:0">' + kinds.map(function (k) { return '<button type="button" class="pg-chip' + (k[0] === kind ? ' sel' : '') + '" id="vk-' + k[0] + '" data-vehkind="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div><div class="list">' +
-      Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind; }).map(function (k) {
-        var V = D.VEHICLES[k], p = L.price(S, V.price);
-        var what = V.kind === 'car' ? 'Top speed ' + V.speed + ' km/h on clear roads' : V.kind === 'boat' ? 'Use the jetties without waiting' : V.kind === 'heli' ? 'Anywhere in Lagos in about 30 minutes, ' + N(L.price(S, V.trip)) + ' a trip' : 'Weekends abroad from the airport';
-        return '<div class="item"><div><h3>' + V.icon + ' ' + esc(V.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(what) + '</span><span>Upkeep ' + N(L.price(S, V.upkeep)) + '/wk</span><span>+' + V.status + ' status</span></div></div>' +
-          '<button class="btn sm" id="buyv-' + k + '" data-buyveh="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button></div>';
-      }).join('') + '</div></div>';
+    html += '<div class="section"><h3>Garage and hangar</h3>' + dealerView('Car dealers are on the map at Berger (Ikeja) and Lekki. You can also buy here.') + '</div>';
     return html + '</div>';
+  }
+
+  /* ---------- car dealer: showroom and my garage ---------- */
+  function dealerView(note) {
+    var tab = ui.dealerTab || 'show', wallet = S.cash + S.bank;
+    var html = '<div class="dl-head"><span class="muted">Wallet</span> <b class="num">' + N(wallet) + '</b></div>' +
+      '<div class="seg"><button type="button" class="seg-b' + (tab === 'show' ? ' sel' : '') + '" id="dl-show" data-dealertab="show">🔑 Showroom</button>' +
+      '<button type="button" class="seg-b' + (tab === 'garage' ? ' sel' : '') + '" id="dl-garage" data-dealertab="garage">🅿️ My garage</button></div>';
+    if (tab === 'garage') {
+      var worth = S.vehicles.reduce(function (a, v) { return a + Math.round(v.paid * 0.5 / 1000) * 1000; }, 0);
+      var cars = S.vehicles.filter(function (v) { return D.VEHICLES[v.id].kind === 'car'; }).length;
+      var driving = (function () { var V = L.bestCar(S); return V; })();
+      html += '<div class="dl-sum"><span>' + S.vehicles.length + ' vehicle' + (S.vehicles.length === 1 ? '' : 's') + ' · ' + S.vehicles.length + '/12 spaces</span><span>Worth <b class="num">' + N(worth) + '</b> to the dealer</span></div>';
+      if (!S.vehicles.length) html += '<p class="note">' + (S.car ? 'You drive the ' + esc(D.CAR.name) + '. ' : '') + 'Nothing parked yet. Pick something in the showroom.</p>';
+      html += '<div class="list">' + S.vehicles.map(function (v, i) {
+        var V = D.VEHICLES[v.id], isCar = V.kind === 'car';
+        var on = isCar && (S.driving === i || (S.driving < 0 && driving === V && S.vehicles.findIndex(function (x) { return D.VEHICLES[x.id] === V; }) === i));
+        return '<div class="item dl-car' + (on ? ' on' : '') + '"><div class="dl-ic">' + V.icon + '</div><div><h3>' + esc(V.name) + '</h3><div class="meta"><span>Worth ' + N(Math.round(v.paid * 0.5 / 1000) * 1000) + ' to the dealer</span><span>Upkeep ' + N(L.price(S, V.upkeep)) + '/wk</span></div></div>' +
+          '<div class="dl-act">' + (isCar ? (on ? '<span class="gain dl-on">Driving</span>' : '<button class="btn sm ghost" id="drive-' + i + '" data-drive="' + i + '">Drive</button>') : '<span class="muted">' + (V.kind === 'boat' ? 'At the jetty' : V.kind === 'heli' ? 'On the helipad' : 'In the hangar') + '</span>') +
+          '<button class="link-btn cost" id="sellv-' + i + '" data-sellveh="' + i + '">Sell</button></div></div>';
+      }).join('') + '</div>';
+      if (cars > 1 && S.driving >= 0) html += '<div class="inline"><button class="btn sm ghost" id="drive-auto" data-drive="-1">Always take the fastest car</button></div>';
+      return html;
+    }
+    var kinds = [['car', '🚗 Cars'], ['boat', '🚤 Boats'], ['heli', '🚁 Helicopters'], ['jet', '🛩️ Jets']];
+    var kind = ui.vehKind || 'car';
+    html += (note ? '<p class="note">' + esc(note) + '</p>' : '') + '<div class="pg-chips" style="padding:0">' + kinds.map(function (k) { return '<button type="button" class="pg-chip' + (k[0] === kind ? ' sel' : '') + '" id="vk-' + k[0] + '" data-vehkind="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div><div class="list">' +
+      Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind; }).map(function (k) {
+        var V = D.VEHICLES[k], p = L.price(S, V.price), own = S.vehicles.filter(function (v) { return v.id === k; }).length;
+        var what = V.kind === 'car' ? 'Top speed ' + V.speed + ' km/h on clear roads' : V.kind === 'boat' ? 'Use the jetties without waiting' : V.kind === 'heli' ? 'Anywhere in Lagos in about 30 minutes, ' + N(L.price(S, V.trip)) + ' a trip' : 'Weekends abroad from the airport';
+        return '<div class="item dl-car"><div class="dl-ic">' + V.icon + '</div><div><h3>' + esc(V.name) + (own ? ' <span class="muted">· own ' + own + '</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(what) + '</span><span>Upkeep ' + N(L.price(S, V.upkeep)) + '/wk</span><span>+' + V.status + ' status</span></div></div>' +
+          '<button class="btn sm" id="buyv-' + k + '" data-buyveh="' + k + '"' + (wallet >= p && S.vehicles.length < 12 ? '' : ' disabled') + '>Buy</button></div>';
+      }).join('') + '</div>';
+    return html;
   }
 
   /* ---------- homes and the Mainland Estate ---------- */
@@ -771,7 +790,8 @@
     return '<div class="inline" style="justify-content:space-between"><h3><span class="pl-ic" style="border-color:' + t.color + '">' + (pl.icon || '•') + '</span> ' + esc(pl.name) + '</h3><button class="btn sm ghost" id="close-place" data-closeplace="1">Close</button></div>' +
       '<p class="note"><span class="pl-type" style="color:' + t.color + '">' + esc(t.name) + '</span> · ' + esc(D.DISTRICTS[pl.district].name) + '</p><p>' + esc(pl.text) + '</p>' +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
-      (here ? '' : '<div class="inline"><button class="btn go" id="trip-' + pl.district + '" data-tripto="' + pl.district + '">Plan a trip to ' + esc(D.DISTRICTS[pl.district].name) + '</button></div>');
+      (pl.dealer ? dealerView() : '') +
+      (here || pl.dealer ? '' : '<div class="inline"><button class="btn go" id="trip-' + pl.district + '" data-tripto="' + pl.district + '">Plan a trip to ' + esc(D.DISTRICTS[pl.district].name) + '</button></div>');
   }
   function whenText(w) {
     var parts = [];
@@ -964,13 +984,36 @@
   }
   function pad(n) { return String(n).padStart(2, '0'); }
 
+  /* ---------- bank: wallet, savings and treasury bills ---------- */
+  function bankView() {
+    var tab = ui.bankTab || 'save', held = L.bondsHeld(S), d = L.day(S);
+    var html = '<div class="section" style="padding-top:0"><div class="wallet-card"><div class="wc-l">Wallet</div><div class="wc-big num">' + N(S.cash) + '</div>' +
+      '<div class="wc-s">Net worth ' + N(L.netWorth(S)) + ' · Cash in hand pays for everything first, then your savings by transfer.</div></div>' +
+      '<div class="bank-card"><div class="bk-top"><span class="bk-logo">🐚</span><div><div class="bk-name">EKO RESERVE BANK</div><div class="bk-rate">Savings ' + (L.BANK_RATE * 100).toFixed(1) + '% a week · Treasury bills ' + Math.round(L.BOND_RATE * 100) + '% in ' + L.BOND_DAYS + ' days</div></div></div>' +
+      '<div class="bk-pills"><div class="bk-pill"><span>Savings</span><b class="num">' + N(S.bank) + '</b></div><div class="bk-pill"><span>In bills</span><b class="num">' + N(held) + '</b></div></div></div>' +
+      '<div class="bank-body"><div class="seg"><button type="button" class="seg-b' + (tab === 'save' ? ' sel' : '') + '" id="bt-save" data-banktab="save">💰 Savings</button><button type="button" class="seg-b' + (tab === 'bill' ? ' sel' : '') + '" id="bt-bill" data-banktab="bill">📜 Treasury bills</button></div>' +
+      '<label class="label" for="amt">Amount (₦)</label><input id="amt" class="amt-big" inputmode="numeric" placeholder="₦ 0">' +
+      '<div class="pg-chips" style="padding:0">' + [10000, 100000, 1000000, 10000000].map(function (v) { return '<button type="button" class="pg-chip" id="amt-' + v + '" data-bondamt="' + v + '">' + N(v) + '</button>'; }).join('') + '</div>';
+    if (tab === 'save') {
+      html += '<div class="inline"><button class="btn sm" id="dep" data-bank="dep">Deposit to savings</button><button class="btn sm ghost" id="wd" data-topup="1">💳 Top up wallet</button></div>' +
+        '<p class="note">Savings earn ' + (L.BANK_RATE * 100).toFixed(1) + '% every Monday. Prices rise faster than that, so idle cash loses value. Top up moves savings into your wallet.</p>';
+    } else {
+      html += '<div class="inline"><button class="btn sm" id="buybond" data-buybond="1">Buy a ' + L.BOND_DAYS + '-day bill</button></div>' +
+        '<p class="note">Paid from savings, minimum ' + N(10000) + '. It is locked until it matures, then comes back to savings with ' + Math.round(L.BOND_RATE * 100) + '%.</p>';
+      if (S.bonds.length) html += '<div class="list">' + S.bonds.map(function (b, i) {
+        var left = b.due - d;
+        return '<div class="item"><div><h3>📜 ' + N(b.amt) + '</h3><div class="meta"><span class="gain num">+' + N(L.bondReturn(b.amt)) + '</span><span>Matures ' + (left <= 1 ? 'tomorrow' : 'in ' + left + ' days') + '</span></div></div></div>';
+      }).join('') + '</div>';
+    }
+    return html + '</div></div>';
+  }
+
   /* ---------- Money tab ---------- */
   function moneyView() {
     var h = L.homeDef(S);
     var html = '<div class="panel-h"><h2>Money</h2><span class="muted">Net worth <b class="num">' + N(L.netWorth(S)) + '</b></span></div><div class="panel-b">';
 
-    html += '<div class="section" style="padding-top:0"><h3>Bank</h3><p class="note">Savings earn 0.3% a week. Prices rise faster than that, so idle cash loses value.</p>' +
-      '<div class="inline"><label class="label" for="amt">Amount (₦)</label><input id="amt" inputmode="numeric" placeholder="10000"><button class="btn sm" id="dep" data-bank="dep">Deposit</button><button class="btn sm ghost" id="wd" data-bank="wd">Withdraw</button></div></div>';
+    html += bankView();
 
     html += '<div class="section"><h3>Rent · ' + esc(h.name) + '</h3><dl class="kv"><dt>Weekly rent</dt><dd class="num">' + N(S.rentRate) + '</dd><dt>Due</dt><dd>Saturdays 12:00</dd><dt>Arrears</dt><dd class="num ' + (S.arrears ? 'cost' : '') + '">' + N(S.arrears) + (S.rentLate ? ' · strike ' + S.rentLate + '/3' : '') + '</dd><dt>Light</dt><dd>' + Math.round(h.power * 100) + '% of the time</dd></dl>' +
       (S.arrears ? '<div class="inline"><button class="btn sm" id="pay-arrears" data-arrears="1">Pay arrears</button></div>' : '') +
@@ -1148,7 +1191,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1242,6 +1285,12 @@
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { return L.applyJob(S, ds.apply); }); return; }
     if (ds.quit) { run(function () { return L.quitJob(S); }); return; }
+    if (ds.dealertab) { ui.dealerTab = ds.dealertab; render(); return; }
+    if (ds.drive) { run(function () { return L.driveVehicle(S, +ds.drive); }); return; }
+    if (ds.banktab) { ui.bankTab = ds.banktab; render(); return; }
+    if (ds.bondamt) { var el = document.getElementById('amt'); if (el) el.value = ds.bondamt; return; }
+    if (ds.buybond) { var ba = amount(); run(function () { return L.buyBond(S, ba); }); return; }
+    if (ds.topup) { var ta = amount(); run(function () { return L.withdraw(S, ta); }); return; }
     if (ds.bank) { var a = amount(); run(function () { return ds.bank === 'dep' ? L.deposit(S, a) : L.withdraw(S, a); }); return; }
     if (ds.arrears) { run(function () { return L.payArrears(S); }); return; }
     if (ds.move) { run(function () { return L.moveHouse(S, ds.move); }); return; }

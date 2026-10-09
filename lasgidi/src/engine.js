@@ -19,10 +19,12 @@
   var STEP = 15;           // minutes per simulation step
   var START_MONTH = 9;     // October, so Detty December arrives in week 9
   var BANK_RATE = 0.003;   // weekly savings interest
+  var BOND_RATE = 0.01;    // a 7-day treasury bill pays 1% at maturity
+  var BOND_DAYS = 7;
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 6;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 7;         // state shape; migrate() upgrades older saves
   // Game RULES version. A life plays by the rules it started under, so a
   // recorded life replays identically after later updates add new systems.
   // 5 = v0.5 rules; 6 adds love and family.
@@ -166,7 +168,7 @@
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car)/.test(m) || /^Car maintenance/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
     if (/Business|^Bought|^Sold|Tenant rent/.test(m)) return 'business';
-    if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash/i.test(m)) return 'savings';
+    if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up/.test(m)) return 'health';
     return amt < 0 ? 'lifestyle' : 'other';
@@ -274,7 +276,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 },
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 },
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -353,6 +355,7 @@
     if (hd.daily) applyFx(s, hd.daily); // perks of homes added after v0.6
     var fd = furnitureDaily(s);
     if (fd) applyFx(s, fd);
+    matureBonds(s);
     var d = day(s), yesterday = d - 1, yDow = yesterday % 7;
     // Missed shift check.
     if (s.job) {
@@ -1160,6 +1163,31 @@
     return ok('Withdrew ' + naira(amt) + '.');
   }
 
+  // Treasury bills: money leaves savings for 7 days and comes back with 1%.
+  function buyBond(s, amt) {
+    amt = Math.floor(amt);
+    if (!(amt >= 10000)) return fail('The smallest bill is ' + naira(10000) + '.');
+    if (amt > s.bank) return fail('Bills are paid from savings. You have ' + naira(s.bank) + ' saved.');
+    if ((s.bonds || []).length >= 20) return fail('You hold 20 bills already. Wait for one to mature.');
+    s.alerts = [];
+    post(s, 'bank', -amt, 'Treasury bill bought');
+    s.bonds.push({ amt: amt, due: day(s) + BOND_DAYS });
+    return ok(naira(amt) + ' in a ' + BOND_DAYS + '-day bill. It pays ' + naira(bondReturn(amt)) + ' on day ' + (day(s) + BOND_DAYS) + '.');
+  }
+  function bondReturn(amt) { return Math.floor(amt * BOND_RATE); }
+  function bondsHeld(s) { return (s.bonds || []).reduce(function (a, b) { return a + b.amt; }, 0); }
+  function matureBonds(s) {
+    if (!s.bonds || !s.bonds.length) return;
+    var d = day(s);
+    s.bonds = s.bonds.filter(function (b) {
+      if (b.due > d) return true;
+      post(s, 'bank', b.amt, 'Treasury bill matured');
+      post(s, 'bank', bondReturn(b.amt), 'Treasury bill interest');
+      log(s, 'A treasury bill matured: ' + naira(b.amt + bondReturn(b.amt)) + ' is back in your savings.', 'good');
+      return false;
+    });
+  }
+
   function joinAjo(s, contrib) {
     if (AJO_SIZES.indexOf(contrib) < 0) return fail('Pick one of the contribution sizes.');
     if (s.ajo) return fail('You are already in an ajo.');
@@ -1608,6 +1636,8 @@
   /* ---------- garage and hangar ---------- */
 
   function bestCar(s) {
+    var dv = s.vehicles && s.driving >= 0 ? s.vehicles[s.driving] : null;
+    if (dv && D.VEHICLES[dv.id].kind === 'car') return D.VEHICLES[dv.id];
     var best = null;
     (s.vehicles || []).forEach(function (v) { var V = D.VEHICLES[v.id]; if (V.kind === 'car' && (!best || V.speed > best.speed)) best = V; });
     return best;
@@ -1624,12 +1654,21 @@
     log(s, 'You bought a ' + V.name + '. Upkeep is ' + naira(price(s, V.upkeep)) + ' a week.', 'good');
     return finish(s, ok('Congratulations on your ' + V.name + '!'));
   }
+  // Pick the car you drive; -1 goes back to the fastest one.
+  function driveVehicle(s, idx) {
+    if (idx === -1) { s.driving = -1; return ok('You will drive your fastest car.'); }
+    var v = s.vehicles && s.vehicles[idx];
+    if (!v || D.VEHICLES[v.id].kind !== 'car') return fail('Pick one of your cars.');
+    s.driving = idx;
+    return ok('You are driving the ' + D.VEHICLES[v.id].name + '.');
+  }
   function sellVehicle(s, idx) {
     var v = s.vehicles && s.vehicles[idx];
     if (!v) return fail('No such vehicle.');
     var val = roundTo(v.paid * 0.5, 1000);
     s.alerts = [];
     s.vehicles.splice(idx, 1);
+    if (s.driving === idx) s.driving = -1; else if (s.driving > idx) s.driving--;
     earn(s, val, 'Sold ' + D.VEHICLES[v.id].name);
     return finish(s, ok('Sold for ' + naira(val) + '.'));
   }
@@ -1728,6 +1767,7 @@
     s.properties.forEach(function (p) { assets += p.value; });
     if (s.car) assets += roundTo(D.CAR.price * 0.5 * s.econ.infl, 1000);
     (s.vehicles || []).forEach(function (v) { assets += roundTo(v.paid * 0.5, 1000); });
+    assets += bondsHeld(s);
     (s.items || []).forEach(function (it) { assets += roundTo(it.paid * 0.4, 50); });
     return assets - debts(s);
   }
@@ -1829,6 +1869,8 @@
     if (s.replay === undefined) s.replay = null; // lives from before v0.5 cannot be replayed
     if (!s.items) s.items = [];
     if (!s.vehicles) s.vehicles = [];
+    if (s.driving == null) s.driving = -1;
+    if (!s.bonds) s.bonds = [];
     if (!s.wardrobe) s.wardrobe = [];
     if (!s.outfit) s.outfit = {};
     if (!s.look) s.look = { skin: 2, hair: 0, shape: 1 };
@@ -2219,7 +2261,8 @@
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
     buyItem: recorded('bi', buyItem), placeItem: recorded('pi', placeItem), storeItem: recorded('si', storeItem), sellItem: recorded('xi', sellItem),
     setLook: recorded('lk', setLook), buyClothes: recorded('bc2', buyClothes), wear: recorded('wr', wear), takeOff: recorded('to', takeOff), outfitTags: outfitTags,
-    buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle),
+    buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle), driveVehicle: recorded('dv', driveVehicle),
+    buyBond: recorded('bb', buyBond), bondReturn: bondReturn, bondsHeld: bondsHeld, BOND_RATE: BOND_RATE, BOND_DAYS: BOND_DAYS, BANK_RATE: BANK_RATE,
     roomSize: roomSize, fitsAt: fitsAt, statusPoints: statusPoints, furnitureSleep: furnitureSleep, furniturePower: furniturePower, furnitureGen: furnitureGen, furnitureDaily: furnitureDaily, bestCar: bestCar,
     buyPlot: recorded('bpl', buyPlot), plotCount: plotCount, plotXY: plotXY, plotTakenByNpc: plotTakenByNpc, myPlot: myPlot, ownsHome: ownsHome,
     rentBoard: recorded('rb', rentBoard), boardRent: boardRent, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd,

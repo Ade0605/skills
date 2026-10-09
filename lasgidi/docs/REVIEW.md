@@ -147,6 +147,16 @@ The tests check four kinds of forgery: inflated wealth with a "consistent" score
 
 What's left: a bot that plays well can still earn a high score. That's legitimate skill, not an exploit, and it's the same limit any replay-verified leaderboard has.
 
+### v0.7: the "own things" layer, without pay-to-win
+
+Lagos Life's screenshots show what keeps players coming back: a home you furnish room by room, a garage of named supercars, an avatar in ankara or agbada, and a bank card with a ₦11 trillion balance. Lasgidi now has all four: a home designer with rooms, a garage with car dealers on the map, a wardrobe, and a bank screen with savings and treasury bills.
+
+Two things are deliberately different:
+- **Nothing is cosmetic only.** Each purchase changes the game, within limits. A good bed improves sleep, an inverter improves light, aso-ebi improves owambes, a car shortens your commute. All of these bonuses are capped, so money cannot buy a guaranteed win.
+- **No real-money top-up.** In Lagos Life, "Top up wallet" sits next to the balance. In Lasgidi it only moves your own savings into your wallet. Every naira is earned in the game, and the ledger seal makes this checkable. A score you can replay means nothing if wealth can be bought.
+
+Each new system takes effect only when you own, place, wear or hold something. Lives from earlier versions therefore replay to the same seal, which a golden fixture test and the replay of five v0.5 lives confirm.
+
 ## 5. Roadmap: making it multiplayer without repeating the mistakes
 
 1. **Server-authoritative engine.** The engine is already pure and deterministic, so run it on the server and have clients send intents (`doAction(id)`), never balances. Persist the action log and replay it to audit any account.

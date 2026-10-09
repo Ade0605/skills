@@ -15,6 +15,19 @@
   };
   var WALLS = { room: '#c9bfa6', share: '#d6ccb4', selfcon: '#e2dccd', miniflat: '#e2dccd', flat2: '#e7e1d2', flat3: '#e7e1d2', duplex: '#efe9dc', luxury: '#2f3136', mansion: '#f4f1ea' };
 
+  // Bigger homes are split into rooms: low partition walls with doorways and
+  // their own floor tiles. Walls are cosmetic; furniture can go anywhere.
+  var ROOM_FLOORS = { Kitchen: ['#eeeae2', '#ded8cb'], Bathroom: ['#cfe0e6', '#bdd0d8'] };
+  function roomsFor(type, sz) {
+    var w = sz[0], d = sz[1];
+    if (type === 'room' || type === 'share' || type === 'selfcon') return [];
+    if (type === 'miniflat') { var m = Math.ceil(w / 2); return [{ x: 0, y: 0, w: m, d: d, name: 'Bedroom' }, { x: m, y: 0, w: w - m, d: d, name: 'Living room' }]; }
+    var a = Math.round(w * 0.55), b = Math.round(d * 0.5);
+    var out = [{ x: 0, y: 0, w: a, d: b, name: 'Bedroom' }, { x: a, y: 0, w: w - a, d: b, name: 'Kitchen' }, { x: 0, y: b, w: a, d: d - b, name: 'Living room' }, { x: a, y: b, w: w - a, d: d - b, name: 'Bathroom' }];
+    if (type === 'mansion' || type === 'duplex') { var h = Math.round(a / 2); out[0] = { x: 0, y: 0, w: h, d: b, name: 'Bedroom' }; out.splice(1, 0, { x: h, y: 0, w: a - h, d: b, name: 'Guest room' }); }
+    return out;
+  }
+
   function shade(hex, f) {
     var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
     var t = f < 0 ? 0 : 255, p = Math.abs(f);
@@ -132,11 +145,29 @@
       poly([iso(0, 0, WALL), iso(sz[0], 0, WALL), iso(sz[0], 0), iso(0, 0)], shade(wall, -0.06));
       poly([iso(0, 0, WALL), iso(0, sz[1], WALL), iso(0, sz[1]), iso(0, 0)], shade(wall, -0.16));
       for (var wx = 1; wx < sz[0] - 0.5; wx += 2.5) poly([iso(wx, 0, WALL * 0.75), iso(wx + 1, 0, WALL * 0.75), iso(wx + 1, 0, WALL * 0.35), iso(wx, 0, WALL * 0.35)], view.power || view.hour < 18 && view.hour >= 7 ? '#a9d4ea' : '#2a3a4a');
-      // Floor tiles.
+      // Floor tiles, by room.
+      var rooms = roomsFor(type, sz);
+      function roomOf(tx, ty) { for (var i = 0; i < rooms.length; i++) { var r = rooms[i]; if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.d) return r; } return null; }
       for (var ty = 0; ty < sz[1]; ty++) for (var tx = 0; tx < sz[0]; tx++) {
-        var hl = hover && hover.x === tx && hover.y === ty;
-        poly([iso(tx, ty), iso(tx + 1, ty), iso(tx + 1, ty + 1), iso(tx, ty + 1)], hl ? '#f2d36b' : fl[(tx + ty) % 2], 'rgba(0,0,0,.06)');
+        var hl = hover && hover.x === tx && hover.y === ty, rm = roomOf(tx, ty), pal = rm && ROOM_FLOORS[rm.name] || fl;
+        poly([iso(tx, ty), iso(tx + 1, ty), iso(tx + 1, ty + 1), iso(tx, ty + 1)], hl ? '#f2d36b' : pal[(tx + ty) % 2], 'rgba(0,0,0,.06)');
       }
+      // Partition walls with a doorway in each, then room names on the floor.
+      var PW = WALL * 0.32, edges = {};
+      rooms.forEach(function (r) {
+        if (r.x > 0) edges['x' + r.x + ':' + r.y] = { x: r.x, y0: r.y, y1: r.y + r.d };
+        if (r.y > 0) edges['y' + r.y + ':' + r.x] = { y: r.y, x0: r.x, x1: r.x + r.w };
+      });
+      Object.keys(edges).forEach(function (k) {
+        var e = edges[k], t = 0.14;
+        if (e.x != null) {
+          var gy = e.y0 + Math.max(0, Math.floor((e.y1 - e.y0) / 2) - 0.5);
+          [[e.y0, gy], [gy + 1, e.y1]].forEach(function (seg) { if (seg[1] - seg[0] > 0.05) { poly([iso(e.x, seg[0], PW), iso(e.x, seg[1], PW), iso(e.x, seg[1]), iso(e.x, seg[0])], shade(wall, -0.22)); poly([iso(e.x - t, seg[0], PW), iso(e.x, seg[0], PW), iso(e.x, seg[1], PW), iso(e.x - t, seg[1], PW)], shade(wall, 0.1)); } });
+        } else {
+          var gx = e.x0 + Math.max(0, Math.floor((e.x1 - e.x0) / 2) - 0.5);
+          [[e.x0, gx], [gx + 1, e.x1]].forEach(function (seg) { if (seg[1] - seg[0] > 0.05) { poly([iso(seg[0], e.y, PW), iso(seg[1], e.y, PW), iso(seg[1], e.y), iso(seg[0], e.y)], shade(wall, -0.1)); poly([iso(seg[0], e.y - t, PW), iso(seg[1], e.y - t, PW), iso(seg[1], e.y, PW), iso(seg[0], e.y, PW)], shade(wall, 0.1)); } });
+        }
+      });
       // Items, back to front.
       hits = [];
       var list = view.items.map(function (it, i) { return { it: it, i: i }; }).filter(function (o) { return o.it.x != null; });
@@ -159,6 +190,10 @@
       // Driveway: cars, a helipad, boats at a jetty marker.
       var cars = view.vehicles.filter(function (v) { return D.VEHICLES[v.id].kind === 'car'; });
       cars.slice(0, 4).forEach(function (v, i) { drawCar(sz[0] + 1.1, 0.4 + i * 1.3, D.VEHICLES[v.id]); });
+      var stored = view.items.filter(function (it) { return it.x == null; }).length, moreCars = Math.max(0, cars.length - 4);
+      var chips = [];
+      if (stored) chips.push('🅿️ +' + stored + ' in storage');
+      if (moreCars) chips.push('🚗 +' + moreCars + ' more in the garage');
       var heli = view.vehicles.some(function (v) { return D.VEHICLES[v.id].kind === 'heli'; });
       if (heli) {
         var hp = iso(Math.max(1, sz[0] * 0.3), sz[1] + 0.85);
@@ -173,6 +208,22 @@
       });
       // NEPA: the room dims when there is no light at night.
       if (!view.power && (view.hour >= 19 || view.hour < 6)) { ctx.fillStyle = 'rgba(8,12,30,.45)'; ctx.fillRect(0, 0, W, H); }
+      // Room names in small pills at each room's middle.
+      if (rooms.length) {
+        ctx.font = '700 ' + Math.max(9, Math.round(10 * s)) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        rooms.forEach(function (r) {
+          var c = iso(r.x + r.w / 2, r.y + r.d / 2), t = r.name.toUpperCase(), tw = ctx.measureText(t).width + 10;
+          ctx.fillStyle = view.dark ? 'rgba(20,20,22,.6)' : 'rgba(255,255,255,.7)'; ctx.fillRect(c.x - tw / 2, c.y - 8, tw, 16);
+          ctx.fillStyle = view.dark ? '#edebe3' : '#3a3b3e'; ctx.fillText(t, c.x, c.y + 0.5);
+        });
+      }
+      // Chips, drawn last so the dark overlay does not hide them.
+      ctx.font = '600 12px sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      chips.forEach(function (c, i) {
+        var tw = ctx.measureText(c).width + 20, cx0 = W - tw - 8, cy0 = H - 28 - i * 30;
+        ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(cx0, cy0 - 12, tw, 24, 12); else ctx.rect(cx0, cy0 - 12, tw, 24); ctx.fill();
+        ctx.fillStyle = '#17181a'; ctx.fillText(c, cx0 + 10, cy0 + 1);
+      });
     }
 
     function tileAt(e) {
