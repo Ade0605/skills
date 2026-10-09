@@ -21,7 +21,8 @@
   var BANK_RATE = 0.003;   // weekly savings interest
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
-  var VERSION = 1;
+  var VERSION = 1;        // save-code format
+  var SCHEMA = 2;         // state shape; migrate() upgrades older saves
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -126,10 +127,42 @@
     if (s.ledger.length > LEDGER_KEEP) s.ledger.length = LEDGER_KEEP;
     s.ledgerCount++;
     s.ledgerSum[acct] += amt;
+    if (memo !== 'Transfer') {
+      var cat = category(memo, amt), side = amt > 0 ? 'inc' : 'out';
+      s.wk[side][cat] = (s.wk[side][cat] || 0) + Math.abs(amt);
+    }
     if (amt > 0 && memo !== 'Transfer') s.stats.earned += amt;
     if (amt < 0 && memo !== 'Transfer') s.stats.spent -= amt;
     s.alerts.push({ amt: amt, memo: memo, acct: acct });
     if (s.alerts.length > 6) s.alerts.shift();
+  }
+
+  // Spending and income categories for the weekly report.
+  var FOOD_LABELS = {}, GIG_LABELS = {};
+  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; })).forEach(function (list) {
+    list.forEach(function (a) {
+      if ((a.fx && a.fx.hunger > 0) || a.special === 'pantry7') FOOD_LABELS[a.label] = true;
+      if (a.gig) GIG_LABELS[a.label] = true;
+    });
+  });
+  var CATEGORY_NAMES = {
+    wages: 'Wages', gigs: 'Gigs and side hustles', business: 'Business and property', savings: 'Ajo, loans and interest',
+    family: 'Family', housing: 'Rent and housing', food: 'Food', transport: 'Transport', losses: 'Fines, scams and theft',
+    health: 'Health', lifestyle: 'Fun and lifestyle', other: 'Other'
+  };
+  function category(memo, amt) {
+    var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
+    if (/^Shift pay/.test(m)) return 'wages';
+    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize)/.test(m)) return 'gigs';
+    if (/^(Rent|Move-in)/.test(m)) return 'housing';
+    if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
+    if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car)/.test(m) || /^Car maintenance/.test(m)) return 'transport';
+    if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
+    if (/Business|^Bought|^Sold|Tenant rent/.test(m)) return 'business';
+    if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash/i.test(m)) return 'savings';
+    if (/Allowance|Aunty/.test(m)) return 'family';
+    if (/Hospital|Check-up/.test(m)) return 'health';
+    return amt < 0 ? 'lifestyle' : 'other';
   }
 
   function canAfford(s, amount) { return s.cash + s.bank >= amount; }
@@ -235,7 +268,8 @@
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
       stats: { trips: 0, shifts: 0, onTime: 0, earned: 0, spent: 0, peakWorth: 0, weekStartWorth: 0 },
-      ach: {}, won: null
+      ach: {}, won: null,
+      sv: SCHEMA, wk: { inc: {}, out: {} }, history: [], report: null
     };
     Object.keys(D.SKILLS).forEach(function (k) { s.skills[k] = 0; });
     Object.keys(D.NPCS).forEach(function (k) { s.friends[k] = { lvl: 0, seen: -1 }; });
@@ -356,6 +390,11 @@
     }
     var worth = netWorth(s);
     log(s, 'Week ' + w + ' report: net worth ' + naira(worth) + ' (' + (worth >= s.stats.weekStartWorth ? '+' : '') + naira(worth - s.stats.weekStartWorth) + ').', 'report');
+    var rep = { w: w, worth: worth, delta: worth - s.stats.weekStartWorth, inc: s.wk.inc, out: s.wk.out };
+    s.history.push({ w: w, worth: worth });
+    if (s.history.length > 104) s.history.shift();
+    s.report = rep;
+    s.wk = { inc: {}, out: {} };
     s.stats.weekStartWorth = worth;
   }
 
@@ -474,13 +513,55 @@
     return list.map(function (a) { return describe(s, a); });
   }
 
+  // Needs at the end of an action if nothing else happens on the way.
+  function project(s, a) {
+    if (a.special === 'sleep' || a.special === 'nap') return { hunger: s.needs.hunger - 3 * a.mins / 60, energy: 100 };
+    var h = a.mins / 60, fx = a.fx || {};
+    var shift = a.special === 'shift' ? -12 : 0;
+    return {
+      hunger: s.needs.hunger - DECAY.hunger * h + (fx.hunger || 0),
+      energy: s.needs.energy - DECAY.energy * h + (fx.energy || 0) + shift
+    };
+  }
+
+  // Minutes from now until the next shift start, or null.
+  function nextShiftStart(s) {
+    if (!s.job) return null;
+    var c = D.CAREERS[s.job.id];
+    for (var i = 0; i < 8; i++) {
+      var d = day(s) + i, t = d * 1440 + c.start * 60;
+      if (c.days.indexOf(d % 7) >= 0 && t > s.t && !(i === 0 && s.job.lastShift === d)) return t - s.t;
+    }
+    return null;
+  }
+
+  function alarmMins(s) {
+    var until = nextShiftStart(s);
+    if (until == null) return null;
+    var c = D.CAREERS[s.job.id];
+    var commute = homeDistrict(s) === c.district ? 0 : Math.round(distance(homeDistrict(s), c.district) / 26 * 60 * 1.6) + 30;
+    var mins = Math.floor((until - commute - 30) / STEP) * STEP;
+    return mins >= 60 ? Math.min(mins, 600) : null;
+  }
+
   function describe(s, a) {
     var out = Object.assign({}, a);
+    if (a.alarm) {
+      var am = alarmMins(s);
+      if (am == null) { out.mins = 60; out.disabled = s.job ? 'Your shift is too soon for a proper sleep' : 'You have no job to wake up for'; }
+      else { out.mins = am; out.label = 'Sleep, alarm for work (' + fmtMins(am) + ')'; }
+    }
     out.price = price(s, a.cost);
     if (a.power && out.atHome && !s.power) { out.price += genCost(s); out.gen = true; }
     if (a.earn) out.earnEst = gigPay(s, a.earn, 1);
     if (a.when) out.whenLabel = windowLabel(a.when);
     if (!out.disabled) out.disabled = blocker(s, a, out.price);
+    var p = project(s, a);
+    if (p.energy <= 0 || p.hunger <= 0) {
+      // Optional effort you cannot finish is blocked; a shift is your call.
+      if (!out.disabled && a.special !== 'shift' && (a.fx && a.fx.energy < 0 || a.gig) && p.energy <= 0) out.disabled = 'Too tired for this';
+      else out.collapseRisk = p.energy <= 0 ? 'You will collapse from exhaustion before this ends' : 'You will collapse from hunger before this ends';
+    }
     return out;
   }
 
@@ -521,6 +602,7 @@
     if (!a) return fail('You cannot do that here.');
     if (a.disabled) return fail(a.disabled);
     if (a.special === 'shift') return workShift(s, a);
+    if (a.alarm) a.label = 'Sleep';
     if (a.price && !pay(s, a.price, a.label + (a.gen ? ' (incl. gen fuel)' : ''))) return fail('Not enough money.');
 
     var msg = a.label + '.';
@@ -750,7 +832,7 @@
       if (id === 'trek') o.energy = Math.round(m.energyPerKm * km);
       if (!o.disabled && s.pending.length) o.disabled = 'Decide on the open event first';
       if (!o.disabled && o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost);
-      if (!o.disabled && id === 'trek' && s.needs.energy < o.energy) o.disabled = 'Too tired to trek';
+      if (!o.disabled && id === 'trek' && s.needs.energy - o.energy - DECAY.energy * o.mins / 60 <= 5) o.disabled = 'Too tired to trek that far';
       return o;
     });
   }
@@ -793,6 +875,7 @@
   }
 
   function fmtMins(m) {
+    if (m >= 1440) { var dd = Math.floor(m / 1440), hh = Math.floor(m % 1440 / 60); return dd + 'd' + (hh ? ' ' + hh + 'h' : ''); }
     var h = Math.floor(m / 60), r = m % 60;
     return (h ? h + 'h' : '') + (r ? (h ? ' ' : '') + r + 'm' : '');
   }
@@ -1252,10 +1335,204 @@
     var json = b64d(parts[1]);
     var s = JSON.parse(json);
     var tampered = fnv('lasgidi' + json) !== parts[2] || !verifyLedger(s);
+    migrate(s);
     return { state: s, tampered: tampered };
   }
 
   // Cash and bank must equal opening balance plus every ledger line ever posted.
+  // Upgrade saves made by older versions in place.
+  function migrate(s) {
+    if (!s || s.sv >= SCHEMA) return s;
+    if (s.welfareDay == null) s.welfareDay = -1;
+    if (s.viralWeek == null) s.viralWeek = -1;
+    if (s.hospitalWeek == null) s.hospitalWeek = -1;
+    if (!s.wk) s.wk = { inc: {}, out: {} };
+    if (!s.history) s.history = [];
+    if (s.report === undefined) s.report = null;
+    s.sv = SCHEMA;
+    return s;
+  }
+
+  /* ---------- advisor ---------- */
+
+  function minutesUntilRent(s) {
+    var d = day(s), target = (d + ((5 - dow(s) + 7) % 7)) * 1440 + 720;
+    if (target <= s.t) target += 7 * 1440;
+    return target - s.t;
+  }
+
+  function route(s, dest, prefer) {
+    var opts = travelOptions(s, dest).filter(function (o) { return !o.disabled; });
+    if (!opts.length) return null;
+    opts.sort(prefer === 'cheap'
+      ? function (a, b) { return a.cost - b.cost || a.mins - b.mins; }
+      : function (a, b) { return a.mins - b.mins || a.cost - b.cost; });
+    return opts[0];
+  }
+
+  function hhmm(mins) { return String(Math.floor(mins / 60) % 24).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0'); }
+
+  function foodHint(s) {
+    var here = availableActions(s).filter(function (a) { return !a.disabled && ((a.fx && a.fx.hunger >= 30 && a.special !== 'welfare') || a.special === 'cook'); })
+      .sort(function (a, b) { return a.price - b.price; })[0];
+    if (here) return { kind: 'warn', text: 'Your belle is empty. ' + here.label + (here.price ? ' for ' + naira(here.price) : '') + '.', act: { type: 'act', id: here.id } };
+    var welfare = availableActions(s).filter(function (a) { return !a.disabled && a.special === 'welfare'; })[0];
+    if (welfare) return { kind: 'warn', text: 'You are broke and hungry. ' + welfare.label + '.', act: { type: 'act', id: welfare.id } };
+    var best = null;
+    Object.keys(D.PLACE_ACTIONS).forEach(function (d) {
+      if (d === s.loc) return;
+      D.PLACE_ACTIONS[d].forEach(function (a) {
+        if (!(a.fx && a.fx.hunger >= 30) || a.special === 'welfare' || !inWindow(s, a.when)) return;
+        var r = route(s, d, 'cheap');
+        if (!r || !canAfford(s, r.cost + price(s, a.cost))) return;
+        if (r.mode === 'trek' && r.km > 5) return;
+        var score = r.mins + (r.cost + price(s, a.cost)) / 100;
+        if (!best || score < best.score) best = { score: score, d: d, a: a, r: r };
+      });
+    });
+    if (best) return { kind: 'warn', text: 'Your belle is empty. ' + best.a.label + ' in ' + D.DISTRICTS[best.d].name + ' (' + D.MODES[best.r.mode].name + ', ' + fmtMins(best.r.mins) + ').', act: { type: 'travel', dest: best.d, mode: best.r.mode } };
+    return { kind: 'warn', text: 'Your belle is empty and food is out of reach. Go home and ask a neighbour.' };
+  }
+
+  function shiftHint(s) {
+    var c = D.CAREERS[s.job.id], m = minuteOfDay(s), st = c.start * 60;
+    if (c.days.indexOf(dow(s)) < 0 || s.job.lastShift === day(s) || m > st + 60) return null;
+    var title = c.titles[s.job.level];
+    var shiftMins = c.end * 60 - Math.max(m, st);
+    var p = project(s, { mins: shiftMins, special: 'shift', fx: {} });
+    if (p.energy <= 5 || p.hunger <= 5) {
+      var slack = st + 15 - m;
+      if (p.hunger <= 5 && p.energy > 5 && slack >= 45) { var fh = foodHint(s); if (fh && fh.act && fh.act.type === 'act') return { kind: 'warn', text: 'Eat before your ' + title + ' shift or you will collapse on the job. ' + fh.text.replace(/^[^.]+\.\s*/, ''), act: fh.act }; }
+      if (p.energy <= 5 && homeDistrict(s) === s.loc && slack >= 120) return { kind: 'warn', text: 'You are too tired for a ' + fmtMins(shiftMins) + ' shift. Nap first; there is time.', act: { type: 'act', id: 'home_nap' } };
+      return { kind: 'warn', text: 'You are not fit for today\'s ' + fmtMins(shiftMins) + ' ' + title + ' shift. Working it means collapsing; skipping it is a strike (' + s.job.missed + '/3 so far).' };
+    }
+    if (s.loc === c.district) {
+      if (m >= st - 60) return { kind: 'go', text: 'Your ' + title + ' shift is open. Clock in' + (m > st + 15 ? ' now. You are already late.' : ' before ' + hhmm(st + 15) + ' for full pay.'), act: { type: 'act', id: 'work_shift' } };
+      return { kind: 'info', text: 'Your shift starts here at ' + hhmm(st) + '. Clock-in opens at ' + hhmm(st - 60) + '.' };
+    }
+    // Cheapest ride that still arrives on time; fastest if none can.
+    var opts = travelOptions(s, c.district).filter(function (o) { return !o.disabled; })
+      .sort(function (a, b) { return a.cost - b.cost || a.mins - b.mins; });
+    var r = opts.filter(function (o) { return m + o.mins <= st + 15 && !(o.mode === 'trek' && o.km > 3); })[0] || route(s, c.district, 'fast');
+    if (!r) return { kind: 'warn', text: 'You cannot afford any ride to work in ' + D.DISTRICTS[c.district].name + '.' };
+    // Leaving later only helps if the cheap ride still makes it then.
+    if (m + r.mins <= st + 15 && st - (m + r.mins) > 60) return { kind: 'info', text: 'Shift at ' + hhmm(st) + ' in ' + D.DISTRICTS[c.district].name + '. Leave by ' + hhmm(Math.max(0, st - r.mins)) + ' (' + D.MODES[r.mode].name + ', ' + fmtMins(r.mins) + (r.cost ? ', ' + naira(r.cost) : '') + ').' };
+    var arrive = m + r.mins;
+    if (arrive > st + 60) return { kind: 'warn', text: 'You will miss today\'s ' + title + ' shift. That is a strike (' + s.job.missed + '/3 so far).' };
+    if (st - arrive <= 90) return { kind: 'go', text: 'Leave now for work in ' + D.DISTRICTS[c.district].name + ': ' + D.MODES[r.mode].name + ', ' + fmtMins(r.mins) + (r.cost ? ', ' + naira(r.cost) : '') + (arrive > st + 15 ? '. You will be late.' : '.'), act: { type: 'travel', dest: c.district, mode: r.mode } };
+    return { kind: 'info', text: 'Shift at ' + hhmm(st) + ' in ' + D.DISTRICTS[c.district].name + '. Leave by ' + hhmm(Math.max(0, st - r.mins)) + ' (' + D.MODES[r.mode].name + ', ' + fmtMins(r.mins) + ').' };
+  }
+
+  function jobHint(s) {
+    var best = null;
+    Object.keys(D.CAREERS).forEach(function (cid) {
+      var c = D.CAREERS[cid], connect = connectFor(s, cid);
+      if (skillLevel(s, c.skill) < c.req[0] && !connect) return;
+      if (c.degree && !s.edu.degree && !connect) return;
+      var r = c.district === s.loc ? { mins: 0, cost: 0 } : route(s, c.district, 'cheap');
+      if (!r) return;
+      // Rank by the daily commute from home, not by where you stand now.
+      var commuteKm = homeDistrict(s) === c.district ? 0 : distance(homeDistrict(s), c.district);
+      var score = commuteKm * 8 - c.pay[0] / 100;
+      if (!best || score < best.score) best = { score: score, cid: cid, r: r };
+    });
+    if (!best) return { kind: 'info', text: 'No job will take you yet. Build Hustle with gigs like hawking in Oshodi.' };
+    var c = D.CAREERS[best.cid];
+    if (c.district === s.loc) return { kind: 'go', text: 'You have no job. ' + c.titles[0] + ' (' + naira(c.pay[0]) + '/shift) is hiring right here.', act: { type: 'apply', id: best.cid } };
+    return { kind: 'go', text: 'You have no job. ' + c.titles[0] + ' in ' + D.DISTRICTS[c.district].name + ' will take you (' + naira(c.pay[0]) + '/shift). Apply in person.', act: { type: 'travel', dest: c.district, mode: best.r.mode } };
+  }
+
+  function advise(s) {
+    if (s.pending.length) return [];
+    var out = [];
+    if (s.needs.hunger < 30) out.push(foodHint(s));
+    if (s.needs.energy < 25) {
+      if (homeDistrict(s) === s.loc) {
+        var am3 = alarmMins(s);
+        out.push(am3 != null && am3 < 480
+          ? { kind: 'warn', text: 'You are exhausted. Sleep with your alarm set so you do not miss work.', act: { type: 'act', id: 'home_alarm' } }
+          : { kind: 'warn', text: 'You are exhausted. Sleep before you collapse.', act: { type: 'act', id: 'home_sleep' } });
+      }
+      else {
+        var r = route(s, homeDistrict(s), 'cheap');
+        out.push({ kind: 'warn', text: 'You are exhausted. Go home to sleep' + (r ? ' (' + D.MODES[r.mode].name + ', ' + fmtMins(r.mins) + ').' : '.'), act: r ? { type: 'travel', dest: homeDistrict(s), mode: r.mode } : null });
+      }
+    }
+    if (s.job) { var sh = shiftHint(s); if (sh) out.push(sh); }
+    if (s.job && hour(s) >= 20 && s.needs.energy < 70 && homeDistrict(s) === s.loc && !out.some(function (t) { return t.act && t.act.id === 'home_sleep'; })) {
+      var nc = D.CAREERS[s.job.id];
+      var am2 = alarmMins(s);
+      if (am2 != null) out.push({ kind: 'go', text: 'Sleep now with your alarm set. Your next ' + nc.titles[s.job.level] + ' shift starts at ' + hhmm(nc.start * 60) + '.', act: { type: 'act', id: 'home_alarm' } });
+    } else if (s.job && hour(s) >= 19 && s.needs.energy < 60 && homeDistrict(s) !== s.loc && !out.length) {
+      var hr = route(s, homeDistrict(s), 'cheap');
+      if (hr) out.push({ kind: 'info', text: 'Head home to rest before tomorrow\'s shift (' + D.MODES[hr.mode].name + ', ' + fmtMins(hr.mins) + ').', act: { type: 'travel', dest: homeDistrict(s), mode: hr.mode } });
+    }
+    var due = minutesUntilRent(s);
+    if (s.rentRate && due <= 48 * 60 && s.cash + s.bank < s.rentRate) {
+      var gig = availableActions(s).filter(function (a) { return a.gig && !a.disabled; })[0];
+      out.push({ kind: 'warn', text: 'Rent of ' + naira(s.rentRate) + ' is due in ' + fmtMins(due) + '. You are ' + naira(s.rentRate - s.cash - s.bank) + ' short.' + (gig ? ' ' + gig.label + ' pays about ' + naira(gig.earnEst) + '.' : ''), act: gig ? { type: 'act', id: gig.id } : { type: 'tab', id: 'money' } });
+    }
+    if (s.pantry <= 1 && !out.some(function (t) { return t.kind === 'warn' && t.act && t.act.type !== 'tab'; })) {
+      var shop = availableActions(s).filter(function (a) { return a.special === 'pantry7' && !a.disabled && a.price + s.rentRate <= s.cash + s.bank; })[0];
+      if (shop) out.push({ kind: 'info', text: 'Your kitchen is empty. ' + shop.label.replace(/ \(7 meals\)/, '') + ': 7 meals for ' + naira(shop.price) + ', far cheaper than eating out.', act: { type: 'act', id: shop.id } });
+    }
+    if (s.job && s.rentRate) {
+      var jc = D.CAREERS[s.job.id], weekly = jc.pay[s.job.level] * s.econ.wage * jc.days.length;
+      if (s.rentRate > weekly * 0.45 && s.cash + s.bank < s.rentRate * 6) {
+        var near = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && D.HOMES[k].rent * s.econ.infl <= weekly * 0.3; })
+          .sort(function (x, y) { return distance(D.HOMES[x].district, jc.district) - distance(D.HOMES[y].district, jc.district); })[0];
+        if (near) out.push({ kind: 'warn', text: 'Rent (' + naira(s.rentRate) + ') eats most of your ' + naira(Math.round(weekly)) + ' weekly pay. ' + D.HOMES[near].name + ' is ' + naira(price(s, D.HOMES[near].rent)) + ' a week and close to work. Move-in costs ' + naira(moveInCost(s, near).total) + '.', act: { type: 'tab', id: 'money' } });
+      }
+    }
+    if (s.arrears) out.push({ kind: 'warn', text: 'You owe ' + naira(s.arrears) + ' in rent. Three missed rents and you are out.', act: { type: 'tab', id: 'money' } });
+    if (!s.job) out.push(jobHint(s));
+    if (s.loc !== homeDistrict(s) && !out.some(function (t) { return t.act; })) {
+      var home = route(s, homeDistrict(s), 'cheap');
+      if (home && home.mode === 'trek' && s.cash + s.bank < price(s, 300)) {
+        var g = availableActions(s).filter(function (a) { return a.gig && !a.disabled; })[0];
+        out.push(g ? { kind: 'warn', text: 'You are broke and far from home. ' + g.label + ' pays about ' + naira(g.earnEst) + ', enough for a ride.', act: { type: 'act', id: g.id } }
+          : { kind: 'warn', text: 'You are broke and far from home. Trek back to ' + D.DISTRICTS[homeDistrict(s)].name + ' (' + fmtMins(home.mins) + ').', act: { type: 'travel', dest: homeDistrict(s), mode: 'trek' } });
+      }
+    }
+    if (!out.length && s.cash + s.bank < s.rentRate * 2) {
+      var gig2 = availableActions(s).filter(function (a) { return a.gig && !a.disabled; })[0];
+      if (gig2) out.push({ kind: 'info', text: 'Money is tight. ' + gig2.label + ' pays about ' + naira(gig2.earnEst) + '.', act: { type: 'act', id: gig2.id } });
+    }
+    if (s.needs.hygiene < 20 && homeDistrict(s) === s.loc) out.push({ kind: 'info', text: 'You smell. A bucket bath takes 30 minutes.', act: { type: 'act', id: 'home_bath' } });
+    if (s.needs.stress > 75) {
+      // Stress comes from neglected needs, so fix the lowest one, cheaply.
+      var lowNeed = ['social', 'fun', 'hygiene'].sort(function (x, y) { return s.needs[x] - s.needs[y]; })[0];
+      var cap = Math.min(price(s, 1000), (s.cash + s.bank) / 5);
+      var calm = availableActions(s).filter(function (a) {
+        return !a.disabled && a.fx && !a.collapseRisk && !(a.fx.energy < -10) && a.price <= cap && !a.gig &&
+          ((a.fx[lowNeed] || 0) > 0 || (a.fx.stress || 0) < 0);
+      }).sort(function (a, b) {
+        var ra = (a.fx[lowNeed] || 0) > 0 ? 0 : 1, rb = (b.fx[lowNeed] || 0) > 0 ? 0 : 1;
+        return (ra - rb) || (a.price - b.price) || ((b.fx[lowNeed] || 0) - (a.fx[lowNeed] || 0));
+      })[0];
+      if (calm && !((calm.fx[lowNeed] || 0) > 0)) lowNeed = 'stress';
+      out.push(calm ? { kind: 'info', text: (lowNeed === 'stress' ? 'Stress is high and your work suffers. ' : 'Stress is high because your ' + ({ social: 'social life', fun: 'enjoyment', hygiene: 'hygiene' })[lowNeed] + ' is low. ') + calm.label + (calm.price ? ' (' + naira(calm.price) + ')' : ' (free)') + '.', act: { type: 'act', id: calm.id } }
+        : { kind: 'info', text: 'Stress is high and your work suffers. Worship on Lagos Island, a beach day or Nollywood at home will calm you down.' });
+    }
+    if (s.goal === 'japa' && !s.edu.ieltsPassed && s.edu.ielts < 10 && s.job) out.push({ kind: 'info', text: 'Japa plan: IELTS prep classes in Yaba raise your pass chance (' + s.edu.ielts + ' of 10+ done).' });
+    if (s.goal === 'landlord' && s.bank < 100000 && !s.ajo && s.job) out.push({ kind: 'info', text: 'Landlord plan: an ajo forces you to save. Join one in the Money tab.', act: { type: 'tab', id: 'money' } });
+    var seenAct = {};
+    return out.filter(function (t) {
+      if (!t) return false;
+      var key = t.act ? t.act.type + ':' + (t.act.id || t.act.dest) : null;
+      if (key && seenAct[key]) return false;
+      if (key) seenAct[key] = true;
+      return true;
+    }).slice(0, 3);
+  }
+
+  function shareText(s) {
+    var title = s.job ? D.CAREERS[s.job.id].titles[s.job.level] : 'job hunting';
+    var got = Object.keys(s.ach).length, total = Object.keys(ACHIEVEMENTS).length;
+    return 'Week ' + (week(s) + 1) + ' in #Lasgidi: ' + s.name + ', ' + D.ORIGINS[s.origin].name + ', now ' + title + ' living in ' + D.DISTRICTS[homeDistrict(s)].name +
+      '. Net worth ' + naira(netWorth(s)) + '. ' + got + '/' + total + ' achievements.' + (s.won ? ' ' + D.GOALS[s.won.goal].name + ' goal: done.' : '') + ' Lagos no dey carry last.';
+  }
+
   function verifyLedger(s) {
     return s.cash === s.opening.cash + s.ledgerSum.cash && s.bank === s.opening.bank + s.ledgerSum.bank &&
       s.cash >= 0 && s.bank >= 0;
@@ -1276,6 +1553,8 @@
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
+    migrate: migrate, advise: advise, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
+    CATEGORY_NAMES: CATEGORY_NAMES, category: category, SCHEMA: SCHEMA,
     _advance: advance, _post: post
   };
 

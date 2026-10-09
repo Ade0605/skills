@@ -106,6 +106,17 @@ Reviewers note it is not deeper than The Sims. That comparison is a fight it can
 | Meta | 4 goals, 18 achievements, a Gist feed, a bank-alert toast for every transaction and a sealed statement. |
 | Saves | Autosave in the browser, plus a portable save code with a checksum and tamper flag. |
 
+### v0.2: the advisor, tuned by simulation
+
+A bot that plays only by following the advisor exposed real design bugs, each of which a new player would also hit:
+
+- **Stranded after hospital.** You wake up broke on Lagos Island with no gig there, and trekking was capped at 12 km. Now every district has a gig, a trek is allowed at any distance if you have the energy to finish it, and a "you're stranded" tip helps you get home.
+- **Collapsing mid-shift.** The advisor told exhausted players to clock in for 8–10 hour shifts. Actions now project your belle and energy at the end. Optional work you can't finish is blocked, and a shift you can't survive shows a warning.
+- **The 8-hour sleep trap.** A fixed 8-hour sleep after 22:00 overran a 06:00 shift. A new "Sleep with alarm set for work" wakes you in time for the commute.
+- **Money leaks.** The fastest ride to work cost half a shift's pay, eating out every meal cost nearly as much as wages, and stress relief through Nollywood on a generator cost ₦109k in 6 weeks. The advisor now picks the cheapest ride that arrives on time, foodstuff is on sale at more markets, and the stress tip fixes your lowest need with free activities first.
+
+Result: following the advisor, every start (LAPO, Ajepako and Nepo) ends 30 weeks between ₦1.9m and ₦3.1m, mostly at the top of a career, with 1–28 collapses instead of hundreds.
+
 ## 5. Roadmap: making it multiplayer without repeating the mistakes
 
 1. **Server-authoritative engine.** The engine is already pure and deterministic, so run it on the server and have clients send intents (`doAction(id)`), never balances. Persist the action log and replay it to audit any account.

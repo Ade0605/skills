@@ -223,3 +223,84 @@ test('30-week bot run keeps the books balanced and the economy bounded', () => {
     assert.ok(Number.isFinite(worth));
   }
 });
+
+test('advisor tells you to leave for work in time and to clock in on arrival', () => {
+  const s = game('mid');
+  s.loc = 'ikeja';
+  L.applyJob(s, 'dispatch');           // Ikeja, 08:00
+  s.loc = 'yaba';
+  s.t = 1440 + 6 * 60 + 30;            // Tue 06:30
+  const tip = L.advise(s).find(t => /Leave now/.test(t.text));
+  assert.ok(tip, JSON.stringify(L.advise(s)));
+  assert.equal(tip.act.type, 'travel');
+  assert.ok(L.travel(s, tip.act.dest, tip.act.mode).ok);
+  while (s.pending.length) L.resolveChoice(s, 1);
+  const clock = L.advise(s).find(t => t.act && t.act.id === 'work_shift');
+  assert.ok(clock, JSON.stringify(L.advise(s)));
+  assert.ok(L.doAction(s, 'work_shift').ok);
+});
+
+test('advisor points a hungry player to food they can afford', () => {
+  const s = game('mid');
+  s.needs.hunger = 10;
+  const tip = L.advise(s)[0];
+  assert.match(tip.text, /belle/i);
+  assert.ok(tip.act);
+});
+
+test('weekly report categorises every naira spent and earned', () => {
+  const s = game('mid');
+  L.travel(s, 'oshodi', 'danfo');
+  while (s.pending.length) L.resolveChoice(s, 1);
+  L.doAction(s, 'oshodi_bukka');
+  L._advance(s, 7 * 1440);
+  const r = s.report;
+  assert.ok(r && r.w === 1);
+  assert.ok(r.out.transport > 0 && r.out.food > 0 && r.out.housing > 0, JSON.stringify(r.out));
+  const out = Object.values(r.out).reduce((a, b) => a + b, 0);
+  const spentWeek = s.ledger.filter(l => l.amt < 0 && l.memo !== 'Transfer' && l.t < 7 * 1440).reduce((a, l) => a - l.amt, 0);
+  assert.equal(out, spentWeek);
+  assert.equal(s.history.length, 1);
+});
+
+test('rent countdown and long durations read in days', () => {
+  const s = game('mid');                // Mon 06:00
+  assert.equal(L.minutesUntilRent(s), 5 * 1440 + 6 * 60);
+  assert.equal(L.fmtMins(L.minutesUntilRent(s)), '5d 6h');
+});
+
+test('v0.1 saves migrate to the current schema', () => {
+  const s = game('mid');
+  for (const k of ['sv', 'wk', 'history', 'report', 'welfareDay', 'viralWeek', 'hospitalWeek']) delete s[k];
+  const code = 'LSG1.' + Buffer.from(JSON.stringify(s)).toString('base64') + '.x';
+  const back = L.deserialize(code).state;
+  assert.equal(back.sv, L.SCHEMA);
+  assert.deepEqual(back.history, []);
+  L._advance(back, 7 * 1440);          // weekly tick works on a migrated save
+  assert.equal(back.history.length, 1);
+});
+
+// Following the advisor alone should be a viable way to play.
+test('a player who follows the advisor survives and gets promoted', () => {
+  const s = L.newGame({ origin: 'lapo', seed: 1, goal: 'freestyle' });
+  let collapses = 0, steps = 0;
+  while (L.week(s) < 16 && steps++ < 20000) {
+    while (s.pending.length) L.resolveChoice(s, 1);
+    const tip = L.advise(s).find(t => t.act && t.act.type !== 'tab');
+    let r = null;
+    if (tip) {
+      const a = tip.act;
+      r = a.type === 'act' ? L.doAction(s, a.id) : a.type === 'travel' ? L.travel(s, a.dest, a.mode) : L.applyJob(s, a.id);
+    }
+    if (!r || !r.ok) {
+      const acts = L.availableActions(s).filter(a => !a.disabled);
+      const a = acts.find(x => x.gig) || acts.find(x => x.fx && (x.fx.fun || x.fx.social) && !x.price);
+      if (a) r = L.doAction(s, a.id); else L._advance(s, 60);
+    }
+    if (r && r.collapsed) collapses++;
+    sane(s);
+  }
+  assert.ok(collapses <= 5, 'collapses: ' + collapses);
+  assert.ok(s.job && s.job.level >= 2, 'job: ' + JSON.stringify(s.job));
+  assert.notEqual(s.home, 'squat');
+});

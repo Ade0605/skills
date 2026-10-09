@@ -32,7 +32,7 @@
   var OKADA_BAN = ['ikeja', 'surulere', 'yaba', 'island', 'ikoyi', 'vi', 'lekki'];
 
   var MODES = {
-    trek:  { name: 'Trek',  speed: 5,  wait: 0,  perKm: 0,   min: 0,    maxKm: 12, road: false, energyPerKm: 4 },
+    trek:  { name: 'Trek',  speed: 5,  wait: 0,  perKm: 0,   min: 0,    maxKm: 45, road: false, energyPerKm: 4 },
     keke:  { name: 'Keke',  speed: 20, wait: 5,  perKm: 90,  min: 200,  maxKm: 8,  road: true,  noBridge: true },
     okada: { name: 'Okada', speed: 30, wait: 3,  perKm: 150, min: 300,  maxKm: 20, road: true,  weave: 0.35 },
     danfo: { name: 'Danfo', speed: 26, wait: 10, perKm: 60,  min: 300,  maxKm: 99, road: true,  stress: 6 },
@@ -101,12 +101,15 @@
   // when: {days:[...], from:h, to:h} — action allowed only then.
   var PLACE_ACTIONS = {
     mushin: [
+      { id: 'mushin_market', label: 'Buy foodstuff at the local market (7 meals)', mins: 45, cost: 4800, special: 'pantry7', when: { from: 7, to: 20 } },
       { id: 'mushin_mamaput', label: 'Eat at Mama Put', mins: 30, cost: 1200, fx: { hunger: 45 } },
       { id: 'mushin_barber', label: 'Gist at the barbershop', mins: 60, fx: { social: 20, fun: 5 }, xp: { charisma: 2 } },
       { id: 'mushin_water', label: 'Sell pure water in go-slow', mins: 120, earn: 1800, fx: { energy: -15, hygiene: -10 }, xp: { hustle: 3 }, gig: true, when: { from: 7, to: 20 } },
       { id: 'mushin_football', label: 'Street football', mins: 60, fx: { fun: 25, energy: -15, hygiene: -20, stress: -8 }, xp: { fitness: 3 }, when: { from: 6, to: 19 } }
     ],
     yaba: [
+      { id: 'yaba_typing', label: 'Type assignments for students', mins: 120, earn: 2000, fx: { energy: -8 }, xp: { tech: 2 }, gig: true, when: { from: 8, to: 22 } },
+      { id: 'yaba_tejuosho', label: 'Buy foodstuff at Tejuosho (7 meals)', mins: 60, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
       { id: 'yaba_buka', label: 'Eat at a Yaba buka', mins: 30, cost: 1500, fx: { hunger: 45 } },
       { id: 'yaba_library', label: 'Study at the library', mins: 120, cost: 500, fx: { energy: -10, fun: -5 }, xp: { tech: 4 }, when: { from: 8, to: 20 } },
       { id: 'yaba_enrol', label: 'Enrol at UNILAG (part-time)', mins: 60, cost: 150000, special: 'enrol' },
@@ -115,6 +118,8 @@
       { id: 'yaba_hackathon', label: 'Weekend hackathon', mins: 240, fx: { social: 25, energy: -25, fun: 15 }, xp: { tech: 8 }, special: 'hackathon', when: { days: [5,6], from: 9, to: 18 } }
     ],
     surulere: [
+      { id: 'suru_recharge', label: 'Sell recharge cards by the stadium', mins: 180, earn: 2300, fx: { energy: -10, social: 5 }, xp: { hustle: 3 }, gig: true, when: { from: 7, to: 21 } },
+      { id: 'suru_market', label: 'Buy foodstuff at the market (7 meals)', mins: 45, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
       { id: 'suru_amala', label: 'Eat amala and ewedu', mins: 45, cost: 1800, fx: { hunger: 55, fun: 5 } },
       { id: 'suru_stadium', label: 'Train at the National Stadium', mins: 90, fx: { energy: -20, fun: 10, hygiene: -25, stress: -10 }, xp: { fitness: 5 }, when: { from: 6, to: 19 } },
       { id: 'suru_studio', label: 'Book studio time', mins: 120, cost: 5000, fx: { fun: 15, energy: -10 }, xp: { music: 6 }, when: { from: 10, to: 23 } },
@@ -125,6 +130,7 @@
       { id: 'ikeja_cv_gig', label: 'Fix phones for walk-ins', mins: 120, earn: 2600, fx: { energy: -10 }, xp: { craft: 3 }, gig: true, req: { craft: 2 }, when: { from: 9, to: 19 } },
       { id: 'ikeja_cinema', label: 'Watch a film at the mall', mins: 150, cost: 4000, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
       { id: 'ikeja_ielts', label: 'Sit the IELTS exam', mins: 240, cost: 320000, special: 'ielts_exam', when: { days: [5], from: 8, to: 12 } },
+      { id: 'ikeja_super', label: 'Supermarket shop at the mall (7 meals)', mins: 60, cost: 7000, special: 'pantry7', when: { from: 9, to: 21 } },
       { id: 'ikeja_suya', label: 'Suya by the roadside', mins: 30, cost: 1500, fx: { hunger: 35, fun: 5 }, when: { from: 17, to: 24 } }
     ],
     oshodi: [
@@ -137,26 +143,32 @@
       { id: 'island_worship', label: 'Worship at church or mosque', mins: 90, fx: { stress: -25, social: 15 } },
       { id: 'island_checkup', label: 'Check-up at General Hospital', mins: 120, cost: 8000, fx: { stress: -10, energy: 10 } },
       { id: 'island_welfare', label: 'Free meal at the church or mosque welfare', mins: 60, fx: { hunger: 40, stress: 5 }, special: 'welfare', when: { from: 7, to: 19 } },
+      { id: 'island_alaaru', label: 'Carry loads at Balogun (alaaru)', mins: 180, earn: 2200, fx: { energy: -22, hygiene: -15 }, xp: { hustle: 3, fitness: 1 }, gig: true, when: { days: [0,1,2,3,4,5], from: 7, to: 18 } },
       { id: 'island_ewa', label: 'Ewa agoyin and bread', mins: 30, cost: 1300, fx: { hunger: 45 } }
     ],
     vi: [
+      { id: 'vi_carwash', label: 'Wash cars outside the banks', mins: 180, earn: 2800, fx: { energy: -15, hygiene: -10 }, xp: { hustle: 2 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
       { id: 'vi_lounge', label: 'Network at a lounge', mins: 120, cost: 8000, fx: { social: 25, fun: 10 }, xp: { charisma: 5 }, when: { from: 17, to: 24 } },
       { id: 'vi_club', label: 'Club night', mins: 240, cost: 15000, fx: { fun: 60, social: 40, energy: -40, hygiene: -20 }, special: 'club', when: { days: [4,5], from: 21, to: 24 } },
       { id: 'vi_restaurant', label: 'Eat at a restaurant', mins: 60, cost: 12000, fx: { hunger: 60, fun: 15 } },
       { id: 'vi_beach', label: 'Walk Bar Beach at dusk', mins: 60, fx: { fun: 15, stress: -12 }, when: { from: 16, to: 20 } }
     ],
     ikoyi: [
+      { id: 'ikoyi_garden', label: 'Tend a madam\'s garden', mins: 180, earn: 3000, fx: { energy: -15, hygiene: -10 }, xp: { craft: 2 }, gig: true, when: { days: [0,1,2,3,4,5], from: 7, to: 17 } },
       { id: 'ikoyi_jog', label: 'Jog around the park', mins: 60, fx: { energy: -12, fun: 10, hygiene: -15, stress: -12 }, xp: { fitness: 3 }, when: { from: 6, to: 19 } },
       { id: 'ikoyi_gallery', label: 'Visit an art gallery', mins: 90, cost: 2000, fx: { fun: 20, social: 10, stress: -8 }, when: { from: 10, to: 18 } },
       { id: 'ikoyi_dine', label: 'Fine dining', mins: 90, cost: 25000, fx: { hunger: 70, fun: 25, social: 10 }, when: { from: 12, to: 23 } }
     ],
     lekki: [
+      { id: 'lekki_errands', label: 'Run errands in the estate', mins: 120, earn: 2200, fx: { energy: -10 }, xp: { hustle: 2, charisma: 1 }, gig: true, when: { from: 8, to: 20 } },
       { id: 'lekki_beach', label: 'Beach day', mins: 180, cost: 2000, fx: { fun: 45, social: 20, hygiene: -15, stress: -15 }, when: { from: 9, to: 18 } },
       { id: 'lekki_gym', label: 'Gym class', mins: 90, cost: 3000, fx: { energy: -18, hygiene: -20, stress: -10 }, xp: { fitness: 6 }, when: { from: 6, to: 21 } },
       { id: 'lekki_content', label: 'Shoot content', mins: 120, fx: { fun: 10, energy: -8 }, xp: { charisma: 3, music: 1 }, special: 'content', when: { from: 8, to: 20 } },
+      { id: 'lekki_super', label: 'Supermarket shop (7 meals)', mins: 45, cost: 7500, special: 'pantry7', when: { from: 8, to: 21 } },
       { id: 'lekki_cafe', label: 'Brunch at a café', mins: 60, cost: 6000, fx: { hunger: 50, fun: 10 } }
     ],
     ajah: [
+      { id: 'ajah_market', label: 'Buy foodstuff at Ajah market (7 meals)', mins: 45, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
       { id: 'ajah_spot', label: 'Eat at a local spot', mins: 30, cost: 1500, fx: { hunger: 45 } },
       { id: 'ajah_shop', label: "Help at a cousin's shop", mins: 180, earn: 2400, fx: { energy: -12 }, xp: { hustle: 3 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 19 } }
     ],
@@ -168,12 +180,14 @@
     festac: [
       { id: 'festac_park', label: 'Hang out at the park', mins: 90, fx: { social: 20, fun: 15, stress: -8 } },
       { id: 'festac_tailor', label: "Tailor's apprentice", mins: 180, earn: 2200, fx: { energy: -10 }, xp: { craft: 4 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
+      { id: 'festac_market', label: 'Buy foodstuff at the market (7 meals)', mins: 45, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
       { id: 'festac_eat', label: 'Eat at a Festac buka', mins: 30, cost: 1300, fx: { hunger: 45 } }
     ]
   };
 
   var HOME_ACTIONS = [
     { id: 'home_sleep', label: 'Sleep (8h)', mins: 480, special: 'sleep' },
+    { id: 'home_alarm', label: 'Sleep with alarm set for work', mins: 480, special: 'sleep', alarm: true },
     { id: 'home_nap', label: 'Nap (2h)', mins: 120, special: 'nap' },
     { id: 'home_bath', label: 'Bucket bath', mins: 30, fx: { hygiene: 60 } },
     { id: 'home_cook', label: 'Cook a meal', mins: 45, fx: { hunger: 55, fun: 3 }, xp: { cooking: 3 }, special: 'cook' },

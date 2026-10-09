@@ -66,6 +66,10 @@
     if (e.flood) chips.push('<span class="chip off">Flooding on the Island</span>');
     if (L.isDecember(S)) chips.push('<span class="chip">Detty December</span>');
     if (e.policy) chips.push('<span class="chip">' + esc(D.POLICIES[e.policy].name) + ' · ' + e.policyWeeks + 'w</span>');
+    if (S.rentRate) {
+      var due = L.minutesUntilRent(S), short = S.cash + S.bank < S.rentRate;
+      chips.push('<span class="chip' + (short && due <= 2880 ? ' off' : '') + '">Rent ' + N(S.rentRate) + ' in ' + dur(due) + '</span>');
+    }
     chips.push('<span class="chip">Prices ×' + e.infl.toFixed(2) + '</span>');
     return '<header class="strip"><div class="strip-in">' +
       '<div class="brand">LASGIDI</div>' +
@@ -170,9 +174,66 @@
     if (a.xp) meta.push('<span>' + Object.keys(a.xp).map(function (k) { return '+' + D.SKILLS[k]; }).join(' ') + '</span>');
     if (a.whenLabel) meta.push('<span>' + esc(a.whenLabel) + '</span>');
     if (a.late) meta.push('<span class="cost">Late: 30% docked</span>');
+    if (a.collapseRisk && !a.disabled) meta.push('<span class="cost">' + esc(a.collapseRisk) + '</span>');
     return '<div class="item' + (a.isWork ? ' work' : '') + '"><div><h3>' + esc(a.label) + '</h3><div class="meta">' + meta.join('') + '</div>' +
       (a.disabled ? '<div class="why">' + esc(a.disabled) + '</div>' : '') + '</div>' +
       '<button class="btn' + (a.isWork ? ' go' : '') + '" id="act-' + a.id + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled' : '') + '>' + (a.isWork ? 'Clock in' : 'Do') + '</button></div>';
+  }
+
+  function adviceView() {
+    var tips = L.advise(S);
+    if (!tips.length) return '';
+    return '<section class="advice" aria-label="Suggestions"><span class="label">Wetin I go do?</span>' + tips.map(function (t, i) {
+      var a = t.act, btn = '';
+      if (a && a.type === 'act') btn = '<button class="btn sm go" id="adv-' + i + '" data-act="' + a.id + '">Do it</button>';
+      if (a && a.type === 'travel') btn = '<button class="btn sm go" id="adv-' + i + '" data-travel="' + a.dest + '" data-mode="' + a.mode + '">Go</button>';
+      if (a && a.type === 'apply') btn = '<button class="btn sm go" id="adv-' + i + '" data-apply="' + a.id + '">Apply</button>';
+      if (a && a.type === 'tab') btn = '<button class="btn sm ghost" id="adv-' + i + '" data-tab="' + a.id + '">Open ' + esc(a.id) + '</button>';
+      return '<div class="tip ' + t.kind + '"><p>' + esc(t.text) + '</p>' + btn + '</div>';
+    }).join('') + '</section>';
+  }
+
+  // Net worth by week: one series, so no legend; the heading names it.
+  function sparkline(points, idBase) {
+    if (!points || points.length < 2) return '<p class="note">Your net worth chart starts after your second full week.</p>';
+    var W = 320, H = 96, P = { l: 4, r: 8, t: 10, b: 18 };
+    var vals = points.map(function (p) { return p.worth; });
+    var lo = Math.min(0, Math.min.apply(null, vals)), hi = Math.max.apply(null, vals);
+    if (hi === lo) hi = lo + 1;
+    var x = function (i) { return P.l + i / (points.length - 1) * (W - P.l - P.r); };
+    var y = function (v) { return P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b); };
+    var line = points.map(function (p, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(p.worth).toFixed(1); }).join('');
+    var area = line + 'L' + x(points.length - 1).toFixed(1) + ',' + y(lo).toFixed(1) + 'L' + x(0).toFixed(1) + ',' + y(lo).toFixed(1) + 'Z';
+    var last = points[points.length - 1];
+    var hits = points.map(function (p, i) {
+      var w = (W - P.l - P.r) / (points.length - 1);
+      return '<rect x="' + (x(i) - w / 2).toFixed(1) + '" y="0" width="' + w.toFixed(1) + '" height="' + H + '" fill="transparent"><title>Week ' + p.w + ': ' + N(p.worth) + '</title></rect>';
+    }).join('');
+    return '<svg class="spark" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="' + idBase + '-t"><title id="' + idBase + '-t">Net worth by week, from ' + N(points[0].worth) + ' in week ' + points[0].w + ' to ' + N(last.worth) + ' in week ' + last.w + '</title>' +
+      '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + y(0).toFixed(1) + '" y2="' + y(0).toFixed(1) + '" stroke="var(--line)" stroke-width="1"/>' +
+      '<path d="' + area + '" fill="var(--lagoon)" opacity=".14"/>' +
+      '<path d="' + line + '" fill="none" stroke="var(--lagoon)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<circle cx="' + x(points.length - 1).toFixed(1) + '" cy="' + y(last.worth).toFixed(1) + '" r="4" fill="var(--lagoon)" stroke="var(--surface)" stroke-width="2"/>' +
+      '<text x="' + P.l + '" y="' + (H - 4) + '" class="spark-l">Wk ' + points[0].w + '</text>' +
+      '<text x="' + (W - P.r) + '" y="' + (H - 4) + '" text-anchor="end" class="spark-l">Wk ' + last.w + '</text>' +
+      hits + '</svg>';
+  }
+
+  function catBars(obj, cls) {
+    var keys = Object.keys(obj).sort(function (a, b) { return obj[b] - obj[a]; });
+    if (!keys.length) return '<p class="note">Nothing this week.</p>';
+    var max = obj[keys[0]];
+    return '<div class="cats">' + keys.map(function (k) {
+      return '<div class="cat"><span>' + esc(L.CATEGORY_NAMES[k] || k) + '</span><span class="cbar"><i class="' + cls + '" style="width:' + Math.max(2, Math.round(obj[k] / max * 100)) + '%"></i></span><span class="num">' + N(obj[k]) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function shareBlock() {
+    var text = L.shareText(S), enc = encodeURIComponent(text);
+    return '<div class="share"><p class="sharetext" id="share-text">' + esc(text) + '</p><div class="inline">' +
+      '<button class="btn sm" id="copy-share" data-copyshare="1">Copy</button>' +
+      '<a class="btn sm ghost" href="https://x.com/intent/post?text=' + enc + '" target="_blank" rel="noopener">Post on X</a>' +
+      '<a class="btn sm ghost" href="https://wa.me/?text=' + enc + '" target="_blank" rel="noopener">WhatsApp</a></div></div>';
   }
 
   function doView() {
@@ -180,7 +241,7 @@
     var home = acts.filter(function (a) { return a.atHome; });
     var place = acts.filter(function (a) { return !a.atHome; });
     var d = D.DISTRICTS[S.loc];
-    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">';
+    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + adviceView();
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
     if (home.length) html += '<div class="section"><h3>At home · ' + esc(L.homeDef(S).name) + '</h3><div class="list">' + home.sort(sortOpen).map(actionRow).join('') + '</div></div>';
@@ -284,6 +345,9 @@
     var html = '<div class="panel-h"><h2>' + esc(S.name) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">';
     html += '<div class="section" style="padding-top:0"><h3>Goal: ' + esc(g.name) + (S.won ? ' · done' : '') + '</h3><p class="note">' + esc(g.text) + '</p>' +
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
+    html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
+      (S.history.length ? '<details><summary>Show as table</summary><div class="stmt-wrap"><table class="stmt"><tbody>' + S.history.slice().reverse().map(function (h) { return '<tr><td>Week ' + h.w + '</td><td class="n num">' + N(h.worth) + '</td></tr>'; }).join('') + '</tbody></table></div></details>' : '') + '</div>';
+    html += '<div class="section"><h3>Share your life</h3>' + shareBlock() + '</div>';
     html += '<div class="section"><h3>Skills</h3><div class="skills">' + Object.keys(D.SKILLS).map(function (k) {
       var lvl = L.skillLevel(S, k), xp = S.skills[k], lo = D.SKILL_XP[lvl], hi = D.SKILL_XP[lvl + 1] || lo;
       var pct = hi > lo ? Math.round((xp - lo) / (hi - lo) * 100) : 100;
@@ -315,6 +379,17 @@
     if (ev) {
       return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ev-title"><div class="sheet"><span class="label">' + L.clockLabel(S) + ' · ' + esc(D.DISTRICTS[S.loc].name) + '</span><h2 id="ev-title">' + esc(ev.title) + '</h2><p>' + esc(ev.text) + '</p><div class="opts">' +
         ev.options.map(function (o, i) { return '<button class="btn' + (i === 0 ? ' go' : ' ghost') + '" id="choice-' + i + '" data-choice="' + i + '">' + esc(o) + '</button>'; }).join('') + '</div></div></div>';
+    }
+    var r = S.report;
+    if (r && S.reportSeen !== r.w) {
+      var spent = 0, made = 0;
+      Object.keys(r.out).forEach(function (k) { spent += r.out[k]; });
+      Object.keys(r.inc).forEach(function (k) { made += r.inc[k]; });
+      return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="rep-title"><div class="sheet"><span class="label">Weekly report card</span><h2 id="rep-title">Week ' + r.w + '</h2>' +
+        '<dl class="kv"><dt>Net worth</dt><dd class="num">' + N(r.worth) + '</dd><dt>Change</dt><dd class="num ' + (r.delta >= 0 ? 'gain' : 'cost') + '">' + (r.delta >= 0 ? '+' : '') + N(r.delta) + '</dd><dt>Money in</dt><dd class="num">' + N(made) + '</dd><dt>Money out</dt><dd class="num">' + N(spent) + '</dd></dl>' +
+        '<h3>Where it came from</h3>' + catBars(r.inc, 'in') + '<h3>Where it went</h3>' + catBars(r.out, 'out') +
+        '<h3>Net worth by week</h3>' + sparkline(S.history, 'rep-spark') + shareBlock() +
+        '<div class="opts"><button class="btn go" id="rep-ok" data-repok="1">On to week ' + (r.w + 1) + '</button></div></div></div>';
     }
     if (S.won && !S.wonSeen) {
       return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="won-title"><div class="sheet"><span class="label">Goal complete</span><h2 id="won-title">' + esc(D.GOALS[S.won.goal].name) + '!</h2><p>' + esc(S.name) + ', you did it in ' + (L.week(S) + 1) + ' weeks. Net worth ' + N(L.netWorth(S)) + ', ' + S.stats.trips + ' trips, ' + S.stats.shifts + ' shifts.</p><div class="opts"><button class="btn go" id="won-ok" data-wonok="1">Keep playing</button></div></div></div>';
@@ -362,7 +437,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -409,6 +484,14 @@
     if (ds.car) { run(function () { return L.buyCar(S); }); return; }
     if (ds.choice) { run(function () { return L.resolveChoice(S, +ds.choice); }); return; }
     if (ds.wonok) { S.wonSeen = true; save(); render(); return; }
+    if (ds.repok) { S.reportSeen = S.report.w; save(); render(); return; }
+    if (ds.copyshare) {
+      var txt = L.shareText(S);
+      try {
+        navigator.clipboard.writeText(txt).then(function () { t.textContent = 'Copied'; }, function () { selectText('share-text'); });
+      } catch (err) { selectText('share-text'); }
+      return;
+    }
     if (ds.copy) {
       var code = L.serialize(S), box = document.getElementById('save-code');
       var done = function (m) { ui.flash = m; render(); };
@@ -439,8 +522,15 @@
   });
 
   /* ---------- boot ---------- */
+  function selectText(id) {
+    var el = document.getElementById(id);
+    if (!el || !window.getSelection) return;
+    var range = document.createRange(); range.selectNodeContents(el);
+    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  }
+
   function start(data) {
-    S = (data && data.state) || load();
+    S = L.migrate((data && data.state) || load());
     if (data && data.ui) Object.assign(ui, data.ui, { toasts: [] });
     render();
   }
