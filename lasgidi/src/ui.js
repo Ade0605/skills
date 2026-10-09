@@ -83,11 +83,122 @@
 
   /* ---------- top-level render ---------- */
   function render() {
-    if (!S) { app.innerHTML = introView(); bindIntro(); return; }
+    // Live updates re-render at any moment, so keep what the viewer is typing.
+    var kept = {};
+    Array.prototype.forEach.call(app.querySelectorAll('input[id], textarea[id]:not([readonly])'), function (el) {
+      if (el.type === 'radio') { if (el.checked) kept[el.id] = true; } else kept[el.id] = el.value;
+    });
     var focusId = document.activeElement && document.activeElement.id;
-    app.innerHTML = strip() + '<main class="wrap">' + needsView() + board() + '</main>' + modal() + '<div class="toasts" id="toasts" aria-live="polite"></div>';
-    renderToasts();
+    if (!S) { app.innerHTML = introView(); bindIntro(); }
+    else {
+      app.innerHTML = strip() + '<main class="wrap">' + needsView() + board() + '</main>' + modal() + '<div class="toasts" id="toasts" aria-live="polite"></div>';
+      renderToasts();
+    }
+    Object.keys(kept).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === 'radio') el.checked = true; else el.value = kept[id];
+    });
     if (focusId) { var f = document.getElementById(focusId); if (f) f.focus(); }
+    syncPresence();
+  }
+
+  /* ---------- Lagos online: shared hall of fame and live presence ----------
+   * Both light up only inside claude.ai; the game is complete without them.
+   * No chat and no free text travel between players: presence carries a
+   * district key, the board carries numbers. */
+  var online = { db: null, user: null, room: null, me: null, fame: [], hidden: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '' };
+
+  function initOnline() {
+    if (!window.claude || typeof window.claude.use !== 'function') return;
+    window.claude.use('user').then(function (u) {
+      if (!u) return;
+      online.user = u;
+      u.id().then(function (id) { online.me = id; scheduleRender(); });
+      u.can('data.write').then(function (c) { online.canWrite = c; scheduleRender(); });
+    });
+    window.claude.use('db').then(function (db) {
+      if (!db) return;
+      online.db = db;
+      db.collection('fame').orderBy('score', 'desc').limit(60).onSnapshot(function (snap) {
+        var rows = [], hidden = 0;
+        snap.docs.forEach(function (d) {
+          var e = L.checkFame(d.data());
+          if (e) rows.push(Object.assign(e, { id: d.id })); else hidden++;
+        });
+        rows.sort(function (a, b) { return b.score - a.score; });
+        online.fame = rows; online.hidden = hidden;
+        if (online.user && rows.length) {
+          online.user.profiles(rows.map(function (r) { return r.id; })).then(function (ps) { online.names = ps; scheduleRender(); });
+        }
+        scheduleRender();
+      }, function () { online.db = null; scheduleRender(); });
+    });
+    window.claude.use('room').then(function (room) {
+      if (!room) return;
+      online.room = room;
+      room.onPeers(function (ch) {
+        var counts = {}, others = 0;
+        ch.peers.forEach(function (p) {
+          if (p.isMe || p.kind !== 'viewer') return;
+          var d = p.presence && p.presence.d;
+          if (typeof d !== 'string' || !D.DISTRICTS[d]) return;
+          counts[d] = (counts[d] || 0) + 1; others++;
+        });
+        online.peers = counts; online.others = others;
+        scheduleRender();
+      }, function () { online.room = null; online.peers = {}; online.others = 0; scheduleRender(); });
+      syncPresence();
+    });
+  }
+
+  var renderTimer = null;
+  function scheduleRender() {
+    if (renderTimer) return;
+    renderTimer = setTimeout(function () { renderTimer = null; render(); }, 400);
+  }
+
+  function syncPresence() {
+    if (!online.room) return;
+    var d = S ? S.loc : null;
+    if (d === online.sentLoc) return;
+    online.sentLoc = d;
+    online.room.presence({ d: d }).catch(function () {});
+  }
+
+  function myFame() {
+    for (var i = 0; i < online.fame.length; i++) if (online.fame[i].id === online.me) return online.fame[i];
+    return null;
+  }
+
+  function postFame(entry, quiet) {
+    if (!online.db || !online.me) return Promise.resolve(quiet ? null : 'The Hall of Fame is not available here.');
+    if (S && S.tampered) return Promise.resolve('Edited saves cannot go on the Hall of Fame.');
+    var mine = myFame();
+    if (mine && mine.score >= entry.score) return Promise.resolve(quiet ? null : 'Your best on the board (' + mine.score + ') is higher. It stays.');
+    return online.db.doc('fame/' + online.me).set(Object.assign({}, entry, { at: Date.now() }))
+      .then(function () { return 'Posted ' + entry.score + ' points to the Hall of Fame.'; })
+      .catch(function (err) {
+        if (err && err.code === 'invalid_argument') { online.canWrite = false; return 'You can read the Hall of Fame but not post to it. Ask the owner for Contributor access.'; }
+        return 'Could not post right now. Try again in a moment.';
+      });
+  }
+
+  function fameView() {
+    if (!online.db) return '';
+    var rows = online.fame.slice(0, 10);
+    var html = '<div class="section"><h3>Lagos Hall of Fame</h3><p class="note">Everyone this game is shared with. Each person\'s best life; scores are rebuilt from the numbers, never taken on trust.' +
+      (online.hidden ? ' ' + online.hidden + ' implausible ' + (online.hidden === 1 ? 'entry is' : 'entries are') + ' hidden.' : '') + '</p>';
+    if (!rows.length) html += '<p class="note">No one has posted yet. Post your life to be first.</p>';
+    else html += '<div class="stmt-wrap"><table class="stmt lives"><thead><tr><th>#</th><th>Lagosian</th><th>Ended as</th><th class="n">Weeks</th><th class="n">Net worth</th><th class="n">Score</th></tr></thead><tbody>' + rows.map(function (r, i) {
+      var p = online.names[r.id], mine = r.id === online.me;
+      var who = mine ? 'You' : (p && p.name) || 'Someone';
+      var title = r.career ? D.CAREERS[r.career].titles[r.level] : 'Jobless';
+      return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + esc(who) + ' <span class="muted">· ' + esc(D.ORIGINS[r.origin].name) + '</span>' + (r.won ? ' <span class="gain">✓ ' + esc(D.GOALS[r.goal].name) + '</span>' : '') + '</td><td>' + esc(title) + '</td><td class="n num">' + r.weeks + '</td><td class="n num">' + N(r.worth) + '</td><td class="n num"><b>' + r.score + '</b></td></tr>';
+    }).join('') + '</tbody></table></div>';
+    if (S && online.me && online.canWrite !== false) html += '<div class="inline"><button class="btn sm" id="post-fame" data-postfame="1">Post this life (' + L.fameEntry(S).score + ')</button><span class="note">' + esc(online.status) + '</span></div>';
+    else if (online.status) html += '<p class="note">' + esc(online.status) + '</p>';
+    return html + '</div>';
   }
 
   function renderToasts() {
@@ -114,6 +225,7 @@
       chips.push('<span class="chip' + (short && due <= 2880 ? ' off' : '') + '">Rent ' + N(S.rentRate) + ' in ' + dur(due) + '</span>');
     }
     chips.push('<span class="chip">Prices ×' + e.infl.toFixed(2) + '</span>');
+    if (online.others) chips.push('<span class="chip">' + online.others + (online.others === 1 ? ' other Lagosian' : ' other Lagosians') + ' online</span>');
     return '<header class="strip"><div class="strip-in">' +
       '<div class="brand">LASGIDI</div>' +
       '<div class="clock"><b>' + L.clockLabel(S) + '</b><span>' + L.dateLabel(S) + '</span></div>' +
@@ -180,6 +292,7 @@
       return '<g class="node' + (here ? ' here' : '') + (sel ? ' sel' : '') + '" data-go="' + k + '" tabindex="0" role="button" aria-label="' + esc(D.DISTRICTS[k].name) + (here ? ' (you are here)' : '') + '">' +
         (here ? '<circle class="ring" cx="' + p.x + '" cy="' + p.y + '" r="8"/>' : '') +
         '<circle class="dot" cx="' + p.x + '" cy="' + p.y + '" r="' + (here ? 8 : 6.5) + '"/>' +
+        (online.peers[k] ? '<g class="peers" aria-hidden="true"><circle cx="' + (p.x + 9) + '" cy="' + (p.y + 7) + '" r="6.5"/><text x="' + (p.x + 9) + '" y="' + (p.y + 10) + '" text-anchor="middle">' + Math.min(99, online.peers[k]) + '</text></g>' : '') +
         '<circle cx="' + p.x + '" cy="' + p.y + '" r="16" fill="transparent"/>' +
         '<text x="' + p.x + '" y="' + (below ? p.y + 21 : p.y - 12) + '" text-anchor="middle">' + esc(D.DISTRICTS[k].name) + '</text>' + tagSvg + '</g>';
     }).join('');
@@ -392,6 +505,7 @@
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
       (S.history.length ? '<details><summary>Show as table</summary><div class="stmt-wrap"><table class="stmt"><tbody>' + S.history.slice().reverse().map(function (h) { return '<tr><td>Week ' + h.w + '</td><td class="n num">' + N(h.worth) + '</td></tr>'; }).join('') + '</tbody></table></div></details>' : '') + '</div>';
+    html += fameView();
     var sum = L.lifeSummary(S), best = lives()[0];
     html += '<div class="section"><h3>Score so far: <span class="num">' + sum.score + '</span></h3><p class="note">Net worth ÷ ₦1,000, plus 10 a week survived, 50 an achievement, 40 a career level and 500 for your goal.' + (best ? ' Your best life scored ' + best.score + '.' : '') + '</p>' + (lives().length ? livesView(5) : '') + '</div>';
     html += '<div class="section"><h3>Share your life</h3>' + shareBlock() + '</div>';
@@ -468,7 +582,8 @@
       (o ? '<b>' + esc(o.name) + '</b><p style="margin:0">' + esc(o.text) + '</p>' : '<p style="margin:0">Lagos decides where you start. The roll is random and happens once per life.</p>') +
       '<div class="odds"><span>LAPO Baby 50%</span><span>Ajepako 35%</span><span>Nepo Baby 15%</span></div>' +
       '<div class="inline">' + (o ? '<button class="btn go" id="start" data-start="1">Start life in ' + esc(D.DISTRICTS[D.HOMES[o.home].district].name) + '</button>' : '<button class="btn go" id="roll" data-roll="1">Roll the birth lottery</button>') + '</div></div>' +
-      (lives().length ? '<div class="field"><span class="label">Hall of lives · best scores</span>' + livesView(5) + '</div>' : '') +
+      (lives().length ? '<div class="field"><span class="label">Your past lives · best scores</span>' + livesView(5) + '</div>' : '') +
+      (online.db && online.fame.length ? '<div class="field">' + fameView().replace('<div class="section">', '<div>') + '</div>' : '') +
       '<details class="import"><summary>Continue from a save code</summary><textarea id="import-code" aria-label="Paste save code" placeholder="LSG1...."></textarea><div class="inline"><button class="btn sm" id="import" data-import="1">Load save</button><span class="note">' + esc(ui.importMsg) + '</span></div></details>' +
       '<p class="note">Lasgidi is a work of fiction. In-game naira has no real value and cannot be bought or cashed out.</p>' +
       '</div>';
@@ -494,7 +609,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -541,6 +656,11 @@
     if (ds.car) { run(function () { return L.buyCar(S); }); return; }
     if (ds.choice) { run(function () { return L.resolveChoice(S, +ds.choice); }); return; }
     if (ds.wonok) { S.wonSeen = true; save(); render(); return; }
+    if (ds.postfame) {
+      t.disabled = true;
+      postFame(L.fameEntry(S)).then(function (msg) { online.status = msg || ''; render(); });
+      return;
+    }
     if (ds.sound) { prefs.sound = !prefs.sound; writeJSON(PREF_KEY, prefs); if (prefs.sound) { ctx(); play('credit'); } render(); return; }
     if (ds.repok) { S.reportSeen = S.report.w; save(); render(); return; }
     if (ds.copyshare) {
@@ -561,6 +681,7 @@
     if (ds.new) {
       if (!ui.confirmNew) { ui.confirmNew = true; ui.flash = 'Tap "New life" again to end this life. It will be scored (' + L.lifeSummary(S).score + ' points) and kept in your hall of lives.'; render(); return; }
       ui.confirmNew = false; ui.flash = '';
+      if (S && !S.tampered) postFame(L.fameEntry(S), true);
       archiveLife();
       S = null;
       try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }
@@ -605,6 +726,7 @@
     S = L.migrate((data && data.state) || load());
     if (data && data.ui) Object.assign(ui, data.ui, { toasts: [] });
     render();
+    initOnline();
   }
   var hot = window.claude && window.claude.hot;
   if (hot && hot.snapshot) hot.snapshot(function () { return { state: S, ui: { tab: ui.tab, sel: ui.sel } }; });

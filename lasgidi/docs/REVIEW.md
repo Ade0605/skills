@@ -117,6 +117,20 @@ A bot that plays only by following the advisor exposed real design bugs, each of
 
 Result: following the advisor, every start (LAPO, Ajepako and Nepo) ends 30 weeks between ₦1.9m and ₦3.1m, mostly at the top of a career, with 1–28 collapses instead of hundreds.
 
+### v0.4: a shared city without the chat risk
+
+The published game now has a light social layer:
+- **Hall of Fame.** Each player has one row. Only you can write your own row, and everyone the game is shared with can read the board.
+- **Presence.** You can see how many other players are online and which district each is in. Each player shares only a district key: no names, text or other data.
+
+This answers §3.2 directly. Players get the "other people are in my Lagos" feeling without an open chat channel to moderate.
+
+The board is still client-reported, which was §3.1's original sin. Two mitigations limit the damage:
+- Readers never trust a stored score. They rebuild it from the fields and drop entries no honest game could produce.
+- Edited saves are refused.
+
+A server-run engine (below) is the real fix.
+
 ## 5. Roadmap: making it multiplayer without repeating the mistakes
 
 1. **Server-authoritative engine.** The engine is already pure and deterministic, so run it on the server and have clients send intents (`doAction(id)`), never balances. Persist the action log and replay it to audit any account.

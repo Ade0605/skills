@@ -336,3 +336,18 @@ test('life summary scores a run', () => {
   assert.ok(b.weeks === a.weeks + 2 && b.score !== a.score);
   assert.equal(typeof b.score, 'number');
 });
+
+test('hall of fame entries are rebuilt from fields and implausible ones dropped', () => {
+  const s = game('mid');
+  L._advance(s, 14 * 1440);
+  const e = L.fameEntry(s);
+  const back = L.checkFame(JSON.parse(JSON.stringify(e)));
+  assert.ok(back);
+  assert.equal(back.score, e.score);
+  assert.equal(L.checkFame(Object.assign({}, e, { score: 999999 })).score, e.score, 'stored score is ignored');
+  assert.equal(L.checkFame(Object.assign({}, e, { worth: 9e11 })), null, 'impossible wealth is dropped');
+  assert.equal(L.checkFame(Object.assign({}, e, { weeks: 1.5 })), null);
+  assert.equal(L.checkFame(Object.assign({}, e, { origin: '<img>' })), null);
+  assert.equal(L.checkFame(null), null);
+  assert.equal(L.lifeSummary(s).score, e.score);
+});

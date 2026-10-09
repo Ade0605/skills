@@ -1539,12 +1539,51 @@
   // A scored summary of this life, for the hall of lives.
   function lifeSummary(s) {
     var weeks = week(s) + 1, worth = netWorth(s), achievements = Object.keys(s.ach).length;
-    var score = Math.round(Math.max(0, worth) / 1000 + weeks * 10 + achievements * 50 + (s.won ? 500 : 0) + (s.job ? s.job.level * 40 : 0));
+    var score = scoreOf({ worth: worth, weeks: weeks, achievements: achievements, won: !!s.won, level: s.job ? s.job.level : 0 });
     return {
       name: s.name, origin: s.origin, goal: s.goal, won: !!s.won, weeks: weeks, worth: worth,
       peak: s.stats.peakWorth, title: s.job ? D.CAREERS[s.job.id].titles[s.job.level] : null,
       home: s.home, achievements: achievements, score: score, tampered: !!s.tampered
     };
+  }
+
+  /* ---------- shared hall of fame ----------
+   * Entries are written by players' own browsers, so they are untrusted.
+   * Readers never trust a stored score: they rebuild it from the fields and
+   * drop entries that no honest game could produce. A server-run engine is
+   * the real fix (docs/REVIEW.md §5); this keeps casual edits off the board. */
+
+  var FAME_FIELDS = { weeks: 1, worth: 1, achievements: 1, level: 1, won: 1, origin: 1, goal: 1 };
+
+  function scoreOf(e) {
+    return Math.round(Math.max(0, e.worth) / 1000 + e.weeks * 10 + e.achievements * 50 + (e.won ? 500 : 0) + e.level * 40);
+  }
+
+  function fameEntry(s) {
+    var e = {
+      v: 1, weeks: week(s) + 1, worth: netWorth(s), achievements: Object.keys(s.ach).length,
+      level: s.job ? s.job.level : 0, won: !!s.won, origin: s.origin, goal: s.goal,
+      career: s.job ? s.job.id : null, home: s.home, seal: s.ledgerHash, lines: s.ledgerCount
+    };
+    e.score = scoreOf(e);
+    return e;
+  }
+
+  // Returns a cleaned entry, or null when it is malformed or implausible.
+  function checkFame(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    var e = {};
+    var int = function (v, lo, hi) { return typeof v === 'number' && isFinite(v) && Math.round(v) === v && v >= lo && v <= hi; };
+    if (!int(raw.weeks, 1, 5200) || !int(raw.worth, -1e9, 1e12) || !int(raw.achievements, 0, Object.keys(ACHIEVEMENTS).length) || !int(raw.level, 0, 4)) return null;
+    if (typeof raw.won !== 'boolean' || !D.ORIGINS[raw.origin] || !D.GOALS[raw.goal]) return null;
+    Object.keys(FAME_FIELDS).forEach(function (k) { e[k] = raw[k]; });
+    e.career = typeof raw.career === 'string' && D.CAREERS[raw.career] ? raw.career : null;
+    e.home = typeof raw.home === 'string' && D.HOMES[raw.home] ? raw.home : null;
+    // Ceiling on wealth: starting cash plus a generous ₦3m a week.
+    if (e.worth > D.ORIGINS[e.origin].cash * 2 + e.weeks * 3000000) return null;
+    if (e.level > 0 && !e.career) return null;
+    e.score = scoreOf(e);
+    return e;
   }
 
   function shareText(s) {
@@ -1574,7 +1613,7 @@
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
-    migrate: migrate, advise: advise, lifeSummary: lifeSummary, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
+    migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
     CATEGORY_NAMES: CATEGORY_NAMES, category: category, SCHEMA: SCHEMA,
     _advance: advance, _post: post
   };

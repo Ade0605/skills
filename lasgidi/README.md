@@ -48,6 +48,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Hall of lives:** ending a life scores it (net worth, weeks survived, achievements, career level and goal) and keeps your best runs on the start screen.
 - **Sound (optional):** a bank-alert ding for money in, a low tone for money out, and a danfo horn when you travel.
 - **Keyboard:** number keys switch tabs, and A runs the advisor's top suggestion.
+- **Lagos online (inside claude.ai):** a shared **Hall of Fame** of everyone's best lives, plus live presence showing how many other players are online and which district they're in. There's no chat and no free text between players. Scores are rebuilt from the stored numbers on every read, and implausible entries are hidden. Outside claude.ai, the game runs single-player as before.
 
 ## Layout
 

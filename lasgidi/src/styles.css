@@ -185,6 +185,9 @@ h1, h2, h3 { margin: 0; text-wrap: balance; }
 .chip-btn[aria-pressed="true"] { background: var(--danfo-ink); color: var(--danfo); }
 .lives th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 4px; }
 .lives th.n { text-align: right; }
+.lives tr.me td { background: color-mix(in srgb, var(--danfo) 16%, transparent); }
+.map .peers circle { fill: var(--lagoon); stroke: var(--surface); stroke-width: 1.5; }
+.map .peers text { font: 700 8px var(--font-data); fill: var(--surface); }
 
 /* advisor */
 .advice { display: grid; gap: 8px; padding: 12px; margin-bottom: 6px; border-radius: 10px; background: var(--sunk); }
