@@ -508,3 +508,45 @@ test('an unfinished challenge does not count', () => {
   assert.equal(s.over, false);
   assert.equal(L.verifyChallenge(JSON.parse(JSON.stringify(L.challengeEntry(s))), '2026-W41').reason, 'not finished');
 });
+
+test('every mapped place sits on land in its own district and links real activities there', () => {
+  globalThis.LASGIDI_DATA = D;
+  require('../src/playground.js');
+  const PG = globalThis.LasgidiPlayground;
+  const ids = new Set();
+  for (const p of D.PLACES) {
+    assert.ok(!ids.has(p.id), 'duplicate place ' + p.id); ids.add(p.id);
+    assert.ok(D.PLACE_TYPES[p.type], p.id + ' type');
+    assert.equal(PG.isWater(p.x, p.y), false, p.id + ' is in the water');
+    assert.equal(PG.nearestDistrict(p.x, p.y).k, p.district, p.id + ' is outside ' + p.district);
+    const here = (D.PLACE_ACTIONS[p.district] || []).map(a => a.id);
+    for (const a of p.acts) assert.ok(here.includes(a), p.id + ' links ' + a + ' which is not in ' + p.district);
+  }
+  assert.ok(D.PLACES.length >= 40);
+});
+
+test('billboards: rent is a recorded ledger debit; stored ads are validated', () => {
+  globalThis.LASGIDI_DATA = D;
+  require('../src/playground.js');
+  const PG = globalThis.LasgidiPlayground;
+  for (const b of D.BILLBOARDS) {
+    assert.equal(PG.isWater(b.x, b.y), false, b.id + ' is in the water');
+    assert.equal(PG.nearestDistrict(b.x, b.y).k, b.district, b.id + ' is outside ' + b.district);
+  }
+  const s = L.newGame({ seed: 9, origin: 'nepo', goal: 'freestyle' });
+  const before = s.cash + s.bank;
+  assert.ok(L.rentBoard(s, 'tmb').ok);
+  assert.equal(before - (s.cash + s.bank), L.boardRent(s));
+  assert.ok(s.ach.billboard);
+  assert.equal(L.rentBoard(s, 'nowhere').ok, false);
+  assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(s)))).ok, 'renting replays');
+  const now = Date.now();
+  const good = { board: 'tmb', emoji: 0, slogan: 's3', color: 1, until: now + 3600e3 };
+  assert.equal(L.checkAd(good, now).text, 'Soft life loading');
+  assert.equal(L.checkAd(Object.assign({}, good, { slogan: 'Call 0803 123 4567' }), now), null, 'free text rejected');
+  assert.equal(L.checkAd(Object.assign({}, good, { until: now - 1 }), now), null, 'expired');
+  assert.equal(L.checkAd(Object.assign({}, good, { until: now + 30 * 3600e3 }), now), null, 'too long');
+  assert.equal(L.checkAd(Object.assign({}, good, { emoji: 99 }), now), null);
+  assert.equal(L.sloganText('b:buka:mushin'), 'Buka now open in Mushin');
+  sane(s);
+});

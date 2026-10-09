@@ -4,7 +4,7 @@
   var L = window.Lasgidi, D = L.DATA, N = L.naira;
   var SAVE_KEY = 'lasgidi.save.v1';
   var app = document.getElementById('app');
-  var ui = { tab: 'do', sel: null, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
+  var ui = { tab: 'do', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0 }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
   var S = null;
 
   /* ---------- storage (best effort) ---------- */
@@ -108,7 +108,7 @@
    * Both light up only inside claude.ai; the game is complete without them.
    * No chat and no free text travel between players: presence carries a
    * district key, the board carries numbers. */
-  var online = { db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {} };
+  var online = { ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {} };
 
   // Each player's row is a small summary at fame/<id>; the replay log lives
   // beside it at fame/<id>/proof/log. Load every summary (no ordering: a
@@ -174,6 +174,19 @@
         rawFame = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
         rankFame();
       }, function () { online.db = null; scheduleRender(); });
+    });
+    window.claude.use('db').then(function (db) {
+      if (!db) return;
+      db.collection('ads').limit(500).onSnapshot(function (snap) {
+        online.ads = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
+        var ids = online.ads.map(function (a) { return a.id; });
+        if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+        scheduleRender();
+      }, function () { online.ads = []; });
+      db.collection('sponsored').limit(50).onSnapshot(function (snap) {
+        online.sponsored = snap.docs.map(function (d) { return d.data(); });
+        scheduleRender();
+      }, function () { online.sponsored = []; });
     });
     window.claude.use('room').then(function (room) {
       if (!room) return;
@@ -347,17 +360,158 @@
       loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
       flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others,
-      clock: L.clockLabel(S), banner: banner
+      clock: L.clockLabel(S), banner: banner,
+      places: ui.placeCat === 'boards' ? [] : D.PLACES.filter(function (p) { return !ui.placeCat || p.type === ui.placeCat; }), place: ui.place,
+      boards: boardAdsMap(), board: ui.board
     };
+  }
+
+  /* ---------- billboards ---------- */
+  // Live paid ads for a board, newest first, at most 3; each person has one ad at a time.
+  function paidAds(boardId) {
+    var now = Date.now();
+    return online.ads.map(function (d) { var a = L.checkAd(d.raw, now); return a && a.board === boardId ? Object.assign(a, { by: d.id }) : null; })
+      .filter(Boolean).sort(function (a, b) { return b.at - a.at; }).slice(0, 3);
+  }
+  // Sponsored ads are written only by the artifact's owner and editors; still shown with care.
+  function sponsoredAds(boardId) {
+    var now = Date.now();
+    return online.sponsored.filter(function (r) {
+      return r && r.board === boardId && typeof r.title === 'string' && r.title.length <= 40 && typeof r.until === 'number' && r.until > now;
+    }).map(function (r) {
+      var c = D.AD_COLORS[r.color] || D.AD_COLORS[1];
+      return { emoji: '📣', text: r.title, line2: typeof r.line2 === 'string' ? r.line2.slice(0, 60) : '', url: typeof r.url === 'string' && /^https:\/\//.test(r.url) ? r.url : null, color: c, sponsored: true, paid: true, until: r.until };
+    });
+  }
+  function psaFor(i) {
+    var a = D.PSAS[i % D.PSAS.length], b = D.PSAS[(i + 3) % D.PSAS.length];
+    return [a, b].map(function (p, j) { return { emoji: p.emoji, text: p.text, color: D.AD_COLORS[j ? 2 : 1], psa: true }; });
+  }
+  function adsForBoard(id, i) {
+    var paid = sponsoredAds(id).concat(paidAds(id).map(function (a) { return Object.assign(a, { paid: true }); }));
+    return paid.length ? paid : psaFor(i);
+  }
+  function boardAdsMap() {
+    var m = {};
+    D.BILLBOARDS.forEach(function (b, i) { m[b.id] = adsForBoard(b.id, i); });
+    return m;
+  }
+  function myAd() {
+    var now = Date.now();
+    for (var i = 0; i < online.ads.length; i++) if (online.ads[i].id === online.me) return L.checkAd(online.ads[i].raw, now);
+    return null;
+  }
+  function adPreview(a, big) {
+    return '<div class="ad' + (big ? ' big' : '') + '" style="background:' + a.color.bg + ';color:' + a.color.fg + '"><span class="ad-e">' + a.emoji + '</span><span class="ad-t">' + esc(a.text) +
+      (a.line2 ? '<small>' + esc(a.line2) + '</small>' : '') + '</span></div>';
+  }
+
+  function boardView(id) {
+    var b = D.BILLBOARDS.filter(function (x) { return x.id === id; })[0];
+    if (!b) return '';
+    var i = D.BILLBOARDS.indexOf(b), ads = adsForBoard(id, i), paid = ads.filter(function (a) { return a.paid; });
+    var html = '<div class="inline" style="justify-content:space-between"><h3>Billboard · ' + esc(b.name) + '</h3><button class="btn sm ghost" id="close-board" data-closeboard="1">Close</button></div>' +
+      '<p class="note">' + (paid.length ? '<span class="onair">ON AIR</span> ' + paid.length + ' ad' + (paid.length === 1 ? '' : 's') + ' take turns, 15 s each.' : 'No paid ads right now, so it shows public-service messages.') + '</p>' +
+      '<div class="ads">' + ads.map(function (a) {
+        var who = a.sponsored ? 'Sponsored' : a.psa ? 'Public service' : (a.by === online.me ? 'Your ad' : ((online.names[a.by] && online.names[a.by].name) || 'A Lagosian'));
+        var left = a.until ? Math.max(1, Math.round((a.until - Date.now()) / 3600e3)) + 'h left' : '';
+        return '<div class="ad-card">' + adPreview(a, true) + '<div class="meta"><span>' + esc(who) + '</span>' + (left ? '<span>' + left + '</span>' : '') +
+          (a.url ? '<a class="btn sm ghost" href="' + esc(a.url) + '" target="_blank" rel="noopener sponsored">Visit</a>' : '') + '</div></div>';
+      }).join('') + '</div>';
+    html += composerView(b, paid);
+    return html;
+  }
+
+  function composerView(b, paid) {
+    var cost = L.boardRent(S), mine = myAd(), others = paid.filter(function (a) { return !a.sponsored && a.by !== online.me; }).length;
+    var html = '<div class="section"><h3>Put your ad here</h3>';
+    if (!online.db || !online.me) return html + '<p class="note">Billboards are shared with everyone you share Lasgidi with. They work when the game is opened on claude.ai.</p></div>';
+    if (online.canWrite === false) return html + '<p class="note">You can see the boards but not post. Ask the owner for Contributor access.</p></div>';
+    if (others >= 3) return html + '<p class="note">This board is full. Try another one.</p></div>';
+    var ad = ui.ad, slogans = L.adSlogans(S);
+    if (!slogans.some(function (x) { return x.code === ad.slogan; })) ad.slogan = slogans[0].code;
+    var preview = { emoji: D.AD_EMOJI[ad.emoji], text: L.sloganText(ad.slogan), color: D.AD_COLORS[ad.color] };
+    html += '<p class="note">Pick an emoji, a slogan and a colour. ' + naira(cost) + ' in-game naira for 24 real hours. You can have one ad up at a time' + (mine ? '; posting here replaces your ad at ' + esc(D.BILLBOARDS.filter(function (x) { return x.id === mine.board; })[0].name) : '') + '.</p>' +
+      adPreview(preview, true) +
+      '<div class="pick" role="group" aria-label="Emoji">' + D.AD_EMOJI.map(function (e, i) { return '<button type="button" class="pick-e' + (i === ad.emoji ? ' on' : '') + '" id="ade-' + i + '" data-ademoji="' + i + '" aria-pressed="' + (i === ad.emoji) + '">' + e + '</button>'; }).join('') + '</div>' +
+      '<label class="label" for="ad-slogan">Slogan</label><select id="ad-slogan" data-adslogan="1">' + slogans.map(function (x) { return '<option value="' + esc(x.code) + '"' + (x.code === ad.slogan ? ' selected' : '') + '>' + esc(x.text) + '</option>'; }).join('') + '</select>' +
+      '<div class="pick" role="group" aria-label="Colour">' + D.AD_COLORS.map(function (c, i) { return '<button type="button" class="pick-c' + (i === ad.color ? ' on' : '') + '" id="adc-' + i + '" data-adcolor="' + i + '" aria-pressed="' + (i === ad.color) + '" aria-label="Colour ' + (i + 1) + '" style="background:' + c.bg + ';color:' + c.fg + '">Aa</button>'; }).join('') + '</div>' +
+      '<div class="inline"><button class="btn go" id="ad-post" data-adpost="' + b.id + '"' + (S.cash + S.bank < cost || S.over ? ' disabled' : '') + '>Rent this board · ' + naira(cost) + '</button>' +
+      (S.cash + S.bank < cost ? '<span class="why">You need ' + naira(cost - S.cash - S.bank) + ' more.</span>' : '') +
+      (online.status ? '<span class="note">' + esc(online.status) + '</span>' : '') + '</div>';
+    return html + '</div>';
+  }
+  function naira(n) { return N(n); }
+
+  function postAd(boardId) {
+    var res = L.rentBoard(S, boardId);
+    if (!res.ok) return Promise.resolve(res);
+    var ad = ui.ad;
+    return online.db.doc('ads/' + online.me).set({ board: boardId, emoji: ad.emoji, slogan: ad.slogan, color: ad.color, at: Date.now(), until: Date.now() + 24 * 3600e3 })
+      .then(function () { return res; }, function (err) {
+        return { ok: false, msg: err && err.code === 'invalid_argument' ? 'Paid, but the board refused the ad: you need Contributor access.' : 'Paid, but the ad could not be posted. Try again in a moment.' };
+      });
+  }
+
+  /* ---------- places ---------- */
+  function placeView(id) {
+    var pl = D.PLACES.filter(function (p) { return p.id === id; })[0];
+    if (!pl) return '';
+    var here = S.loc === pl.district, t = D.PLACE_TYPES[pl.type];
+    var avail = here ? L.availableActions(S) : [];
+    var rows = pl.acts.map(function (aid) {
+      var a = here ? avail.filter(function (x) { return x.id === aid; })[0] : null;
+      if (a) return actionRow(a);
+      var def = (D.PLACE_ACTIONS[pl.district] || []).filter(function (x) { return x.id === aid; })[0];
+      if (!def) return '';
+      var meta = [dur(def.mins)];
+      if (def.cost) meta.push('<span class="cost">' + N(L.price(S, def.cost)) + '</span>');
+      if (def.earn) meta.push('<span class="gain">earns</span>');
+      if (def.when) meta.push(esc(whenText(def.when)));
+      return '<div class="item"><div><h3>' + esc(def.label) + '</h3><div class="meta">' + meta.map(function (m) { return '<span>' + m + '</span>'; }).join('') + '</div></div></div>';
+    }).join('');
+    return '<div class="inline" style="justify-content:space-between"><h3><span class="pl-ic" style="border-color:' + t.color + '">' + (pl.icon || '•') + '</span> ' + esc(pl.name) + '</h3><button class="btn sm ghost" id="close-place" data-closeplace="1">Close</button></div>' +
+      '<p class="note"><span class="pl-type" style="color:' + t.color + '">' + esc(t.name) + '</span> · ' + esc(D.DISTRICTS[pl.district].name) + '</p><p>' + esc(pl.text) + '</p>' +
+      (rows ? '<div class="list">' + rows + '</div>' : '') +
+      (here ? '' : '<div class="inline"><button class="btn go" id="trip-' + pl.district + '" data-tripto="' + pl.district + '">Plan a trip to ' + esc(D.DISTRICTS[pl.district].name) + '</button></div>');
+  }
+  function whenText(w) {
+    var parts = [];
+    if (w.days) parts.push(w.days.map(function (d) { return D.DAYS[d]; }).join('/'));
+    if (w.from != null) parts.push(String(w.from).padStart(2, '0') + ':00–' + String(w.to).padStart(2, '0') + ':00');
+    return parts.join(' ');
   }
   function mountPlayground() {
     if (!S || !window.LasgidiPlayground) return;
     var narrow = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
     var slot = document.querySelector(narrow ? '.tab-body .pg-slot' : '.map-panel .pg-slot');
     if (!slot) return;
-    if (!playground) playground = window.LasgidiPlayground.create({ onSelect: function (k) { ui.sel = k === S.loc ? null : k; render(); } });
+    if (!playground) playground = window.LasgidiPlayground.create({
+      onSelect: function (k) { ui.sel = k === S.loc ? null : k; ui.place = null; ui.board = null; render(); },
+      onSelectPlace: function (id) { ui.place = id; ui.board = null; ui.sel = null; render(); },
+      onSelectBoard: function (id) { ui.board = id; ui.place = null; ui.sel = null; render(); }
+    });
     slot.appendChild(playground.el);
     playground.update(sceneFor());
+  }
+
+  function placeFilters() {
+    var cats = Object.keys(D.PLACE_TYPES);
+    var html = '<div class="pg-chips" role="group" aria-label="Show places"><span class="label">Places</span>' +
+      '<button type="button" class="pg-chip' + (!ui.placeCat ? ' sel' : '') + '" id="pc-all" data-placecat="">All</button>' +
+      cats.map(function (c) { return '<button type="button" class="pg-chip' + (ui.placeCat === c ? ' sel' : '') + '" id="pc-' + c + '" data-placecat="' + c + '"><i class="sw" style="background:' + D.PLACE_TYPES[c].color + '"></i>' + esc(D.PLACE_TYPES[c].name) + '</button>'; }).join('') +
+      '<button type="button" class="pg-chip' + (ui.placeCat === 'boards' ? ' sel' : '') + '" id="pc-boards" data-placecat="boards">📣 Billboards</button></div>';
+    if (ui.placeCat === 'boards') {
+      html += '<div class="pg-chips">' + D.BILLBOARDS.map(function (b) {
+        var n = paidAds(b.id).length + sponsoredAds(b.id).length;
+        return '<button type="button" class="pg-chip' + (ui.board === b.id ? ' sel' : '') + '" id="bb-' + b.id + '" data-boardsel="' + b.id + '">' + esc(b.name) + (n ? ' <span class="onair">' + n + '</span>' : '') + '</button>';
+      }).join('') + '</div>';
+    } else if (ui.placeCat) {
+      html += '<div class="pg-chips">' + D.PLACES.filter(function (p) { return p.type === ui.placeCat; }).map(function (p) {
+        return '<button type="button" class="pg-chip' + (ui.place === p.id ? ' sel' : '') + '" id="pl-' + p.id + '" data-place="' + p.id + '">' + (p.icon || '') + ' ' + esc(p.name) + '</button>';
+      }).join('') + '</div>';
+    }
+    return html;
   }
 
   function mapBlock() {
@@ -368,9 +522,10 @@
         (online.peers[k] ? ' <span class="num">· ' + online.peers[k] + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     return '<div class="panel-h"><h2>' + esc(d.name) + '</h2><span class="label">' + (d.side === 'island' ? 'Island' : 'Mainland') + '</span></div>' +
-      '<div class="pg-slot"></div>' + chips +
+      '<div class="pg-slot"></div>' + placeFilters() + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
-      '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) : '<p>' + esc(d.blurb) + ' Tap a district to plan a trip.</p>') + '</div>';
+      '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
+        : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : '<p>' + esc(d.blurb) + ' Tap a district, a place or a billboard.</p>') + '</div>';
   }
 
   function travelView(dest) {
@@ -674,7 +829,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -706,9 +861,22 @@
     }
     if (!S) return;
     if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; render(); return; }
-    if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; render(); return; }
+    if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
+    if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
+    if (ds.place) { ui.place = ds.place; ui.board = null; ui.sel = null; render(); return; }
+    if (ds.boardsel) { ui.board = ds.boardsel; ui.place = null; ui.sel = null; online.status = ''; render(); return; }
+    if (ds.closeplace) { ui.place = null; render(); return; }
+    if (ds.closeboard) { ui.board = null; online.status = ''; render(); return; }
+    if (ds.tripto) { ui.sel = ds.tripto; render(); return; }
+    if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
+    if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
+    if (ds.adpost) {
+      t.disabled = true;
+      postAd(ds.adpost).then(function (res) { online.status = res.msg; run(function () { return res; }); });
+      return;
+    }
     if (ds.clearSel) { ui.sel = null; render(); return; }
-    if (ds.travel) { run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; if (ui.tab === 'map') ui.tab = 'do'; } return r; }, 'travel'); return; }
+    if (ds.travel) { run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; if (ui.tab === 'map' && !ui.place) ui.tab = 'do'; } return r; }, 'travel'); return; }
     if (ds.act) { run(function () { return L.doAction(S, ds.act); }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { return L.applyJob(S, ds.apply); }); return; }
@@ -758,6 +926,10 @@
       try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }
       render();
     }
+  });
+
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'ad-slogan') { ui.ad.slogan = e.target.value; render(); }
   });
 
   document.addEventListener('keydown', function (e) {

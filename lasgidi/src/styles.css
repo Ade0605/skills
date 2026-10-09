@@ -142,6 +142,26 @@ h1, h2, h3 { margin: 0; text-wrap: balance; }
 .pg-chip.here { background: var(--danfo); border-color: var(--danfo-ink); color: var(--danfo-ink); }
 .pg-chip.sel { border-color: var(--lagoon); box-shadow: inset 0 0 0 1.5px var(--lagoon); }
 
+.pg-chips .label { align-self: center; margin-right: 2px; }
+.pg-chip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+.pl-ic { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 2px solid; background: #ffffff; font-size: 15px; vertical-align: -6px; }
+.pl-type { font-weight: 700; }
+
+/* billboards */
+.ads { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.ad-card { display: grid; gap: 6px; }
+.ad { display: flex; align-items: center; gap: 10px; border-radius: 8px; padding: 10px 12px; border: 3px solid #202226; min-height: 64px; }
+.ad.big { min-height: 76px; }
+.ad-e { font-size: 30px; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.ad-t { font-family: var(--font-display); font-size: 16px; line-height: 1.15; overflow-wrap: anywhere; display: grid; gap: 2px; }
+.ad-t small { font-family: var(--font-body); font-size: 12px; font-weight: 700; }
+.onair { display: inline-block; padding: 1px 8px; border-radius: 999px; background: #e5484d; color: #ffffff; font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+.pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-e, .pick-c { width: 38px; height: 38px; border-radius: 8px; border: 2px solid var(--line); background: var(--paper); cursor: pointer; font-size: 20px; }
+.pick-c { font-family: var(--font-display); font-size: 13px; }
+.pick-e.on, .pick-c.on { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--danfo); }
+select { border: 1.5px solid var(--line); background: var(--paper); border-radius: 8px; padding: 7px 10px; max-width: 100%; }
+
 /* ---------- travel options ---------- */
 .modes { display: grid; gap: 6px; }
 .mode {
@@ -322,3 +342,4 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   .brand { font-size: 18px; }
   .mode { grid-template-columns: 64px 1fr auto; }
 }
+.ad-card .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 12.5px; color: var(--muted); }

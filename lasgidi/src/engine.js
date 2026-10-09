@@ -57,7 +57,8 @@
     debt_free:   'Debt free: cleared every loan',
     top:         'Top of the ladder in a career',
     wedding:     'Wedding bells: got married',
-    parent:      'Proud parent: welcomed a child'
+    parent:      'Proud parent: welcomed a child',
+    billboard:   'On the billboard: rented an ad board'
   };
 
   /* ---------- small helpers ---------- */
@@ -1432,6 +1433,55 @@
     return finish(s, ok('Congratulations! You married ' + p.name + '.'));
   }
 
+  /* ---------- billboards ----------
+   * The engine only takes the rent (a recorded, replayable debit). What the
+   * ad says lives in the shared store and is built from fixed parts. */
+
+  function boardDef(id) {
+    for (var i = 0; i < D.BILLBOARDS.length; i++) if (D.BILLBOARDS[i].id === id) return D.BILLBOARDS[i];
+    return null;
+  }
+  function boardRent(s) { return price(s, D.BILLBOARD_RENT); }
+
+  function rentBoard(s, id) {
+    var b = boardDef(id);
+    if (!b) return fail('No such billboard.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var cost = boardRent(s);
+    s.alerts = [];
+    if (!pay(s, cost, 'Billboard rental: ' + b.name)) return fail('Renting this board costs ' + naira(cost) + '.');
+    unlock(s, 'billboard');
+    log(s, 'Your ad is up on the ' + b.name + ' billboard for 24 hours.', 'good');
+    return finish(s, ok('Your ad is on air at ' + b.name + '.'));
+  }
+
+  // Ad slogans: the fixed list, plus your own businesses by name and district.
+  function adSlogans(s) {
+    var out = D.AD_SLOGANS.map(function (t, i) { return { code: 's' + i, text: t }; });
+    (s.businesses || []).forEach(function (b) {
+      var code = 'b:' + b.id + ':' + homeDistrict(s);
+      if (!out.some(function (o) { return o.code === code; })) out.push({ code: code, text: D.BUSINESSES[b.id].name + ' now open in ' + D.DISTRICTS[homeDistrict(s)].name });
+    });
+    return out;
+  }
+  // Turn a stored slogan code back into text; null when it is not a valid code.
+  function sloganText(code) {
+    if (typeof code !== 'string') return null;
+    var m = /^s(\d{1,2})$/.exec(code);
+    if (m) return D.AD_SLOGANS[+m[1]] || null;
+    m = /^b:([a-z]+):([a-z]+)$/.exec(code);
+    if (m && D.BUSINESSES[m[1]] && D.DISTRICTS[m[2]]) return D.BUSINESSES[m[1]].name + ' now open in ' + D.DISTRICTS[m[2]].name;
+    return null;
+  }
+  // Validate an ad read from the shared store. Returns a clean ad or null.
+  function checkAd(raw, now) {
+    if (!raw || typeof raw !== 'object' || !boardDef(raw.board)) return null;
+    var e = raw.emoji, c = raw.color, text = sloganText(raw.slogan);
+    if (!(e >= 0 && e < D.AD_EMOJI.length && Math.round(e) === e) || !(c >= 0 && c < D.AD_COLORS.length && Math.round(c) === c) || !text) return null;
+    if (typeof raw.until !== 'number' || raw.until <= now || raw.until > now + 25 * 3600 * 1000) return null;
+    return { board: raw.board, emoji: D.AD_EMOJI[e], text: text, color: D.AD_COLORS[c], until: raw.until, at: typeof raw.at === 'number' ? raw.at : 0 };
+  }
+
   /* ---------- scoring & goals ---------- */
 
   function debts(s) {
@@ -1925,6 +1975,7 @@
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
+    rentBoard: recorded('rb', rentBoard), boardRent: boardRent, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,

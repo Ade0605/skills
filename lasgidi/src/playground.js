@@ -144,12 +144,23 @@
     wrap.appendChild(canvas); wrap.appendChild(hud); wrap.appendChild(zoom);
 
     var ctx = canvas.getContext('2d');
+    // Can this device draw colour emoji? If not, fall back to vector glyphs.
+    var emojiOk = (function () {
+      try {
+        var t = document.createElement('canvas'); t.width = t.height = 16;
+        var g = t.getContext('2d'); g.font = '14px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.textBaseline = 'top';
+        g.fillText('🌳', 0, 0);
+        var d = g.getImageData(0, 0, 16, 16).data;
+        for (var i = 0; i < d.length; i += 4) if (d[i + 3] > 0 && (Math.abs(d[i] - d[i + 1]) > 30 || Math.abs(d[i + 1] - d[i + 2]) > 30)) return true;
+      } catch (e) { /* no canvas reads */ }
+      return false;
+    })();
     var scene = null, theme = null, staticLayer = null, staticKey = '';
     var W = 0, H = 0, dpr = 1, cam = { z: 1, px: 0, py: 0 }, base = { s: 1, ox: 0, oy: 0 };
     var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var raf = 0, last = 0, clock = 0;
     var vehicles = [], boats = [];
-    var pins = [];
+    var pins = [], placeHits = [], boardHits = [];
 
     // Vehicles: danfos on roads, ferries on the lagoon.
     D.ROADS.forEach(function (r, i) {
@@ -398,9 +409,66 @@
         ctx.fillStyle = theme.lagoon; ctx.fillRect(q.x - 1.2 * s, q.y - 2.4 * s, 2.4 * s, 1.4 * s);
       });
 
+      // Billboards: a panel on two posts; paid ads rotate every 15 s.
+      boardHits = [];
+      var slot = Math.floor(Date.now() / 15000);
+      D.BILLBOARDS.forEach(function (b, bi) {
+        var ads = (scene.boards && scene.boards[b.id]) || [];
+        if (!ads.length) return;
+        var ad = ads[(slot + bi) % ads.length];
+        var p = toScreen(b.x, b.y, 0), k = Math.max(0.85, Math.min(1.8, s));
+        var pw = 40 * k, ph = 20 * k, post = 12 * k, x = p.x - pw / 2, y = p.y - post - ph;
+        var selB = b.id === scene.board;
+        ctx.strokeStyle = theme.dark ? '#9aa0a6' : '#4b4f55'; ctx.lineWidth = Math.max(1, 1.2 * k);
+        ctx.beginPath(); ctx.moveTo(p.x - pw * 0.3, p.y); ctx.lineTo(p.x - pw * 0.3, y + ph); ctx.moveTo(p.x + pw * 0.3, p.y); ctx.lineTo(p.x + pw * 0.3, y + ph); ctx.stroke();
+        ctx.fillStyle = theme.dark ? '#0b0c0d' : '#202226'; roundRect(ctx, x - 1.5, y - 1.5, pw + 3, ph + 3, 3); ctx.fill();
+        ctx.fillStyle = ad.color.bg; roundRect(ctx, x, y, pw, ph, 2); ctx.fill();
+        if (selB) { ctx.strokeStyle = theme.danfo; ctx.lineWidth = 2.5; roundRect(ctx, x - 3, y - 3, pw + 6, ph + 6, 4); ctx.stroke(); }
+        ctx.textBaseline = 'middle';
+        ctx.font = Math.round(ph * 0.55) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+        ctx.textAlign = 'left'; ctx.fillStyle = ad.color.fg;
+        ctx.fillText(ad.emoji, x + 2 * k, y + ph / 2 + 0.5);
+        var fs = Math.round(5.2 * k * Math.min(1.25, cam.z));
+        if (fs >= 6) {
+          ctx.font = '700 ' + fs + 'px Atkinson Hyperlegible, sans-serif';
+          var words = ad.text.split(' '), lines = [''], maxW = pw - ph * 0.65 - 5 * k;
+          words.forEach(function (w) { var t = (lines[lines.length - 1] + ' ' + w).trim(); if (ctx.measureText(t).width > maxW && lines[lines.length - 1]) lines.push(w); else lines[lines.length - 1] = t; });
+          lines = lines.slice(0, Math.max(1, Math.floor(ph / (fs + 1))));
+          lines.forEach(function (ln, i) { ctx.fillText(ln, x + ph * 0.62 + 3 * k, y + ph / 2 + (i - (lines.length - 1) / 2) * (fs + 1)); });
+        }
+        if (ad.paid) { ctx.beginPath(); ctx.arc(x + pw - 3 * k, y + 3 * k, 1.8 * k, 0, Math.PI * 2); ctx.fillStyle = '#e5484d'; ctx.fill(); }
+        boardHits.push({ id: b.id, x: p.x, y: y + ph / 2, w: pw, h: ph + post });
+      });
+      ctx.textBaseline = 'alphabetic';
+
+      // Key places: a coloured badge per category with a small vector glyph.
+      placeHits = [];
+      var labels = [];
+      var pr = Math.max(6.5, Math.min(12, 6.5 * Math.sqrt(cam.z) * Math.min(1.3, Math.max(0.85, base.s))));
+      (scene.places || []).forEach(function (pl) {
+        var p = toScreen(pl.x, pl.y, 0), sel = pl.id === scene.place;
+        var cy = p.y - pr - 2;
+        if (sel) { ctx.beginPath(); ctx.arc(p.x, cy, pr + 5, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fill(); }
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - pr * 0.45, cy + pr * 0.6); ctx.lineTo(p.x + pr * 0.45, cy + pr * 0.6); ctx.closePath();
+        ctx.fillStyle = D.PLACE_TYPES[pl.type].color; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, cy, pr, 0, Math.PI * 2); ctx.fill();
+        if (emojiOk && pl.icon) {
+          // Real icons: the emoji on a white badge, ringed in the category colour.
+          ctx.beginPath(); ctx.arc(p.x, cy, pr, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+          ctx.lineWidth = sel ? 3 : 2; ctx.strokeStyle = sel ? theme.danfo : D.PLACE_TYPES[pl.type].color; ctx.stroke();
+          ctx.font = Math.round(pr * 1.15) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(pl.icon, p.x, cy + pr * 0.08);
+        } else {
+          ctx.lineWidth = sel ? 2.5 : 1.5; ctx.strokeStyle = sel ? theme.danfo : '#ffffff'; ctx.stroke();
+          glyph(ctx, pl.glyph, p.x, cy, pr * 0.62);
+        }
+        placeHits.push({ id: pl.id, x: p.x, y: cy });
+        if (sel || cam.z >= 1.9) labels.push({ place: pl, top: { x: p.x, y: cy + 4 }, pri: sel ? 1 : 4, sel: sel });
+      });
+
       // District pins.
       pins = [];
-      var labels = [];
       var pulse = reduce ? 0.5 : (clock % 2200) / 2200;
       keys.forEach(function (k) {
         var d = D.DISTRICTS[k], p = toScreen(d.x, d.y, 0);
@@ -439,10 +507,9 @@
       list.sort(function (a, b) { return a.pri - b.pri; });
       var taken = pins.map(function (p) { return { x: p.x - 7, y: p.y - 7, w: 14, h: 14 }; });
       list.forEach(function (l) {
-        var d = D.DISTRICTS[l.k];
-        var text = d.name + (l.k === scene.home ? ' · Home' : '') + (l.k === scene.work ? ' · Work' : '');
-        ctx.font = '700 ' + (l.here ? 12 : 11) + 'px Atkinson Hyperlegible, sans-serif';
-        var w = ctx.measureText(text).width + 12, h = 17, x0 = l.top.x, y0 = l.top.y;
+        var text = l.place ? l.place.name : D.DISTRICTS[l.k].name + (l.k === scene.home ? ' · Home' : '') + (l.k === scene.work ? ' · Work' : '');
+        ctx.font = (l.place ? '600 10.5px' : '700 ' + (l.here ? 12 : 11) + 'px') + ' Atkinson Hyperlegible, sans-serif';
+        var w = ctx.measureText(text).width + (l.place ? 18 : 12), h = l.place ? 15 : 17, x0 = l.top.x, y0 = l.top.y;
         var spots = [[x0 - w / 2, y0 - 28], [x0 - w / 2, y0 + 10], [x0 + 10, y0 - h / 2], [x0 - 10 - w, y0 - h / 2]];
         var box = null;
         for (var i = 0; i < spots.length && !box; i++) {
@@ -455,10 +522,46 @@
         taken.push(box);
         ctx.fillStyle = l.here ? theme.danfo : (theme.dark ? 'rgba(27,28,30,.9)' : 'rgba(255,255,255,.92)');
         roundRect(ctx, box.x, box.y, box.w, box.h, 8.5); ctx.fill();
-        if (l.sel) { ctx.strokeStyle = theme.lagoon; ctx.lineWidth = 2; ctx.stroke(); }
+        if (l.place) { ctx.fillStyle = D.PLACE_TYPES[l.place.type].color; ctx.fillRect(box.x + 5, box.y + box.h / 2 - 3, 3, 6); }
+        if (l.sel) { ctx.strokeStyle = l.place ? theme.danfo : theme.lagoon; ctx.lineWidth = 2; roundRect(ctx, box.x, box.y, box.w, box.h, 8.5); ctx.stroke(); }
         ctx.fillStyle = l.here ? theme.danfoInk : theme.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(text, box.x + box.w / 2, box.y + box.h / 2 + 0.5);
       });
+    }
+
+    // Tiny white vector icons, drawn in a box of half-size r around (x, y).
+    function glyph(g, kind, x, y, r) {
+      g.save();
+      g.strokeStyle = '#ffffff'; g.fillStyle = '#ffffff'; g.lineWidth = Math.max(1, r * 0.28); g.lineCap = 'round'; g.lineJoin = 'round';
+      var L = function (pts) { g.beginPath(); pts.forEach(function (p, i) { if (i) g.lineTo(x + p[0] * r, y + p[1] * r); else g.moveTo(x + p[0] * r, y + p[1] * r); }); g.stroke(); };
+      var C = function (cx, cy, rr, fill) { g.beginPath(); g.arc(x + cx * r, y + cy * r, rr * r, 0, Math.PI * 2); if (fill) g.fill(); else g.stroke(); };
+      var R = function (x0, y0, w, h, fill) { if (fill) g.fillRect(x + x0 * r, y + y0 * r, w * r, h * r); else g.strokeRect(x + x0 * r, y + y0 * r, w * r, h * r); };
+      switch (kind) {
+        case 'glass': L([[-0.8, -0.7], [0.8, -0.7], [0, 0.15], [-0.8, -0.7]]); L([[0, 0.15], [0, 0.75]]); L([[-0.45, 0.8], [0.45, 0.8]]); break;
+        case 'note': C(-0.35, 0.55, 0.3, true); L([[-0.08, 0.55], [-0.08, -0.8], [0.6, -0.55]]); break;
+        case 'film': R(-0.8, -0.55, 1.6, 1.1); L([[-0.35, -0.55], [-0.35, 0.55]]); L([[0.35, -0.55], [0.35, 0.55]]); break;
+        case 'mask': C(0, 0, 0.75); C(-0.3, -0.15, 0.1, true); C(0.3, -0.15, 0.1, true); g.beginPath(); g.arc(x, y + 0.1 * r, 0.38 * r, 0.2, Math.PI - 0.2); g.stroke(); break;
+        case 'frame': R(-0.75, -0.65, 1.5, 1.3); L([[-0.5, 0.4], [-0.1, -0.05], [0.2, 0.25], [0.5, -0.1]]); break;
+        case 'tree': C(0, -0.25, 0.5, true); L([[0, 0.2], [0, 0.85]]); break;
+        case 'wave': g.beginPath(); for (var i = 0; i <= 10; i++) { var t = i / 10; g.lineTo(x + (t * 1.7 - 0.85) * r, y + Math.sin(t * Math.PI * 2) * 0.3 * r); } g.stroke(); break;
+        case 'ball': C(0, 0, 0.7); L([[-0.7, 0], [0.7, 0]]); L([[0, -0.7], [0, 0.7]]); break;
+        case 'dumbbell': L([[-0.6, 0], [0.6, 0]]); R(-0.85, -0.4, 0.3, 0.8, true); R(0.55, -0.4, 0.3, 0.8, true); break;
+        case 'bowl': g.beginPath(); g.arc(x, y - 0.1 * r, 0.75 * r, 0, Math.PI); g.closePath(); g.fill(); L([[-0.9, -0.1], [0.9, -0.1]]); break;
+        case 'basket': L([[-0.8, -0.2], [0.8, -0.2], [0.55, 0.7], [-0.55, 0.7], [-0.8, -0.2]]); g.beginPath(); g.arc(x, y - 0.2 * r, 0.5 * r, Math.PI, 0); g.stroke(); break;
+        case 'cap': L([[-0.9, -0.2], [0, -0.65], [0.9, -0.2], [0, 0.25], [-0.9, -0.2]]); L([[-0.5, 0.05], [-0.5, 0.55], [0.5, 0.55], [0.5, 0.05]]); break;
+        case 'laptop': R(-0.6, -0.6, 1.2, 0.85); L([[-0.9, 0.55], [0.9, 0.55]]); break;
+        case 'phone': R(-0.4, -0.75, 0.8, 1.5); C(0, 0.5, 0.08, true); break;
+        case 'tool': L([[-0.6, 0.6], [0.3, -0.3]]); C(0.45, -0.45, 0.3); break;
+        case 'scissors': C(-0.4, 0.45, 0.25); C(0.4, 0.45, 0.25); L([[-0.25, 0.25], [0.5, -0.75]]); L([[0.25, 0.25], [-0.5, -0.75]]); break;
+        case 'cross': R(-0.22, -0.7, 0.44, 1.4, true); R(-0.7, -0.22, 1.4, 0.44, true); break;
+        case 'dome': g.beginPath(); g.arc(x, y + 0.2 * r, 0.6 * r, Math.PI, 0); g.closePath(); g.fill(); L([[0, -0.4], [0, -0.85]]); L([[-0.8, 0.45], [0.8, 0.45]]); break;
+        case 'naira': L([[-0.45, 0.7], [-0.45, -0.7], [0.45, 0.7], [0.45, -0.7]]); L([[-0.7, -0.1], [0.7, -0.1]]); L([[-0.7, 0.2], [0.7, 0.2]]); break;
+        case 'boat': g.beginPath(); g.moveTo(x - 0.85 * r, y + 0.15 * r); g.lineTo(x + 0.85 * r, y + 0.15 * r); g.lineTo(x + 0.5 * r, y + 0.6 * r); g.lineTo(x - 0.5 * r, y + 0.6 * r); g.closePath(); g.fill(); L([[0, 0.1], [0, -0.75], [0.55, 0.0]]); break;
+        case 'bus': R(-0.75, -0.6, 1.5, 1.0); L([[-0.75, -0.1], [0.75, -0.1]]); C(-0.4, 0.6, 0.15, true); C(0.4, 0.6, 0.15, true); break;
+        case 'plane': L([[0, -0.85], [0, 0.85]]); L([[-0.85, 0.05], [0, -0.25], [0.85, 0.05]]); L([[-0.35, 0.75], [0, 0.6], [0.35, 0.75]]); break;
+        default: C(0, 0, 0.35, true);
+      }
+      g.restore();
     }
 
     function roundRect(g, x, y, w, h, r) {
@@ -509,7 +612,13 @@
         var dd = Math.min(Math.hypot(p.x - x, p.y - y), Math.hypot(p.gx - x, p.gy - y), Math.hypot(p.x - x, p.y - 19 - y));
         if (dd < bd) { bd = dd; best = p.k; }
       });
-      if (best && opts.onSelect) opts.onSelect(best);
+      var bestBoard = null;
+      boardHits.forEach(function (b) { if (Math.abs(x - b.x) <= b.w / 2 + 3 && y >= b.y - b.h / 2 - 3 && y <= b.y + b.h / 2) bestBoard = b.id; });
+      if (bestBoard && opts.onSelectBoard) { opts.onSelectBoard(bestBoard); return; }
+      var bestPlace = null, bp = Math.min(bd, 16);
+      placeHits.forEach(function (p) { var dd = Math.hypot(p.x - x, p.y - y); if (dd < bp) { bp = dd; bestPlace = p.id; } });
+      if (bestPlace && opts.onSelectPlace) opts.onSelectPlace(bestPlace);
+      else if (best && opts.onSelect) opts.onSelect(best);
     });
     zoom.addEventListener('click', function (e) {
       var b = e.target.closest('[data-z]'); if (!b) return;
@@ -531,6 +640,8 @@
     function kick() { last = 0; if (reduce) { drawStatic(); drawDynamic(0); } else schedule(); }
 
     root.addEventListener('resize', function () { if (wrap.isConnected) kick(); });
+    // Billboards keep rotating even when motion is reduced (a slow swap, not animation).
+    if (reduce) setInterval(function () { if (wrap.isConnected && scene) { drawStatic(); drawDynamic(0); } }, 15000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) kick(); });
 
     return {
@@ -546,5 +657,5 @@
     };
   }
 
-  root.LasgidiPlayground = { create: create };
+  root.LasgidiPlayground = { create: create, isWater: isWater, nearestDistrict: nearestDistrict };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
