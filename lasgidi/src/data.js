@@ -203,6 +203,7 @@
       { id: 'lekki_beach', label: 'Beach day', mins: 180, cost: 2000, fx: { fun: 45, social: 20, hygiene: -15, stress: -15 }, when: { from: 9, to: 18 } },
       { id: 'lekki_palms_film', label: 'Watch a film at The Palms', mins: 150, cost: 5000, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
       { id: 'lekki_palms_shop', label: 'Window shop and eat at The Palms', mins: 90, cost: 6000, fx: { hunger: 40, fun: 20, stress: -8 }, when: { from: 10, to: 21 } },
+      { id: 'lekki_island', label: 'Day on a private island (by your own boat)', mins: 480, cost: 5000000, fx: { fun: 90, social: 40, stress: -50, energy: -10 }, needsVehicle: 'boat', when: { from: 7, to: 15 } },
       { id: 'lekki_elegushi', label: 'Beach party at Elegushi', mins: 240, cost: 5000, fx: { fun: 55, social: 35, stress: -15, hygiene: -15, energy: -15 }, when: { days: [5,6], from: 12, to: 22 } },
       { id: 'lekki_lcc', label: 'Canopy walk at the Conservation Centre', mins: 150, cost: 3000, fx: { fun: 35, stress: -15, energy: -10 }, xp: { fitness: 1 }, when: { from: 8, to: 17 } },
       { id: 'lekki_gym', label: 'Gym class', mins: 90, cost: 3000, fx: { energy: -18, hygiene: -20, stress: -10 }, xp: { fitness: 6 }, when: { from: 6, to: 21 } },
@@ -289,6 +290,7 @@
     { id: 'banks', icon: '🏦', name: 'Bank headquarters', type: 'services', glyph: 'naira', district: 'vi', x: 18.9, y: 25.7, acts: ['vi_carwash'], text: 'Where bankers work. Wash cars outside for cash. Deposits are on the Money tab.' },
     { id: 'quilox', icon: '🌐', name: 'Quilox', type: 'nightlife', glyph: 'glass', district: 'vi', x: 18.0, y: 24.9, acts: ['vi_quilox', 'vi_quilox_door'], text: 'The most famous club on the Island. VIP tables, bottle sparklers and celebrity sightings, Friday to Sunday.' },
     { id: 'palms', icon: '🛍️', name: 'The Palms', type: 'culture', glyph: 'film', district: 'lekki', x: 26.1, y: 23.5, acts: ['lekki_palms_film', 'lekki_palms_shop'], text: 'The big Lekki mall: cinema, food court and shops.' },
+    { id: 'vip_jetty', icon: '🏝️', name: 'Lekki VIP jetty', type: 'outdoors', glyph: 'boat', district: 'lekki', x: 25.9, y: 24.4, acts: ['lekki_island'], text: 'Private boats leave from here for the islands off Lagos. You need your own boat.' },
     { id: 'elegushi', icon: '🏖️', name: 'Elegushi beach', type: 'outdoors', glyph: 'wave', district: 'lekki', x: 27.3, y: 25.8, acts: ['lekki_elegushi'], text: 'Weekend beach parties with DJs, horses and suya by the waves.' },
     { id: 'lekki_motors', icon: '🏎️', name: 'Lekki luxury motors', type: 'services', glyph: 'car', district: 'lekki', x: 27.1, y: 24.9, acts: [], dealer: true, text: 'Glass showroom of SUVs, supercars and boats. Helicopters and jets by appointment.' },
     { id: 'lekki_beach', icon: '🏖️', name: 'Lekki beach', type: 'outdoors', glyph: 'wave', district: 'lekki', x: 28.4, y: 25.7, acts: ['lekki_beach', 'lekki_content'], text: 'Weekend crowds, horses and content shoots.' },
@@ -393,10 +395,13 @@
     speedboat: { name: 'Speedboat', icon: '🚤', kind: 'boat', price: 60000000, speed: 50, fuel: 600, upkeep: 60000, status: 12, color: '#ffffff' },
     yacht:     { name: 'Yacht', icon: '🛥️', kind: 'boat', price: 3500000000, speed: 40, fuel: 1500, upkeep: 2500000, status: 80, color: '#f4f3ec' },
     heli:      { name: 'Helicopter', icon: '🚁', kind: 'heli', price: 2800000000, speed: 200, fuel: 0, trip: 250000, upkeep: 3000000, status: 90, color: '#2f6fa0' },
+    jetski:    { name: 'Jet ski', icon: '🌊', kind: 'boat', price: 15000000, speed: 55, fuel: 300, upkeep: 20000, status: 4, color: '#2f6fa0' },
+    houseboat: { name: 'Houseboat', icon: '🏠', kind: 'boat', price: 1800000000, speed: 20, fuel: 1200, upkeep: 1500000, status: 45, color: '#efe9dc', sleep: 0.1 },
     catamaran: { name: 'Luxury catamaran', icon: '⛵', kind: 'boat', price: 900000000, speed: 45, fuel: 1000, upkeep: 800000, status: 35, color: '#f4f3ec' },
     superyacht:{ name: 'Superyacht', icon: '🛳️', kind: 'boat', price: 25000000000, speed: 38, fuel: 5000, upkeep: 20000000, status: 180, color: '#ffffff' },
     light_jet: { name: 'Light jet', icon: '🛩️', kind: 'jet', price: 9000000000, speed: 0, fuel: 0, upkeep: 15000000, status: 120, color: '#e9e6df' },
     jumbo:     { name: 'VIP airliner', icon: '✈️', kind: 'jet', price: 150000000000, speed: 0, fuel: 0, upkeep: 200000000, status: 400, color: '#f4f3ec' },
+    bizjet:    { name: 'Business jet', icon: '🛩️', kind: 'jet', price: 20000000000, speed: 0, fuel: 0, upkeep: 30000000, status: 160, color: '#f4f3ec' },
     jet:       { name: 'Private jet', icon: '🛩️', kind: 'jet', price: 45000000000, speed: 0, fuel: 0, upkeep: 60000000, status: 250, color: '#f4f3ec' }
   };
 

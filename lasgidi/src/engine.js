@@ -27,8 +27,10 @@
   var SCHEMA = 8;         // state shape; migrate() upgrades older saves
   // Game RULES version. A life plays by the rules it started under, so a
   // recorded life replays identically after later updates add new systems.
-  // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race.
-  var RULES = 7;
+  // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race,
+  // PAYE and levies; 8 is harder still (steeper PAYE, rent reviews, luxury
+  // upkeep and insurance, slower promotions).
+  var RULES = 8;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -400,9 +402,11 @@
     if (s.econ.policy === 'power') pay(s, price(s, 1000), 'Power levy') || addDebt(s, price(s, 1000), 'Power levy');
     if (s.car) pay(s, price(s, 5000), 'Car maintenance') || addDebt(s, price(s, 5000), 'Mechanic');
     (s.vehicles || []).forEach(function (v) {
-      var V = D.VEHICLES[v.id], fee = price(s, V.upkeep);
+      var V = D.VEHICLES[v.id], fee = vehicleUpkeep(s, v.id);
       pay(s, fee, 'Upkeep: ' + V.name) || addDebt(s, fee, 'Upkeep: ' + V.name);
+      if (s.rules >= 8 && v.paid > 100000000) { var ins = roundTo(v.paid * 0.002, 1000); pay(s, ins, 'Insurance: ' + V.name) || addDebt(s, ins, 'Insurance: ' + V.name); }
     });
+    if (s.rules >= 8 && w > 0 && w % 4 === 0) rentReview(s);
 
     weeklyBusinessCosts(s);
     weeklyAjo(s);
@@ -478,6 +482,15 @@
     return !!(h && h.owned && s.properties.some(function (p) { return p.id === D.ESTATE.property; }));
   }
 
+  // Rules 8: every 4 weeks the landlord moves rent up with inflation.
+  function rentReview(s) {
+    var h = D.HOMES[s.home];
+    if (!h || h.owned || !s.rentRate || s.econ.policy === 'tenancy') return;
+    var target = roundTo(h.rent * s.econ.infl, 50);
+    if (target <= s.rentRate) return;
+    log(s, 'Rent review: your landlord has raised the rent from ' + naira(s.rentRate) + ' to ' + naira(target) + ' a week, in line with prices.', 'bad');
+    s.rentRate = target;
+  }
   function moveInCost(s, homeId) {
     if (D.HOMES[homeId].owned) return { rent: 0, total: 0 };
     var rent = price(s, D.HOMES[homeId].rent);
@@ -555,8 +568,11 @@
   // free, the next ₦16,000 is taxed at 10% and everything above at 20%.
   function payeTax(s, got) {
     if (s.rules < 7) return 0;
-    var free = 4000 * s.econ.wage, mid = 20000 * s.econ.wage;
-    var t = Math.max(0, Math.min(got, mid) - free) * 0.1 + Math.max(0, got - mid) * 0.2;
+    var w = s.econ.wage;
+    function band(lo, hi, r) { return Math.max(0, Math.min(got, hi * w) - lo * w) * r; }
+    var t = s.rules >= 8
+      ? band(3000, 15000, 0.1) + band(15000, 50000, 0.2) + band(50000, Infinity, 0.25)
+      : band(4000, 20000, 0.1) + band(20000, Infinity, 0.2);
     return roundTo(t, 50);
   }
   function shiftPay(s, late, perf) {
@@ -839,6 +855,7 @@
     var c = D.CAREERS[s.job.id], L = s.job.level;
     if (L >= 4) return null;
     var shiftsNeeded = 4 + 2 * L - (connectFor(s, s.job.id) && s.friends[connectFor(s, s.job.id)].lvl >= 80 ? 2 : 0);
+    if (s.rules >= 8) shiftsNeeded = Math.ceil(shiftsNeeded * 1.3);
     return { shifts: shiftsNeeded, skill: c.req[L + 1], skillName: D.SKILLS[c.skill], perf: 0.55 };
   }
 
@@ -1626,7 +1643,12 @@
     placed(s).forEach(function (it) { var f = D.FURNITURE[it.id]; if (f.fx && f.fx[key] && (!f.needsPower || s.power)) t += f.fx[key]; });
     return cap == null ? t : Math.min(cap, t);
   }
-  function furnitureSleep(s) { return fxSum(s, 'sleep', 0.3); }
+  // Furniture (capped), plus a houseboat moored by an Island home.
+  function furnitureSleep(s) {
+    var t = fxSum(s, 'sleep', 0.3), d = homeDef(s).district;
+    if ((d === 'lekki' || d === 'ikoyi') && (s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].sleep; })) t += 0.1;
+    return t;
+  }
   function furniturePower(s) {
     var t = 0;
     placed(s).forEach(function (it) { var f = D.FURNITURE[it.id]; if (f.fx && f.fx.power) t += f.fx.power; });
@@ -1755,6 +1777,7 @@
     log(s, 'You bought a ' + V.name + '. Upkeep is ' + naira(price(s, V.upkeep)) + ' a week.', 'good');
     return finish(s, ok('Congratulations on your ' + V.name + '!'));
   }
+  function vehicleUpkeep(s, id) { return price(s, D.VEHICLES[id].upkeep * (s.rules >= 8 ? 1.5 : 1)); }
   // Pick the car you drive; -1 goes back to the fastest one.
   function driveVehicle(s, idx) {
     if (idx === -1) { s.driving = -1; return ok('You will drive your fastest car.'); }
@@ -2254,7 +2277,7 @@
     if (!rp || typeof rp.seed !== 'number' || !Array.isArray(rp.acts) || rp.acts.length > MAX_ACTS) return null;
     if (!D.GOALS[rp.goal] || (rp.origin !== null && !D.ORIGINS[rp.origin])) return null;
     var rules = rp.rules == null ? 5 : rp.rules;
-    if (rules !== 5 && rules !== 6 && rules !== 7) return null;
+    if (!(rules >= 5 && rules <= 8 && Math.round(rules) === rules)) return null;
     if (rp.challenge != null && !CHALLENGE_ID.test(rp.challenge)) return null;
     var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined });
     for (var i = 0; i < rp.acts.length; i++) {
@@ -2374,7 +2397,7 @@
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
     buyItem: recorded('bi', buyItem), placeItem: recorded('pi', placeItem), storeItem: recorded('si', storeItem), sellItem: recorded('xi', sellItem),
     setLook: recorded('lk', setLook), buyClothes: recorded('bc2', buyClothes), wear: recorded('wr', wear), takeOff: recorded('to', takeOff), outfitTags: outfitTags,
-    buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle), driveVehicle: recorded('dv', driveVehicle),
+    buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle), driveVehicle: recorded('dv', driveVehicle), vehicleUpkeep: vehicleUpkeep,
     payeTax: payeTax, savingsRate: savingsRate, billRate: billRate, loanRate: loanRate,
     buyBond: recorded('tb', buyBond), bondReturn: bondReturn, bondsHeld: bondsHeld, BOND_RATE: BOND_RATE, BOND_DAYS: BOND_DAYS, BANK_RATE: BANK_RATE,
     roomSize: roomSize, fitsAt: fitsAt, statusPoints: statusPoints, furnitureSleep: furnitureSleep, furniturePower: furniturePower, furnitureGen: furnitureGen, furnitureDaily: furnitureDaily, bestCar: bestCar,

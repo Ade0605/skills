@@ -697,6 +697,8 @@
   }
 
   /* ---------- car dealer: showroom and my garage ---------- */
+  // A vehicle's picture when one exists, else its emoji.
+  function vehPic(id) { return pic('veh:' + id, D.VEHICLES[id].name, '<div class="dl-ic">' + D.VEHICLES[id].icon + '</div>', 'dl-pic'); }
   function dealerView(note) {
     var tab = ui.dealerTab || 'show', wallet = S.cash + S.bank;
     var html = '<div class="dl-head"><span class="muted">Wallet</span> <b class="num">' + N(wallet) + '</b></div>' +
@@ -708,13 +710,19 @@
       var driving = (function () { var V = L.bestCar(S); return V; })();
       html += '<div class="dl-sum"><span>' + S.vehicles.length + ' vehicle' + (S.vehicles.length === 1 ? '' : 's') + ' · ' + S.vehicles.length + '/12 spaces</span><span>Worth <b class="num">' + N(worth) + '</b> to the dealer</span></div>';
       if (!S.vehicles.length) html += '<p class="note">' + (S.car ? 'You drive the ' + esc(D.CAR.name) + '. ' : '') + 'Nothing parked yet. Pick something in the showroom.</p>';
-      html += '<div class="list">' + S.vehicles.map(function (v, i) {
-        var V = D.VEHICLES[v.id], isCar = V.kind === 'car';
-        var on = isCar && (S.driving === i || (S.driving < 0 && driving === V && S.vehicles.findIndex(function (x) { return D.VEHICLES[x.id] === V; }) === i));
-        return '<div class="item dl-car' + (on ? ' on' : '') + '"><div class="dl-ic">' + V.icon + '</div><div><h3>' + esc(V.name) + '</h3><div class="meta"><span>Worth ' + N(Math.round(v.paid * 0.5 / 1000) * 1000) + ' to the dealer</span><span>Upkeep ' + N(L.price(S, V.upkeep)) + '/wk</span></div></div>' +
-          '<div class="dl-act">' + (isCar ? (on ? '<span class="gain dl-on">Driving</span>' : '<button class="btn sm ghost" id="drive-' + i + '" data-drive="' + i + '">Drive</button>') : '<span class="muted">' + (V.kind === 'boat' ? 'At the jetty' : V.kind === 'heli' ? 'On the helipad' : 'In the hangar') + '</span>') +
-          '<button class="link-btn cost" id="sellv-' + i + '" data-sellveh="' + i + '">Sell</button></div></div>';
-      }).join('') + '</div>';
+      var groups = [['Garage', '🅿️', ['car']], ['Marina', '⚓', ['boat']], ['Hangar', '🛫', ['heli', 'jet']]];
+      groups.forEach(function (g) {
+        var rows = S.vehicles.map(function (v, i) { return { v: v, i: i, V: D.VEHICLES[v.id] }; }).filter(function (o) { return g[2].indexOf(o.V.kind) >= 0; });
+        if (!rows.length) return;
+        var up = rows.reduce(function (a, o) { return a + L.vehicleUpkeep(S, o.v.id); }, 0), val = rows.reduce(function (a, o) { return a + Math.round(o.v.paid * 0.5 / 1000) * 1000; }, 0);
+        html += '<h4 class="dl-group">' + g[1] + ' ' + g[0] + ' <span class="muted">· ' + rows.length + ' · upkeep ' + N(up) + '/wk · worth ' + N(val) + '</span></h4><div class="list">' + rows.map(function (o) {
+          var v = o.v, i = o.i, V = o.V, isCar = V.kind === 'car';
+          var on = isCar && (S.driving === i || (S.driving < 0 && driving === V && S.vehicles.findIndex(function (x) { return D.VEHICLES[x.id] === V; }) === i));
+          return '<div class="item dl-car' + (on ? ' on' : '') + '">' + vehPic(v.id) + '<div><h3>' + esc(V.name) + '</h3><div class="meta"><span>Worth ' + N(Math.round(v.paid * 0.5 / 1000) * 1000) + ' to the dealer</span><span>Upkeep ' + N(L.vehicleUpkeep(S, v.id)) + '/wk</span></div></div>' +
+            '<div class="dl-act">' + (isCar ? (on ? '<span class="gain dl-on">Driving</span>' : '<button class="btn sm ghost" id="drive-' + i + '" data-drive="' + i + '">Drive</button>') : '<span class="muted">' + (V.kind === 'boat' ? 'At the jetty' : V.kind === 'heli' ? 'On the helipad' : 'In the hangar') + '</span>') +
+            '<button class="link-btn cost" id="sellv-' + i + '" data-sellveh="' + i + '">Sell</button></div></div>';
+        }).join('') + '</div>';
+      });
       if (cars > 1 && S.driving >= 0) html += '<div class="inline"><button class="btn sm ghost" id="drive-auto" data-drive="-1">Always take the fastest car</button></div>';
       return html;
     }
@@ -724,7 +732,7 @@
       Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind; }).map(function (k) {
         var V = D.VEHICLES[k], p = L.price(S, V.price), own = S.vehicles.filter(function (v) { return v.id === k; }).length;
         var what = V.kind === 'car' ? 'Top speed ' + V.speed + ' km/h on clear roads' : V.kind === 'boat' ? 'Use the jetties without waiting' : V.kind === 'heli' ? 'Anywhere in Lagos in about 30 minutes, ' + N(L.price(S, V.trip)) + ' a trip' : 'Weekends abroad from the airport';
-        return '<div class="item dl-car"><div class="dl-ic">' + V.icon + '</div><div><h3>' + esc(V.name) + (own ? ' <span class="muted">· own ' + own + '</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(what) + '</span><span>Upkeep ' + N(L.price(S, V.upkeep)) + '/wk</span><span>+' + V.status + ' status</span></div></div>' +
+        return '<div class="item dl-car">' + vehPic(k) + '<div><h3>' + esc(V.name) + (own ? ' <span class="muted">· own ' + own + '</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(what) + '</span><span>Upkeep ' + N(L.vehicleUpkeep(S, k)) + '/wk</span><span>+' + V.status + ' status</span></div></div>' +
           '<button class="btn sm" id="buyv-' + k + '" data-buyveh="' + k + '"' + (wallet >= p && S.vehicles.length < 12 ? '' : ' disabled') + '>Buy</button></div>';
       }).join('') + '</div>';
     return html;
@@ -1010,6 +1018,13 @@
         '<button class="btn sm" id="apply-' + cid + '" data-apply="' + cid + '"' + (e.ok ? '' : ' disabled') + '>' + (mine ? 'Current' : 'Apply') + '</button></div>';
     }).join('') + '</div></div>';
     return html + '</div>';
+  }
+  // Pictures: AI-generated illustrations in img/, keyed like 'place:shrine'.
+  // Falls back to the given HTML (usually the emoji) when there is none.
+  function pic(key, alt, fallback, cls) {
+    var src = D.IMAGES && D.IMAGES[key];
+    if (!src) return fallback || '';
+    return '<img class="pic ' + (cls || '') + '" src="' + esc(src) + '" alt="' + esc(alt) + '" loading="lazy" decoding="async" width="640" height="400">';
   }
   function pad(n) { return String(n).padStart(2, '0'); }
 

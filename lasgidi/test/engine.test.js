@@ -730,7 +730,7 @@ test('businesses: build on a site, upgrade, hire a manager; old-style buys uncha
 });
 
 test('rules 7: CBN governor race sets rates; PAYE and business levies; old rules untouched', () => {
-  const s = L.newGame({ seed: 31, origin: 'mid', goal: 'freestyle' });
+  const s = L.newGame({ seed: 31, origin: 'mid', goal: 'freestyle', rules: 7 });
   assert.equal(s.rules, 7);
   let saw = false;
   for (let i = 0; i < 20 && !saw; i++) {
@@ -780,4 +780,35 @@ test('billboard plans: busier boards and longer runs cost more; legacy rent unch
   assert.ok(L.rentBoard(legacy, 'tmb').ok);
   assert.equal(b0 - (legacy.cash + legacy.bank), L.boardRent(legacy));
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});
+
+test('more luxury: jet ski, houseboat, business jet; private island needs a boat', () => {
+  const s = L.newGame({ seed: 34, origin: 'nepo', goal: 'freestyle' });
+  L._post(s, 'bank', 30000000000, 'test grant');
+  const isle = () => L.availableActions(s).some(a => a.id === 'lekki_island');
+  if (s.loc !== 'lekki') s.loc = 'lekki';
+  assert.equal(isle(), false, 'no boat, no island');
+  const st = L.statusPoints(s), sl = L.furnitureSleep(s);
+  assert.ok(L.buyVehicle(s, 'jetski').ok);
+  assert.ok(isle(), 'any boat unlocks the island day');
+  assert.ok(L.buyVehicle(s, 'houseboat').ok && L.buyVehicle(s, 'bizjet').ok);
+  assert.ok(L.statusPoints(s) > st);
+  if (['lekki', 'ikoyi'].includes(D.HOMES[s.home].district)) assert.ok(L.furnitureSleep(s) > sl, 'houseboat helps sleep by an Island home');
+});
+
+test('rules 8: steeper PAYE, rent reviews, luxury insurance, slower promotions; rules 7 unchanged', () => {
+  const s = L.newGame({ seed: 35, origin: 'mid', goal: 'freestyle' });
+  assert.equal(s.rules, 8);
+  const r7 = L.newGame({ seed: 35, origin: 'mid', goal: 'freestyle', rules: 7 });
+  assert.ok(L.payeTax(s, 100000) > L.payeTax(r7, 100000), 'rules 8 taxes big pay harder');
+  assert.equal(L.payeTax(s, 2500), 0);
+  const rent0 = s.rentRate;
+  for (let i = 0; i < 30 && L.week(s) < 4; i++) { while (s.pending.length) L.resolveChoice(s, 1); L.wait(s, 24 * 60); }
+  while (s.pending.length) L.resolveChoice(s, 1);
+  if (rent0 && s.econ.policy !== 'tenancy') assert.ok(s.rentRate >= rent0, 'rent never drops at a review');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  // Slower promotions only under rules 8.
+  const a = L.newGame({ seed: 36, origin: 'mid', goal: 'freestyle' }), b = L.newGame({ seed: 36, origin: 'mid', goal: 'freestyle', rules: 7 });
+  a.job = { id: 'trader', level: 1, shifts: 0, perfSum: 0 }; b.job = { id: 'trader', level: 1, shifts: 0, perfSum: 0 };
+  assert.ok(L.promotionNeeds(a).shifts > L.promotionNeeds(b).shifts);
 });

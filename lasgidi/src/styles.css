@@ -394,3 +394,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .biz-btns .link-btn { color: var(--muted); }
 .ad-sub { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin: 8px 0; }
 .ad-sub input { margin-top: 2px; }
+.dl-group { margin: 14px 0 6px; font-size: 15px; }
+.dl-group .muted { font-weight: 500; font-size: 12.5px; }
+.pic { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 14px; background: var(--sunk); }
+.dl-pic { width: 84px; border-radius: 10px; }
