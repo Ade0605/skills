@@ -503,6 +503,25 @@
     shortlet: { name: 'Short-let flat, Lekki', price: 60000000, daily: 900000, power: true, december: 2 }
   };
 
+  // Where you build a business: a payout factor and weekly shop rent.
+  var BUSINESS_SITES = {
+    ikeja: { mult: 1.1, rent: 15000 }, ikorodu: { mult: 0.85, rent: 4000 }, oshodi: { mult: 1.05, rent: 8000 },
+    mushin: { mult: 0.9, rent: 5000 }, festac: { mult: 0.95, rent: 7000 }, surulere: { mult: 1.0, rent: 9000 },
+    yaba: { mult: 1.05, rent: 12000 }, island: { mult: 1.1, rent: 14000 }, ikoyi: { mult: 1.2, rent: 35000 },
+    vi: { mult: 1.25, rent: 40000 }, lekki: { mult: 1.25, rent: 30000 }, ajah: { mult: 0.95, rent: 8000 }
+  };
+  // Upgrades: what each business becomes at levels 2 and 3, and its emoji on the map.
+  var BUSINESS_GROWTH = {
+    pos:      { icon: '🏧', names: ['POS kiosk', 'POS and bill-pay shop', 'Agent banking hub'] },
+    buka:     { icon: '🍲', names: ['Buka', 'Restaurant', 'Restaurant chain'] },
+    barber:   { icon: '💈', names: ['Barbershop', 'Grooming lounge', 'Salon franchise'] },
+    laundry:  { icon: '🧺', names: ['Laundry', 'Dry cleaner', 'Laundry chain'] },
+    danfo:    { icon: '🚌', names: ['Danfo bus', 'Danfo fleet', 'Transport company'] },
+    event:    { icon: '🎉', names: ['Event centre', 'Banquet hall', 'Events empire'] },
+    shortlet: { icon: '🏙️', names: ['Short-let flat, Lekki', 'Short-let block', 'Serviced apartments'] }
+  };
+  var BUSINESS_LEVEL = { cost: [0, 0.8, 1.6], mult: [1, 1.6, 2.4] };
+
   var PROPERTIES = {
     iko_plot:  { name: 'Plot of land, Ikorodu', price: 6000000, weekly: 0, house: false },
     iko_house: { name: 'Bungalow, Ikorodu', price: 35000000, weekly: 90000, house: true },
@@ -541,7 +560,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, BUSINESSES: BUSINESSES, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

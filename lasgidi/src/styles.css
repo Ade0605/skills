@@ -387,3 +387,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .dl-act { display: flex; align-items: center; gap: 10px; }
 .dl-on { font-weight: 700; }
 .link-btn { background: none; border: 0; padding: 4px; font: 600 14px var(--font-body); cursor: pointer; color: #d0435a; }
+/* Businesses */
+.biz { grid-template-columns: auto minmax(0, 1fr) auto; display: grid; gap: 10px; align-items: center; }
+.biz-stars { color: #e5a400; letter-spacing: 1px; font-size: 13px; }
+.biz-btns { margin-top: 8px; flex-wrap: wrap; }
+.biz-btns .link-btn { color: var(--muted); }

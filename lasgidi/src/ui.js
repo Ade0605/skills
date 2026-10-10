@@ -509,7 +509,8 @@
       places: ui.placeCat === 'boards' || ui.placeCat === 'homes' ? [] : D.PLACES.filter(function (p) { return !ui.placeCat || p.type === ui.placeCat; }), place: ui.place,
       homeId: S.home, homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
       myPlot: L.myPlot(S), plotSel: ui.plotSel, plotOwners: plotOwners(),
-      boards: boardAdsMap(), board: ui.board
+      boards: boardAdsMap(), board: ui.board,
+      biz: S.businesses.filter(function (b) { return b.site; }).map(function (b) { return { district: b.site, icon: D.BUSINESS_GROWTH[b.id].icon }; })
     };
   }
 
@@ -1008,6 +1009,36 @@
     return html + '</div></div>';
   }
 
+  /* ---------- businesses you build ---------- */
+  function businessesView() {
+    var html = '<div class="section"><h3>Your businesses</h3><p class="note">Build on a site in any district. Each one pays out daily at 18:00 after running costs. Upgrade it twice to grow it. Without a manager, visit at least weekly, or the staff will steal from you.</p>';
+    if (S.businesses.length) html += '<div class="list">' + S.businesses.map(function (b, i) {
+      var g = D.BUSINESS_GROWTH[b.id], idle = L.day(S) - b.visit, up = L.upgradeCost(S, b);
+      var stars = b.level ? '★★★'.slice(0, b.level) + '☆☆☆'.slice(0, 3 - b.level) : '';
+      var meta = [];
+      meta.push(b.site ? esc(D.DISTRICTS[b.site].name) : 'No site');
+      meta.push('<span class="gain num">~' + N(L.businessEstimate(S, b)) + '/day</span>');
+      if (b.site) meta.push('Shop rent ' + N(L.price(S, D.BUSINESS_SITES[b.site].rent * (b.level || 1))) + '/wk');
+      if (b.manager) meta.push('Manager ' + N(L.managerPay(S, b)) + '/wk');
+      else meta.push('Last visit ' + (idle ? idle + ' days ago' : 'today') + (idle > 7 ? ' <span class="cost">· staff are stealing</span>' : ''));
+      var btns = '';
+      if (b.level && b.level < 3) btns += '<button class="btn sm" id="upb-' + i + '" data-upb="' + i + '"' + (S.cash + S.bank >= up ? '' : ' disabled') + '>Upgrade ' + N(up) + '</button>';
+      if (b.level) btns += b.manager ? '<button class="btn sm ghost" id="fmb-' + i + '" data-fmb="' + i + '">Let manager go</button>' : '<button class="btn sm ghost" id="hmb-' + i + '" data-hmb="' + i + '">Hire manager</button>';
+      btns += '<button class="link-btn" id="sell-' + i + '" data-sellb="' + i + '">Sell (60%)</button>';
+      return '<div class="item biz"><div class="dl-ic">' + (g ? g.icon : '🏪') + '</div><div><h3>' + esc(L.businessName(b)) + (stars ? ' <span class="biz-stars">' + stars + '</span>' : '') + '</h3><div class="meta">' + meta.map(function (m) { return '<span>' + m + '</span>'; }).join('') + '</div><div class="inline biz-btns">' + btns + '</div></div></div>';
+    }).join('') + '</div>' + (S.businesses.some(function (b) { return !b.manager; }) ? '<div class="inline"><button class="btn sm" id="visit" data-visit="1">Check on businesses (2h)</button></div>' : '');
+    var site = ui.bizSite || (D.BUSINESS_SITES[S.loc] ? S.loc : 'surulere'), sd = D.BUSINESS_SITES[site];
+    html += '<details' + (S.businesses.length && !ui.bizOpen ? '' : ' open') + '><summary>Build a business</summary>' +
+      '<div class="inline"><label class="label" for="biz-site">Site</label><select id="biz-site">' + Object.keys(D.BUSINESS_SITES).map(function (k) {
+        return '<option value="' + k + '"' + (k === site ? ' selected' : '') + '>' + esc(D.DISTRICTS[k].name) + ' · ×' + D.BUSINESS_SITES[k].mult.toFixed(2) + ' · rent ' + N(L.price(S, D.BUSINESS_SITES[k].rent)) + '/wk</option>';
+      }).join('') + '</select></div><div class="list">' + Object.keys(D.BUSINESSES).map(function (k) {
+        var bz = D.BUSINESSES[k], p = L.price(S, bz.price), g = D.BUSINESS_GROWTH[k];
+        return '<div class="item biz"><div class="dl-ic">' + g.icon + '</div><div><h3>' + esc(bz.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span class="gain num">~' + N(Math.round(bz.daily * S.econ.infl * sd.mult / 50) * 50) + '/day here</span><span>Grows into ' + esc(g.names[2]) + '</span>' + (bz.power ? '<span>Needs light</span>' : '') + (bz.weekend ? '<span>Busy Fri–Sun</span>' : '') + (bz.december ? '<span>Booms in December</span>' : '') + '</div></div>' +
+          '<button class="btn sm" id="buyb-' + k + '" data-buyb="' + k + '"' + (S.cash + S.bank >= p && S.businesses.length < 12 ? '' : ' disabled') + '>Build</button></div>';
+      }).join('') + '</div></details></div>';
+    return html;
+  }
+
   /* ---------- Money tab ---------- */
   function moneyView() {
     var h = L.homeDef(S);
@@ -1040,16 +1071,7 @@
           '<button class="btn sm ghost" id="loan-' + k + '" data-loan="' + k + '"' + (max ? '' : ' disabled') + '>Borrow amount</button></div>';
       }).join('') + '</div><p class="note">"Borrow amount" uses the figure in the Amount box above.</p></div>';
 
-    html += '<div class="section"><h3>Businesses</h3><p class="note">Pay out daily at 18:00 after running costs. Not visited in 7 days? Staff will steal from you.</p>';
-    if (S.businesses.length) html += '<div class="list">' + S.businesses.map(function (b, i) {
-      var def = D.BUSINESSES[b.id], idle = L.day(S) - b.visit;
-      return '<div class="item"><div><h3>' + esc(def.name) + '</h3><div class="meta"><span>Last visit ' + (idle ? idle + ' days ago' : 'today') + '</span>' + (idle > 7 ? '<span class="cost">Staff are stealing</span>' : '') + '</div></div><button class="btn sm ghost" id="sell-' + i + '" data-sellb="' + i + '">Sell (60%)</button></div>';
-    }).join('') + '</div><div class="inline"><button class="btn sm" id="visit" data-visit="1">Check on businesses (2h)</button></div>';
-    html += '<details><summary>Buy a business</summary><div class="list">' + Object.keys(D.BUSINESSES).map(function (k) {
-      var b = D.BUSINESSES[k], p = L.price(S, b.price);
-      return '<div class="item"><div><h3>' + esc(b.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span class="gain num">~' + N(Math.round(b.daily * S.econ.infl / 50) * 50) + '/day</span>' + (b.power ? '<span>Needs light</span>' : '') + (b.weekend ? '<span>Busy Fri–Sun</span>' : '') + (b.december ? '<span>Booms in December</span>' : '') + '</div></div>' +
-        '<button class="btn sm" id="buyb-' + k + '" data-buyb="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button></div>';
-    }).join('') + '</div></details></div>';
+    html += businessesView();
 
     html += '<div class="section"><h3>Property and car</h3>' + (S.properties.length ? '<ul class="note">' + S.properties.map(function (p) { return '<li>' + esc(D.PROPERTIES[p.id].name) + ' · worth ' + N(p.value) + '</li>'; }).join('') + '</ul>' : '') +
       '<div class="list">' + Object.keys(D.PROPERTIES).map(function (k) {
@@ -1191,7 +1213,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1285,6 +1307,9 @@
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { return L.applyJob(S, ds.apply); }); return; }
     if (ds.quit) { run(function () { return L.quitJob(S); }); return; }
+    if (ds.upb) { run(function () { return L.upgradeBusiness(S, +ds.upb); }); return; }
+    if (ds.hmb) { run(function () { return L.hireManager(S, +ds.hmb); }); return; }
+    if (ds.fmb) { run(function () { return L.fireManager(S, +ds.fmb); }); return; }
     if (ds.dealertab) { ui.dealerTab = ds.dealertab; render(); return; }
     if (ds.drive) { run(function () { return L.driveVehicle(S, +ds.drive); }); return; }
     if (ds.banktab) { ui.bankTab = ds.banktab; render(); return; }
@@ -1297,7 +1322,7 @@
     if (ds.ajo) { run(function () { return L.joinAjo(S, +ds.ajo); }); return; }
     if (ds.loan) { var la = amount(); run(function () { return L.takeLoan(S, ds.loan, la); }); return; }
     if (ds.repay) { run(function () { var l = S.loans[+ds.repay]; return L.repayLoan(S, +ds.repay, l ? l.bal : 0); }); return; }
-    if (ds.buyb) { run(function () { return L.buyBusiness(S, ds.buyb); }); return; }
+    if (ds.buyb) { var site = ui.bizSite || (D.BUSINESS_SITES[S.loc] ? S.loc : 'surulere'); run(function () { return L.buyBusiness(S, ds.buyb, site); }); return; }
     if (ds.sellb) { run(function () { return L.sellBusiness(S, +ds.sellb); }); return; }
     if (ds.visit) { run(function () { return L.visitBusinesses(S); }); return; }
     if (ds.buyp) { run(function () { return L.buyProperty(S, ds.buyp); }); return; }
@@ -1340,6 +1365,7 @@
   });
 
   document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'biz-site') { ui.bizSite = e.target.value; ui.bizOpen = true; render(); }
     if (e.target && e.target.id === 'ad-slogan') { ui.ad.slogan = e.target.value; render(); }
     if (e.target && e.target.id === 'look-hair' && S) { var hv = +e.target.value; run(function () { return L.setLook(S, S.look.skin, hv, S.look.shape); }); }
   });

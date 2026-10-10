@@ -699,3 +699,31 @@ test('replay codes: a life that buys a business and a bill replays to the same s
   assert.equal(r.businesses.length, 1);
   assert.equal(r.ledgerHash, s.ledgerHash);
 });
+
+test('businesses: build on a site, upgrade, hire a manager; old-style buys unchanged', () => {
+  // Old-style buy (no site) behaves exactly as before: same seal as a life without the new code paths.
+  const a = L.newGame({ seed: 24, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(L.buyBusiness(a, 'pos').ok);
+  assert.equal(a.businesses[0].site, undefined);
+  assert.equal(L.upgradeBusiness(a, 0).ok, false, 'no growth without a site');
+
+  const s = L.newGame({ seed: 24, origin: 'nepo', goal: 'freestyle' });
+  assert.equal(L.buyBusiness(s, 'pos', 'mars').ok, false);
+  assert.ok(L.buyBusiness(s, 'pos', 'lekki').ok);
+  const b = s.businesses[0], est1 = L.businessEstimate(s, b), paid1 = b.paid;
+  assert.ok(est1 > L.businessEstimate(a, a.businesses[0]), 'Lekki pays more');
+  assert.ok(L.upgradeBusiness(s, 0).ok);
+  assert.equal(L.businessName(b), 'POS and bill-pay shop');
+  assert.ok(b.paid > paid1 && L.businessEstimate(s, b) > est1 * 1.5);
+  assert.ok(L.hireManager(s, 0).ok);
+  // Ten days without a visit: no stealing with a manager; rent and salary charged weekly.
+  for (let i = 0; i < 10; i++) { while (s.pending.length) L.resolveChoice(s, 1); L.wait(s, 24 * 60); }
+  assert.ok(!s.log.some(l => /staff are stealing/.test(l.text || l.msg || '')), 'manager stops theft');
+  assert.ok(s.ledger.some(l => /^Shop rent: POS and bill-pay shop/.test(l.memo)));
+  assert.ok(s.ledger.some(l => /^Manager salary: POS and bill-pay shop/.test(l.memo)));
+  assert.equal(L.category('Shop rent: Restaurant', -1), 'business');
+  const r = L.replayLife(s.replay);
+  assert.equal(r.ledgerHash, s.ledgerHash);
+  assert.equal(r.businesses[0].level, 2);
+  sane(s);
+});

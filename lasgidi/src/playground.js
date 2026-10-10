@@ -646,6 +646,17 @@
 
         labels.push({ k: k, here: here, sel: sel, top: top, pri: here ? 0 : sel ? 1 : (k === scene.home || k === scene.work) ? 2 : 3 });
 
+        // Your businesses here: small emoji chips to the left of the pin.
+        var biz = (scene.biz || []).filter(function (b) { return b.district === k; });
+        biz.slice(0, 3).forEach(function (b, bi) {
+          var bx = top.x - 14 - bi * 17, by = top.y - 2;
+          ctx.beginPath(); ctx.arc(bx, by, 8, 0, Math.PI * 2); ctx.fillStyle = theme.surface; ctx.fill();
+          ctx.strokeStyle = '#2fa36b'; ctx.lineWidth = 2; ctx.stroke();
+          ctx.font = '10px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = theme.ink; ctx.fillText(b.icon, bx, by + 0.5);
+        });
+        if (biz.length > 3) { ctx.font = '700 9px IBM Plex Mono, monospace'; ctx.fillStyle = theme.ink; ctx.fillText('+' + (biz.length - 3), top.x - 14 - 3 * 17, top.y - 2); }
+
         // Other players here.
         var n = scene.peers && scene.peers[k];
         if (n) {

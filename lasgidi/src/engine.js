@@ -167,7 +167,7 @@
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car)/.test(m) || /^Car maintenance/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
-    if (/Business|^Bought|^Sold|Tenant rent/.test(m)) return 'business';
+    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up/.test(m)) return 'health';
@@ -403,6 +403,7 @@
       pay(s, fee, 'Upkeep: ' + V.name) || addDebt(s, fee, 'Upkeep: ' + V.name);
     });
 
+    weeklyBusinessCosts(s);
     weeklyAjo(s);
     weeklyLoans(s);
     weeklyProperty(s);
@@ -1287,13 +1288,18 @@
 
   /* ---------- assets ---------- */
 
-  function buyBusiness(s, id) {
+  // site is optional: lives recorded before sites existed buy without one.
+  function buyBusiness(s, id, site) {
     var b = D.BUSINESSES[id];
     if (!b) return fail('Unknown business.');
+    if (site != null && !D.BUSINESS_SITES[site]) return fail('Pick a district for your business.');
+    if (site != null && s.businesses.length >= 12) return fail('You run 12 businesses already.');
     var cost = price(s, b.price);
     s.alerts = [];
     if (!pay(s, cost, 'Bought ' + b.name)) return fail('You need ' + naira(cost) + '.');
-    s.businesses.push({ id: id, paid: cost, visit: day(s) });
+    var rec = { id: id, paid: cost, visit: day(s) };
+    if (site != null) { rec.site = site; rec.level = 1; }
+    s.businesses.push(rec);
     log(s, 'You now own a ' + b.name + '. It pays out at 18:00 daily. Visit at least weekly or staff will chop the money.', 'good');
     return finish(s, ok('Business bought.'));
   }
@@ -1306,6 +1312,53 @@
     s.businesses.splice(i, 1);
     earn(s, v, 'Sold ' + D.BUSINESSES[b.id].name);
     return finish(s, ok('Sold for ' + naira(v) + '.'));
+  }
+
+  function businessName(b) { var g = D.BUSINESS_GROWTH[b.id]; return g && b.level ? g.names[b.level - 1] : D.BUSINESSES[b.id].name; }
+  function upgradeCost(s, b) { return b.level && b.level < 3 ? price(s, D.BUSINESSES[b.id].price * D.BUSINESS_LEVEL.cost[b.level]) : 0; }
+  function managerPay(s, b) { return roundTo(D.BUSINESSES[b.id].daily * 0.08 * 7 * s.econ.infl * D.BUSINESS_LEVEL.mult[(b.level || 1) - 1], 500); }
+
+  function upgradeBusiness(s, i) {
+    var b = s.businesses[i];
+    if (!b) return fail('No such business.');
+    if (!b.level) return fail('Rebuild it on a site to grow it.');
+    if (b.level >= 3) return fail('Already as big as it gets.');
+    var cost = upgradeCost(s, b), from = businessName(b);
+    s.alerts = [];
+    if (!pay(s, cost, 'Business upgrade: ' + from)) return fail('The upgrade costs ' + naira(cost) + '.');
+    b.level++; b.paid += cost;
+    log(s, 'Your ' + from + ' is now a ' + businessName(b) + '.', 'good');
+    return finish(s, ok('Upgraded to ' + businessName(b) + '.'));
+  }
+  function hireManager(s, i) {
+    var b = s.businesses[i];
+    if (!b) return fail('No such business.');
+    if (!b.level) return fail('Rebuild it on a site to hire a manager.');
+    if (b.manager) return fail('It already has a manager.');
+    b.manager = true;
+    return ok('Hired. A manager costs ' + naira(managerPay(s, b)) + ' a week; no more weekly visits needed.');
+  }
+  function fireManager(s, i) {
+    var b = s.businesses[i];
+    if (!b || !b.manager) return fail('No manager to let go.');
+    b.manager = false; b.visit = day(s);
+    return ok('You let the manager go. Visit at least weekly from now on.');
+  }
+  function weeklyBusinessCosts(s) {
+    s.businesses.forEach(function (b) {
+      if (!b.site) return;
+      var nm = businessName(b), rent = price(s, D.BUSINESS_SITES[b.site].rent * (b.level || 1));
+      pay(s, rent, 'Shop rent: ' + nm) || addDebt(s, rent, 'Shop rent: ' + nm);
+      if (b.manager) { var w = managerPay(s, b); pay(s, w, 'Manager salary: ' + nm) || addDebt(s, w, 'Manager salary: ' + nm); }
+    });
+  }
+  // Estimated daily payout for the UI (no randomness).
+  function businessEstimate(s, b) {
+    var def = D.BUSINESSES[b.id], v = def.daily * s.econ.infl;
+    if (b.site) v *= D.BUSINESS_SITES[b.site].mult;
+    if (b.level > 1) v *= D.BUSINESS_LEVEL.mult[b.level - 1];
+    if (b.manager) v *= 0.9;
+    return roundTo(v, 50);
   }
 
   function visitBusinesses(s) {
@@ -1324,11 +1377,14 @@
     s.businesses.forEach(function (b) {
       var def = D.BUSINESSES[b.id];
       var v = def.daily * s.econ.infl * (0.7 + rand(s) * 0.6);
+      if (b.site) v *= D.BUSINESS_SITES[b.site].mult;
+      if (b.level > 1) v *= D.BUSINESS_LEVEL.mult[b.level - 1];
+      if (b.manager) v *= 0.9; // the manager's cut
       if (def.weekend) v *= (d >= 4 ? 2.2 : 0.3);
       if (def.december && isDecember(s)) v *= def.december;
       if (monthIndex(s) === 0) v *= 0.75;
-      if (day(s) - b.visit > 7) { v *= 0.45; notes.push(def.name + ' staff are stealing'); }
-      if (def.power && !s.power) v -= def.daily * 0.12 * s.econ.fuel * s.econ.infl;
+      if (!b.manager && day(s) - b.visit > 7) { v *= 0.45; notes.push(businessName(b) + ' staff are stealing'); }
+      if (def.power && !s.power) v -= def.daily * 0.12 * s.econ.fuel * s.econ.infl * (b.level > 1 ? D.BUSINESS_LEVEL.mult[b.level - 1] : 1);
       if (def.risky && rand(s) < 0.05) { v -= def.daily * 1.5; notes.push('union and LASTMA "dues" on the bus'); }
       total += v;
     });
@@ -2254,6 +2310,8 @@
     deposit: recorded('d', deposit), withdraw: recorded('w', withdraw), joinAjo: recorded('aj', joinAjo), takeLoan: recorded('l', takeLoan), repayLoan: recorded('r', repayLoan), loanLimit: loanLimit,
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
+    upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
+    businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,
