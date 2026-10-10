@@ -393,6 +393,10 @@
     speedboat: { name: 'Speedboat', icon: '🚤', kind: 'boat', price: 60000000, speed: 50, fuel: 600, upkeep: 60000, status: 12, color: '#ffffff' },
     yacht:     { name: 'Yacht', icon: '🛥️', kind: 'boat', price: 3500000000, speed: 40, fuel: 1500, upkeep: 2500000, status: 80, color: '#f4f3ec' },
     heli:      { name: 'Helicopter', icon: '🚁', kind: 'heli', price: 2800000000, speed: 200, fuel: 0, trip: 250000, upkeep: 3000000, status: 90, color: '#2f6fa0' },
+    catamaran: { name: 'Luxury catamaran', icon: '⛵', kind: 'boat', price: 900000000, speed: 45, fuel: 1000, upkeep: 800000, status: 35, color: '#f4f3ec' },
+    superyacht:{ name: 'Superyacht', icon: '🛳️', kind: 'boat', price: 25000000000, speed: 38, fuel: 5000, upkeep: 20000000, status: 180, color: '#ffffff' },
+    light_jet: { name: 'Light jet', icon: '🛩️', kind: 'jet', price: 9000000000, speed: 0, fuel: 0, upkeep: 15000000, status: 120, color: '#e9e6df' },
+    jumbo:     { name: 'VIP airliner', icon: '✈️', kind: 'jet', price: 150000000000, speed: 0, fuel: 0, upkeep: 200000000, status: 400, color: '#f4f3ec' },
     jet:       { name: 'Private jet', icon: '🛩️', kind: 'jet', price: 45000000000, speed: 0, fuel: 0, upkeep: 60000000, status: 250, color: '#f4f3ec' }
   };
 
@@ -427,17 +431,23 @@
 
   // Ad boards at high-traffic spots. Players rent them with in-game naira.
   var BILLBOARDS = [
-    { id: 'tmb', name: 'Third Mainland Bridge, Yaba end', district: 'yaba', x: 16.3, y: 16.8 },
-    { id: 'oshodi', name: 'Oshodi interchange', district: 'oshodi', x: 9.6, y: 9.9 },
-    { id: 'allen', name: 'Allen roundabout, Ikeja', district: 'ikeja', x: 10.2, y: 5.4 },
-    { id: 'ikorodu_rd', name: 'Ikorodu Road', district: 'ikorodu', x: 23.5, y: 4.3 },
-    { id: 'ojuelegba', name: 'Ojuelegba, Surulere', district: 'surulere', x: 12.0, y: 17.3 },
-    { id: 'festac_link', name: 'Festac link road', district: 'festac', x: 4.2, y: 16.9 },
-    { id: 'marina', name: 'Marina, Lagos Island', district: 'island', x: 16.1, y: 23.5 },
-    { id: 'ozumba', name: 'Ozumba Mbadiwe, VI', district: 'vi', x: 20.4, y: 24.2 },
-    { id: 'lekki_toll', name: 'Lekki toll gate', district: 'lekki', x: 25.6, y: 22.9 },
-    { id: 'ajah_rb', name: 'Ajah roundabout', district: 'ajah', x: 36.7, y: 24.3 }
+    { id: 'tmb', traffic: 1.8, name: 'Third Mainland Bridge, Yaba end', district: 'yaba', x: 16.3, y: 16.8 },
+    { id: 'oshodi', traffic: 1.5, name: 'Oshodi interchange', district: 'oshodi', x: 9.6, y: 9.9 },
+    { id: 'allen', traffic: 1.3, name: 'Allen roundabout, Ikeja', district: 'ikeja', x: 10.2, y: 5.4 },
+    { id: 'ikorodu_rd', traffic: 0.8, name: 'Ikorodu Road', district: 'ikorodu', x: 23.5, y: 4.3 },
+    { id: 'ojuelegba', traffic: 1.1, name: 'Ojuelegba, Surulere', district: 'surulere', x: 12.0, y: 17.3 },
+    { id: 'festac_link', traffic: 0.8, name: 'Festac link road', district: 'festac', x: 4.2, y: 16.9 },
+    { id: 'marina', traffic: 1.2, name: 'Marina, Lagos Island', district: 'island', x: 16.1, y: 23.5 },
+    { id: 'ozumba', traffic: 1.6, name: 'Ozumba Mbadiwe, VI', district: 'vi', x: 20.4, y: 24.2 },
+    { id: 'lekki_toll', traffic: 1.7, name: 'Lekki toll gate', district: 'lekki', x: 25.6, y: 22.9 },
+    { id: 'ajah_rb', traffic: 0.9, name: 'Ajah roundabout', district: 'ajah', x: 36.7, y: 24.3 }
   ];
+  // How long an ad runs and the price multiple (longer runs are cheaper per day).
+  var AD_PLANS = {
+    day:   { name: '1 day', days: 1, mult: 1 },
+    three: { name: '3 days', days: 3, mult: 2.6 },
+    week:  { name: '7 days', days: 7, mult: 5.5 }
+  };
   // Ads are built from these parts only: no free text, so nothing to moderate.
   var AD_EMOJI = ['🔥', '💯', '🎉', '💼', '🍲', '📱', '🎶', '⚽', '💪', '🙏', '👑', '🚌', '🏠', '💡', '❤️', '🇳🇬'];
   var AD_SLOGANS = [
@@ -538,6 +548,14 @@
     power:   { name: 'Power levy', text: '₦1,000 weekly levy. Light is far more steady everywhere.' }
   };
 
+  // CBN governor race (rules 7+): every 4 weeks, two weeks after the
+  // governorship vote. The winner's monetary stance lasts 4 weeks.
+  var CBN = {
+    hawk:    { name: 'The Hawk', icon: '🦅', text: 'Tight money. Savings 0.6% a week, treasury bills 2%, new loans 50% dearer, and inflation slows by half.', save: 0.006, bill: 0.02, loan: 1.5, infl: 0.5 },
+    dove:    { name: 'The Dove', icon: '🕊️', text: 'Cheap money. Savings 0.1% a week, treasury bills 0.5%, new loans 40% cheaper, and inflation runs 50% faster.', save: 0.001, bill: 0.005, loan: 0.6, infl: 1.5 },
+    builder: { name: 'The Builder', icon: '🏗️', text: 'Development finance. Businesses earn 15% more and cooperative loans go 50% higher. Rates stay where they are.', save: 0.003, bill: 0.01, loan: 1, infl: 1, biz: 1.15, coop: 1.5 }
+  };
+
   var GOALS = {
     japa:     { name: 'Japa', text: 'Pass IELTS and show ₦15m proof of funds for a visa.' },
     landlord: { name: 'Landlord', text: 'Own a house in Lagos.' },
@@ -560,7 +578,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

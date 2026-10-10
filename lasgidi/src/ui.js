@@ -4,7 +4,7 @@
   var L = window.Lasgidi, D = L.DATA, N = L.naira;
   var SAVE_KEY = 'lasgidi.save.v1', WEEKLY_KEY = 'lasgidi.weekly.v1';
   var app = document.getElementById('app');
-  var ui = { tab: 'do', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0 }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
+  var ui = { tab: 'do', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0, plan: 'day' }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
   var S = null;
 
   /* ---------- storage (best effort) ---------- */
@@ -202,6 +202,7 @@
       if (!db) return;
       db.collection('ads').limit(500).onSnapshot(function (snap) {
         online.ads = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
+        setTimeout(maybeRenewAd, 0);
         var ids = online.ads.map(function (a) { return a.id; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
@@ -571,7 +572,7 @@
   }
 
   function composerView(b, paid) {
-    var cost = L.boardRent(S), mine = myAd(), others = paid.filter(function (a) { return !a.sponsored && a.by !== online.me; }).length;
+    var plan = ui.ad.plan || 'day', cost = L.boardQuote(S, b.id, plan), mine = myAd(), sub = adSub(), others = paid.filter(function (a) { return !a.sponsored && a.by !== online.me; }).length;
     var html = '<div class="section"><h3>Put your ad here</h3>';
     if (!online.db || !online.me) return html + '<p class="note">Billboards are shared with everyone you share Lasgidi with. They work when the game is opened on claude.ai.</p></div>';
     if (online.canWrite === false) return html + '<p class="note">You can see the boards but not post. Ask the owner for Contributor access.</p></div>';
@@ -579,11 +580,17 @@
     var ad = ui.ad, slogans = L.adSlogans(S);
     if (!slogans.some(function (x) { return x.code === ad.slogan; })) ad.slogan = slogans[0].code;
     var preview = { emoji: D.AD_EMOJI[ad.emoji], text: L.sloganText(ad.slogan), color: D.AD_COLORS[ad.color] };
-    html += '<p class="note">Pick an emoji, a slogan and a colour. ' + naira(cost) + ' in-game naira for 24 real hours. You can have one ad up at a time' + (mine ? '; posting here replaces your ad at ' + esc(D.BILLBOARDS.filter(function (x) { return x.id === mine.board; })[0].name) : '') + '.</p>' +
+    html += '<p class="note">Pick an emoji, a slogan, a colour and how long it runs. Busier boards cost more' + (b.traffic ? ' (this one is ×' + b.traffic + ')' : '') + ', and longer runs are cheaper per day. Paid in in-game naira; time runs in real hours. You can have one ad up at a time' + (mine ? '; posting here replaces your ad at ' + esc(D.BILLBOARDS.filter(function (x) { return x.id === mine.board; })[0].name) : '') + '.</p>' +
       adPreview(preview, true) +
       '<div class="pick" role="group" aria-label="Emoji">' + D.AD_EMOJI.map(function (e, i) { return '<button type="button" class="pick-e' + (i === ad.emoji ? ' on' : '') + '" id="ade-' + i + '" data-ademoji="' + i + '" aria-pressed="' + (i === ad.emoji) + '">' + e + '</button>'; }).join('') + '</div>' +
       '<label class="label" for="ad-slogan">Slogan</label><select id="ad-slogan" data-adslogan="1">' + slogans.map(function (x) { return '<option value="' + esc(x.code) + '"' + (x.code === ad.slogan ? ' selected' : '') + '>' + esc(x.text) + '</option>'; }).join('') + '</select>' +
       '<div class="pick" role="group" aria-label="Colour">' + D.AD_COLORS.map(function (c, i) { return '<button type="button" class="pick-c' + (i === ad.color ? ' on' : '') + '" id="adc-' + i + '" data-adcolor="' + i + '" aria-pressed="' + (i === ad.color) + '" aria-label="Colour ' + (i + 1) + '" style="background:' + c.bg + ';color:' + c.fg + '">Aa</button>'; }).join('') + '</div>' +
+      '<div class="label">How long</div><div class="pg-chips" style="padding:0">' + Object.keys(D.AD_PLANS).map(function (k) {
+        var P = D.AD_PLANS[k], q = L.boardQuote(S, b.id, k);
+        return '<button type="button" class="pg-chip' + (k === plan ? ' sel' : '') + '" id="adp-' + k + '" data-adplan="' + k + '">' + P.name + ' · ' + naira(q) + (P.days > 1 ? ' (' + naira(Math.round(q / P.days / 500) * 500) + '/day)' : '') + '</button>';
+      }).join('') + '</div>' +
+      '<label class="ad-sub"><input type="checkbox" id="ad-renew"' + (ui.ad.renew ? ' checked' : '') + '> Subscribe: renew automatically when it runs out (charged each time you open the game after it ends)</label>' +
+      (sub ? '<p class="note">Subscribed: ' + esc(D.AD_PLANS[sub.plan].name) + ' at ' + esc(boardName(sub.board)) + '. <button type="button" class="link-btn" id="ad-unsub" data-adunsub="1">Cancel subscription</button></p>' : '') +
       '<div class="inline"><button class="btn go" id="ad-post" data-adpost="' + b.id + '"' + (S.cash + S.bank < cost || S.over ? ' disabled' : '') + '>Rent this board · ' + naira(cost) + '</button>' +
       (S.cash + S.bank < cost ? '<span class="why">You need ' + naira(cost - S.cash - S.bank) + ' more.</span>' : '') +
       (online.status ? '<span class="note">' + esc(online.status) + '</span>' : '') + '</div>';
@@ -591,11 +598,32 @@
   }
   function naira(n) { return N(n); }
 
+  // Ad subscription: kept in this browser only; renews when the game is open after the ad ends.
+  var ADSUB_KEY = 'lasgidi.adsub.v1';
+  function adSub() {
+    try { var v = JSON.parse(localStorage.getItem(ADSUB_KEY) || 'null'); return v && D.AD_PLANS[v.plan] && boardName(v.board) ? v : null; } catch (e) { return null; }
+  }
+  function setAdSub(v) { try { if (v) localStorage.setItem(ADSUB_KEY, JSON.stringify(v)); else localStorage.removeItem(ADSUB_KEY); } catch (e) {} }
+  function boardName(id) { var b = D.BILLBOARDS.filter(function (x) { return x.id === id; })[0]; return b ? b.name : ''; }
+  var renewTried = false;
+  function maybeRenewAd() {
+    var sub = adSub();
+    if (renewTried || !sub || !S || S.over || S.challenge || !online.db || !online.me || online.canWrite === false || myAd()) return;
+    renewTried = true;
+    var keep = ui.ad;
+    ui.ad = { emoji: sub.emoji, slogan: sub.slogan, color: sub.color, plan: sub.plan, renew: true };
+    postAd(sub.board).then(function (res) {
+      ui.ad = keep;
+      run(function () { return res.ok ? { ok: true, msg: 'Ad subscription renewed at ' + boardName(sub.board) + '.' } : { ok: false, msg: 'Ad subscription not renewed: ' + res.msg }; });
+    });
+  }
+
   function postAd(boardId) {
-    var res = L.rentBoard(S, boardId);
+    var ad = ui.ad, plan = ad.plan || 'day';
+    var res = L.rentBoard(S, boardId, plan);
     if (!res.ok) return Promise.resolve(res);
-    var ad = ui.ad;
-    return online.db.doc('ads/' + online.me).set({ board: boardId, emoji: ad.emoji, slogan: ad.slogan, color: ad.color, at: Date.now(), until: Date.now() + 24 * 3600e3 })
+    if (ad.renew) setAdSub({ board: boardId, plan: plan, emoji: ad.emoji, slogan: ad.slogan, color: ad.color });
+    return online.db.doc('ads/' + online.me).set({ board: boardId, emoji: ad.emoji, slogan: ad.slogan, color: ad.color, at: Date.now(), until: Date.now() + res.days * 24 * 3600e3 })
       .then(function () { return res; }, function (err) {
         return { ok: false, msg: err && err.code === 'invalid_argument' ? 'Paid, but the board refused the ad: you need Contributor access.' : 'Paid, but the ad could not be posted. Try again in a moment.' };
       });
@@ -990,20 +1018,20 @@
     var tab = ui.bankTab || 'save', held = L.bondsHeld(S), d = L.day(S);
     var html = '<div class="section" style="padding-top:0"><div class="wallet-card"><div class="wc-l">Wallet</div><div class="wc-big num">' + N(S.cash) + '</div>' +
       '<div class="wc-s">Net worth ' + N(L.netWorth(S)) + ' · Cash in hand pays for everything first, then your savings by transfer.</div></div>' +
-      '<div class="bank-card"><div class="bk-top"><span class="bk-logo">🐚</span><div><div class="bk-name">EKO RESERVE BANK</div><div class="bk-rate">Savings ' + (L.BANK_RATE * 100).toFixed(1) + '% a week · Treasury bills ' + Math.round(L.BOND_RATE * 100) + '% in ' + L.BOND_DAYS + ' days</div></div></div>' +
+      '<div class="bank-card"><div class="bk-top"><span class="bk-logo">🐚</span><div><div class="bk-name">EKO RESERVE BANK</div><div class="bk-rate">Savings ' + (L.savingsRate(S) * 100).toFixed(1) + '% a week · Treasury bills ' + +(L.billRate(S) * 100).toFixed(1) + '% in ' + L.BOND_DAYS + ' days</div>' + (S.econ.cbn ? '<div class="bk-rate">CBN governor: ' + D.CBN[S.econ.cbn].icon + ' ' + esc(D.CBN[S.econ.cbn].name) + ' · ' + S.econ.cbnWeeks + ' week' + (S.econ.cbnWeeks === 1 ? '' : 's') + ' left</div>' : '') + '</div></div>' +
       '<div class="bk-pills"><div class="bk-pill"><span>Savings</span><b class="num">' + N(S.bank) + '</b></div><div class="bk-pill"><span>In bills</span><b class="num">' + N(held) + '</b></div></div></div>' +
       '<div class="bank-body"><div class="seg"><button type="button" class="seg-b' + (tab === 'save' ? ' sel' : '') + '" id="bt-save" data-banktab="save">💰 Savings</button><button type="button" class="seg-b' + (tab === 'bill' ? ' sel' : '') + '" id="bt-bill" data-banktab="bill">📜 Treasury bills</button></div>' +
       '<label class="label" for="amt">Amount (₦)</label><input id="amt" class="amt-big" inputmode="numeric" placeholder="₦ 0">' +
       '<div class="pg-chips" style="padding:0">' + [10000, 100000, 1000000, 10000000].map(function (v) { return '<button type="button" class="pg-chip" id="amt-' + v + '" data-bondamt="' + v + '">' + N(v) + '</button>'; }).join('') + '</div>';
     if (tab === 'save') {
       html += '<div class="inline"><button class="btn sm" id="dep" data-bank="dep">Deposit to savings</button><button class="btn sm ghost" id="wd" data-topup="1">💳 Top up wallet</button></div>' +
-        '<p class="note">Savings earn ' + (L.BANK_RATE * 100).toFixed(1) + '% every Monday. Prices rise faster than that, so idle cash loses value. Top up moves savings into your wallet.</p>';
+        '<p class="note">Savings earn ' + (L.savingsRate(S) * 100).toFixed(1) + '% every Monday. Prices rise faster than that, so idle cash loses value. Top up moves savings into your wallet.</p>';
     } else {
       html += '<div class="inline"><button class="btn sm" id="buybond" data-buybond="1">Buy a ' + L.BOND_DAYS + '-day bill</button></div>' +
-        '<p class="note">Paid from savings, minimum ' + N(10000) + '. It is locked until it matures, then comes back to savings with ' + Math.round(L.BOND_RATE * 100) + '%.</p>';
+        '<p class="note">Paid from savings, minimum ' + N(10000) + '. It is locked until it matures, then comes back to savings with ' + +(L.billRate(S) * 100).toFixed(1) + '%. The rate is fixed when you buy.</p>';
       if (S.bonds.length) html += '<div class="list">' + S.bonds.map(function (b, i) {
         var left = b.due - d;
-        return '<div class="item"><div><h3>📜 ' + N(b.amt) + '</h3><div class="meta"><span class="gain num">+' + N(L.bondReturn(b.amt)) + '</span><span>Matures ' + (left <= 1 ? 'tomorrow' : 'in ' + left + ' days') + '</span></div></div></div>';
+        return '<div class="item"><div><h3>📜 ' + N(b.amt) + '</h3><div class="meta"><span class="gain num">+' + N(L.bondReturn(b.amt, b.rate)) + '</span><span>Matures ' + (left <= 1 ? 'tomorrow' : 'in ' + left + ' days') + '</span></div></div></div>';
       }).join('') + '</div>';
     }
     return html + '</div></div>';
@@ -1061,12 +1089,12 @@
     html += '</div>';
 
     html += '<div class="section"><h3>Loans</h3>' + (S.loans.length ? '<div class="list">' + S.loans.map(function (l, i) {
-      return '<div class="item"><div><h3>' + esc(l.name) + '</h3><div class="meta"><span class="cost num">Owe ' + N(l.bal) + '</span>' + (l.rate ? '<span>' + Math.round(l.rate * 100) + '%/week</span>' : '') + '<span>' + (l.weeksLeft > 0 ? l.weeksLeft + ' weeks left' : 'Overdue') + '</span></div></div>' +
+      return '<div class="item"><div><h3>' + esc(l.name) + '</h3><div class="meta"><span class="cost num">Owe ' + N(l.bal) + '</span>' + (l.rate ? '<span>' + +(l.rate * 100).toFixed(1) + '%/week</span>' : '') + '<span>' + (l.weeksLeft > 0 ? l.weeksLeft + ' weeks left' : 'Overdue') + '</span></div></div>' +
         '<button class="btn sm" id="repay-' + i + '" data-repay="' + i + '">Repay all</button></div>';
     }).join('') + '</div>' : '<p class="note">No debts.</p>') +
       '<div class="list">' + Object.keys(L.LOANS).map(function (k) {
         var lo = L.LOANS[k], max = L.loanLimit(S, k);
-        return '<div class="item"><div><h3>' + esc(lo.name) + '</h3><div class="meta"><span>' + Math.round(lo.rate * 100) + '% a week</span><span>' + lo.weeks + ' weeks</span><span>' + (max ? 'Up to ' + N(max) : (k === 'coop' ? 'Needs a job and 10 shifts' : '')) + '</span>' +
+        return '<div class="item"><div><h3>' + esc(lo.name) + '</h3><div class="meta"><span>' + +(L.loanRate(S, k) * 100).toFixed(1) + '% a week</span><span>' + lo.weeks + ' weeks</span><span>' + (max ? 'Up to ' + N(max) : (k === 'coop' ? 'Needs a job and 10 shifts' : '')) + '</span>' +
           (k === 'app' ? '<span class="cost">Shames you to your contacts if late</span>' : '') + '</div></div>' +
           '<button class="btn sm ghost" id="loan-' + k + '" data-loan="' + k + '"' + (max ? '' : ' disabled') + '>Borrow amount</button></div>';
       }).join('') + '</div><p class="note">"Borrow amount" uses the figure in the Amount box above.</p></div>';
@@ -1213,7 +1241,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1296,6 +1324,8 @@
     if (ds.tripto) { ui.sel = ds.tripto; render(); return; }
     if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
+    if (ds.adplan) { ui.ad.plan = ds.adplan; render(); return; }
+    if (ds.adunsub) { setAdSub(null); ui.ad.renew = false; online.status = 'Subscription cancelled. Your current ad runs until it ends.'; render(); return; }
     if (ds.adpost) {
       t.disabled = true;
       postAd(ds.adpost).then(function (res) { online.status = res.msg; run(function () { return res; }); });
@@ -1365,6 +1395,7 @@
   });
 
   document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'ad-renew') { ui.ad.renew = e.target.checked; }
     if (e.target && e.target.id === 'biz-site') { ui.bizSite = e.target.value; ui.bizOpen = true; render(); }
     if (e.target && e.target.id === 'ad-slogan') { ui.ad.slogan = e.target.value; render(); }
     if (e.target && e.target.id === 'look-hair' && S) { var hv = +e.target.value; run(function () { return L.setLook(S, S.look.skin, hv, S.look.shape); }); }

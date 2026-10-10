@@ -392,3 +392,5 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .biz-stars { color: #e5a400; letter-spacing: 1px; font-size: 13px; }
 .biz-btns { margin-top: 8px; flex-wrap: wrap; }
 .biz-btns .link-btn { color: var(--muted); }
+.ad-sub { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin: 8px 0; }
+.ad-sub input { margin-top: 2px; }

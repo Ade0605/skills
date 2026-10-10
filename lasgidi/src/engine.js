@@ -24,11 +24,11 @@
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 7;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 8;         // state shape; migrate() upgrades older saves
   // Game RULES version. A life plays by the rules it started under, so a
   // recorded life replays identically after later updates add new systems.
-  // 5 = v0.5 rules; 6 adds love and family.
-  var RULES = 6;
+  // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race.
+  var RULES = 7;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -157,10 +157,11 @@
   var CATEGORY_NAMES = {
     wages: 'Wages', gigs: 'Gigs and side hustles', business: 'Business and property', savings: 'Ajo, loans and interest',
     family: 'Family', housing: 'Rent and housing', food: 'Food', transport: 'Transport', losses: 'Fines, scams and theft',
-    health: 'Health', lifestyle: 'Fun and lifestyle', other: 'Other'
+    health: 'Health', lifestyle: 'Fun and lifestyle', tax: 'Tax and levies', other: 'Other'
   };
   function category(memo, amt) {
     var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
+    if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
     if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in)/.test(m)) return 'housing';
@@ -277,7 +278,7 @@
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
       rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 },
-      econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0 },
+      econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
       stats: { trips: 0, shifts: 0, onTime: 0, earned: 0, spent: 0, peakWorth: 0, weekStartWorth: 0 },
@@ -385,11 +386,11 @@
     var w = week(s);
     var prevMonth = (START_MONTH + Math.floor((w - 1) / 4)) % 12;
     // Inflation: 0.4%–1.2% a week. Wages chase it at half speed.
-    var inf = 0.004 + rand(s) * 0.008;
+    var inf = (0.004 + rand(s) * 0.008) * cbnOf(s, 'infl', 1);
     s.econ.infl = Math.round(s.econ.infl * (1 + inf) * 10000) / 10000;
     s.econ.wage = Math.round(s.econ.wage * (1 + inf / 2) * 10000) / 10000;
 
-    var interest = Math.floor(s.bank * BANK_RATE);
+    var interest = Math.floor(s.bank * savingsRate(s));
     if (interest > 0) post(s, 'bank', interest, 'Savings interest');
 
     if (s.allowanceWeeks > 0) {
@@ -415,6 +416,8 @@
       s.econ.policy = null;
     }
     if (w > 0 && w % 4 === 0) queueVote(s);
+    if (s.econ.cbnWeeks > 0 && --s.econ.cbnWeeks === 0) { log(s, D.CBN[s.econ.cbn].name + '\'s term at the CBN has ended. Rates are back to normal.', 'info'); s.econ.cbn = null; }
+    if (s.rules >= 7 && w % 4 === 2) queueCbn(s);
 
     var m = monthIndex(s);
     if (m !== prevMonth) {
@@ -548,6 +551,14 @@
     return a;
   }
 
+  // Rules 7: PAYE on each shift. The first ₦4,000 (inflation-adjusted) is
+  // free, the next ₦16,000 is taxed at 10% and everything above at 20%.
+  function payeTax(s, got) {
+    if (s.rules < 7) return 0;
+    var free = 4000 * s.econ.wage, mid = 20000 * s.econ.wage;
+    var t = Math.max(0, Math.min(got, mid) - free) * 0.1 + Math.max(0, got - mid) * 0.2;
+    return roundTo(t, 50);
+  }
   function shiftPay(s, late, perf) {
     var c = D.CAREERS[s.job.id];
     var v = c.pay[s.job.level] * s.econ.wage * (late ? 0.7 : 1) * perf;
@@ -645,6 +656,7 @@
   function gigPay(s, base, spread) {
     var f = s.econ.infl;
     if (monthIndex(s) === 0) f *= 0.8; // January sapa
+    if (s.rules >= 7) f *= 0.85;       // rules 7: customers price you down
     return roundTo(base * f * spread, 50);
   }
 
@@ -806,6 +818,8 @@
     var coop = s.loans.filter(function (l) { return l.kind === 'coop' && l.bal > 0; })[0];
     var deduct = coop ? Math.min(coop.bal, roundTo(got * 0.25, 50)) : 0;
     earn(s, got, 'Shift pay: ' + c.titles[s.job.level]);
+    var tax = payeTax(s, got);
+    if (tax) post(s, 'cash', -tax, 'PAYE income tax');
     if (deduct) { pay(s, deduct, 'Cooperative deduction'); coop.bal -= deduct; }
     addXp(s, (function () { var x = {}; x[c.skill] = 4 + s.job.level; return x; })());
     s.job.shifts++;
@@ -959,6 +973,20 @@
       ids: ids
     });
   }
+
+  function queueCbn(s) {
+    var ids = Object.keys(D.CBN);
+    queue(s, {
+      id: 'cbn', title: 'CBN governor race',
+      text: 'Three candidates want the Central Bank. The winner sets interest rates and the pace of inflation for 4 weeks.',
+      options: ids.map(function (k) { return D.CBN[k].icon + ' ' + D.CBN[k].name + ': ' + D.CBN[k].text; }),
+      ids: ids
+    });
+  }
+  // The current CBN stance's value for a key, or the normal value.
+  function cbnOf(s, key, normal) { var c = s.econ.cbn && D.CBN[s.econ.cbn]; return c && c[key] != null ? c[key] : normal; }
+  function savingsRate(s) { return cbnOf(s, 'save', BANK_RATE); }
+  function billRate(s) { return cbnOf(s, 'bill', BOND_RATE); }
 
   function dailyEvent(s) {
     if (rand(s) > 0.5) return;
@@ -1120,6 +1148,15 @@
         else if (rand(s) < 0.4) { var t = Math.min(s.cash, price(s, 1500)); if (t) post(s, 'cash', -t, 'Taken by area boys'); applyFx(s, { stress: 15 }); msg = 'They took ' + naira(t) + ' from your pocket.'; }
         else { applyFx(s, { stress: 5 }); msg = 'You stood your ground. They moved on.'; }
         break;
+      case 'cbn':
+        var cids = ev.ids, cw = cids.map(function () { return 1 + rand(s) * 2; });
+        cw[idx] += 1.5;
+        var ct = cw.reduce(function (a, b) { return a + b; }, 0), cr = rand(s) * ct, cwin = cids[0];
+        for (var ci = 0; ci < cids.length; ci++) { cr -= cw[ci]; if (cr <= 0) { cwin = cids[ci]; break; } }
+        s.econ.cbn = cwin; s.econ.cbnWeeks = 4;
+        msg = D.CBN[cwin].icon + ' ' + D.CBN[cwin].name + ' is the new CBN governor. ' + D.CBN[cwin].text + (cwin === cids[idx] ? ' Your candidate won.' : '');
+        log(s, msg, 'story');
+        break;
       case 'vote':
         var ids = ev.ids, weights = ids.map(function () { return 1 + rand(s) * 2; });
         weights[idx] += 1.5;
@@ -1130,7 +1167,7 @@
         log(s, msg, 'story');
         break;
     }
-    if (msg && ev.id !== 'scam' && ev.id !== 'vote') log(s, msg, 'info');
+    if (msg && ev.id !== 'scam' && ev.id !== 'vote' && ev.id !== 'cbn') log(s, msg, 'info');
     return finish(s, ok(msg));
   }
 
@@ -1172,10 +1209,11 @@
     if ((s.bonds || []).length >= 20) return fail('You hold 20 bills already. Wait for one to mature.');
     s.alerts = [];
     post(s, 'bank', -amt, 'Treasury bill bought');
-    s.bonds.push({ amt: amt, due: day(s) + BOND_DAYS });
-    return ok(naira(amt) + ' in a ' + BOND_DAYS + '-day bill. It pays ' + naira(bondReturn(amt)) + ' on day ' + (day(s) + BOND_DAYS) + '.');
+    var br = billRate(s);
+    s.bonds.push(br === BOND_RATE ? { amt: amt, due: day(s) + BOND_DAYS } : { amt: amt, due: day(s) + BOND_DAYS, rate: br });
+    return ok(naira(amt) + ' in a ' + BOND_DAYS + '-day bill. It pays ' + naira(bondReturn(amt, br)) + ' on day ' + (day(s) + BOND_DAYS) + '.');
   }
-  function bondReturn(amt) { return Math.floor(amt * BOND_RATE); }
+  function bondReturn(amt, rate) { return Math.floor(amt * (rate || BOND_RATE)); }
   function bondsHeld(s) { return (s.bonds || []).reduce(function (a, b) { return a + b.amt; }, 0); }
   function matureBonds(s) {
     if (!s.bonds || !s.bonds.length) return;
@@ -1183,8 +1221,8 @@
     s.bonds = s.bonds.filter(function (b) {
       if (b.due > d) return true;
       post(s, 'bank', b.amt, 'Treasury bill matured');
-      post(s, 'bank', bondReturn(b.amt), 'Treasury bill interest');
-      log(s, 'A treasury bill matured: ' + naira(b.amt + bondReturn(b.amt)) + ' is back in your savings.', 'good');
+      post(s, 'bank', bondReturn(b.amt, b.rate), 'Treasury bill interest');
+      log(s, 'A treasury bill matured: ' + naira(b.amt + bondReturn(b.amt, b.rate)) + ' is back in your savings.', 'good');
       return false;
     });
   }
@@ -1229,11 +1267,12 @@
   function loanLimit(s, kind) {
     if (kind === 'coop') {
       if (!s.job || s.stats.shifts < 10) return 0;
-      return roundTo(D.CAREERS[s.job.id].pay[s.job.level] * 10, 1000);
+      return roundTo(D.CAREERS[s.job.id].pay[s.job.level] * 10 * cbnOf(s, 'coop', 1), 1000);
     }
     return LOANS[kind].max;
   }
 
+  function loanRate(s, kind) { var m = cbnOf(s, 'loan', 1); return m === 1 ? LOANS[kind].rate : Math.round(LOANS[kind].rate * m * 10000) / 10000; }
   function takeLoan(s, kind, amt) {
     var L = LOANS[kind];
     if (!L) return fail('Unknown loan.');
@@ -1244,8 +1283,9 @@
     if (!(amt > 0) || amt > max) return fail('You can borrow up to ' + naira(max) + '.');
     s.alerts = [];
     post(s, 'bank', amt, L.name);
-    s.loans.push({ kind: kind, name: L.name, bal: amt, rate: L.rate, weeksLeft: L.weeks, principal: amt });
-    log(s, 'Borrowed ' + naira(amt) + ' (' + L.name + ', ' + Math.round(L.rate * 100) + '% a week, ' + L.weeks + ' weeks).', 'info');
+    var rate = loanRate(s, kind);
+    s.loans.push({ kind: kind, name: L.name, bal: amt, rate: rate, weeksLeft: L.weeks, principal: amt });
+    log(s, 'Borrowed ' + naira(amt) + ' (' + L.name + ', ' + (Math.round(rate * 1000) / 10) + '% a week, ' + L.weeks + ' weeks).', 'info');
     return ok('Loan paid into your bank.');
   }
 
@@ -1358,6 +1398,7 @@
     if (b.site) v *= D.BUSINESS_SITES[b.site].mult;
     if (b.level > 1) v *= D.BUSINESS_LEVEL.mult[b.level - 1];
     if (b.manager) v *= 0.9;
+    if (s.econ.cbn === 'builder') v *= D.CBN.builder.biz;
     return roundTo(v, 50);
   }
 
@@ -1380,6 +1421,7 @@
       if (b.site) v *= D.BUSINESS_SITES[b.site].mult;
       if (b.level > 1) v *= D.BUSINESS_LEVEL.mult[b.level - 1];
       if (b.manager) v *= 0.9; // the manager's cut
+      if (s.econ.cbn === 'builder') v *= D.CBN.builder.biz;
       if (def.weekend) v *= (d >= 4 ? 2.2 : 0.3);
       if (def.december && isDecember(s)) v *= def.december;
       if (monthIndex(s) === 0) v *= 0.75;
@@ -1389,7 +1431,10 @@
       total += v;
     });
     total = roundTo(total, 50);
-    if (total > 0) earn(s, total, 'Business payout');
+    if (total > 0) {
+      earn(s, total, 'Business payout');
+      if (s.rules >= 7) { var levy = roundTo(total * 0.12, 50); if (levy) post(s, 'cash', -levy, 'Business levies (state and council)'); }
+    }
     else if (total < 0) { var lost = payPartial(s, -total, 'Business running costs'); if (lost < -total) addDebt(s, -total - lost, 'Business suppliers'); }
     if (notes.length) log(s, 'Business: ' + notes.join('; ') + '.', 'bad');
   }
@@ -1771,17 +1816,25 @@
     return null;
   }
   function boardRent(s) { return price(s, D.BILLBOARD_RENT); }
+  // Price for a board and plan: busier boards and longer runs cost more.
+  function boardQuote(s, id, plan) {
+    var b = boardDef(id), P = D.AD_PLANS[plan];
+    if (!b || !P) return 0;
+    return roundTo(price(s, D.BILLBOARD_RENT * (b.traffic || 1) * P.mult), 500);
+  }
 
-  function rentBoard(s, id) {
+  // plan is optional: lives recorded before plans existed rent for one day at the flat price.
+  function rentBoard(s, id, plan) {
     var b = boardDef(id);
     if (!b) return fail('No such billboard.');
     if (s.pending.length) return fail('Decide on the open event first.');
-    var cost = boardRent(s);
+    if (plan != null && !D.AD_PLANS[plan]) return fail('Pick how long your ad runs.');
+    var cost = plan == null ? boardRent(s) : boardQuote(s, id, plan), days = plan == null ? 1 : D.AD_PLANS[plan].days;
     s.alerts = [];
     if (!pay(s, cost, 'Billboard rental: ' + b.name)) return fail('Renting this board costs ' + naira(cost) + '.');
     unlock(s, 'billboard');
-    log(s, 'Your ad is up on the ' + b.name + ' billboard for 24 hours.', 'good');
-    return finish(s, ok('Your ad is on air at ' + b.name + '.'));
+    log(s, 'Your ad is up on the ' + b.name + ' billboard for ' + (days === 1 ? '24 hours' : days + ' days') + '.', 'good');
+    return finish(s, ok('Your ad is on air at ' + b.name + '.', { days: days, cost: cost }));
   }
 
   // Ad slogans: the fixed list, plus your own businesses by name and district.
@@ -1807,7 +1860,7 @@
     if (!raw || typeof raw !== 'object' || !boardDef(raw.board)) return null;
     var e = raw.emoji, c = raw.color, text = sloganText(raw.slogan);
     if (!(e >= 0 && e < D.AD_EMOJI.length && Math.round(e) === e) || !(c >= 0 && c < D.AD_COLORS.length && Math.round(c) === c) || !text) return null;
-    if (typeof raw.until !== 'number' || raw.until <= now || raw.until > now + 25 * 3600 * 1000) return null;
+    if (typeof raw.until !== 'number' || raw.until <= now || raw.until > now + (7 * 24 + 1) * 3600 * 1000) return null;
     return { board: raw.board, emoji: D.AD_EMOJI[e], text: text, color: D.AD_COLORS[c], until: raw.until, at: typeof raw.at === 'number' ? raw.at : 0 };
   }
 
@@ -1927,6 +1980,7 @@
     if (!s.vehicles) s.vehicles = [];
     if (s.driving == null) s.driving = -1;
     if (!s.bonds) s.bonds = [];
+    if (s.econ && s.econ.cbn === undefined) { s.econ.cbn = null; s.econ.cbnWeeks = 0; }
     if (!s.wardrobe) s.wardrobe = [];
     if (!s.outfit) s.outfit = {};
     if (!s.look) s.look = { skin: 2, hair: 0, shape: 1 };
@@ -2200,7 +2254,7 @@
     if (!rp || typeof rp.seed !== 'number' || !Array.isArray(rp.acts) || rp.acts.length > MAX_ACTS) return null;
     if (!D.GOALS[rp.goal] || (rp.origin !== null && !D.ORIGINS[rp.origin])) return null;
     var rules = rp.rules == null ? 5 : rp.rules;
-    if (rules !== 5 && rules !== 6) return null;
+    if (rules !== 5 && rules !== 6 && rules !== 7) return null;
     if (rp.challenge != null && !CHALLENGE_ID.test(rp.challenge)) return null;
     var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined });
     for (var i = 0; i < rp.acts.length; i++) {
@@ -2321,10 +2375,11 @@
     buyItem: recorded('bi', buyItem), placeItem: recorded('pi', placeItem), storeItem: recorded('si', storeItem), sellItem: recorded('xi', sellItem),
     setLook: recorded('lk', setLook), buyClothes: recorded('bc2', buyClothes), wear: recorded('wr', wear), takeOff: recorded('to', takeOff), outfitTags: outfitTags,
     buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle), driveVehicle: recorded('dv', driveVehicle),
+    payeTax: payeTax, savingsRate: savingsRate, billRate: billRate, loanRate: loanRate,
     buyBond: recorded('tb', buyBond), bondReturn: bondReturn, bondsHeld: bondsHeld, BOND_RATE: BOND_RATE, BOND_DAYS: BOND_DAYS, BANK_RATE: BANK_RATE,
     roomSize: roomSize, fitsAt: fitsAt, statusPoints: statusPoints, furnitureSleep: furnitureSleep, furniturePower: furniturePower, furnitureGen: furnitureGen, furnitureDaily: furnitureDaily, bestCar: bestCar,
     buyPlot: recorded('bpl', buyPlot), plotCount: plotCount, plotXY: plotXY, plotTakenByNpc: plotTakenByNpc, myPlot: myPlot, ownsHome: ownsHome,
-    rentBoard: recorded('rb', rentBoard), boardRent: boardRent, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd,
+    rentBoard: recorded('rb', rentBoard), boardRent: boardRent, boardQuote: boardQuote, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,

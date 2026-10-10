@@ -545,7 +545,8 @@ test('billboards: rent is a recorded ledger debit; stored ads are validated', ()
   assert.equal(L.checkAd(good, now).text, 'Soft life loading');
   assert.equal(L.checkAd(Object.assign({}, good, { slogan: 'Call 0803 123 4567' }), now), null, 'free text rejected');
   assert.equal(L.checkAd(Object.assign({}, good, { until: now - 1 }), now), null, 'expired');
-  assert.equal(L.checkAd(Object.assign({}, good, { until: now + 30 * 3600e3 }), now), null, 'too long');
+  assert.ok(L.checkAd(Object.assign({}, good, { until: now + 7 * 24 * 3600e3 }), now), 'a 7-day plan is valid');
+  assert.equal(L.checkAd(Object.assign({}, good, { until: now + 8 * 24 * 3600e3 }), now), null, 'too long');
   assert.equal(L.checkAd(Object.assign({}, good, { emoji: 99 }), now), null);
   assert.equal(L.sloganText('b:buka:mushin'), 'Buka now open in Mushin');
   sane(s);
@@ -726,4 +727,57 @@ test('businesses: build on a site, upgrade, hire a manager; old-style buys uncha
   assert.equal(r.ledgerHash, s.ledgerHash);
   assert.equal(r.businesses[0].level, 2);
   sane(s);
+});
+
+test('rules 7: CBN governor race sets rates; PAYE and business levies; old rules untouched', () => {
+  const s = L.newGame({ seed: 31, origin: 'mid', goal: 'freestyle' });
+  assert.equal(s.rules, 7);
+  let saw = false;
+  for (let i = 0; i < 20 && !saw; i++) {
+    while (s.pending.length) { const ev = s.pending[0]; if (ev.id === 'cbn') { saw = true; L.resolveChoice(s, 0); } else L.resolveChoice(s, 1); }
+    if (!saw) L.wait(s, 24 * 60);
+  }
+  assert.ok(saw, 'a CBN race happens by week 2');
+  assert.ok(D.CBN[s.econ.cbn] && s.econ.cbnWeeks === 4);
+  const c = D.CBN[s.econ.cbn];
+  assert.equal(L.savingsRate(s), c.save);
+  assert.equal(L.billRate(s), c.bill);
+  assert.equal(L.loanRate(s, 'app'), Math.round(L.LOANS.app.rate * c.loan * 10000) / 10000);
+  // PAYE: none on small pay, 20% at the margin on big pay.
+  assert.equal(L.payeTax(s, 3000), 0);
+  assert.ok(L.payeTax(s, 100000) > 15000);
+  assert.equal(L.category('PAYE income tax', -1), 'tax');
+  assert.equal(L.category('Business levies (state and council)', -1), 'tax');
+  const r = L.replayLife(s.replay);
+  assert.equal(r.ledgerHash, s.ledgerHash);
+  // Rules 6 lives never see the race or the tax.
+  const o = L.newGame({ seed: 31, origin: 'mid', goal: 'freestyle', rules: 6 });
+  for (let i = 0; i < 20; i++) { while (o.pending.length) { assert.notEqual(o.pending[0].id, 'cbn'); L.resolveChoice(o, 1); } L.wait(o, 24 * 60); }
+  assert.equal(L.payeTax(o, 100000), 0);
+  assert.equal(o.econ.cbn, null);
+});
+
+test('luxury boats and jets: superyacht sails, jets add status', () => {
+  const s = L.newGame({ seed: 32, origin: 'nepo', goal: 'freestyle' });
+  L._post(s, 'bank', 200000000000, 'test grant');
+  assert.ok(L.buyVehicle(s, 'superyacht').ok && L.buyVehicle(s, 'light_jet').ok);
+  assert.ok(L.travelOptions(s, 'ikoyi').some(o => o.mode === 'boat' && !o.disabled), 'a superyacht uses the jetties');
+  const before = L.statusPoints(s);
+  assert.ok(L.buyVehicle(s, 'jumbo').ok);
+  assert.ok(L.statusPoints(s) > before);
+});
+
+test('billboard plans: busier boards and longer runs cost more; legacy rent unchanged', () => {
+  const s = L.newGame({ seed: 33, origin: 'nepo', goal: 'freestyle' });
+  const day = L.boardQuote(s, 'tmb', 'day'), week = L.boardQuote(s, 'tmb', 'week');
+  assert.ok(week > day * 5 && week < day * 7, 'a week is cheaper per day');
+  assert.ok(L.boardQuote(s, 'tmb', 'day') > L.boardQuote(s, 'festac_link', 'day'), 'Third Mainland costs more than Festac');
+  const before = s.cash + s.bank, r = L.rentBoard(s, 'tmb', 'three');
+  assert.ok(r.ok && r.days === 3);
+  assert.equal(before - (s.cash + s.bank), L.boardQuote(s, 'tmb', 'three'));
+  assert.equal(L.rentBoard(s, 'tmb', 'month').ok, false);
+  const legacy = L.newGame({ seed: 33, origin: 'nepo', goal: 'freestyle' }), b0 = legacy.cash + legacy.bank;
+  assert.ok(L.rentBoard(legacy, 'tmb').ok);
+  assert.equal(b0 - (legacy.cash + legacy.bank), L.boardRent(legacy));
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
