@@ -1,0 +1,17 @@
+{
+  "name": "llm-council",
+  "version": "0.1.0",
+  "description": "Ask a council of LLMs via OpenRouter: independent answers, anonymized peer review and ranking, and a chairman's final synthesis. Method after karpathy/llm-council.",
+  "author": {
+    "name": "Ade0605",
+    "url": "https://github.com/Ade0605"
+  },
+  "homepage": "https://github.com/karpathy/llm-council",
+  "keywords": [
+    "llm",
+    "council",
+    "openrouter",
+    "multi-model",
+    "ensemble"
+  ]
+}
