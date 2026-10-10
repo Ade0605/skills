@@ -689,3 +689,13 @@ test('driving: pick which car you drive; selling keeps the pick right', () => {
   L.sellVehicle(s, 0);
   assert.equal(s.driving, -1);
 });
+
+test('replay codes: a life that buys a business and a bill replays to the same seal', () => {
+  const s = L.newGame({ seed: 23, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(L.buyBusiness(s, 'pos').ok);
+  assert.ok(L.buyBond(s, 20000).ok);
+  for (let i = 0; i < 3; i++) { while (s.pending.length) L.resolveChoice(s, 1); L.wait(s, 24 * 60); }
+  const r = L.replayLife(s.replay);
+  assert.equal(r.businesses.length, 1);
+  assert.equal(r.ledgerHash, s.ledgerHash);
+});

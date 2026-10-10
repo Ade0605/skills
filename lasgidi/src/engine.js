@@ -2234,6 +2234,7 @@
   // A finished challenge is frozen: every recorded call becomes a no-op failure.
   function recorded(code, raw) {
     var fn = function (s) { return s.over ? fail('This Weekly Lagos is over. Start next week\'s, or go back to your life.') : raw.apply(null, arguments); };
+    if (RECORDED[code]) throw new Error('Replay code used twice: ' + code);
     RECORDED[code] = { fn: fn };
     return function (s) {
       var args = Array.prototype.slice.call(arguments, 1);
@@ -2262,7 +2263,7 @@
     buyItem: recorded('bi', buyItem), placeItem: recorded('pi', placeItem), storeItem: recorded('si', storeItem), sellItem: recorded('xi', sellItem),
     setLook: recorded('lk', setLook), buyClothes: recorded('bc2', buyClothes), wear: recorded('wr', wear), takeOff: recorded('to', takeOff), outfitTags: outfitTags,
     buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle), driveVehicle: recorded('dv', driveVehicle),
-    buyBond: recorded('bb', buyBond), bondReturn: bondReturn, bondsHeld: bondsHeld, BOND_RATE: BOND_RATE, BOND_DAYS: BOND_DAYS, BANK_RATE: BANK_RATE,
+    buyBond: recorded('tb', buyBond), bondReturn: bondReturn, bondsHeld: bondsHeld, BOND_RATE: BOND_RATE, BOND_DAYS: BOND_DAYS, BANK_RATE: BANK_RATE,
     roomSize: roomSize, fitsAt: fitsAt, statusPoints: statusPoints, furnitureSleep: furnitureSleep, furniturePower: furniturePower, furnitureGen: furnitureGen, furnitureDaily: furnitureDaily, bestCar: bestCar,
     buyPlot: recorded('bpl', buyPlot), plotCount: plotCount, plotXY: plotXY, plotTakenByNpc: plotTakenByNpc, myPlot: myPlot, ownsHome: ownsHome,
     rentBoard: recorded('rb', rentBoard), boardRent: boardRent, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd,
