@@ -59,6 +59,7 @@
     detty:       'Survived Detty December',
     promoted:    'Promoted at work',
     traveller:   'Travelled to another city',
+    gifted:      'Received a gift from another Lagosian',
     gems:        'Found all five of a day\'s gems',
     debt_free:   'Debt free: cleared every loan',
     top:         'Top of the ladder in a career',
@@ -281,7 +282,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 },
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 },
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -2065,6 +2066,7 @@
     if (s.driving == null) s.driving = -1;
     if (!s.bonds) s.bonds = [];
     if (!s.gems) s.gems = {};
+    if (!s.giftsOpened) s.giftsOpened = {};
     if (s.econ && s.econ.cbn === undefined) { s.econ.cbn = null; s.econ.cbnWeeks = 0; }
     if (!s.wardrobe) s.wardrobe = [];
     if (!s.outfit) s.outfit = {};
@@ -2362,6 +2364,30 @@
     return { ok: same, entry: same ? got : e, reason: same ? null : 'does not match its replay' };
   }
 
+  /* ---------- gifts between players (mood only, never cash) ---------- */
+  function sendGift(s, id) {
+    var G = D.GIFTS[id];
+    if (!G) return fail('No such gift.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var cost = price(s, G.price);
+    s.alerts = [];
+    if (!pay(s, cost, 'Gift: ' + G.name)) return fail(G.name + ' costs ' + naira(cost) + '.');
+    applyFx(s, { social: 5 });
+    return ok('You sent a ' + G.name.toLowerCase() + '.');
+  }
+  // key identifies the gift (sender and time); up to 3 opened per game day.
+  function openGift(s, key, id) {
+    var G = D.GIFTS[id];
+    if (!G || typeof key !== 'string' || key.length > 80) return fail('That gift is not valid.');
+    if (Object.prototype.hasOwnProperty.call(s.giftsOpened, key)) return fail('You already opened this gift.');
+    var today = day(s), n = Object.keys(s.giftsOpened).filter(function (k) { return s.giftsOpened[k] === today; }).length;
+    if (n >= 3) return fail('You have opened three gifts today. Save the rest for tomorrow.');
+    s.giftsOpened[key] = today;
+    applyFx(s, G.fx);
+    unlock(s, 'gifted');
+    return finish(s, ok(G.icon + ' You opened a ' + G.name.toLowerCase() + '. Your mood lifts.'));
+  }
+
   /* ---------- Daily gem hunt ---------- */
   // Every real-world day hides the same 5 gems for everyone, at places picked
   // from the date. Each gem pays once per life; prizes grow through the day's
@@ -2509,6 +2535,7 @@
     rentBoard: recorded('rb', rentBoard), boardRent: boardRent, boardQuote: boardQuote, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd, checkPictureAd: checkPictureAd, PIC_MAX: PIC_MAX,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
+    sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     districtCity: districtCity, cityOf: cityOf, intercityOptions: intercityOptions, intercity: recorded('ic', intercity),
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,

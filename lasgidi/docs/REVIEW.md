@@ -163,6 +163,15 @@ Picture ads are the one place a player's own content reaches other players, so t
 
 Each new system takes effect only when you own, place, wear or hold something. Lives from earlier versions therefore replay to the same seal, which a golden fixture test and the replay of five v0.5 lives confirm.
 
+### Multiplayer life without chat or cash transfers
+
+Lasgidi has no chat:
+- Players see each other in a district.
+- They can send a fixed wave.
+- They can visit each other's homes read-only. A snapshot is checked against the game's data before it's drawn.
+
+Gifts are symbolic. The sender pays and the receiver's mood lifts, but no naira moves between lives. Cash gifts would let a player farm money with a second account, and that would undo the replay-verified leaderboards.
+
 ## 5. Roadmap: making it multiplayer without repeating the mistakes
 
 1. **Server-authoritative engine.** The engine is already pure and deterministic, so run it on the server and have clients send intents (`doAction(id)`), never balances. Persist the action log and replay it to audit any account.

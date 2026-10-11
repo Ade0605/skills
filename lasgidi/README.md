@@ -83,6 +83,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Hall of lives:** ending a life scores it (net worth, weeks survived, achievements, career level and goal) and keeps your best runs on the start screen.
 - **Sound (optional):** a bank-alert ding for money in, a low tone for money out, and a danfo horn when you travel.
 - **Keyboard:** number keys switch tabs, and A runs the advisor's top suggestion.
+- **Multiplayer life:** see the other players in your district.
+  - **Wave:** a wave is fixed text, never free text.
+  - **Visit:** visit their home read-only. You see their furniture and garage, checked against the game's own data before it's drawn.
+  - **Gifts:** send a gift such as suya, flowers, a cake or aso-ebi fabric. Gifts lift the receiver's mood but never move money, so a second account can't feed cash into a Hall of Fame life.
 - **Lagos online (inside claude.ai):** a shared **Hall of Fame** of everyone's best lives, plus live presence showing how many other players are online and which district they're in. There's no chat and no free text between players. Every life records its seed and every move, so other players' browsers **replay each entry move by move** and rank only lives that reproduce the same ledger seal and score. To fake a top score, you'd have to actually play it. Outside claude.ai, the game runs single-player as before.
 
 ## Pictures

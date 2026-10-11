@@ -881,3 +881,19 @@ test('cities: districts on land in their own city; same-city travel only; fly an
   t.loc = 'oshodi'; t.t = Math.floor(t.t / 1440) * 1440 + 22 * 60;
   assert.match(L.intercityOptions(t, 'ph').find(o => o.mode === 'bus').disabled, /night/);
 });
+
+test('gifts: the sender pays, the receiver gets mood only (no cash); opened once, three a day', () => {
+  const s = L.newGame({ seed: 42, origin: 'mid', goal: 'freestyle' });
+  const before = s.cash + s.bank;
+  assert.ok(L.sendGift(s, 'suya').ok);
+  assert.equal(before - (s.cash + s.bank), L.price(s, D.GIFTS.suya.price));
+  const r = L.newGame({ seed: 43, origin: 'mid', goal: 'freestyle' }), cash = r.cash + r.bank, fun = r.needs.fun;
+  assert.ok(L.openGift(r, 'u_a:1', 'cake').ok);
+  assert.equal(r.cash + r.bank, cash, 'no money changes hands');
+  assert.ok(r.needs.fun >= fun);
+  assert.equal(L.openGift(r, 'u_a:1', 'cake').ok, false, 'once');
+  assert.ok(L.openGift(r, 'u_b:1', 'suya').ok && L.openGift(r, 'u_c:1', 'suya').ok);
+  assert.match(L.openGift(r, 'u_d:1', 'suya').msg, /three gifts today/);
+  assert.equal(L.openGift(r, 'u_e:1', 'gold').ok, false);
+  assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});

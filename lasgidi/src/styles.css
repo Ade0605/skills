@@ -417,3 +417,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .badge { position: absolute; top: -6px; right: -8px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #e5484d; color: #fff; font: 700 11.5px/20px var(--font-body); text-align: center; }
 .tab .badge { position: static; display: inline-block; margin-left: 6px; vertical-align: 1px; }
 .phone-top { display: flex; align-items: center; gap: 10px; padding: 10px 12px 0; }
+/* Multiplayer life */
+.person { grid-template-columns: minmax(0, 1fr); }
+.person .inline { flex-wrap: wrap; gap: 6px; }
+.person select { max-width: 100%; font-size: 13px; padding: 6px; border-radius: 8px; }
+.visit .visit-slot { margin: 8px 0; }

@@ -705,6 +705,14 @@
     builder: { name: 'The Builder', icon: '🏗️', text: 'Development finance. Businesses earn 15% more and cooperative loans go 50% higher. Rates stay where they are.', save: 0.003, bill: 0.01, loan: 1, infl: 1, biz: 1.15, coop: 1.5 }
   };
 
+  // Gifts between players are symbolic: the sender pays, the receiver's mood lifts. No cash changes hands.
+  var GIFTS = {
+    suya:    { name: 'Tray of suya', icon: '🍢', price: 3000, fx: { fun: 10, social: 10, hunger: 15 } },
+    flowers: { name: 'Bouquet of flowers', icon: '💐', price: 8000, fx: { social: 15, stress: -5 } },
+    cake:    { name: 'Birthday cake', icon: '🎂', price: 15000, fx: { fun: 15, social: 15 } },
+    fabric:  { name: 'Aso-ebi fabric', icon: '🧵', price: 40000, fx: { social: 25, stress: -8 } }
+  };
+
   var GOALS = {
     japa:     { name: 'Japa', text: 'Pass IELTS and show ₦15m proof of funds for a visa.' },
     landlord: { name: 'Landlord', text: 'Own a house in Lagos.' },
@@ -727,7 +735,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 
