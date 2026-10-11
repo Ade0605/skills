@@ -517,8 +517,9 @@ test('every mapped place sits on land in its own district and links real activit
   for (const p of D.PLACES) {
     assert.ok(!ids.has(p.id), 'duplicate place ' + p.id); ids.add(p.id);
     assert.ok(D.PLACE_TYPES[p.type], p.id + ' type');
-    assert.equal(PG.isWater(p.x, p.y), false, p.id + ' is in the water');
-    assert.equal(PG.nearestDistrict(p.x, p.y).k, p.district, p.id + ' is outside ' + p.district);
+    const pc = D.DISTRICTS[p.district].city || 'lagos';
+    assert.equal(PG.isWater(p.x, p.y, pc), false, p.id + ' is in the water');
+    assert.equal(PG.nearestDistrict(p.x, p.y, pc).k, p.district, p.id + ' is outside ' + p.district);
     const here = (D.PLACE_ACTIONS[p.district] || []).map(a => a.id);
     for (const a of p.acts) assert.ok(here.includes(a), p.id + ' links ' + a + ' which is not in ' + p.district);
   }
@@ -559,8 +560,9 @@ test('every home estate sits on land in its own district; perks apply daily', ()
   for (const [id, h] of Object.entries(D.HOMES)) {
     assert.ok(D.HOME_TYPES[h.type], id + ' type');
     if (h.hidden || h.owned) continue; // owned homes are drawn on their estate plot
-    assert.equal(PG.isWater(h.x, h.y), false, id + ' is in the water');
-    assert.equal(PG.nearestDistrict(h.x, h.y).k, h.district, id + ' is outside ' + h.district);
+    const hc = D.DISTRICTS[h.district].city || 'lagos';
+    assert.equal(PG.isWater(h.x, h.y, hc), false, id + ' is in the water');
+    assert.equal(PG.nearestDistrict(h.x, h.y, hc).k, h.district, id + ' is outside ' + h.district);
   }
   const s = L.newGame({ seed: 3, origin: 'nepo', goal: 'freestyle' });
   assert.ok(L.moveHouse(s, 'yaba_share').ok);
@@ -846,4 +848,36 @@ test('daily gem hunt: same gems for everyone each day, must be there, once each,
   assert.match(L.collectGem(s, '2026-10-13', 0).msg, /already hunted today/, 'one hunt day per game day');
   assert.equal(L.collectGem(s, 'yesterday', 0).ok, false);
   assert.equal(L.category('Gem hunt prize', 1), 'gigs');
+});
+
+test('cities: districts on land in their own city; same-city travel only; fly and bus between cities', () => {
+  globalThis.LASGIDI_DATA = D;
+  require('../src/playground.js');
+  const PG = globalThis.LasgidiPlayground;
+  for (const [k, d] of Object.entries(D.DISTRICTS)) {
+    const c = d.city || 'lagos';
+    assert.ok(D.CITIES[c], k + ' city');
+    assert.equal(PG.isWater(d.x, d.y, c), false, k + ' is in the water');
+    assert.ok((D.PLACE_ACTIONS[k] || []).some(a => a.gig), k + ' has a gig, so nobody is stranded');
+  }
+  for (const c of Object.values(D.CITIES)) { assert.ok(D.DISTRICTS[c.airport] && D.DISTRICTS[c.park]); }
+  const s = L.newGame({ seed: 40, origin: 'nepo', goal: 'freestyle' });
+  assert.equal(L.cityOf(s), 'lagos');
+  assert.ok(L.travelOptions(s, 'abj_wuse').every(o => o.disabled), 'no danfo to Abuja');
+  assert.match(L.intercityOptions(s, 'abuja').find(o => o.mode === 'flight').disabled || '', /Leaves from Ikeja/);
+  // Get to the airport, then fly.
+  if (s.loc !== 'ikeja') { const o = L.travelOptions(s, 'ikeja').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(s, 'ikeja', o.mode).ok); }
+  while (s.pending.length) L.resolveChoice(s, 1);
+  const before = s.cash + s.bank, r = L.intercity(s, 'abuja', 'flight');
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.loc, 'abj_airport'); assert.equal(L.cityOf(s), 'abuja');
+  assert.ok(before - (s.cash + s.bank) >= L.price(s, D.INTERCITY.flight.fare) * 0.9);
+  assert.ok(s.ach.traveller);
+  assert.ok(L.availableActions(s).some(a => a.id === 'abj_air_gig'), 'local actions in Abuja');
+  assert.equal(L.category('Flight to Abuja', -1), 'transport');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  // The bus does not run at night.
+  const t = L.newGame({ seed: 41, origin: 'mid', goal: 'freestyle' });
+  t.loc = 'oshodi'; t.t = Math.floor(t.t / 1440) * 1440 + 22 * 60;
+  assert.match(L.intercityOptions(t, 'ph').find(o => o.mode === 'bus').disabled, /night/);
 });

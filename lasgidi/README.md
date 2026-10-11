@@ -51,7 +51,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Birth lottery:** LAPO Baby (50%), Ajepako (35%) or Nepo Baby (15%). This sets your starting cash and home. A Nepo Baby's allowance ends after 8 weeks.
 - **Goals:** Japa (IELTS plus ₦15m proof of funds), Landlord (own a house), Odogwu (top of a career) or Freestyle.
 - **Needs:** Belle, energy, enjoyment, social, hygiene and calm. Neglect them and you end up in General Hospital.
-- **Districts:** 12 in total. Ikeja, Ikorodu, Oshodi, Mushin, Festac, Surulere and Yaba are on the mainland. Lagos Island, Ikoyi, VI, Lekki and Ajah are on the Island.
+- **Cities:** Lagos, Abuja and Port Harcourt, each with its own map, districts, landmarks, homes and jobs.
+  - **Abuja:** Aso Rock, Millennium Park, Jabi Lake, Wuse Market and Eagle Square, plus the civil service and consulting careers.
+  - **Port Harcourt:** Uniport, Pleasure Park, Mile 1 market, the waterfront and the Trans-Amadi yards, plus oil-services jobs.
+  - **Getting there:** fly from the airport (about ₦150k, or free in your own jet) or take the long-distance bus from the motor park. The bus is cheaper, takes 11 to 12 hours, and doesn't run at night.
+- **Districts:** 12 in Lagos. Ikeja, Ikorodu, Oshodi, Mushin, Festac, Surulere and Yaba are on the mainland. Lagos Island, Ikoyi, VI, Lekki and Ajah are on the Island.
 - **Transport:** 8 modes. Keke cannot cross the bridges, BRT and the ferry run only between their stops, and okada carries task-force risk in the ban areas. Go-slow peaks 06–10 and 16–21.
 - **Careers:** 9 careers × 5 levels, from Dispatch Rider to Logistics Boss and from Backup Singer to Afrobeats Giant.
 - **Design your home:** buy 30 pieces of furniture and place, rotate or store them on a tile grid inside your home. Bigger homes are split into a bedroom, guest room, kitchen, living room and bathroom. Beds help sleep, solar and inverters help with light, and an AC or a pool table lifts your mood. Furniture moves house with you.

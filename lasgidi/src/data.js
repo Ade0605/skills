@@ -16,7 +16,36 @@
     ikoyi:   { name: 'Ikoyi',        x: 20, y: 21, side: 'island',   blurb: 'Old money. Quiet streets and steady light.' },
     vi:      { name: 'Victoria Island', x: 19, y: 25, side: 'island', blurb: 'Banks, towers, lounges and clubs on the Atlantic.' },
     lekki:   { name: 'Lekki',        x: 28, y: 24, side: 'island',   blurb: 'Estates, startups, the beach. Floods when it rains.' },
-    ajah:    { name: 'Ajah',         x: 38, y: 25, side: 'island',   blurb: 'Island address, mainland rent, long commute.' }
+    ajah:    { name: 'Ajah',         x: 38, y: 25, side: 'island',   blurb: 'Island address, mainland rent, long commute.' },
+    // Abuja and Port Harcourt each sit in their own map frame (km, x east, y south).
+    abj_kubwa:   { city: 'abuja', name: 'Kubwa',    x: 4,  y: 2,  side: 'mainland', blurb: 'Satellite town on the expressway. Cheap rooms, long commute.' },
+    abj_maitama: { city: 'abuja', name: 'Maitama',  x: 14, y: 7,  side: 'mainland', blurb: 'Embassies, big compounds and Millennium Park.' },
+    abj_wuse:    { city: 'abuja', name: 'Wuse',     x: 11, y: 11, side: 'mainland', blurb: 'Wuse Market by day, Wuse 2 suya and lounges by night.' },
+    abj_jabi:    { city: 'abuja', name: 'Jabi',     x: 6,  y: 11, side: 'mainland', blurb: 'The lake, the mall and the weekend crowd.' },
+    abj_asokoro: { city: 'abuja', name: 'Asokoro',  x: 22, y: 11, side: 'mainland', blurb: 'In the shadow of Aso Rock. Quiet, guarded and expensive.' },
+    abj_garki:   { city: 'abuja', name: 'Garki',    x: 16, y: 15, side: 'mainland', blurb: 'Ministries, the business district and Eagle Square.' },
+    abj_nyanya:  { city: 'abuja', name: 'Nyanya',   x: 28, y: 16, side: 'mainland', blurb: 'Busy motor park on the Keffi road. Buses to Lagos and PH.' },
+    abj_airport: { city: 'abuja', name: 'Abuja Airport', x: 8, y: 24, side: 'mainland', blurb: 'Nnamdi Azikiwe International. Flights to Lagos and PH.' },
+    ph_airport:  { city: 'ph', name: 'PH Airport', x: 6,  y: 1,  side: 'mainland', blurb: 'Omagwa, far north of town. Flights to Lagos and Abuja.' },
+    ph_choba:    { city: 'ph', name: 'Choba',      x: 3,  y: 6,  side: 'mainland', blurb: 'Uniport students, cheap food, the teaching hospital nearby.' },
+    ph_rumuokoro:{ city: 'ph', name: 'Rumuokoro',  x: 13, y: 6,  side: 'mainland', blurb: 'The big junction and motor park. Buses to Lagos and Abuja.' },
+    ph_gra:      { city: 'ph', name: 'GRA',        x: 12, y: 11, side: 'mainland', blurb: 'Garden City nightlife, malls and oil money.' },
+    ph_transamadi:{ city: 'ph', name: 'Trans-Amadi', x: 21, y: 11, side: 'mainland', blurb: 'Industrial yards and oil-service companies.' },
+    ph_dline:    { city: 'ph', name: 'D-Line',     x: 9,  y: 15, side: 'mainland', blurb: 'Mile 1 market and crowded streets.' },
+    ph_oldgra:   { city: 'ph', name: 'Old GRA',    x: 14, y: 15, side: 'mainland', blurb: 'Old colonial streets, Isaac Boro Park, fish and bole.' },
+    ph_borokiri: { city: 'ph', name: 'Borokiri',   x: 16, y: 19, side: 'mainland', blurb: 'The waterfront on the Bonny River.' }
+  };
+
+  // Cities you can live in. Travel between them is by plane or long-distance bus.
+  var CITIES = {
+    lagos: { name: 'Lagos', airport: 'ikeja', park: 'oshodi', hospital: 'island', hospitalName: 'General Hospital, Lagos Island' },
+    abuja: { name: 'Abuja', airport: 'abj_airport', park: 'abj_nyanya', hospital: 'abj_garki', hospitalName: 'National Hospital, Garki' },
+    ph:    { name: 'Port Harcourt', airport: 'ph_airport', park: 'ph_rumuokoro', hospital: 'ph_choba', hospitalName: 'the teaching hospital near Choba' }
+  };
+  // Flight and bus times (minutes) and base fares between cities.
+  var INTERCITY = {
+    flight: { name: 'Flight', mins: 180, fare: 150000 },
+    bus:    { name: 'Long-distance bus', fare: 30000, mins: { 'lagos-abuja': 720, 'abuja-lagos': 720, 'lagos-ph': 660, 'ph-lagos': 660, 'abuja-ph': 690, 'ph-abuja': 690 } }
   };
 
   // Drawn on the map only; travel uses straight-line distance x 1.3.
@@ -24,7 +53,11 @@
     ['ikeja', 'oshodi'], ['oshodi', 'mushin'], ['mushin', 'surulere'], ['mushin', 'yaba'],
     ['surulere', 'festac'], ['surulere', 'yaba'], ['yaba', 'island'], ['ikeja', 'ikorodu'],
     ['oshodi', 'festac'], ['island', 'ikoyi'], ['ikoyi', 'vi'], ['island', 'vi'],
-    ['ikoyi', 'lekki'], ['vi', 'lekki'], ['lekki', 'ajah'], ['ikorodu', 'yaba']
+    ['ikoyi', 'lekki'], ['vi', 'lekki'], ['lekki', 'ajah'], ['ikorodu', 'yaba'],
+    ['abj_kubwa', 'abj_maitama'], ['abj_maitama', 'abj_wuse'], ['abj_wuse', 'abj_jabi'], ['abj_wuse', 'abj_garki'], ['abj_maitama', 'abj_asokoro'],
+    ['abj_asokoro', 'abj_garki'], ['abj_asokoro', 'abj_nyanya'], ['abj_garki', 'abj_airport'], ['abj_jabi', 'abj_airport'], ['abj_kubwa', 'abj_jabi'],
+    ['ph_airport', 'ph_choba'], ['ph_airport', 'ph_rumuokoro'], ['ph_choba', 'ph_rumuokoro'], ['ph_rumuokoro', 'ph_gra'], ['ph_gra', 'ph_dline'],
+    ['ph_gra', 'ph_transamadi'], ['ph_dline', 'ph_oldgra'], ['ph_oldgra', 'ph_borokiri'], ['ph_transamadi', 'ph_oldgra'], ['ph_gra', 'ph_oldgra']
   ];
   var FERRY_STOPS = ['ikorodu', 'island', 'ikoyi', 'lekki'];
   var BRT_STOPS = ['ikorodu', 'ikeja', 'oshodi', 'yaba', 'island'];
@@ -80,6 +113,15 @@
     lekki_duplex: { name: '4-bed duplex, Lekki', district: 'lekki', rent: 110000, power: 0.85, sleep: 1.1, type: 'duplex', x: 31.2, y: 24.4, daily: { stress: -3 }, perk: 'Gated estate with security and an inverter.' },
     ikoyi_apt:    { name: 'Serviced flat, Ikoyi', district: 'ikoyi', rent: 150000, power: 0.95, sleep: 1.1, type: 'luxury', x: 19.2, y: 20.6 },
     vi_penthouse: { name: 'Penthouse, Victoria Island', district: 'vi', rent: 260000, power: 0.98, sleep: 1.15, type: 'luxury', x: 20.8, y: 25.4, daily: { stress: -4, fun: 3 }, perk: '24-hour power, a gym and a view of the Atlantic.' },
+    abj_kubwa_selfcon: { name: 'Self-con, Kubwa', district: 'abj_kubwa', rent: 6000, power: 0.55, sleep: 0.9, type: 'selfcon', x: 5.2, y: 2.6 },
+    abj_nyanya_room:   { name: 'Room in Nyanya', district: 'abj_nyanya', rent: 3000, power: 0.45, sleep: 0.85, type: 'room', x: 27.2, y: 17.0 },
+    abj_wuse_flat:     { name: '2-bed flat, Wuse 2', district: 'abj_wuse', rent: 45000, power: 0.8, sleep: 1, type: 'flat2', x: 11.8, y: 9.8 },
+    abj_maitama_duplex:{ name: 'Duplex, Maitama', district: 'abj_maitama', rent: 140000, power: 0.92, sleep: 1.1, type: 'duplex', x: 14.8, y: 5.8, daily: { stress: -3 } },
+    abj_asokoro_mansion:{ name: 'Mansion, Asokoro', district: 'abj_asokoro', rent: 450000, power: 0.99, sleep: 1.2, type: 'mansion', x: 23.0, y: 12.0, daily: { stress: -6, fun: 4 } },
+    ph_rumuokoro_room: { name: 'Room in Rumuokoro', district: 'ph_rumuokoro', rent: 2800, power: 0.4, sleep: 0.85, type: 'room', x: 13.6, y: 4.8 },
+    ph_dline_selfcon:  { name: 'Self-con, D-Line', district: 'ph_dline', rent: 7000, power: 0.5, sleep: 0.9, type: 'selfcon', x: 8.2, y: 16.0 },
+    ph_gra_flat:       { name: '3-bed flat, GRA Phase 2', district: 'ph_gra', rent: 40000, power: 0.75, sleep: 1.05, type: 'flat3', x: 12.4, y: 9.8 },
+    ph_oldgra_duplex:  { name: 'Duplex, Old GRA', district: 'ph_oldgra', rent: 90000, power: 0.85, sleep: 1.1, type: 'duplex', x: 14.6, y: 16.2, daily: { stress: -3 } },
     estate_own:   { name: 'Your house, Mainland Estate', district: 'ikeja', rent: 0, power: 0.65, sleep: 1.05, type: 'duplex', owned: true, perk: 'Your own house: no rent, no landlord, an estate transformer.' },
     banana:       { name: 'Mansion, Banana Island', district: 'ikoyi', rent: 600000, power: 0.99, sleep: 1.2, type: 'mansion', x: 22.4, y: 20.6, daily: { stress: -6, fun: 4 }, perk: 'Pool, staff quarters and 24-hour power on Lagos\'s most exclusive island.' }
   };
@@ -121,6 +163,15 @@
     music:    { name: 'Music', district: 'surulere', skill: 'music', start: 18, end: 24, days: [3,4,5,6],
       titles: ['Backup Singer', 'Hypeman', 'Club Act', 'Headliner', 'Afrobeats Giant'],
       pay: [5000, 9000, 17000, 40000, 99000], req: [1, 3, 5, 7, 10] },
+    civil:    { name: 'Civil Service', district: 'abj_garki', skill: 'charisma', start: 8, end: 16, days: [0,1,2,3,4], degree: true,
+      titles: ['Clerk', 'Executive Officer', 'Senior Officer', 'Deputy Director', 'Permanent Secretary'],
+      pay: [8000, 12500, 20000, 36000, 70000], req: [1, 3, 5, 7, 9] },
+    consult:  { name: 'Consulting', district: 'abj_maitama', skill: 'tech', start: 9, end: 18, days: [0,1,2,3,4], degree: true,
+      titles: ['Analyst', 'Associate', 'Manager', 'Partner', 'Managing Partner'],
+      pay: [10000, 18000, 32000, 60000, 120000], req: [2, 4, 6, 8, 10] },
+    oil:      { name: 'Oil Services', district: 'ph_transamadi', skill: 'craft', start: 6, end: 16, days: [0,1,2,3,4,5],
+      titles: ['Roustabout', 'Technician', 'Supervisor', 'Rig Manager', 'Oilfield Contractor'],
+      pay: [7500, 13000, 22000, 42000, 85000], req: [1, 3, 5, 7, 9] },
     fitness:  { name: 'Fitness', district: 'lekki', skill: 'fitness', start: 6, end: 12, days: [0,1,2,3,4,5],
       titles: ['Gym Assistant', 'Trainer', 'Head Coach', 'Gym Owner', 'Fitness Icon'],
       pay: [5000, 8000, 13500, 24000, 45000], req: [1, 3, 5, 7, 9] }
@@ -129,6 +180,75 @@
   // Effects: needs deltas (hunger, energy, fun, social, hygiene, stress), xp, earn, cost.
   // when: {days:[...], from:h, to:h} — action allowed only then.
   var PLACE_ACTIONS = {
+    abj_kubwa: [
+      { id: 'abj_kubwa_food', label: 'Buy foodstuff at Kubwa market (7 meals)', mins: 60, cost: 4500, special: 'pantry7', when: { from: 7, to: 19 } },
+      { id: 'abj_kubwa_gig', label: 'Carry loads at Kubwa market', mins: 180, earn: 2400, fx: { energy: -20, hygiene: -12 }, xp: { hustle: 2, fitness: 1 }, gig: true, when: { from: 7, to: 18 } }
+    ],
+    abj_maitama: [
+      { id: 'abj_millennium', label: 'Walk in Millennium Park', mins: 90, fx: { fun: 18, stress: -12 }, when: { from: 7, to: 19 } },
+      { id: 'abj_maitama_gig', label: 'Run errands for Maitama households', mins: 150, earn: 3500, fx: { energy: -12 }, xp: { hustle: 2, charisma: 1 }, gig: true, when: { from: 8, to: 19 } }
+    ],
+    abj_wuse: [
+      { id: 'abj_suya', label: 'Eat suya in Wuse 2', mins: 45, cost: 2500, fx: { hunger: 35, fun: 10 }, when: { from: 17, to: 24 } },
+      { id: 'abj_night', label: 'Night out in Wuse 2', mins: 240, cost: 15000, fx: { fun: 55, social: 40, energy: -35, hygiene: -15 }, special: 'club', when: { days: [4,5], from: 21, to: 24 } },
+      { id: 'abj_wuse_gig', label: 'Sell at Wuse Market', mins: 180, earn: 3000, fx: { energy: -15 }, xp: { hustle: 3 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } }
+    ],
+    abj_jabi: [
+      { id: 'abj_jabi_film', label: 'Watch a film at Jabi Lake Mall', mins: 150, cost: 5000, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
+      { id: 'abj_jabi_boat', label: 'Boat ride on Jabi Lake', mins: 60, cost: 3000, fx: { fun: 25, stress: -10 }, when: { from: 9, to: 18 } },
+      { id: 'abj_jabi_gig', label: 'Wash cars by the lake', mins: 180, earn: 2800, fx: { energy: -15, hygiene: -10 }, xp: { hustle: 2 }, gig: true, when: { from: 8, to: 18 } }
+    ],
+    abj_asokoro: [
+      { id: 'abj_aso', label: 'Watch the sun set on Aso Rock', mins: 60, fx: { fun: 15, stress: -10 }, when: { from: 16, to: 19 } },
+      { id: 'abj_asokoro_gig', label: 'Security shift at an Asokoro gate', mins: 240, earn: 4000, fx: { energy: -18, fun: -8 }, xp: { fitness: 1 }, gig: true }
+    ],
+    abj_garki: [
+      { id: 'abj_eagle', label: 'Stroll round Eagle Square', mins: 45, fx: { fun: 10, stress: -5 }, when: { from: 7, to: 19 } },
+      { id: 'abj_garki_gig', label: 'Type documents at a business centre', mins: 120, earn: 3200, fx: { energy: -8 }, xp: { tech: 2 }, gig: true, when: { days: [0,1,2,3,4], from: 8, to: 18 } }
+    ],
+    abj_nyanya: [
+      { id: 'abj_nyanya_buka', label: 'Eat at a Nyanya buka', mins: 30, cost: 1300, fx: { hunger: 45 } },
+      { id: 'abj_nyanya_gig', label: 'Load buses at Nyanya park', mins: 180, earn: 2600, fx: { energy: -20, hygiene: -12 }, xp: { hustle: 2 }, gig: true, when: { from: 5, to: 20 } }
+    ],
+    abj_airport: [
+      { id: 'abj_air_eat', label: 'Eat at the airport', mins: 45, cost: 6000, fx: { hunger: 50 } },
+      { id: 'abj_air_gig', label: 'Help travellers with bags', mins: 120, earn: 2500, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 6, to: 22 } }
+    ],
+    ph_airport: [
+      { id: 'ph_air_eat', label: 'Eat at the airport', mins: 45, cost: 5500, fx: { hunger: 50 } },
+      { id: 'ph_air_gig', label: 'Help travellers with bags', mins: 120, earn: 2400, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 6, to: 22 } }
+    ],
+    ph_choba: [
+      { id: 'ph_uniport_lib', label: 'Study at the Uniport library', mins: 120, cost: 300, fx: { energy: -10, fun: -5 }, xp: { tech: 4 }, when: { from: 8, to: 20 } },
+      { id: 'ph_choba_eat', label: 'Eat at a Choba student canteen', mins: 30, cost: 1200, fx: { hunger: 45 } },
+      { id: 'ph_choba_gig', label: 'Type projects for students', mins: 120, earn: 2200, fx: { energy: -8 }, xp: { tech: 2 }, gig: true, when: { from: 8, to: 22 } }
+    ],
+    ph_rumuokoro: [
+      { id: 'ph_pleasure', label: 'Relax at Pleasure Park', mins: 120, cost: 1000, fx: { fun: 25, social: 10, stress: -10 }, when: { from: 9, to: 19 } },
+      { id: 'ph_rumu_gig', label: 'Conduct buses at Rumuokoro park', mins: 180, earn: 2800, fx: { energy: -18, hygiene: -10 }, xp: { hustle: 2 }, gig: true, when: { from: 5, to: 21 } }
+    ],
+    ph_gra: [
+      { id: 'ph_night', label: 'Night out in GRA', mins: 240, cost: 12000, fx: { fun: 55, social: 40, energy: -35, hygiene: -15 }, special: 'club', when: { days: [4,5], from: 21, to: 24 } },
+      { id: 'ph_gra_film', label: 'Watch a film at the PH mall', mins: 150, cost: 4500, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
+      { id: 'ph_gra_gig', label: 'Valet parking in GRA', mins: 180, earn: 3500, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 17, to: 24 } }
+    ],
+    ph_transamadi: [
+      { id: 'ph_canteen', label: 'Eat at a yard canteen', mins: 30, cost: 1500, fx: { hunger: 45 } },
+      { id: 'ph_yard_gig', label: 'Day labour at a Trans-Amadi yard', mins: 300, earn: 4500, fx: { energy: -30, hygiene: -15 }, xp: { craft: 2, fitness: 1 }, gig: true, when: { days: [0,1,2,3,4,5], from: 6, to: 15 } }
+    ],
+    ph_dline: [
+      { id: 'ph_mile1_food', label: 'Buy foodstuff at Mile 1 (7 meals)', mins: 60, cost: 6000, special: 'pantry7', when: { from: 7, to: 19 } },
+      { id: 'ph_mile1_gig', label: 'Carry loads at Mile 1 market', mins: 180, earn: 2500, fx: { energy: -20, hygiene: -12 }, xp: { hustle: 2, fitness: 1 }, gig: true, when: { from: 7, to: 18 } }
+    ],
+    ph_oldgra: [
+      { id: 'ph_bole', label: 'Eat bole and fish', mins: 45, cost: 2500, fx: { hunger: 50, fun: 10 } },
+      { id: 'ph_isaac', label: 'Walk in Isaac Boro Park', mins: 60, fx: { fun: 12, stress: -8 }, when: { from: 7, to: 19 } },
+      { id: 'ph_oldgra_gig', label: 'Run errands in Old GRA', mins: 150, earn: 2700, fx: { energy: -12 }, xp: { hustle: 2 }, gig: true, when: { from: 8, to: 19 } }
+    ],
+    ph_borokiri: [
+      { id: 'ph_waterfront', label: 'Watch the boats at the waterfront', mins: 60, fx: { fun: 15, stress: -8 }, when: { from: 6, to: 19 } },
+      { id: 'ph_fish_gig', label: 'Help fishermen land the catch', mins: 180, earn: 2600, fx: { energy: -20, hygiene: -15 }, xp: { fitness: 1, hustle: 1 }, gig: true, when: { from: 5, to: 12 } }
+    ],
     mushin: [
       { id: 'mushin_market', label: 'Buy foodstuff at the local market (7 meals)', mins: 45, cost: 4800, special: 'pantry7', when: { from: 7, to: 20 } },
       { id: 'mushin_mamaput', label: 'Eat at Mama Put', mins: 30, cost: 1200, fx: { hunger: 45 } },
@@ -297,7 +417,29 @@
     { id: 'lcc', icon: '🐒', name: 'Lekki Conservation Centre', type: 'outdoors', glyph: 'tree', district: 'lekki', x: 26.6, y: 24.2, acts: ['lekki_lcc'], text: 'Monkeys, mangroves and a long canopy walkway.' },
     { id: 'lekki_gym', icon: '🏋️', name: 'Lekki gym', type: 'outdoors', glyph: 'dumbbell', district: 'lekki', x: 28.7, y: 23.6, acts: ['lekki_gym'], text: 'Classes all day. Zainab trains here.' },
     { id: 'lekki_cafe', icon: '☕', name: 'Lekki cafés', type: 'food', glyph: 'bowl', district: 'lekki', x: 27.6, y: 23.7, acts: ['lekki_cafe', 'lekki_super', 'lekki_errands'], text: 'Brunch, a supermarket and errands for estate residents.' },
-    { id: 'ajah_market', icon: '🧺', name: 'Ajah market', type: 'food', glyph: 'basket', district: 'ajah', x: 38.6, y: 24.6, acts: ['ajah_market', 'ajah_spot', 'ajah_shop'], text: 'Foodstuff, a local spot and your cousin\'s shop.' }
+    { id: 'ajah_market', icon: '🧺', name: 'Ajah market', type: 'food', glyph: 'basket', district: 'ajah', x: 38.6, y: 24.6, acts: ['ajah_market', 'ajah_spot', 'ajah_shop'], text: 'Foodstuff, a local spot and your cousin\'s shop.' },
+    { id: 'abj_aso', icon: '⛰️', name: 'Aso Rock', type: 'outdoors', glyph: 'tree', district: 'abj_asokoro', x: 21.4, y: 9.4, acts: ['abj_aso'], text: 'The granite rock behind the seat of government. Best at sunset.' },
+    { id: 'abj_millennium', icon: '🌳', name: 'Millennium Park', type: 'outdoors', glyph: 'tree', district: 'abj_maitama', x: 15.4, y: 8.2, acts: ['abj_millennium'], text: 'Abuja\'s biggest park, with lawns, a river and picnics.' },
+    { id: 'abj_jabi_mall', icon: '🎬', name: 'Jabi Lake Mall', type: 'culture', glyph: 'film', district: 'abj_jabi', x: 7.2, y: 10.0, acts: ['abj_jabi_film'], text: 'Shops, a cinema and a terrace over the lake.' },
+    { id: 'abj_jabi_lake', icon: '🚣', name: 'Jabi Lake', type: 'outdoors', glyph: 'wave', district: 'abj_jabi', x: 5.0, y: 12.2, acts: ['abj_jabi_boat', 'abj_jabi_gig'], text: 'Boat rides, joggers and car washes by the water.' },
+    { id: 'abj_wuse_market', icon: '🧺', name: 'Wuse Market', type: 'food', glyph: 'basket', district: 'abj_wuse', x: 11.8, y: 12.2, acts: ['abj_wuse_gig'], text: 'The big market of the capital. Everything, all day.' },
+    { id: 'abj_wuse2', icon: '🍢', name: 'Wuse 2 strip', type: 'nightlife', glyph: 'glass', district: 'abj_wuse', x: 10.0, y: 10.2, acts: ['abj_suya', 'abj_night'], text: 'Suya spots, lounges and clubs. Busy Friday and Saturday.' },
+    { id: 'abj_eagle', icon: '🦅', name: 'Eagle Square', type: 'culture', glyph: 'dome', district: 'abj_garki', x: 17.4, y: 14.0, acts: ['abj_eagle'], text: 'The big parade ground by the National Assembly.' },
+    { id: 'abj_cbd', icon: '🏢', name: 'Central Business District', type: 'learn', glyph: 'laptop', district: 'abj_garki', x: 15.0, y: 16.0, acts: ['abj_garki_gig'], text: 'Ministries and business centres. The civil service hires here.' },
+    { id: 'abj_kubwa_mkt', icon: '🛍️', name: 'Kubwa market', type: 'food', glyph: 'basket', district: 'abj_kubwa', x: 4.8, y: 3.0, acts: ['abj_kubwa_food', 'abj_kubwa_gig'], text: 'Cheap foodstuff for the satellite towns.' },
+    { id: 'abj_nyanya_park', icon: '🚌', name: 'Nyanya motor park', type: 'transport', glyph: 'bus', district: 'abj_nyanya', x: 28.6, y: 15.2, acts: ['abj_nyanya_gig', 'abj_nyanya_buka'], text: 'Long-distance buses to Lagos and Port Harcourt.' },
+    { id: 'abj_airport_pl', icon: '✈️', name: 'Nnamdi Azikiwe Airport', type: 'transport', glyph: 'plane', district: 'abj_airport', x: 8.6, y: 23.0, acts: ['abj_air_eat', 'abj_air_gig'], text: 'Flights to Lagos and Port Harcourt.' },
+    { id: 'ph_airport_pl', icon: '✈️', name: 'Port Harcourt Airport', type: 'transport', glyph: 'plane', district: 'ph_airport', x: 6.6, y: 2.2, acts: ['ph_air_eat', 'ph_air_gig'], text: 'Omagwa. Flights to Lagos and Abuja.' },
+    { id: 'ph_uniport', icon: '🎓', name: 'University of Port Harcourt', type: 'learn', glyph: 'cap', district: 'ph_choba', x: 3.2, y: 7.2, acts: ['ph_uniport_lib', 'ph_choba_gig', 'ph_choba_eat'], text: 'Uniport campus, the library and student canteens.' },
+    { id: 'ph_pleasure', icon: '🎡', name: 'Pleasure Park', type: 'outdoors', glyph: 'tree', district: 'ph_rumuokoro', x: 13.8, y: 7.4, acts: ['ph_pleasure'], text: 'Rides, lawns and a lake for weekend families.' },
+    { id: 'ph_park', icon: '🚌', name: 'Rumuokoro motor park', type: 'transport', glyph: 'bus', district: 'ph_rumuokoro', x: 12.2, y: 5.4, acts: ['ph_rumu_gig'], text: 'Long-distance buses to Lagos and Abuja.' },
+    { id: 'ph_garden', icon: '🍸', name: 'Garden City nightlife', type: 'nightlife', glyph: 'glass', district: 'ph_gra', x: 12.8, y: 12.0, acts: ['ph_night', 'ph_gra_gig'], text: 'Lounges and clubs where the oil money comes out to play.' },
+    { id: 'ph_mall', icon: '🎬', name: 'Port Harcourt mall', type: 'culture', glyph: 'film', district: 'ph_gra', x: 11.0, y: 10.6, acts: ['ph_gra_film'], text: 'Cinema, food court and air-conditioning.' },
+    { id: 'ph_yards', icon: '🛢️', name: 'Trans-Amadi yards', type: 'learn', glyph: 'tool', district: 'ph_transamadi', x: 21.6, y: 12.0, acts: ['ph_yard_gig', 'ph_canteen'], text: 'Oil-service companies. Day labour and real careers.' },
+    { id: 'ph_mile1', icon: '🧺', name: 'Mile 1 market', type: 'food', glyph: 'basket', district: 'ph_dline', x: 9.6, y: 14.0, acts: ['ph_mile1_food', 'ph_mile1_gig'], text: 'The busiest market in Port Harcourt.' },
+    { id: 'ph_bole', icon: '🐟', name: 'Bole and fish spot', type: 'food', glyph: 'bowl', district: 'ph_oldgra', x: 13.4, y: 15.8, acts: ['ph_bole'], text: 'Roasted plantain and fish with pepper sauce. A PH classic.' },
+    { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
+    { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' }
   ];
 
   // Interiors: floor size (in furniture tiles) for each kind of home.
@@ -431,7 +573,9 @@
   // Big names painted on the ground: [text, x, y, size in km].
   var AREA_LABELS = [
     ['MAINLAND', 6.5, 12.5, 1.2], ['THE ISLAND', 15.0, 25.6, 0.8], ['IKOYI', 20.6, 22.6, 0.55], ['BANANA ISLAND', 23.6, 21.2, 0.45],
-    ['LEKKI', 33.0, 24.8, 0.9], ['MAINLAND ESTATE', 18.0, 3.7, 0.55], ['AIRPORT', 6.4, 1.9, 0.5]
+    ['LEKKI', 33.0, 24.8, 0.9], ['MAINLAND ESTATE', 18.0, 3.7, 0.55], ['AIRPORT', 6.4, 1.9, 0.5],
+    ['ABUJA', 19.0, 20.5, 1.2, 'abuja'], ['JABI LAKE', 6.6, 13.6, 0.45, 'abuja'], ['ASO ROCK', 22.6, 7.6, 0.5, 'abuja'], ['AIRPORT', 6.2, 25.6, 0.5, 'abuja'],
+    ['PORT HARCOURT', 17.0, 6.0, 1.0, 'ph'], ['BONNY RIVER', 15.0, 23.4, 0.7, 'ph'], ['AIRPORT', 4.2, -0.2, 0.5, 'ph']
   ];
 
   // Ad boards at high-traffic spots. Players rent them with in-game naira.
@@ -583,7 +727,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

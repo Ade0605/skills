@@ -481,6 +481,7 @@
 
   function strip() {
     var e = S.econ, chips = [];
+    if (L.cityOf(S) !== 'lagos' || L.districtCity(L.homeDef(S).district) !== 'lagos') chips.push('<span class="chip">📍 ' + esc(D.CITIES[L.cityOf(S)].name) + '</span>');
     chips.push('<span class="chip' + (S.power ? '' : ' off') + '">' + (S.power ? 'Light: on' : 'NEPA took light') + '</span>');
     if (e.fuelDays) chips.push('<span class="chip off">Fuel scarcity · ' + e.fuelDays + 'd</span>');
     if (e.flood) chips.push('<span class="chip off">Flooding on the Island</span>');
@@ -537,11 +538,11 @@
     else if (S.econ.flood) banner = 'Flooding on the Island today';
     else if (L.isDecember(S)) banner = 'Detty December: prices up, parties everywhere';
     return {
-      loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
+      city: L.cityOf(S), loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
       flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others,
       clock: L.clockLabel(S), banner: banner,
-      places: ui.placeCat === 'boards' || ui.placeCat === 'homes' ? [] : D.PLACES.filter(function (p) { return !ui.placeCat || p.type === ui.placeCat; }), place: ui.place,
+      places: ui.placeCat === 'boards' || ui.placeCat === 'homes' || ui.placeCat === 'cities' ? [] : D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && (!ui.placeCat || p.type === ui.placeCat); }), place: ui.place,
       homeId: S.home, homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
       myPlot: L.myPlot(S), plotSel: ui.plotSel, plotOwners: plotOwners(),
       boards: boardAdsMap(), board: ui.board, gems: gemsLeft(),
@@ -976,25 +977,40 @@
     playground.update(sceneFor());
   }
 
+  // Fly or take the bus to another city.
+  function citiesView() {
+    var here = L.cityOf(S), html = '<div class="section cities"><h3>✈️ Other cities</h3><p class="note">You are in ' + esc(D.CITIES[here].name) + '. Flights leave from ' + esc(D.DISTRICTS[D.CITIES[here].airport].name) + '; buses from ' + esc(D.DISTRICTS[D.CITIES[here].park].name) + ' (daytime only). Your home and rent stay where they are; you can move house to another city from its Homes list.</p>';
+    Object.keys(D.CITIES).filter(function (c) { return c !== here; }).forEach(function (c) {
+      var opts = L.intercityOptions(S, c);
+      html += '<div class="city-card"><h4>' + esc(D.CITIES[c].name) + '</h4><div class="list">' + opts.map(function (o) {
+        var at = S.loc === o.from;
+        return '<div class="item"><div><h3>' + (o.mode === 'flight' ? '✈️ ' : '🚌 ') + esc(o.name) + '</h3><div class="meta"><span>' + dur(o.mins) + '</span><span class="cost num">' + (o.cost ? N(o.cost) : 'Free') + '</span>' + (o.disabled ? '<span class="why">' + esc(o.disabled) + '</span>' : '') + '</div></div>' +
+          (o.disabled && !at ? '<button class="btn sm ghost" id="go-' + c + '-' + o.mode + '" data-tripto="' + o.from + '">Go to ' + esc(D.DISTRICTS[o.from].name) + '</button>' : '<button class="btn sm go" id="fly-' + c + '-' + o.mode + '" data-fly="' + c + ':' + o.mode + '"' + (o.disabled ? ' disabled' : '') + '>Go</button>') + '</div>';
+      }).join('') + '</div></div>';
+    });
+    return html + '</div>';
+  }
   function placeFilters() {
     var cats = Object.keys(D.PLACE_TYPES);
     var html = '<div class="pg-chips" role="group" aria-label="Show places"><span class="label">Places</span>' +
       '<button type="button" class="pg-chip' + (!ui.placeCat ? ' sel' : '') + '" id="pc-all" data-placecat="">All</button>' +
       cats.map(function (c) { return '<button type="button" class="pg-chip' + (ui.placeCat === c ? ' sel' : '') + '" id="pc-' + c + '" data-placecat="' + c + '"><i class="sw" style="background:' + D.PLACE_TYPES[c].color + '"></i>' + esc(D.PLACE_TYPES[c].name) + '</button>'; }).join('') +
-      '<button type="button" class="pg-chip' + (ui.placeCat === 'boards' ? ' sel' : '') + '" id="pc-boards" data-placecat="boards">📣 Billboards</button>' +
-      '<button type="button" class="pg-chip' + (ui.placeCat === 'homes' ? ' sel' : '') + '" id="pc-homes" data-placecat="homes">🏠 Homes</button></div>';
+      (L.cityOf(S) === 'lagos' ? '<button type="button" class="pg-chip' + (ui.placeCat === 'boards' ? ' sel' : '') + '" id="pc-boards" data-placecat="boards">📣 Billboards</button>' : '') +
+      '<button type="button" class="pg-chip' + (ui.placeCat === 'homes' ? ' sel' : '') + '" id="pc-homes" data-placecat="homes">🏠 Homes</button>' +
+      '<button type="button" class="pg-chip' + (ui.placeCat === 'cities' ? ' sel' : '') + '" id="pc-cities" data-placecat="cities">✈️ Cities</button></div>';
+    if (ui.placeCat === 'cities') return html + citiesView();
     if (ui.placeCat === 'homes') {
-      html += '<div class="pg-chips">' + marketHomes().map(function (k) {
+      html += '<div class="pg-chips">' + marketHomes().filter(function (k) { return L.districtCity(D.HOMES[k].district) === L.cityOf(S); }).map(function (k) {
         var h = D.HOMES[k];
         return '<button type="button" class="pg-chip' + (ui.homeSel === k ? ' sel' : '') + (S.home === k ? ' here' : '') + '" id="hm-' + k + '" data-homesel="' + k + '">' + esc(h.name) + ' <span class="num">· ' + N(L.price(S, h.rent)) + '/wk</span></button>';
-      }).join('') + '<button type="button" class="pg-chip" id="hm-estate" data-plotsel="' + (L.myPlot(S) != null ? L.myPlot(S) : firstFreePlot()) + '">🏡 ' + esc(D.ESTATE.name) + ' plots</button></div>';
+      }).join('') + (L.cityOf(S) === 'lagos' ? '<button type="button" class="pg-chip" id="hm-estate" data-plotsel="' + (L.myPlot(S) != null ? L.myPlot(S) : firstFreePlot()) + '">🏡 ' + esc(D.ESTATE.name) + ' plots</button>' : '') + '</div>';
     } else if (ui.placeCat === 'boards') {
       html += '<div class="pg-chips">' + D.BILLBOARDS.map(function (b) {
         var n = paidAds(b.id).length + sponsoredAds(b.id).length;
         return '<button type="button" class="pg-chip' + (ui.board === b.id ? ' sel' : '') + '" id="bb-' + b.id + '" data-boardsel="' + b.id + '">' + esc(b.name) + (n ? ' <span class="onair">' + n + '</span>' : '') + '</button>';
       }).join('') + '</div>';
     } else if (ui.placeCat) {
-      html += '<div class="pg-chips">' + D.PLACES.filter(function (p) { return p.type === ui.placeCat; }).map(function (p) {
+      html += '<div class="pg-chips">' + D.PLACES.filter(function (p) { return p.type === ui.placeCat && L.districtCity(p.district) === L.cityOf(S); }).map(function (p) {
         return '<button type="button" class="pg-chip' + (ui.place === p.id ? ' sel' : '') + '" id="pl-' + p.id + '" data-place="' + p.id + '">' + (p.icon || '') + ' ' + esc(p.name) + '</button>';
       }).join('') + '</div>';
     }
@@ -1003,7 +1019,7 @@
 
   function mapBlock() {
     var d = D.DISTRICTS[S.loc];
-    var chips = '<div class="pg-chips" role="group" aria-label="Districts">' + Object.keys(D.DISTRICTS).map(function (k) {
+    var chips = '<div class="pg-chips" role="group" aria-label="Districts">' + Object.keys(D.DISTRICTS).filter(function (k) { return L.districtCity(k) === L.cityOf(S); }).map(function (k) {
       var here = k === S.loc, sel = k === ui.sel;
       return '<button type="button" class="pg-chip' + (here ? ' here' : '') + (sel ? ' sel' : '') + '" id="go-' + k + '" data-go="' + k + '"' + (here ? ' aria-current="true"' : '') + '>' + esc(D.DISTRICTS[k].name) +
         (online.peers[k] ? ' <span class="num">· ' + online.peers[k] + '</span>' : '') + '</button>';
@@ -1388,7 +1404,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1471,6 +1487,7 @@
     if (ds.tripto) { ui.sel = ds.tripto; render(); return; }
     if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
+    if (ds.fly) { var fp = ds.fly.split(':'); run(function () { var r = L.intercity(S, fp[0], fp[1]); if (r.ok) { ui.sel = null; ui.place = null; ui.placeCat = null; } return r; }, 'travel'); return; }
     if (ds.gem) { var gid = gemToday(), gn = +ds.gem; run(function () { return L.collectGem(S, gid, gn); }); return; }
     if (ds.picsubmit) {
       var draft = ui.picDraft, bid = ds.picsubmit, pl = ui.ad.plan || 'day';

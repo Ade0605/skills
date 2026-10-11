@@ -407,3 +407,5 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 /* Daily gem hunt */
 .gem-here { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; background: color-mix(in srgb, #58a6ff 14%, var(--surface)); border: 1px solid color-mix(in srgb, #58a6ff 45%, var(--line)); border-radius: 14px; padding: 10px 12px; margin: 8px 0; }
 .gem-card h3 .muted { font-weight: 500; font-size: 13px; }
+.city-card { margin-top: 10px; }
+.city-card h4 { margin: 6px 0; font-size: 15px; }

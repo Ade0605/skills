@@ -58,6 +58,7 @@
     viral:       'Viral: your content blew up',
     detty:       'Survived Detty December',
     promoted:    'Promoted at work',
+    traveller:   'Travelled to another city',
     gems:        'Found all five of a day\'s gems',
     debt_free:   'Debt free: cleared every loan',
     top:         'Top of the ladder in a career',
@@ -169,7 +170,7 @@
     if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
-    if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car)/.test(m) || /^Car maintenance/.test(m)) return 'transport';
+    if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^Car maintenance/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
     if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill/i.test(m)) return 'savings';
@@ -878,6 +879,50 @@
 
   /* ---------- travel ---------- */
 
+  /* ---------- cities ---------- */
+  function districtCity(k) { return (D.DISTRICTS[k] && D.DISTRICTS[k].city) || 'lagos'; }
+  function cityOf(s) { return districtCity(s.loc); }
+  function intercityOptions(s, city) {
+    var here = cityOf(s), C = D.CITIES[city];
+    if (!C) return [];
+    if (city === here) return [];
+    var jet = (s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === 'jet'; });
+    var F = D.INTERCITY.flight, B = D.INTERCITY.bus, from = D.CITIES[here], h = hour(s);
+    var fl = { mode: 'flight', name: jet ? 'Your private jet' : F.name, mins: jet ? 120 : F.mins, cost: jet ? 0 : price(s, F.fare), from: from.airport, to: C.airport };
+    var bus = { mode: 'bus', name: B.name, mins: B.mins[here + '-' + city], cost: price(s, B.fare), from: from.park, to: C.park };
+    [fl, bus].forEach(function (o) {
+      if (s.loc !== o.from) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name;
+      else if (o.mode === 'bus' && (h >= 20 || h < 5)) o.disabled = 'No night buses: the roads are not safe after dark';
+      else if (s.pending.length) o.disabled = 'Decide on the open event first';
+      else if (s.over) o.disabled = 'This Weekly Lagos is over';
+      else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost);
+    });
+    return [fl, bus];
+  }
+  function intercity(s, city, mode) {
+    var o = intercityOptions(s, city).filter(function (x) { return x.mode === mode; })[0];
+    if (!o) return fail(D.CITIES[city] ? 'You are already in ' + D.CITIES[city].name + '.' : 'Unknown city.');
+    if (o.disabled) return fail(o.disabled);
+    s.alerts = [];
+    if (o.cost && !pay(s, o.cost, o.name + ' to ' + D.CITIES[city].name)) return fail('Not enough for the fare.');
+    var mins = o.mins, msg;
+    if (mode === 'bus') {
+      var r = rand(s);
+      if (r < 0.15) { mins += 180; msg = 'A breakdown on the expressway added three hours.'; }
+      else if (r < 0.25) { payPartial(s, price(s, 2000), 'Checkpoint "settlement"'); msg = 'Checkpoints all the way. You "settled" one of them.'; }
+      advance(s, mins);
+      applyFx(s, { energy: -25, hygiene: -25, stress: 12, hunger: -20 });
+    } else {
+      advance(s, mins);
+      applyFx(s, { energy: -10, stress: 4 });
+    }
+    s.loc = o.to;
+    s.stats.trips++;
+    unlock(s, 'traveller');
+    log(s, 'You arrived in ' + D.CITIES[city].name + ' (' + D.DISTRICTS[o.to].name + ').', 'good');
+    return finish(s, ok('Welcome to ' + D.CITIES[city].name + '. ' + (msg || '')));
+  }
+
   function distance(a, b) {
     var A = D.DISTRICTS[a], B = D.DISTRICTS[b];
     return Math.round(Math.hypot(A.x - B.x, A.y - B.y) * 1.3 * 10) / 10;
@@ -893,6 +938,7 @@
   function travelOptions(s, dest) {
     var from = s.loc;
     if (from === dest) return [];
+    if (districtCity(from) !== districtCity(dest)) return Object.keys(D.MODES).map(function (id) { return { mode: id, name: D.MODES[id].name, km: 0, mins: 0, cost: 0, disabled: 'That is in ' + D.CITIES[districtCity(dest)].name + '. Fly or take a bus.' }; });
     var km = distance(from, dest);
     var crossing = D.DISTRICTS[from].side !== D.DISTRICTS[dest].side;
     var flood = s.econ.flood > 0 && (D.DISTRICTS[dest].side === 'island' || D.DISTRICTS[from].side === 'island');
@@ -1972,11 +2018,12 @@
       if (paid < bill) addDebt(s, bill - paid, 'Hospital bill');
     }
     advance(s, 360);
-    s.loc = 'island';
+    var hc = D.CITIES[cityOf(s)];
+    s.loc = hc.hospital;
     s.needs.hunger = Math.max(s.needs.hunger, 60);
     s.needs.energy = Math.max(s.needs.energy, 60);
     s.needs.stress = clamp(s.needs.stress + 15, 0, 100);
-    var msg = 'You collapsed from ' + why + ' and woke up in General Hospital, Lagos Island.';
+    var msg = 'You collapsed from ' + why + ' and woke up in ' + hc.hospitalName + '.';
     log(s, msg, 'bad');
     res.msg = (res.msg ? res.msg + ' ' : '') + msg;
     res.collapsed = true;
@@ -2054,7 +2101,7 @@
     if (welfare) return { kind: 'warn', text: 'You are broke and hungry. ' + welfare.label + '.', act: { type: 'act', id: welfare.id } };
     var best = null;
     Object.keys(D.PLACE_ACTIONS).forEach(function (d) {
-      if (d === s.loc) return;
+      if (d === s.loc || districtCity(d) !== cityOf(s)) return;
       D.PLACE_ACTIONS[d].forEach(function (a) {
         if (!(a.fx && a.fx.hunger >= 30) || a.special === 'welfare' || !inWindow(s, a.when)) return;
         var r = route(s, d, 'cheap');
@@ -2101,6 +2148,7 @@
     var best = null;
     Object.keys(D.CAREERS).forEach(function (cid) {
       var c = D.CAREERS[cid], connect = connectFor(s, cid);
+      if (districtCity(c.district) !== cityOf(s)) return;
       if (nearHome && ((s.job && s.job.id === cid) || distance(homeDistrict(s), c.district) > 6)) return;
       // Never talk someone out of a better-paid career just to shorten the commute.
       if (nearHome && s.job && c.pay[0] < D.CAREERS[s.job.id].pay[s.job.level] * 0.6) return;
@@ -2156,7 +2204,7 @@
     if (s.job && s.rentRate) {
       var jc = D.CAREERS[s.job.id], weekly = jc.pay[s.job.level] * s.econ.wage * jc.days.length;
       if (s.rentRate > weekly * 0.45 && s.cash + s.bank < s.rentRate * 6) {
-        var near = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && D.HOMES[k].rent * s.econ.infl <= weekly * 0.3; })
+        var near = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && districtCity(D.HOMES[k].district) === districtCity(jc.district) && D.HOMES[k].rent * s.econ.infl <= weekly * 0.3; })
           .sort(function (x, y) { return distance(D.HOMES[x].district, jc.district) - distance(D.HOMES[y].district, jc.district); })[0];
         if (near && near !== s.home) {
           var mc = moveInCost(s, near).total, canMove = !s.arrears && canAfford(s, mc);
@@ -2324,7 +2372,7 @@
     if (!GEM_ID.test(dayId)) return [];
     var h = 2166136261;
     for (var i = 0; i < dayId.length; i++) { h ^= dayId.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
-    var pool = D.PLACES.map(function (p) { return p.id; }), out = [];
+    var pool = D.PLACES.filter(function (p) { return (D.DISTRICTS[p.district].city || 'lagos') === 'lagos'; }).map(function (p) { return p.id; }), out = [];
     while (out.length < GEM_COUNT && pool.length) {
       h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h ^ (h >>> 13)) >>> 0;
       out.push(pool.splice(h % pool.length, 1)[0]);
@@ -2461,6 +2509,7 @@
     rentBoard: recorded('rb', rentBoard), boardRent: boardRent, boardQuote: boardQuote, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd, checkPictureAd: checkPictureAd, PIC_MAX: PIC_MAX,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
+    districtCity: districtCity, cityOf: cityOf, intercityOptions: intercityOptions, intercity: recorded('ic', intercity),
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,

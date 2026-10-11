@@ -10,7 +10,7 @@
 
   var D = root.LASGIDI_DATA;
   var TW = 26, TH = 13;          // iso tile size in world pixels (2:1)
-  var X0 = -2, X1 = 43, Y0 = -1, Y1 = 30;
+  var X0 = -2, X1 = 43, Y0 = -1, Y1 = 30, CITY = 'lagos';
 
   // Land, in km: the mainland, and the Island strip from Lagos Island to Ajah.
   // Everything else is water: the Lagoon between them, the harbour channel,
@@ -18,6 +18,14 @@
   var MAINLAND = [[-2, -1], [31, -1], [34, 2.5], [32, 5.6], [24, 6.4], [17.4, 6.6], [16.6, 10], [17.2, 14], [17, 17.8], [14.2, 19.4], [11.4, 20.6], [7, 21.2], [2, 20.8], [-2, 20]];
   var ISLAND = [[14.4, 21], [17.8, 19.9], [21.6, 19.8], [25.6, 21.4], [33, 22.4], [43, 22.6], [43, 26.6], [33, 26.9], [24, 26.9], [20.6, 27.1], [17.6, 26.4], [16, 24.2], [14.2, 22.6]];
   var CREEK = [[17.2, 23.1], [21.4, 22.6], [21.6, 23.3], [17.4, 23.8]]; // Five Cowries creek between the Island and VI
+  // Each city in its own frame: land polygons, water carved out of them, and the drawing box.
+  var GEO = {
+    lagos: { box: [-2, 43, -1, 30], land: [MAINLAND, ISLAND], water: [CREEK], label: [] },
+    abuja: { box: [-2, 34, -2, 28], land: [[[-2, -2], [34, -2], [34, 28], [-2, 28]]],
+      water: [[[4.6, 12.8], [6.4, 12.4], [8.8, 12.9], [9.4, 14.0], [8.2, 15.0], [5.6, 14.9], [4.4, 14.0]]], label: [['Jabi Lake', 6.9, 13.8]] },
+    ph: { box: [-2, 32, -2, 26], land: [[[-2, -2], [32, -2], [32, 8], [28, 12.5], [25, 17.5], [20.5, 21], [16.5, 21.6], [12, 21.2], [6, 19.8], [-2, 19]]],
+      water: [[[22.4, 13.6], [27.2, 12.6], [27.6, 13.4], [22.8, 14.6]]], label: [['Bonny River', 18, 24], ['Amadi Creek', 25.4, 14.6]] }
+  };
 
   // How each district builds: height range (px), density, footprint, palette.
   var STYLE = {
@@ -32,10 +40,28 @@
     yaba:     { h: [7, 26], dens: 0.72, r: 3.0, foot: [0.55, 0.75], roof: '#a8826a', wall: '#c9b29b' },
     surulere: { h: [5, 13], dens: 0.7, r: 3.0, foot: [0.55, 0.8], roof: '#9c6a4a', wall: '#cdb69c' },
     festac:   { h: [5, 7], dens: 0.6, r: 3.4, foot: [0.5, 0.62], roof: '#7c8f4a', wall: '#ddd3bf', rows: true },
-    ikorodu:  { h: [3, 6], dens: 0.42, r: 3.2, foot: [0.45, 0.65], roof: '#9a5b3b', wall: '#d2c2a8', trees: 0.3 }
+    ikorodu:  { h: [3, 6], dens: 0.42, r: 3.2, foot: [0.45, 0.65], roof: '#9a5b3b', wall: '#d2c2a8', trees: 0.3 },
+    abj_kubwa:   { h: [3, 7], dens: 0.6, r: 3.2, foot: [0.5, 0.7], roof: '#9a5b3b', wall: '#d8c9ad', trees: 0.15 },
+    abj_maitama: { h: [8, 20], dens: 0.4, r: 3.4, foot: [0.5, 0.7], roof: '#c9c2b2', wall: '#efe6d6', trees: 0.4 },
+    abj_wuse:    { h: [8, 30], dens: 0.75, r: 3.2, foot: [0.55, 0.75], roof: '#a8826a', wall: '#d6c7ad' },
+    abj_jabi:    { h: [6, 16], dens: 0.55, r: 3.0, foot: [0.5, 0.65], roof: '#b9643f', wall: '#e3d6c3', trees: 0.2 },
+    abj_asokoro: { h: [7, 14], dens: 0.35, r: 3.4, foot: [0.5, 0.7], roof: '#3d4a52', wall: '#f2ede4', trees: 0.45 },
+    abj_garki:   { h: [12, 60], dens: 0.65, r: 3.2, foot: [0.55, 0.75], roof: '#9fb3c4', wall: '#8fa2b3', glass: true },
+    abj_nyanya:  { h: [3, 7], dens: 0.85, r: 2.8, foot: [0.65, 0.9], roof: '#8f5a3c', wall: '#c8b79a', market: true },
+    abj_airport: { h: [3, 8], dens: 0.2, r: 2.4, foot: [0.6, 0.9], roof: '#b8b0a2', wall: '#d9d3c4' },
+    ph_airport:  { h: [3, 8], dens: 0.2, r: 2.4, foot: [0.6, 0.9], roof: '#b8b0a2', wall: '#d9d3c4' },
+    ph_choba:    { h: [4, 10], dens: 0.6, r: 3.0, foot: [0.5, 0.7], roof: '#9a5b3b', wall: '#d2c2a8', trees: 0.25 },
+    ph_rumuokoro:{ h: [3, 8], dens: 0.85, r: 2.8, foot: [0.65, 0.9], roof: '#3f7f9a', wall: '#c8b79a', market: true },
+    ph_gra:      { h: [8, 28], dens: 0.6, r: 3.2, foot: [0.55, 0.75], roof: '#b8b0a2', wall: '#958d7e', trees: 0.2 },
+    ph_transamadi:{ h: [6, 14], dens: 0.7, r: 3.2, foot: [0.75, 0.95], roof: '#7c8a8f', wall: '#a7a49c' },
+    ph_dline:    { h: [4, 10], dens: 0.9, r: 2.8, foot: [0.65, 0.9], roof: '#8f5a3c', wall: '#bfa58a' },
+    ph_oldgra:   { h: [5, 12], dens: 0.6, r: 3.0, foot: [0.55, 0.8], roof: '#9c6a4a', wall: '#cdb69c', trees: 0.3 },
+    ph_borokiri: { h: [4, 9], dens: 0.75, r: 2.6, foot: [0.6, 0.85], roof: '#c7a27a', wall: '#a8835c' }
   };
   // Typical share of time each district has light.
-  var GRID = { vi: 0.9, ikoyi: 0.95, lekki: 0.75, island: 0.6, ikeja: 0.6, yaba: 0.5, surulere: 0.55, festac: 0.55, ajah: 0.6, mushin: 0.35, oshodi: 0.4, ikorodu: 0.4 };
+  var GRID = { vi: 0.9, ikoyi: 0.95, lekki: 0.75, island: 0.6, ikeja: 0.6, yaba: 0.5, surulere: 0.55, festac: 0.55, ajah: 0.6, mushin: 0.35, oshodi: 0.4, ikorodu: 0.4,
+    abj_kubwa: 0.5, abj_maitama: 0.92, abj_wuse: 0.75, abj_jabi: 0.75, abj_asokoro: 0.95, abj_garki: 0.85, abj_nyanya: 0.45, abj_airport: 0.8,
+    ph_airport: 0.7, ph_choba: 0.45, ph_rumuokoro: 0.45, ph_gra: 0.75, ph_transamadi: 0.65, ph_dline: 0.4, ph_oldgra: 0.55, ph_borokiri: 0.45 };
   var FERRIES = [['ikorodu', 'island'], ['ikorodu', 'ikoyi'], ['island', 'lekki'], ['ikoyi', 'lekki']];
 
   function inPoly(x, y, pts) {
@@ -46,10 +72,12 @@
     }
     return c;
   }
-  function isWater(x, y) {
-    if (inPoly(x, y, CREEK)) return true;
-    return !(inPoly(x, y, MAINLAND) || inPoly(x, y, ISLAND));
+  function isWater(x, y, city) {
+    var g = GEO[city || CITY];
+    for (var i = 0; i < g.water.length; i++) if (inPoly(x, y, g.water[i])) return true;
+    return !g.land.some(function (l) { return inPoly(x, y, l); });
   }
+  function cityOfDistrict(k) { return (D.DISTRICTS[k] && D.DISTRICTS[k].city) || 'lagos'; }
   // Stable pseudo-random from integers.
   function hash(a, b, c) {
     var h = (a * 374761393 + b * 668265263 + (c || 0) * 2147483647) | 0;
@@ -72,17 +100,41 @@
 
   /* ---------- world model (built once) ---------- */
 
-  var keys = Object.keys(D.DISTRICTS);
-  function nearestDistrict(x, y) {
+  var keys = [];
+  function nearestDistrict(x, y, city) {
     var best = null, bd = 1e9;
-    keys.forEach(function (k) {
+    (city ? Object.keys(D.DISTRICTS).filter(function (k) { return cityOfDistrict(k) === city; }) : keys).forEach(function (k) {
       var d = D.DISTRICTS[k], dd = Math.hypot(d.x - x, d.y - y);
       if (dd < bd) { bd = dd; best = k; }
     });
     return { k: best, d: bd };
   }
 
-  var tiles = [], buildings = [], trees = [];
+  // Housing estates: each home on the market gets its own plot of matching
+  // buildings. Clear the generic city off those plots first.
+  var MODELS = {
+    room:     { n: [3, 2], gap: 0.26, w: 0.2, d: 0.2, h: [4, 5], roof: ['#8f5a3c', '#7c8a8f'], wall: '#c9b49a' },
+    share:    { n: [2, 1], gap: 0.42, w: 0.32, d: 0.26, h: [12, 14], roof: ['#9aa3a8'], wall: '#d9cdb8' },
+    selfcon:  { n: [3, 1], gap: 0.3, w: 0.24, d: 0.24, h: [8, 9], roof: ['#a8826a'], wall: '#e0d3bd' },
+    miniflat: { n: [2, 2], gap: 0.32, w: 0.26, d: 0.24, h: [9, 11], roof: ['#7c8f4a'], wall: '#ddd3bf' },
+    flat2:    { n: [2, 1], gap: 0.42, w: 0.32, d: 0.3, h: [16, 18], roof: ['#b3a28a'], wall: '#d6c7ad' },
+    flat3:    { n: [3, 1], gap: 0.38, w: 0.3, d: 0.3, h: [20, 24], roof: ['#9fa8b0'], wall: '#cfc6b8' },
+    duplex:   { n: [2, 2], gap: 0.36, w: 0.26, d: 0.22, h: [8, 8], roof: ['#b44a3a', '#4b4f55'], wall: '#efe6d6', pitch: true, lawn: true },
+    luxury:   { n: [2, 1], gap: 0.46, w: 0.32, d: 0.32, h: [46, 58], roof: ['#9fb3c4'], wall: '#8fa2b3', glass: true },
+    mansion:  { n: [1, 1], gap: 0, w: 0.62, d: 0.44, h: [11, 11], roof: ['#3d4a52'], wall: '#f2ede4', pitch: true, lawn: true, pool: true }
+  };
+  function nearEstate(x, y) { return ESTATES.some(function (e) { return Math.hypot(e.x - x, e.y - y) < e.r + 0.2; }); }
+  var E = D.ESTATE, EX1 = E.x0 + E.cols * E.gap, EY1 = E.y0 + E.rows * E.gap;
+  function inMainlandEstate(x, y) { return CITY === 'lagos' && x > E.x0 - 0.3 && x < EX1 + 0.3 && y > E.y0 - 0.3 && y < EY1 + 0.3; }
+  function plotXY(n) { return { x: E.x0 + (n % E.cols) * E.gap + E.gap / 2, y: E.y0 + Math.floor(n / E.cols) * E.gap + E.gap / 2 }; }
+  function npcPlot(n) { var h = Math.imul((n + 17) * 2654435761, 1597334677) >>> 0; return (h % 100) < 38; }
+  var ESTATE_ROOFS = ['#3f8f55', '#2f7a63', '#4a9a5a', '#b44a3a', '#4b4f55', '#2f6fa0'];
+  var tiles = [], buildings = [], trees = [], ESTATES = [], LAND_BOX = null;
+  var MODELS_REF = null;
+  function buildWorld(city) {
+  CITY = city; var bx0 = GEO[city].box; X0 = bx0[0]; X1 = bx0[1]; Y0 = bx0[2]; Y1 = bx0[3];
+  keys = Object.keys(D.DISTRICTS).filter(function (k) { return cityOfDistrict(k) === city; });
+  tiles = []; buildings = []; trees = [];
   for (var ty = Y0; ty < Y1; ty++) {
     for (var tx = X0; tx < X1; tx++) {
       var cx = tx + 0.5, cy = ty + 0.5;
@@ -112,31 +164,12 @@
         wall: tower ? '#8fa2b3' : st.wall, glass: st.glass || tower, seed: hash(ix, iy, 17) });
     }
   }
-  // Housing estates: each home on the market gets its own plot of matching
-  // buildings. Clear the generic city off those plots first.
-  var MODELS = {
-    room:     { n: [3, 2], gap: 0.26, w: 0.2, d: 0.2, h: [4, 5], roof: ['#8f5a3c', '#7c8a8f'], wall: '#c9b49a' },
-    share:    { n: [2, 1], gap: 0.42, w: 0.32, d: 0.26, h: [12, 14], roof: ['#9aa3a8'], wall: '#d9cdb8' },
-    selfcon:  { n: [3, 1], gap: 0.3, w: 0.24, d: 0.24, h: [8, 9], roof: ['#a8826a'], wall: '#e0d3bd' },
-    miniflat: { n: [2, 2], gap: 0.32, w: 0.26, d: 0.24, h: [9, 11], roof: ['#7c8f4a'], wall: '#ddd3bf' },
-    flat2:    { n: [2, 1], gap: 0.42, w: 0.32, d: 0.3, h: [16, 18], roof: ['#b3a28a'], wall: '#d6c7ad' },
-    flat3:    { n: [3, 1], gap: 0.38, w: 0.3, d: 0.3, h: [20, 24], roof: ['#9fa8b0'], wall: '#cfc6b8' },
-    duplex:   { n: [2, 2], gap: 0.36, w: 0.26, d: 0.22, h: [8, 8], roof: ['#b44a3a', '#4b4f55'], wall: '#efe6d6', pitch: true, lawn: true },
-    luxury:   { n: [2, 1], gap: 0.46, w: 0.32, d: 0.32, h: [46, 58], roof: ['#9fb3c4'], wall: '#8fa2b3', glass: true },
-    mansion:  { n: [1, 1], gap: 0, w: 0.62, d: 0.44, h: [11, 11], roof: ['#3d4a52'], wall: '#f2ede4', pitch: true, lawn: true, pool: true }
-  };
-  var ESTATES = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && D.HOMES[k].x != null; }).map(function (k) {
+  ESTATES = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && D.HOMES[k].x != null && cityOfDistrict(D.HOMES[k].district) === city; }).map(function (k) {
     var h = D.HOMES[k], m = MODELS[h.type] || MODELS.room;
     return { id: k, x: h.x, y: h.y, type: h.type, k: h.district, m: m, r: Math.max(0.45, (Math.max(m.n[0], m.n[1]) * Math.max(m.gap, m.w)) / 2 + 0.25) };
   });
-  function nearEstate(x, y) { return ESTATES.some(function (e) { return Math.hypot(e.x - x, e.y - y) < e.r + 0.2; }); }
-  var E = D.ESTATE, EX1 = E.x0 + E.cols * E.gap, EY1 = E.y0 + E.rows * E.gap;
-  function inMainlandEstate(x, y) { return x > E.x0 - 0.3 && x < EX1 + 0.3 && y > E.y0 - 0.3 && y < EY1 + 0.3; }
   buildings = buildings.filter(function (b) { return !nearEstate(b.x, b.y) && !inMainlandEstate(b.x, b.y); });
   trees = trees.filter(function (t) { return !nearEstate(t.x, t.y) && !inMainlandEstate(t.x, t.y); });
-  function plotXY(n) { return { x: E.x0 + (n % E.cols) * E.gap + E.gap / 2, y: E.y0 + Math.floor(n / E.cols) * E.gap + E.gap / 2 }; }
-  function npcPlot(n) { var h = Math.imul((n + 17) * 2654435761, 1597334677) >>> 0; return (h % 100) < 38; }
-  var ESTATE_ROOFS = ['#3f8f55', '#2f7a63', '#4a9a5a', '#b44a3a', '#4b4f55', '#2f6fa0'];
   ESTATES.forEach(function (e, ei) {
     var m = e.m, nx = m.n[0], ny = m.n[1];
     for (var i = 0; i < nx; i++) for (var j = 0; j < ny; j++) {
@@ -148,7 +181,7 @@
   buildings.sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
   trees.sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
 
-  var LAND_BOX = { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9 };
+  LAND_BOX = { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9 };
   tiles.forEach(function (t) {
     [[t.x, t.y], [t.x + 1, t.y], [t.x, t.y + 1], [t.x + 1, t.y + 1]].forEach(function (c) {
       var p = iso(c[0], c[1]);
@@ -156,6 +189,9 @@
       LAND_BOX.minY = Math.min(LAND_BOX.minY, p.y); LAND_BOX.maxY = Math.max(LAND_BOX.maxY, p.y);
     });
   });
+
+  }
+  buildWorld('lagos');
 
   // Landmarks drawn into the static layer.
   var RUNWAY = [[3.2, 0.6], [9.6, 0.2], [9.8, 1.0], [3.4, 1.4]];
@@ -206,10 +242,15 @@
     var HOME_ICON = { room: '🛏️', share: '👥', selfcon: '🚪', miniflat: '🏠', flat2: '🏢', flat3: '🏢', duplex: '🏡', luxury: '🌆', mansion: '🏰' };
 
     // Vehicles: danfos on roads, ferries on the lagoon.
-    D.ROADS.forEach(function (r, i) {
-      for (var n = 0; n < 2; n++) vehicles.push({ a: r[0], b: r[1], t: hash(i, n, 21), dir: n ? -1 : 1, kind: hash(i, n, 22) < 0.7 ? 'danfo' : 'car' });
-    });
-    FERRIES.forEach(function (r, i) { boats.push({ a: r[0], b: r[1], t: hash(i, 3, 23), dir: 1 }); });
+    function cityRoads() { return D.ROADS.filter(function (r) { return cityOfDistrict(r[0]) === CITY; }); }
+    function rebuildTraffic() {
+      vehicles = []; boats = [];
+      cityRoads().forEach(function (r, i) {
+        for (var n = 0; n < 2; n++) vehicles.push({ a: r[0], b: r[1], t: hash(i, n, 21), dir: n ? -1 : 1, kind: hash(i, n, 22) < 0.7 ? 'danfo' : 'car' });
+      });
+      if (CITY === 'lagos') FERRIES.forEach(function (r, i) { boats.push({ a: r[0], b: r[1], t: hash(i, 3, 23), dir: 1 }); });
+    }
+    rebuildTraffic();
 
     function readTheme() {
       var cs = getComputedStyle(document.documentElement);
@@ -284,7 +325,7 @@
     function drawStatic() {
       var night = nightLevel(scene.hour, scene.minute);
       var power = powerMap();
-      var key = [W, H, dpr, cam.z, cam.px | 0, cam.py | 0, theme.dark, Math.round(night * 10), JSON.stringify(power), scene.flood ? 1 : 0, scene.myPlot, scene.plotSel, JSON.stringify(scene.plotOwners || {})].join('|');
+      var key = [CITY, W, H, dpr, cam.z, cam.px | 0, cam.py | 0, theme.dark, Math.round(night * 10), JSON.stringify(power), scene.flood ? 1 : 0, scene.myPlot, scene.plotSel, JSON.stringify(scene.plotOwners || {})].join('|');
       if (key === staticKey && staticLayer) return;
       staticKey = key;
       if (!staticLayer) staticLayer = document.createElement('canvas');
@@ -327,6 +368,7 @@
       });
 
       // Airport runway near Ikeja and the National Stadium in Surulere.
+      if (CITY === 'lagos') {
       g.beginPath();
       RUNWAY.forEach(function (p, i) { var q = toScreen(p[0], p[1], 0); if (i) g.lineTo(q.x, q.y); else g.moveTo(q.x, q.y); });
       g.closePath(); g.fillStyle = theme.road; g.fill();
@@ -337,6 +379,7 @@
       g.beginPath(); g.ellipse(sc.x, sc.y, STADIUM.rx * TW * s * 0.8, STADIUM.ry * TH * s * 0.8, 0, 0, Math.PI * 2);
       g.fillStyle = theme.dark ? '#3c6a3a' : '#6aa357'; g.fill();
       g.lineWidth = 3 * s; g.strokeStyle = theme.dark ? '#7b7f86' : '#d8d4c8'; g.stroke();
+      }
 
       // Estate plots: a paved pad, lawns for duplexes and the mansion, a pool.
       ESTATES.forEach(function (e) {
@@ -352,7 +395,7 @@
       });
 
       // Mainland Estate: a fenced grid of plots.
-      (function () {
+      if (CITY === 'lagos') (function () {
         var c = [[E.x0 - 0.15, E.y0 - 0.15], [EX1 + 0.15, E.y0 - 0.15], [EX1 + 0.15, EY1 + 0.15], [E.x0 - 0.15, EY1 + 0.15]];
         g.beginPath(); c.forEach(function (k, i) { var q = toScreen(k[0], k[1], 0); if (i) g.lineTo(q.x, q.y); else g.moveTo(q.x, q.y); }); g.closePath();
         g.fillStyle = theme.dark ? '#33402f' : '#d4ddb8'; g.fill();
@@ -368,7 +411,7 @@
 
       // Roads (bridges included) between districts.
       g.lineCap = 'round';
-      D.ROADS.forEach(function (r) {
+      cityRoads().forEach(function (r) {
         var a = D.DISTRICTS[r[0]], b = D.DISTRICTS[r[1]];
         var p = toScreen(a.x, a.y, 0), q = toScreen(b.x, b.y, 0);
         var bridge = a.side !== b.side;
@@ -380,7 +423,7 @@
       });
       // Ferry lanes.
       g.strokeStyle = theme.lagoon; g.lineWidth = Math.max(1, 1.2 * s); g.setLineDash([5 * s, 5 * s]);
-      FERRIES.forEach(function (r) {
+      (CITY === 'lagos' ? FERRIES : []).forEach(function (r) {
         var a = D.DISTRICTS[r[0]], b = D.DISTRICTS[r[1]], p = toScreen(a.x, a.y, 0), q = toScreen(b.x, b.y, 0);
         g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
       });
@@ -388,13 +431,13 @@
 
       // Road names along the roads; minor roads and streets appear as you zoom in.
       g.textAlign = 'center'; g.textBaseline = 'middle';
-      D.ROADS.forEach(function (r) {
+      cityRoads().forEach(function (r) {
         var name = D.ROAD_NAMES[r[0] + '-' + r[1]];
         if (!name || (cam.z < 1.4 && D.MAJOR_ROADS.indexOf(name) < 0)) return;
         var a = D.DISTRICTS[r[0]], b = D.DISTRICTS[r[1]];
         groundText(g, name, (a.x + b.x) / 2, (a.y + b.y) / 2, b.x - a.x, b.y - a.y, D.MAJOR_ROADS.indexOf(name) >= 0 ? 0.55 : 0.42, theme.dark ? 'rgba(235,235,225,.85)' : 'rgba(40,42,46,.85)', true);
       });
-      if (cam.z >= 1.6) {
+      if (cam.z >= 1.6 && CITY === 'lagos') {
         D.STREETS.forEach(function (st) {
           var p = toScreen(st.a[0], st.a[1], 0), q = toScreen(st.b[0], st.b[1], 0);
           g.strokeStyle = theme.road; g.lineWidth = Math.max(1.2, 1.6 * s); g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
@@ -402,7 +445,7 @@
         });
       }
       // Area names painted on the ground.
-      D.AREA_LABELS.forEach(function (l) {
+      D.AREA_LABELS.filter(function (l) { return (l[4] || 'lagos') === CITY; }).forEach(function (l) {
         groundText(g, l[0], l[1], l[2], 1, 0, l[3], theme.dark ? 'rgba(255,255,255,.3)' : 'rgba(30,60,30,.34)', false, true);
       });
 
@@ -410,13 +453,16 @@
       g.fillStyle = theme.dark ? 'rgba(160,210,214,.55)' : 'rgba(15,111,120,.55)';
       g.font = 'italic 600 ' + Math.max(9, 11 * Math.min(1.4, s)) + 'px ' + 'Atkinson Hyperlegible, sans-serif';
       g.textAlign = 'center';
-      var lg = toScreen(30, 13.5, 0); g.fillText('LAGOS  LAGOON', lg.x, lg.y);
-      var oc = toScreen(37, 29.6, 0); g.fillText('ATLANTIC  OCEAN', oc.x, oc.y);
-      var hb = toScreen(11.5, 24.5, 0); g.fillText('HARBOUR', hb.x, hb.y);
+      if (CITY === 'lagos') {
+        var lg = toScreen(30, 13.5, 0); g.fillText('LAGOS  LAGOON', lg.x, lg.y);
+        var oc = toScreen(37, 29.6, 0); g.fillText('ATLANTIC  OCEAN', oc.x, oc.y);
+        var hb = toScreen(11.5, 24.5, 0); g.fillText('HARBOUR', hb.x, hb.y);
+      }
+      GEO[CITY].label.forEach(function (l) { var q = toScreen(l[1], l[2], 0); g.fillText(l[0].toUpperCase(), q.x, q.y); });
 
       // Trees and buildings, back to front.
       var houses = [];
-      for (var pn = 0; pn < E.cols * E.rows; pn++) {
+      for (var pn = 0; CITY === 'lagos' && pn < E.cols * E.rows; pn++) {
         if (!(npcPlot(pn) || (scene.plotOwners && scene.plotOwners[pn]) || scene.myPlot === pn)) continue;
         var pp = plotXY(pn);
         houses.push({ x: pp.x, y: pp.y, w: E.gap * 0.5, dep: E.gap * 0.42, h: 7 + hash(pn, 3, 61) * 3, k: E.district, pitch: true,
@@ -569,7 +615,7 @@
         homeHits.push({ id: e.id, x: p.x, y: cy });
         if (mine || sel) labels.push({ place: { name: mine ? 'Your home · ' + D.HOMES[e.id].name : D.HOMES[e.id].name, type: 'services' }, top: { x: p.x, y: cy + 4 }, pri: mine ? 2 : 1, sel: sel, homeTag: true });
       });
-      if (scene.myPlot != null) {
+      if (scene.myPlot != null && CITY === 'lagos') {
         var mp = plotXY(scene.myPlot), mq = toScreen(mp.x, mp.y, 0), my = mq.y - 14 * s - er;
         ctx.beginPath(); ctx.arc(mq.x, my, er + 2, 0, Math.PI * 2); ctx.fillStyle = theme.danfo; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = theme.danfoInk; ctx.stroke();
         if (emojiOk) { ctx.font = Math.round(er * 1.15) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🏡', mq.x, my + er * 0.08); }
@@ -580,7 +626,7 @@
       // Billboards: a panel on two posts; paid ads rotate every 15 s.
       boardHits = [];
       var slot = Math.floor(Date.now() / 15000);
-      D.BILLBOARDS.forEach(function (b, bi) {
+      (CITY === 'lagos' ? D.BILLBOARDS : []).forEach(function (b, bi) {
         var ads = (scene.boards && scene.boards[b.id]) || [];
         if (!ads.length) return;
         var ad = ads[(slot + bi) % ads.length];
@@ -687,7 +733,7 @@
       // Today's hidden gems: a bobbing diamond over each place still to find.
       (scene.gems || []).forEach(function (g) {
         var pl = D.PLACES.filter(function (x) { return x.id === g.place; })[0];
-        if (!pl) return;
+        if (!pl || cityOfDistrict(pl.district) !== CITY) return;
         var p = toScreen(pl.x, pl.y, 0), bob = reduce ? 0 : Math.sin(clock / 380 + pl.x) * 2.5, gy = p.y - pr * 2 - 16 + bob, gr = Math.max(7, pr * 0.85);
         ctx.strokeStyle = '#2f6fd0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(p.x, gy + gr + 2); ctx.lineTo(p.x, p.y - pr * 2); ctx.stroke();
         ctx.beginPath(); ctx.arc(p.x, gy, gr + 3, 0, Math.PI * 2); ctx.fillStyle = '#2f6fd0'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
@@ -820,7 +866,7 @@
       var bestPlace = null, bp = Math.min(bd, 16);
       // Tap on the estate grid: work back from the screen to world km.
       var w = fromScreen(x, y);
-      if (!bestHome && bd > 14 && w.x > E.x0 && w.x < EX1 && w.y > E.y0 && w.y < EY1 && opts.onSelectPlot) {
+      if (!bestHome && bd > 14 && CITY === 'lagos' && w.x > E.x0 && w.x < EX1 && w.y > E.y0 && w.y < EY1 && opts.onSelectPlot) {
         var col = Math.floor((w.x - E.x0) / E.gap), row = Math.floor((w.y - E.y0) / E.gap);
         var hitPlace = placeHits.some(function (p) { return Math.hypot(p.x - x, p.y - y) < 14; });
         if (!hitPlace) { opts.onSelectPlot(row * E.cols + col); return; }
@@ -856,6 +902,7 @@
     return {
       el: wrap,
       update: function (next) {
+        if ((next.city || 'lagos') !== CITY) { buildWorld(next.city || 'lagos'); rebuildTraffic(); W = 0; cam = { z: 1, px: 0, py: 0 }; staticKey = ''; }
         scene = next;
         theme = readTheme();
         canvas.setAttribute('aria-label', 'Isometric map of Lagos. You are in ' + D.DISTRICTS[next.loc].name + ', ' + next.clock + '. Use the district buttons below to plan a trip.');
@@ -866,5 +913,5 @@
     };
   }
 
-  root.LasgidiPlayground = { create: create, isWater: isWater, nearestDistrict: nearestDistrict, ESTATES: ESTATES };
+  root.LasgidiPlayground = { create: create, isWater: isWater, nearestDistrict: nearestDistrict, ESTATES: ESTATES, GEO: GEO };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
