@@ -910,3 +910,25 @@ test('events: festivals appear only in their month, day and hours', () => {
   assert.ok(!f2 || f2.disabled, 'not in November');
   for (const [d, list] of Object.entries(D.PLACE_ACTIONS)) for (const a of list) if (a.event) assert.ok(D.PLACES.some(p => p.acts.includes(a.id)), a.id + ' is on a place card');
 });
+
+test('quests: checks flip, claims pay once, and the life still replays', () => {
+  const s = L.newGame({ seed: 45, origin: 'nepo', goal: 'freestyle' });
+  assert.deepEqual(L.activeQuests(s).map(q => q.id), ['save_100k', 'get_job', 'first_shift'], 'claimable first');
+  assert.equal(L.claimQuest(s, 'get_job').ok, false, 'not done yet');
+  assert.equal(L.claimQuest(s, 'nope').ok, false);
+  assert.ok(L.questDone(s, 'save_100k'), 'Nepo starts with ₦800k banked');
+  const before = s.cash + s.bank;
+  assert.ok(L.claimQuest(s, 'save_100k').ok);
+  assert.equal(s.cash + s.bank - before, L.price(s, D.QUESTS.find(q => q.id === 'save_100k').reward));
+  assert.equal(L.claimQuest(s, 'save_100k').ok, false, 'once');
+  assert.ok(!L.questDone(s, 'pantry'));
+  assert.ok(L.travel(s, 'mushin', L.travelOptions(s, 'mushin').find(o => !o.disabled).mode).ok);
+  if (Math.floor(s.t / 60) % 24 < 7) L.wait(s, 120);
+  assert.ok(L.doAction(s, 'mushin_market').ok);
+  assert.ok(L.questDone(s, 'pantry'));
+  assert.ok(L.claimQuest(s, 'pantry').ok);
+  assert.deepEqual(L.activeQuests(s).map(q => q.id), ['get_job', 'first_shift', 'gem']);
+  const r = L.replayLife(s.replay);
+  assert.equal(r.ledgerHash, s.ledgerHash);
+  assert.deepEqual(Object.keys(r.quests).sort(), ['pantry', 'save_100k']);
+});

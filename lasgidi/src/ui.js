@@ -1147,6 +1147,32 @@
     return html;
   }
 
+  function questChips() {
+    var qs = L.activeQuests(S);
+    if (!qs.length) return '';
+    return '<div class="quests" role="group" aria-label="Quests">' + qs.map(function (q) {
+      return '<button type="button" class="quest' + (q.done ? ' done' : '') + '" id="q-' + q.id + '" data-quest="' + q.id + '" title="' + esc(q.title + ': ' + (q.done ? 'claim ' + N(q.reward) : q.hint)) + '" aria-label="' + esc(q.title + '. ' + (q.done ? 'Claim ' + N(q.reward) : q.hint)) + '"><span class="q-ic">' + q.icon + '</span><span class="q-t"><b>' + esc(q.title) + '</b><small>' +
+        (q.done ? 'Claim ' + N(q.reward) : esc(q.hint)) + '</small></span></button>';
+    }).join('') + '</div>';
+  }
+  function questsView() {
+    var got = S.quests || {};
+    return '<div class="section"><h3>🎯 Quests</h3><p class="note">Small goals to get you started. Each pays once.</p><div class="list">' + D.QUESTS.map(function (q) {
+      var claimed = got[q.id] != null, done = L.questDone(S, q.id);
+      return '<div class="item"><div><h3>' + q.icon + ' ' + esc(q.title) + '</h3><div class="meta">' + (claimed ? '<span class="gain">Claimed</span>' : done ? '<span class="gain">Done</span>' : '<span>' + esc(q.hint) + '</span>') + '<span class="num">' + N(L.price(S, q.reward)) + '</span></div></div>' +
+        (claimed ? '' : '<button class="btn sm' + (done ? '' : ' ghost') + '" id="qa-' + q.id + '" data-quest="' + q.id + '">' + (done ? 'Claim' : 'Go') + '</button>') + '</div>';
+    }).join('') + '</div></div>';
+  }
+  var QUEST_APPS = { jobs: 1, gems: 1, bank: 1, events: 1, dealers: 1, travel: 1 };
+  function goQuest(id) {
+    var q = D.QUESTS.filter(function (x) { return x.id === id; })[0];
+    if (!q) return;
+    if (L.questDone(S, id)) { run(function () { return L.claimQuest(S, id); }); return; }
+    if (QUEST_APPS[q.go]) { ui.tab = 'phone'; ui.app = q.go; }
+    else ui.tab = q.go === 'business' ? 'money' : q.go;
+    render();
+  }
+
   function mapBlock() {
     var d = D.DISTRICTS[S.loc];
     var chips = '<div class="pg-chips" role="group" aria-label="Districts">' + Object.keys(D.DISTRICTS).filter(function (k) { return L.districtCity(k) === L.cityOf(S); }).map(function (k) {
@@ -1155,7 +1181,7 @@
         (online.peers[k] ? ' <span class="num">· ' + online.peers[k] + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     return '<div class="panel-h"><h2>' + esc(d.name) + '</h2><span class="label">' + (d.side === 'island' ? 'Island' : 'Mainland') + '</span></div>' +
-      '<div class="pg-slot"></div>' + placeFilters() + chips +
+      '<div class="pg-wrap">' + questChips() + '<div class="pg-slot"></div></div>' + placeFilters() + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
       '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
         : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : ui.homeSel ? homeView(ui.homeSel) : ui.plotSel != null ? plotView(ui.plotSel)
@@ -1449,7 +1475,7 @@
   function markRead() { try { localStorage.setItem(READ_KEY, JSON.stringify({ seed: S.seed, t: S.t })); } catch (e) {} }
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
-    ['messages', '💬', 'Messages'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['dealers', '🚗', 'Dealers'],
+    ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['travel', '✈️', 'Travel'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
@@ -1477,6 +1503,7 @@
     if (app) {
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
+      else if (app === 'quests') body = '<div class="panel-b">' + questsView() + '</div>';
       else if (app === 'bank') body = '<div class="panel-b">' + bankView() + '</div>';
       else if (app === 'dealers') body = '<div class="panel-b"><div class="section"><h3>Car dealers</h3>' + dealerView('Buy from the phone, or visit the Berger and Lekki dealers on the map.') + '</div></div>';
       else if (app === 'gems') body = '<div class="panel-b">' + gemCard() + '</div>';
@@ -1490,7 +1517,7 @@
     var unread = unreadCount(), id = gemToday(), found = L.gemsFound(S, id).length;
     var onNow = 0;
     Object.keys(D.PLACE_ACTIONS).forEach(function (d) { D.PLACE_ACTIONS[d].forEach(function (a) { if (a.event && L.districtCity(d) === L.cityOf(S) && (!a.when.months || a.when.months.indexOf(L.monthIndex(S)) >= 0) && L.inWindow(S, a.when)) onNow++; }); });
-    var badge = { messages: unread, gems: L.GEM_COUNT - found, events: onNow };
+    var badge = { quests: L.activeQuests(S, 99).filter(function (q) { return q.done; }).length, messages: unread, gems: L.GEM_COUNT - found, events: onNow };
     return '<div class="panel-h"><h2>📱 Phone</h2><span class="muted">' + esc(L.clockLabel(S)) + '</span></div><div class="panel-b"><div class="apps">' + APPS.map(function (x) {
       var n = badge[x[0]];
       return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';
@@ -1588,7 +1615,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1673,6 +1700,7 @@
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
     if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
     if (ds.tour) { setTour(+ds.tour); render(); return; }
+    if (ds.quest) { goQuest(ds.quest); return; }
     if (ds.wave) {
       var wid = ds.wave; if (!online.room) return;
       online.waved[wid] = Date.now();

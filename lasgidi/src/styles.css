@@ -436,3 +436,26 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   .needs.hud { grid-template-columns: 56px repeat(3, minmax(0, 1fr)); }
   .needs.hud .hud-face { grid-row: span 2; }
 }
+
+/* quest chips over the map */
+.pg-wrap { position: relative; }
+.quests { position: absolute; left: 8px; top: 8px; z-index: 2; display: grid; gap: 5px; max-width: min(240px, 62%); pointer-events: none; }
+.quest {
+  pointer-events: auto; display: flex; align-items: center; gap: 7px; text-align: left; cursor: pointer;
+  border: 1.5px solid var(--line); border-radius: 12px; padding: 4px 9px 4px 5px; color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 92%, transparent); box-shadow: 0 1px 3px rgb(0 0 0 / .2); font: inherit;
+}
+.quest .q-ic { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 50%; background: var(--sunk); font-size: 15px; }
+.quest .q-t { display: grid; min-width: 0; line-height: 1.2; }
+.quest b { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quest small { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quest.done { border-color: var(--danfo-ink); background: var(--danfo); color: var(--danfo-ink); }
+.quest.done small { color: var(--danfo-ink); font-weight: 700; }
+.quest.done .q-ic { background: #fff8; }
+@media (max-width: 600px) {
+  .quests { grid-auto-flow: column; justify-content: start; max-width: calc(100% - 60px); }
+  .quest { padding: 3px; border-radius: 999px; }
+  .quest .q-t { display: none; }
+  .quest:first-child { padding-right: 10px; }
+  .quest:first-child .q-t { display: grid; max-width: 170px; }
+}

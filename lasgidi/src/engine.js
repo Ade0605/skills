@@ -24,7 +24,7 @@
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 8;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 9;         // state shape; migrate() upgrades older saves
   // Game RULES version. A life plays by the rules it started under, so a
   // recorded life replays identically after later updates add new systems.
   // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race,
@@ -282,7 +282,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 },
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {},
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -702,6 +702,7 @@
       advance(s, a.mins);
       applyFx(s, a.fx);
     }
+    if (a.event) s.stats.events = (s.stats.events || 0) + 1;
     addXp(s, a.xp);
     if (a.xp && a.xp.fitness && outfitTags(s).gym) addXp(s, { fitness: 1 }); // gym kit
 
@@ -2073,6 +2074,7 @@
     if (!s.wardrobe) s.wardrobe = [];
     if (!s.outfit) s.outfit = {};
     if (!s.look) s.look = { skin: 2, hair: 0, shape: 1 };
+    if (!s.quests) s.quests = {};
     if (!s.rules) { s.rules = 5; s.partner = null; s.kids = []; s.babyPause = -1; if (s.replay) s.replay.rules = 5; }
     s.sv = SCHEMA;
     return s;
@@ -2431,6 +2433,44 @@
     return finish(s, ok('💎 You found a gem! +' + naira(prize) + '.'));
   }
 
+  /* ---------- starter quests ---------- */
+  var QUEST_CHECKS = {
+    get_job:     function (s) { return !!s.job; },
+    first_shift: function (s) { return s.stats.shifts > 0; },
+    pantry:      function (s) { return s.pantry >= 5; },
+    gem:         function (s) { return Object.keys(s.gems || {}).some(function (k) { return s.gems[k].got.length > 0; }); },
+    save_100k:   function (s) { return s.bank >= 100000; },
+    event:       function (s) { return (s.stats.events || 0) > 0; },
+    sleep_oba:   function (s) { return (s.items || []).some(function (it) { return it.id === 'king'; }); },
+    promoted:    function (s) { return !!s.ach.promoted; },
+    car:         function (s) { return !!s.car || (s.vehicles || []).length > 0; },
+    fly:         function (s) { return !!s.ach.traveller; },
+    business:    function (s) { return (s.businesses || []).length > 0; }
+  };
+  function questDef(id) { return D.QUESTS.filter(function (q) { return q.id === id; })[0]; }
+  function questDone(s, id) { var c = QUEST_CHECKS[id]; return !!(c && c(s)); }
+  function questReward(s, id) { var q = questDef(id); return q ? price(s, q.reward) : 0; }
+  function activeQuests(s, n) {
+    var got = s.quests || {};
+    var open = D.QUESTS.filter(function (q) { return got[q.id] == null; })
+      .map(function (q) { return { id: q.id, icon: q.icon, title: q.title, hint: q.hint, go: q.go, done: questDone(s, q.id), reward: questReward(s, q.id) }; });
+    // Ready-to-claim quests first, then the next ones in order.
+    return open.filter(function (q) { return q.done; }).concat(open.filter(function (q) { return !q.done; })).slice(0, n || 3);
+  }
+  function claimQuest(s, id) {
+    var q = questDef(id);
+    if (!q) return fail('No such quest.');
+    if (!s.quests) s.quests = {};
+    if (s.quests[id] != null) return fail('You already claimed that.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (!questDone(s, id)) return fail('Not done yet: ' + q.hint + '.');
+    var got = questReward(s, id);
+    s.alerts = [];
+    s.quests[id] = day(s);
+    earn(s, got, 'Quest: ' + q.title);
+    return finish(s, ok(q.icon + ' ' + q.title + ' done. +' + naira(got) + '.'));
+  }
+
   /* ---------- Weekly Lagos challenge ---------- */
 
   var CHALLENGE_ID = /^\d{4}-W\d{2}$/;
@@ -2537,6 +2577,7 @@
     rentBoard: recorded('rb', rentBoard), boardRent: boardRent, boardQuote: boardQuote, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd, checkPictureAd: checkPictureAd, PIC_MAX: PIC_MAX,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
+    claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity),
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,

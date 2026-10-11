@@ -37,6 +37,21 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // Starter quests, shown as chips on the map. check names a rule in engine questDone().
+  var QUESTS = [
+    { id: 'get_job',     icon: '💼', title: 'Get a job',             hint: 'Open Phone → Jobs',           reward: 3000,  go: 'jobs' },
+    { id: 'first_shift', icon: '⏰', title: 'Work your first shift', hint: 'Go to work in hours',          reward: 2000,  go: 'jobs' },
+    { id: 'pantry',      icon: '🛒', title: 'Stock your pantry',     hint: 'Buy foodstuff at a market',    reward: 1500,  go: 'do' },
+    { id: 'gem',         icon: '💎', title: 'Daily gem hunt',        hint: 'Phone → Gems',                 reward: 2000,  go: 'gems' },
+    { id: 'save_100k',   icon: '🏦', title: 'Save ₦100k in the bank', hint: 'Phone → Bank',                reward: 5000,  go: 'bank' },
+    { id: 'event',       icon: '🎉', title: 'Go to a festival',      hint: 'Phone → Events',               reward: 5000,  go: 'events' },
+    { id: 'sleep_oba',   icon: '👑', title: 'Sleep like Oba',        hint: 'Buy a king-size bed',          reward: 10000, go: 'home' },
+    { id: 'promoted',    icon: '📈', title: 'Get promoted',          hint: 'Keep working shifts',          reward: 10000, go: 'jobs' },
+    { id: 'car',         icon: '🚗', title: 'Buy your first car',    hint: 'Phone → Dealers',              reward: 15000, go: 'dealers' },
+    { id: 'fly',         icon: '✈️', title: 'Visit another city',    hint: 'Phone → Travel',               reward: 10000, go: 'travel' },
+    { id: 'business',    icon: '🏪', title: 'Build a business',      hint: 'Money tab → Businesses',       reward: 20000, go: 'business' }
+  ];
+
   var CITIES = {
     lagos: { name: 'Lagos', airport: 'ikeja', park: 'oshodi', hospital: 'island', hospitalName: 'General Hospital, Lagos Island' },
     abuja: { name: 'Abuja', airport: 'abj_airport', park: 'abj_nyanya', hospital: 'abj_garki', hospitalName: 'National Hospital, Garki' },
@@ -742,7 +757,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 
