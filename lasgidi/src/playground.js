@@ -163,6 +163,15 @@
 
   /* ---------- the playground ---------- */
 
+  // Picture ads: decode each validated data URL once and keep it.
+  var PICS = {};
+  function picImage(src) {
+    if (PICS[src]) return PICS[src];
+    var keys = Object.keys(PICS); if (keys.length > 40) delete PICS[keys[0]];
+    var im = new Image(); im.decoding = 'async'; im.src = src; PICS[src] = im;
+    return im;
+  }
+
   function create(opts) {
     var wrap = document.createElement('div');
     wrap.className = 'pg';
@@ -581,6 +590,14 @@
         ctx.strokeStyle = theme.dark ? '#9aa0a6' : '#4b4f55'; ctx.lineWidth = Math.max(1, 1.2 * k);
         ctx.beginPath(); ctx.moveTo(p.x - pw * 0.3, p.y); ctx.lineTo(p.x - pw * 0.3, y + ph); ctx.moveTo(p.x + pw * 0.3, p.y); ctx.lineTo(p.x + pw * 0.3, y + ph); ctx.stroke();
         ctx.fillStyle = theme.dark ? '#0b0c0d' : '#202226'; roundRect(ctx, x - 1.5, y - 1.5, pw + 3, ph + 3, 3); ctx.fill();
+        var pimg = ad.img ? picImage(ad.img) : null;
+        if (pimg && pimg.complete && pimg.naturalWidth) {
+          ctx.save(); roundRect(ctx, x, y, pw, ph, 2); ctx.clip(); ctx.drawImage(pimg, x, y, pw, ph); ctx.restore();
+          if (selB) { ctx.strokeStyle = theme.danfo; ctx.lineWidth = 2.5; roundRect(ctx, x - 3, y - 3, pw + 6, ph + 6, 4); ctx.stroke(); }
+          ctx.beginPath(); ctx.arc(x + pw - 3 * k, y + 3 * k, 1.8 * k, 0, Math.PI * 2); ctx.fillStyle = '#e5484d'; ctx.fill();
+          boardHits.push({ id: b.id, x: p.x, y: y + ph / 2, w: pw, h: ph + post });
+          return;
+        }
         ctx.fillStyle = ad.color.bg; roundRect(ctx, x, y, pw, ph, 2); ctx.fill();
         if (selB) { ctx.strokeStyle = theme.danfo; ctx.lineWidth = 2.5; roundRect(ctx, x - 3, y - 3, pw + 6, ph + 6, 4); ctx.stroke(); }
         ctx.textBaseline = 'middle';

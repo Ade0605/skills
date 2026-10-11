@@ -106,6 +106,7 @@
     // Live updates re-render at any moment, so keep what the viewer is typing.
     var kept = {};
     Array.prototype.forEach.call(app.querySelectorAll('input[id], textarea[id]:not([readonly])'), function (el) {
+      if (el.type === 'file' || el.type === 'checkbox') return; // browsers forbid setting a file input; checkboxes render from state
       if (el.type === 'radio') { if (el.checked) kept[el.id] = true; } else kept[el.id] = el.value;
     });
     var focusId = document.activeElement && document.activeElement.id;
@@ -131,7 +132,7 @@
    * Both light up only inside claude.ai; the game is complete without them.
    * No chat and no free text travel between players: presence carries a
    * district key, the board carries numbers. */
-  var online = { ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {} };
+  var online = { ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '' };
 
   // Each player's row is a small summary at fame/<id>; the replay log lives
   // beside it at fame/<id>/proof/log. Load every summary (no ordering: a
@@ -182,12 +183,35 @@
     });
   }
 
+  // Picture-ad review: a player's own submission, and (for editors) the queue.
+  var myReviewOn = false, reviewsOn = false;
+  function subscribeMyReview() {
+    if (myReviewOn || !online.me) return;
+    window.claude.use('db').then(function (db) {
+      if (!db || myReviewOn) return; myReviewOn = true;
+      try { db.doc('adreview/' + online.me).onSnapshot(function (d) { online.myReview = d && d.exists ? d.data() : null; scheduleRender(); }, function () { online.myReview = null; }); } catch (e) { online.myReview = null; }
+    });
+  }
+  function subscribeReviews() {
+    if (reviewsOn) return;
+    window.claude.use('db').then(function (db) {
+      if (!db || reviewsOn) return; reviewsOn = true;
+      try { db.collection('adreview').limit(100).onSnapshot(function (snap) {
+        online.adreview = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }).filter(function (r) { return r.raw && !r.raw.status; });
+        var ids = online.adreview.map(function (r) { return r.id; });
+        if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+        scheduleRender();
+      }, function () { online.adreview = []; }); } catch (e) { online.adreview = []; }
+    });
+  }
+
   function initOnline() {
     if (!window.claude || typeof window.claude.use !== 'function') return;
     window.claude.use('user').then(function (u) {
       if (!u) return;
       online.user = u;
-      u.id().then(function (id) { online.me = id; scheduleRender(); });
+      u.id().then(function (id) { online.me = id; scheduleRender(); subscribeMyReview(); });
+      if (typeof u.canEdit === 'function') u.canEdit().then(function (c) { online.canEdit = !!c; scheduleRender(); if (c) subscribeReviews(); }, function () {});
       u.can('data.write').then(function (c) { online.canWrite = c; scheduleRender(); });
     });
     window.claude.use('db').then(function (db) {
@@ -213,6 +237,16 @@
       }, function () { online.sponsored = []; });
     });
     window.claude.use('db').then(function (db) { if (db) subscribeWeekly(); });
+    window.claude.use('db').then(function (db) {
+      if (!db) return;
+      try { db.collection('adimg').limit(200).onSnapshot(function (snap) {
+        online.adimg = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); scheduleRender();
+      }, function () { online.adimg = []; });
+      db.collection('adpaid').limit(500).onSnapshot(function (snap) {
+        var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.adpaid = m; scheduleRender();
+      }, function () { online.adpaid = {}; }); } catch (e) { online.adimg = []; online.adpaid = {}; }
+      subscribeMyReview(); if (online.canEdit) subscribeReviews();
+    });
     window.claude.use('db').then(function (db) {
       if (!db) return;
       db.collection('residents').limit(500).onSnapshot(function (snap) {
@@ -536,8 +570,18 @@
     var a = D.PSAS[i % D.PSAS.length], b = D.PSAS[(i + 3) % D.PSAS.length];
     return [a, b].map(function (p, j) { return { emoji: p.emoji, text: p.text, color: D.AD_COLORS[j ? 2 : 1], psa: true }; });
   }
+  function pictureAds(boardId) {
+    var now = Date.now();
+    return online.adimg.map(function (d) { var a = L.checkPictureAd(d.raw, online.adpaid[d.id], now); return a && a.board === boardId ? Object.assign(a, { by: d.id, paid: true, picture: true, text: 'Picture ad', color: D.AD_COLORS[0], emoji: '🖼️' }) : null; })
+      .filter(Boolean).sort(function (a, b) { return b.at - a.at; }).slice(0, 3);
+  }
+  function sponsoredPictures(boardId) {
+    var now = Date.now();
+    return online.sponsored.filter(function (r) { return r && r.board === boardId && typeof r.until === 'number' && r.until > now && r.until < now + 31 * 24 * 3600e3 && typeof r.img === 'string' && r.img.length <= L.PIC_MAX && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+\/]+={0,2}$/.test(r.img); })
+      .map(function (r) { return { img: r.img, text: 'Sponsored', color: D.AD_COLORS[1], emoji: '📣', sponsored: true, paid: true, picture: true, until: r.until }; });
+  }
   function adsForBoard(id, i) {
-    var paid = sponsoredAds(id).concat(paidAds(id).map(function (a) { return Object.assign(a, { paid: true }); }));
+    var paid = sponsoredPictures(id).concat(sponsoredAds(id), pictureAds(id), paidAds(id).map(function (a) { return Object.assign(a, { paid: true }); }));
     return paid.length ? paid : psaFor(i);
   }
   function boardAdsMap() {
@@ -551,6 +595,7 @@
     return null;
   }
   function adPreview(a, big) {
+    if (a.img) return '<div class="ad ad-pic' + (big ? ' big' : '') + '"><img src="' + esc(a.img) + '" alt="Picture ad" width="320" height="160"></div>';
     return '<div class="ad' + (big ? ' big' : '') + '" style="background:' + a.color.bg + ';color:' + a.color.fg + '"><span class="ad-e">' + a.emoji + '</span><span class="ad-t">' + esc(a.text) +
       (a.line2 ? '<small>' + esc(a.line2) + '</small>' : '') + '</span></div>';
   }
@@ -568,8 +613,66 @@
           (a.url ? '<a class="btn sm ghost" href="' + esc(a.url) + '" target="_blank" rel="noopener sponsored">Visit</a>' : '') + '</div></div>';
       }).join('') + '</div>';
     html += composerView(b, paid);
+    html += pictureComposer(b);
+    if (online.canEdit) html += reviewQueue();
     return html;
   }
+
+  /* ---------- picture ads ---------- */
+  function myPicture() {
+    var now = Date.now(), mine = online.adimg.filter(function (d) { return d.id === online.me; })[0];
+    return { approved: mine ? mine.raw : null, live: mine ? L.checkPictureAd(mine.raw, online.adpaid[online.me], now) : null };
+  }
+  function pictureComposer(b) {
+    if (!online.db || !online.me || online.canWrite === false) return '';
+    var plan = ui.ad.plan || 'day', mp = myPicture(), rv = online.myReview, html = '<div class="section"><h3>Picture ad</h3>';
+    html += '<p class="note">Upload your own picture: a flyer, a product, your business. ' + (online.canEdit ? 'As an editor, you can post it straight away as a sponsored ad, or send it through review like everyone else.' : 'The owner reviews every picture before it can go up. You pay only after it is approved.') + '</p>';
+    if (mp.live) html += '<p class="note"><span class="onair">ON AIR</span> Your picture is up at ' + esc(boardName(mp.live.board)) + ' for ' + Math.max(1, Math.round((mp.live.until - Date.now()) / 3600e3)) + ' more hours.</p>';
+    else if (mp.approved && rv && rv.sub === mp.approved.sub) {
+      var q = L.boardQuote(S, mp.approved.board, mp.approved.plan);
+      html += adPreview({ img: mp.approved.img }, true) + '<div class="inline"><span class="gain">Approved for ' + esc(boardName(mp.approved.board)) + ' · ' + esc(D.AD_PLANS[mp.approved.plan].name) + '.</span><button class="btn go" id="pic-pay" data-picpay="1"' + (S.cash + S.bank < q || S.over ? ' disabled' : '') + '>Pay ' + N(q) + ' to go live</button></div>';
+    } else if (rv && rv.status === 'rejected') html += '<p class="note cost">Your last picture was not approved. You can try a different one.</p>';
+    else if (rv && !rv.status) html += adPreview({ img: rv.img }, true) + '<p class="note">Waiting for the owner to review your picture for ' + esc(boardName(rv.board)) + '.</p>';
+    html += '<label class="label" for="ad-file">Choose a picture</label><input type="file" id="ad-file" accept="image/jpeg,image/png,image/webp">';
+    if (ui.picDraft) {
+      html += adPreview({ img: ui.picDraft }, true) + '<p class="note">Cropped to fit the board. Runs ' + esc(D.AD_PLANS[plan].name) + ' at ' + esc(b.name) + ' (pick the length above), ' + N(L.boardQuote(S, b.id, plan)) + ' once approved.</p>' +
+        '<div class="inline"><button class="btn" id="pic-submit" data-picsubmit="' + b.id + '">Send for review</button>' +
+        (online.canEdit ? '<button class="btn ghost" id="pic-sponsor" data-picsponsor="' + b.id + '">Post now as sponsored</button>' : '') + '</div>';
+    }
+    if (online.picStatus) html += '<p class="note">' + esc(online.picStatus) + '</p>';
+    return html + '</div>';
+  }
+  function reviewQueue() {
+    var q = online.adreview.filter(function (r) { return r.raw && typeof r.raw.img === 'string' && /^data:image\/(jpeg|png);base64,/.test(r.raw.img) && r.raw.img.length <= L.PIC_MAX; });
+    var html = '<div class="section"><h3>Review picture ads <span class="muted">· ' + q.length + ' waiting</span></h3>';
+    if (!q.length) return html + '<p class="note">Nothing to review.</p></div>';
+    return html + '<div class="list">' + q.map(function (r) {
+      var who = (online.names[r.id] && online.names[r.id].name) || 'A Lagosian', P = D.AD_PLANS[r.raw.plan];
+      return '<div class="item review">' + adPreview({ img: r.raw.img }, false) + '<div><h3>' + esc(who) + '</h3><div class="meta"><span>' + esc(boardName(r.raw.board)) + '</span><span>' + esc(P ? P.name : '') + '</span></div>' +
+        '<div class="inline"><button class="btn sm" id="rv-ok-' + esc(r.id) + '" data-rvok="' + esc(r.id) + '">Approve</button><button class="btn sm ghost" id="rv-no-' + esc(r.id) + '" data-rvno="' + esc(r.id) + '">Reject</button></div></div></div>';
+    }).join('') + '</div></div>';
+  }
+  // Read a picked file, crop it to the board's 2:1 shape and re-encode as JPEG.
+  function preparePicture(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 15 * 1024 * 1024) return reject(new Error('Pick a JPEG, PNG or WebP picture under 15 MB.'));
+      var url = URL.createObjectURL(file), im = new Image();
+      im.onload = function () {
+        var W = 320, H = 160, c = document.createElement('canvas'); c.width = W; c.height = H;
+        var g = c.getContext('2d'), r = Math.max(W / im.naturalWidth, H / im.naturalHeight), w = im.naturalWidth * r, h = im.naturalHeight * r;
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H); g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
+        URL.revokeObjectURL(url);
+        var q = 0.8, out = c.toDataURL('image/jpeg', q);
+        while (out.length > L.PIC_MAX - 2000 && q > 0.3) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+        if (out.length > L.PIC_MAX - 2000) return reject(new Error('That picture is too detailed to fit. Try a simpler one.'));
+        resolve(out);
+      };
+      im.onerror = function () { URL.revokeObjectURL(url); reject(new Error('That file could not be read as a picture.')); };
+      im.src = url;
+    });
+  }
+  function randSub() { var a = 'abcdefghijklmnopqrstuvwxyz0123456789', o = ''; for (var i = 0; i < 12; i++) o += a[Math.floor(Math.random() * a.length)]; return o; }
+  function picWriteError(err) { return err && err.code === 'invalid_argument' ? 'The board refused it: you may need Contributor access.' : 'It could not be saved. Try again in a moment.'; }
 
   function composerView(b, paid) {
     var plan = ui.ad.plan || 'day', cost = L.boardQuote(S, b.id, plan), mine = myAd(), sub = adSub(), others = paid.filter(function (a) { return !a.sponsored && a.by !== online.me; }).length;
@@ -1256,7 +1359,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1339,6 +1442,42 @@
     if (ds.tripto) { ui.sel = ds.tripto; render(); return; }
     if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
+    if (ds.picsubmit) {
+      var draft = ui.picDraft, bid = ds.picsubmit, pl = ui.ad.plan || 'day';
+      if (!draft) return;
+      online.picStatus = 'Sending…'; render();
+      online.db.doc('adreview/' + online.me).set({ img: draft, board: bid, plan: pl, sub: randSub(), at: Date.now() })
+        .then(function () { ui.picDraft = null; online.picStatus = 'Sent. You will see it here once the owner approves it.'; render(); }, function (err) { online.picStatus = picWriteError(err); render(); });
+      return;
+    }
+    if (ds.picsponsor) {
+      var sd = ui.picDraft, sp = D.AD_PLANS[ui.ad.plan || 'day'];
+      if (!sd || !online.canEdit) return;
+      online.db.doc('sponsored/p' + randSub()).set({ img: sd, board: ds.picsponsor, at: Date.now(), until: Date.now() + sp.days * 24 * 3600e3 })
+        .then(function () { ui.picDraft = null; online.picStatus = 'Posted as a sponsored picture for ' + sp.name + '.'; render(); }, function (err) { online.picStatus = picWriteError(err); render(); });
+      return;
+    }
+    if (ds.picpay) {
+      var ap = myPicture().approved;
+      if (!ap) return;
+      t.disabled = true;
+      var pr = L.rentBoard(S, ap.board, ap.plan);
+      if (!pr.ok) { run(function () { return pr; }); return; }
+      online.db.doc('adpaid/' + online.me).set({ sub: ap.sub, board: ap.board, until: Date.now() + pr.days * 24 * 3600e3, at: Date.now() })
+        .then(function () { online.picStatus = ''; run(function () { return { ok: true, msg: 'Your picture is on air at ' + boardName(ap.board) + '.' }; }); }, function (err) { run(function () { return { ok: false, msg: 'Paid, but ' + picWriteError(err).toLowerCase() }; }); });
+      save(); return;
+    }
+    if (ds.rvok || ds.rvno) {
+      var rid = ds.rvok || ds.rvno, row = online.adreview.filter(function (r) { return r.id === rid; })[0];
+      if (!row) return;
+      var done = function () { online.adreview = online.adreview.filter(function (r) { return r.id !== rid; }); render(); };
+      if (ds.rvno) { online.db.doc('adreview/' + rid).update({ status: 'rejected' }).then(done, function (err) { online.picStatus = picWriteError(err); render(); }); return; }
+      var rr = row.raw;
+      online.db.doc('adimg/' + rid).set({ img: rr.img, board: rr.board, plan: rr.plan, sub: rr.sub, approvedAt: Date.now() })
+        .then(function () { return online.db.doc('adreview/' + rid).update({ status: 'approved' }); })
+        .then(done, function (err) { online.picStatus = picWriteError(err); render(); });
+      return;
+    }
     if (ds.adplan) { ui.ad.plan = ds.adplan; render(); return; }
     if (ds.adunsub) { setAdSub(null); ui.ad.renew = false; online.status = 'Subscription cancelled. Your current ad runs until it ends.'; render(); return; }
     if (ds.adpost) {
@@ -1410,6 +1549,10 @@
   });
 
   document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'ad-file') {
+      var f = e.target.files && e.target.files[0];
+      preparePicture(f).then(function (d) { ui.picDraft = d; online.picStatus = ''; render(); }, function (err) { ui.picDraft = null; online.picStatus = err.message; render(); });
+    }
     if (e.target && e.target.id === 'ad-renew') { ui.ad.renew = e.target.checked; }
     if (e.target && e.target.id === 'biz-site') { ui.bizSite = e.target.value; ui.bizOpen = true; render(); }
     if (e.target && e.target.id === 'ad-slogan') { ui.ad.slogan = e.target.value; render(); }

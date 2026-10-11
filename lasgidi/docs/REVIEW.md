@@ -155,6 +155,12 @@ Two things are deliberately different:
 - **Nothing is cosmetic only.** Each purchase changes the game, within limits. A good bed improves sleep, an inverter improves light, aso-ebi improves owambes, a car shortens your commute. All of these bonuses are capped, so money cannot buy a guaranteed win.
 - **No real-money top-up.** In Lagos Life, "Top up wallet" sits next to the balance. In Lasgidi it only moves your own savings into your wallet. Every naira is earned in the game, and the ledger seal makes this checkable. A score you can replay means nothing if wealth can be bought.
 
+Picture ads are the one place a player's own content reaches other players, so they go through moderation:
+- Every picture is re-encoded in the browser, which strips anything hidden in the file.
+- It is stored as JPEG data and shown only as an image, never as markup.
+- It stays off air until the owner approves it, and the player pays only after approval.
+- Text ads still come from fixed parts only.
+
 Each new system takes effect only when you own, place, wear or hold something. Lives from earlier versions therefore replay to the same seal, which a golden fixture test and the replay of five v0.5 lives confirm.
 
 ## 5. Roadmap: making it multiplayer without repeating the mistakes

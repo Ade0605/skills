@@ -812,3 +812,19 @@ test('rules 8: steeper PAYE, rent reviews, luxury insurance, slower promotions; 
   a.job = { id: 'trader', level: 1, shifts: 0, perfSum: 0 }; b.job = { id: 'trader', level: 1, shifts: 0, perfSum: 0 };
   assert.ok(L.promotionNeeds(a).shifts > L.promotionNeeds(b).shifts);
 });
+
+test('picture ads: only approved, paid, image-only data shows; payment is a recorded rentBoard', () => {
+  const now = 1e12, img = { img: 'data:image/jpeg;base64,' + 'A'.repeat(400), board: 'tmb', plan: 'three', sub: 'abc123xyz' };
+  const paid = { sub: 'abc123xyz', board: 'tmb', until: now + 3 * 24 * 3600e3, at: now };
+  assert.ok(L.checkPictureAd(img, paid, now));
+  assert.equal(L.checkPictureAd(Object.assign({}, img, { img: 'data:image/svg+xml;base64,PHN2Zz4=' }), paid, now), null, 'no SVG');
+  assert.equal(L.checkPictureAd(Object.assign({}, img, { img: 'javascript:alert(1)' }), paid, now), null);
+  assert.equal(L.checkPictureAd(Object.assign({}, img, { img: 'data:image/png;base64,' + 'A'.repeat(L.PIC_MAX) }), paid, now), null, 'too big');
+  assert.equal(L.checkPictureAd(img, Object.assign({}, paid, { sub: 'other1234' }), now), null, 'payment must match the approved picture');
+  assert.equal(L.checkPictureAd(img, Object.assign({}, paid, { until: now - 1 }), now), null, 'expired');
+  assert.equal(L.checkPictureAd(img, Object.assign({}, paid, { until: now + 5 * 24 * 3600e3 }), now), null, 'longer than the plan');
+  assert.equal(L.checkPictureAd(img, Object.assign({}, paid, { board: 'oshodi' }), now), null, 'paid for another board');
+  const s = L.newGame({ seed: 37, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(L.rentBoard(s, 'tmb', 'three').ok);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

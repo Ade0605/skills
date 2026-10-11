@@ -1887,6 +1887,19 @@
     return { board: raw.board, emoji: D.AD_EMOJI[e], text: text, color: D.AD_COLORS[c], until: raw.until, at: typeof raw.at === 'number' ? raw.at : 0 };
   }
 
+  // Picture ads: an approved picture (written by the owner) shows only while
+  // the player's matching payment record is live. Returns a clean ad or null.
+  var PIC_MAX = 123000; // about 90 KB of image as base64
+  function checkPictureAd(img, paid, now) {
+    if (!img || !paid || typeof img !== 'object' || typeof paid !== 'object') return null;
+    if (typeof img.img !== 'string' || img.img.length > PIC_MAX || !/^data:image\/(jpeg|png);base64,[A-Za-z0-9+\/]+={0,2}$/.test(img.img)) return null;
+    if (typeof img.sub !== 'string' || !/^[a-z0-9]{6,24}$/.test(img.sub) || paid.sub !== img.sub) return null;
+    var P = D.AD_PLANS[img.plan];
+    if (!P || !boardDef(img.board) || paid.board !== img.board) return null;
+    if (typeof paid.until !== 'number' || paid.until <= now || paid.until > now + (P.days * 24 + 1) * 3600 * 1000) return null;
+    return { board: img.board, img: img.img, until: paid.until, plan: img.plan, at: typeof paid.at === 'number' ? paid.at : 0 };
+  }
+
   /* ---------- scoring & goals ---------- */
 
   function debts(s) {
@@ -2402,7 +2415,7 @@
     buyBond: recorded('tb', buyBond), bondReturn: bondReturn, bondsHeld: bondsHeld, BOND_RATE: BOND_RATE, BOND_DAYS: BOND_DAYS, BANK_RATE: BANK_RATE,
     roomSize: roomSize, fitsAt: fitsAt, statusPoints: statusPoints, furnitureSleep: furnitureSleep, furniturePower: furniturePower, furnitureGen: furnitureGen, furnitureDaily: furnitureDaily, bestCar: bestCar,
     buyPlot: recorded('bpl', buyPlot), plotCount: plotCount, plotXY: plotXY, plotTakenByNpc: plotTakenByNpc, myPlot: myPlot, ownsHome: ownsHome,
-    rentBoard: recorded('rb', rentBoard), boardRent: boardRent, boardQuote: boardQuote, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd,
+    rentBoard: recorded('rb', rentBoard), boardRent: boardRent, boardQuote: boardQuote, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd, checkPictureAd: checkPictureAd, PIC_MAX: PIC_MAX,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,

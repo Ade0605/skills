@@ -400,3 +400,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .dl-pic { width: 84px; border-radius: 10px; }
 .pl-pic { margin: 0 0 10px; }
 .biz .dl-pic { width: 84px; }
+.ad-pic { padding: 0; overflow: hidden; background: #000; }
+.ad-pic img { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover; }
+.item.review { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; align-items: center; }
+.item.review .ad-pic { width: 120px; }
