@@ -427,3 +427,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .tour-ic { font-size: 28px; line-height: 1; }
 .tour p { margin: 4px 0 8px; font-size: 14px; }
 .tour .link-btn { color: var(--muted); }
+/* HUD: your face beside the need bars */
+.needs.hud { grid-template-columns: 56px repeat(6, minmax(0, 1fr)); align-items: center; }
+.hud-face { grid-row: span 1; width: 56px; height: 56px; padding: 0; border-radius: 50%; overflow: hidden; border: 3px solid #2fa36b; background: var(--sunk); cursor: pointer; }
+.hud-face canvas { display: block; }
+.need-ic { font-size: 14px; }
+@media (max-width: 899px) {
+  .needs.hud { grid-template-columns: 56px repeat(3, minmax(0, 1fr)); }
+  .needs.hud .hud-face { grid-row: span 2; }
+}

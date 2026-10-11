@@ -203,6 +203,7 @@
       { id: 'abj_asokoro_gig', label: 'Security shift at an Asokoro gate', mins: 240, earn: 4000, fx: { energy: -18, fun: -8 }, xp: { fitness: 1 }, gig: true }
     ],
     abj_garki: [
+      { id: 'abj_carnival', label: 'Abuja Carnival at Eagle Square', mins: 240, cost: 2000, fx: { fun: 50, social: 30, energy: -20 }, event: true, when: { months: [10], days: [5,6], from: 10, to: 20 } },
       { id: 'abj_eagle', label: 'Stroll round Eagle Square', mins: 45, fx: { fun: 10, stress: -5 }, when: { from: 7, to: 19 } },
       { id: 'abj_garki_gig', label: 'Type documents at a business centre', mins: 120, earn: 3200, fx: { energy: -8 }, xp: { tech: 2 }, gig: true, when: { days: [0,1,2,3,4], from: 8, to: 18 } }
     ],
@@ -224,6 +225,7 @@
       { id: 'ph_choba_gig', label: 'Type projects for students', mins: 120, earn: 2200, fx: { energy: -8 }, xp: { tech: 2 }, gig: true, when: { from: 8, to: 22 } }
     ],
     ph_rumuokoro: [
+      { id: 'ph_carniriv', label: 'Port Harcourt carnival (Carniriv)', mins: 300, cost: 5000, fx: { fun: 60, social: 35, energy: -25 }, event: true, when: { months: [11], days: [4,5,6], from: 14, to: 24 } },
       { id: 'ph_pleasure', label: 'Relax at Pleasure Park', mins: 120, cost: 1000, fx: { fun: 25, social: 10, stress: -10 }, when: { from: 9, to: 19 } },
       { id: 'ph_rumu_gig', label: 'Conduct buses at Rumuokoro park', mins: 180, earn: 2800, fx: { energy: -18, hygiene: -10 }, xp: { hustle: 2 }, gig: true, when: { from: 5, to: 21 } }
     ],
@@ -268,6 +270,7 @@
       { id: 'yaba_cchub', label: 'Startup meetup at CcHub', mins: 150, fx: { social: 20, fun: 10, energy: -10 }, xp: { tech: 3, charisma: 2 }, when: { days: [1,3], from: 17, to: 21 } },
     ],
     surulere: [
+      { id: 'suru_match', label: 'Super Eagles match at the National Stadium', mins: 180, cost: 3000, fx: { fun: 40, social: 25, stress: -10 }, event: true, when: { days: [5], from: 15, to: 19 } },
       { id: 'suru_recharge', label: 'Sell recharge cards by the stadium', mins: 180, earn: 2300, fx: { energy: -10, social: 5 }, xp: { hustle: 3 }, gig: true, when: { from: 7, to: 21 } },
       { id: 'suru_market', label: 'Buy foodstuff at the market (7 meals)', mins: 45, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
       { id: 'suru_amala', label: 'Eat amala and ewedu', mins: 45, cost: 1800, fx: { hunger: 55, fun: 5 } },
@@ -277,6 +280,7 @@
       { id: 'suru_owambe', label: 'Attend an owambe', mins: 240, cost: 3000, fx: { fun: 40, social: 40, hunger: 60, energy: -20 }, xp: { charisma: 2 }, special: 'owambe', when: { days: [5], from: 12, to: 19 } }
     ],
     ikeja: [
+      { id: 'ikeja_felabration', label: 'Felabration night at the Shrine', mins: 300, cost: 5000, fx: { fun: 70, social: 40, energy: -25, stress: -15 }, xp: { music: 3 }, special: 'club', event: true, when: { months: [9], from: 19, to: 24 } },
       { id: 'ikeja_cv_learn', label: 'Learn repairs at Computer Village', mins: 120, cost: 1000, fx: { energy: -10 }, xp: { craft: 5 }, when: { days: [0,1,2,3,4,5], from: 9, to: 18 } },
       { id: 'ikeja_cv_gig', label: 'Fix phones for walk-ins', mins: 120, earn: 2600, fx: { energy: -10 }, xp: { craft: 3 }, gig: true, req: { craft: 2 }, when: { from: 9, to: 19 } },
       { id: 'ikeja_cinema', label: 'Watch a film at the mall', mins: 150, cost: 4000, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
@@ -293,6 +297,7 @@
       { id: 'oshodi_bukka', label: 'Eat at a bukka', mins: 30, cost: 1000, fx: { hunger: 40 } }
     ],
     island: [
+      { id: 'island_eyo', label: 'Watch the Eyo festival procession', mins: 240, fx: { fun: 45, social: 25, energy: -15 }, event: true, when: { months: [0], days: [5], from: 8, to: 16 } },
       { id: 'island_balogun', label: 'Haggle at Balogun market', mins: 60, fx: { fun: 5, energy: -5 }, xp: { hustle: 3, charisma: 1 }, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
       { id: 'island_worship', label: 'Worship at church or mosque', mins: 90, fx: { stress: -25, social: 15 } },
       { id: 'island_checkup', label: 'Check-up at General Hospital', mins: 120, cost: 8000, fx: { stress: -10, energy: 10 } },
@@ -303,6 +308,7 @@
       { id: 'island_ewa', label: 'Ewa agoyin and bread', mins: 30, cost: 1300, fx: { hunger: 45 } }
     ],
     vi: [
+      { id: 'vi_dec_festival', label: 'Detty December festival on the beach', mins: 360, cost: 40000, fx: { fun: 85, social: 55, energy: -40, hygiene: -20 }, special: 'club', event: true, when: { months: [11], days: [5,6], from: 16, to: 24 } },
       { id: 'vi_carwash', label: 'Wash cars outside the banks', mins: 180, earn: 2800, fx: { energy: -15, hygiene: -10 }, xp: { hustle: 2 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
       { id: 'vi_lounge', label: 'Network at a lounge', mins: 120, cost: 8000, fx: { social: 25, fun: 10 }, xp: { charisma: 5 }, when: { from: 17, to: 24 } },
       { id: 'vi_club', label: 'Club night', mins: 240, cost: 15000, fx: { fun: 60, social: 40, energy: -40, hygiene: -20 }, special: 'club', when: { days: [4,5], from: 21, to: 24 } },
@@ -319,6 +325,7 @@
       { id: 'ikoyi_dine', label: 'Fine dining', mins: 90, cost: 25000, fx: { hunger: 70, fun: 25, social: 10 }, when: { from: 12, to: 23 } }
     ],
     lekki: [
+      { id: 'lekki_dec_concert', label: 'Detty December beach concert at Elegushi', mins: 300, cost: 25000, fx: { fun: 80, social: 50, energy: -35, hygiene: -15 }, special: 'club', event: true, when: { months: [11], days: [4,5,6], from: 18, to: 24 } },
       { id: 'lekki_errands', label: 'Run errands in the estate', mins: 120, earn: 2200, fx: { energy: -10 }, xp: { hustle: 2, charisma: 1 }, gig: true, when: { from: 8, to: 20 } },
       { id: 'lekki_beach', label: 'Beach day', mins: 180, cost: 2000, fx: { fun: 45, social: 20, hygiene: -15, stress: -15 }, when: { from: 9, to: 18 } },
       { id: 'lekki_palms_film', label: 'Watch a film at The Palms', mins: 150, cost: 5000, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
@@ -363,7 +370,7 @@
   var PLACES = [
     { id: 'cv', icon: '📱', name: 'Computer Village', type: 'learn', glyph: 'phone', district: 'ikeja', x: 10.8, y: 4.6, acts: ['ikeja_cv_learn', 'ikeja_cv_gig'], text: 'West Africa\'s biggest phone and gadget market. Learn repairs or fix phones for cash.' },
     { id: 'ikeja_mall', icon: '🎬', name: 'Ikeja mall and cinema', type: 'culture', glyph: 'film', district: 'ikeja', x: 9.2, y: 3.4, acts: ['ikeja_cinema', 'ikeja_super'], text: 'Films, air-conditioning and a supermarket under one roof.' },
-    { id: 'shrine', icon: '🎷', name: 'New Afrika Shrine', type: 'nightlife', glyph: 'note', district: 'ikeja', x: 11.7, y: 3.2, acts: ['ikeja_shrine'], text: 'The home of Afrobeat, built in memory of Fela. Live bands Thursday to Sunday nights.' },
+    { id: 'shrine', icon: '🎷', name: 'New Afrika Shrine', type: 'nightlife', glyph: 'note', district: 'ikeja', x: 11.7, y: 3.2, acts: ['ikeja_felabration', 'ikeja_shrine'], text: 'The home of Afrobeat, built in memory of Fela. Live bands Thursday to Sunday nights.' },
     { id: 'kanu_park', icon: '🌳', name: 'Ndubuisi Kanu Park', type: 'outdoors', glyph: 'tree', district: 'ikeja', x: 10.7, y: 3.1, acts: ['ikeja_park'], text: 'Green lawns in Alausa, busy with picnics at weekends.' },
     { id: 'ielts', icon: '📝', name: 'IELTS test centre', type: 'learn', glyph: 'cap', district: 'ikeja', x: 9.3, y: 4.9, acts: ['ikeja_ielts'], text: 'Saturday morning sittings. The first step to Japa.' },
     { id: 'berger_cars', icon: '🚗', name: 'Berger car mart', type: 'services', glyph: 'car', district: 'ikeja', x: 9.6, y: 5.8, acts: [], dealer: true, text: 'Rows of tokunbo cars, bikes and kekes. Haggle, then drive it home.' },
@@ -382,7 +389,7 @@
     { id: 'festac_park', icon: '🌳', name: 'Festac park', type: 'outdoors', glyph: 'tree', district: 'festac', x: 2.6, y: 16.4, acts: ['festac_park'], text: 'Quiet green space in the planned town.' },
     { id: 'festac_market', icon: '🧺', name: 'Festac market', type: 'food', glyph: 'basket', district: 'festac', x: 1.6, y: 17.6, acts: ['festac_market', 'festac_eat'], text: 'Foodstuff and a buka on the corner.' },
     { id: 'tailor', icon: '🧵', name: 'Tailor\'s shop', type: 'learn', glyph: 'tool', district: 'festac', x: 2.9, y: 17.6, acts: ['festac_tailor'], text: 'Aso-ebi season keeps the machines running.' },
-    { id: 'stadium', icon: '🏟️', name: 'National Stadium', type: 'outdoors', glyph: 'ball', district: 'surulere', x: 9.2, y: 16.6, acts: ['suru_stadium', 'suru_recharge'], text: 'Run the tracks for free. Sell recharge cards to the crowd.' },
+    { id: 'stadium', icon: '🏟️', name: 'National Stadium', type: 'outdoors', glyph: 'ball', district: 'surulere', x: 9.2, y: 16.6, acts: ['suru_match', 'suru_stadium', 'suru_recharge'], text: 'Run the tracks for free. Sell recharge cards to the crowd.' },
     { id: 'theatre', icon: '🎭', name: 'National Theatre', type: 'culture', glyph: 'mask', district: 'surulere', x: 11.4, y: 18.9, acts: ['suru_theatre'], text: 'The famous military-cap building at Iganmu. Plays Friday to Sunday.' },
     { id: 'studio', icon: '🎙️', name: 'Recording studio', type: 'learn', glyph: 'note', district: 'surulere', x: 10.6, y: 17.4, acts: ['suru_studio'], text: 'Where Afrobeats careers start.' },
     { id: 'owambe_hall', icon: '🎉', name: 'Event hall', type: 'nightlife', glyph: 'note', district: 'surulere', x: 9.5, y: 18.6, acts: ['suru_owambe'], text: 'Saturday owambes: jollof, small chops, money spraying.' },
@@ -392,7 +399,7 @@
     { id: 'library', icon: '📚', name: 'Yaba library', type: 'learn', glyph: 'cap', district: 'yaba', x: 15.5, y: 14.4, acts: ['yaba_library', 'yaba_ielts'], text: 'Quiet study, and IELTS prep classes.' },
     { id: 'tejuosho', icon: '🛍️', name: 'Tejuosho market', type: 'food', glyph: 'basket', district: 'yaba', x: 14.4, y: 15.5, acts: ['yaba_tejuosho', 'yaba_buka'], text: 'Fabric, foodstuff and a busy buka.' },
     { id: 'balogun', icon: '🛍️', name: 'Balogun market', type: 'food', glyph: 'basket', district: 'island', x: 15.6, y: 21.6, acts: ['island_balogun', 'island_alaaru'], text: 'The biggest market on the Island. Haggle, or carry loads for cash.' },
-    { id: 'freedom', icon: '🎶', name: 'Freedom Park', type: 'culture', glyph: 'note', district: 'island', x: 16.4, y: 22.6, acts: ['island_freedom'], text: 'A former colonial prison turned open-air arts venue. Live music in the evenings.' },
+    { id: 'freedom', icon: '🎶', name: 'Freedom Park', type: 'culture', glyph: 'note', district: 'island', x: 16.4, y: 22.6, acts: ['island_eyo', 'island_freedom'], text: 'A former colonial prison turned open-air arts venue. Live music in the evenings.' },
     { id: 'museum', icon: '🏛️', name: 'National Museum, Onikan', type: 'culture', glyph: 'mask', district: 'island', x: 16.9, y: 21.6, acts: ['island_museum'], text: 'Bronzes, masks and Nigerian history.' },
     { id: 'gen_hosp', icon: '🏥', name: 'General Hospital', type: 'services', glyph: 'cross', district: 'island', x: 15.8, y: 22.9, acts: ['island_checkup', 'island_welfare'], text: 'Check-ups, and where you wake up if you collapse.' },
     { id: 'worship', icon: '🛐', name: 'Cathedral and Central Mosque', type: 'services', glyph: 'dome', district: 'island', x: 16.6, y: 21.0, acts: ['island_worship'], text: 'Prayer, peace and free welfare meals when you are broke.' },
@@ -404,14 +411,14 @@
     { id: 'dine', icon: '🍽️', name: 'Fine-dining restaurant', type: 'food', glyph: 'bowl', district: 'ikoyi', x: 21.1, y: 21.1, acts: ['ikoyi_dine'], text: 'Small plates, big bills.' },
     { id: 'clubs', icon: '🪩', name: 'Adeola Odeku club strip', type: 'nightlife', glyph: 'glass', district: 'vi', x: 18.5, y: 24.6, acts: ['vi_club'], text: 'Friday and Saturday nights until the sun comes up.' },
     { id: 'lounge', icon: '🍸', name: 'Rooftop lounge', type: 'nightlife', glyph: 'glass', district: 'vi', x: 19.6, y: 24.4, acts: ['vi_lounge'], text: 'After-work drinks and networking.' },
-    { id: 'bar_beach', icon: '🏖️', name: 'Bar Beach', type: 'outdoors', glyph: 'wave', district: 'vi', x: 19.5, y: 26.1, acts: ['vi_beach'], text: 'Atlantic breeze at dusk.' },
+    { id: 'bar_beach', icon: '🏖️', name: 'Bar Beach', type: 'outdoors', glyph: 'wave', district: 'vi', x: 19.5, y: 26.1, acts: ['vi_dec_festival', 'vi_beach'], text: 'Atlantic breeze at dusk.' },
     { id: 'muri_park', icon: '🌴', name: 'Muri Okunola Park', type: 'outdoors', glyph: 'tree', district: 'vi', x: 18.3, y: 25.4, acts: ['vi_park'], text: 'A green pocket among the towers.' },
     { id: 'vi_food', icon: '🍽️', name: 'VI restaurants', type: 'food', glyph: 'bowl', district: 'vi', x: 19.9, y: 25.2, acts: ['vi_restaurant'], text: 'Continental, Asian and very expensive jollof.' },
     { id: 'banks', icon: '🏦', name: 'Bank headquarters', type: 'services', glyph: 'naira', district: 'vi', x: 18.9, y: 25.7, acts: ['vi_carwash'], text: 'Where bankers work. Wash cars outside for cash. Deposits are on the Money tab.' },
     { id: 'quilox', icon: '🌐', name: 'Quilox', type: 'nightlife', glyph: 'glass', district: 'vi', x: 18.0, y: 24.9, acts: ['vi_quilox', 'vi_quilox_door'], text: 'The most famous club on the Island. VIP tables, bottle sparklers and celebrity sightings, Friday to Sunday.' },
     { id: 'palms', icon: '🛍️', name: 'The Palms', type: 'culture', glyph: 'film', district: 'lekki', x: 26.1, y: 23.5, acts: ['lekki_palms_film', 'lekki_palms_shop'], text: 'The big Lekki mall: cinema, food court and shops.' },
     { id: 'vip_jetty', icon: '🏝️', name: 'Lekki VIP jetty', type: 'outdoors', glyph: 'boat', district: 'lekki', x: 25.9, y: 24.4, acts: ['lekki_island'], text: 'Private boats leave from here for the islands off Lagos. You need your own boat.' },
-    { id: 'elegushi', icon: '🏖️', name: 'Elegushi beach', type: 'outdoors', glyph: 'wave', district: 'lekki', x: 27.3, y: 25.8, acts: ['lekki_elegushi'], text: 'Weekend beach parties with DJs, horses and suya by the waves.' },
+    { id: 'elegushi', icon: '🏖️', name: 'Elegushi beach', type: 'outdoors', glyph: 'wave', district: 'lekki', x: 27.3, y: 25.8, acts: ['lekki_dec_concert', 'lekki_elegushi'], text: 'Weekend beach parties with DJs, horses and suya by the waves.' },
     { id: 'lekki_motors', icon: '🏎️', name: 'Lekki luxury motors', type: 'services', glyph: 'car', district: 'lekki', x: 27.1, y: 24.9, acts: [], dealer: true, text: 'Glass showroom of SUVs, supercars and boats. Helicopters and jets by appointment.' },
     { id: 'lekki_beach', icon: '🏖️', name: 'Lekki beach', type: 'outdoors', glyph: 'wave', district: 'lekki', x: 28.4, y: 25.7, acts: ['lekki_beach', 'lekki_content'], text: 'Weekend crowds, horses and content shoots.' },
     { id: 'lcc', icon: '🐒', name: 'Lekki Conservation Centre', type: 'outdoors', glyph: 'tree', district: 'lekki', x: 26.6, y: 24.2, acts: ['lekki_lcc'], text: 'Monkeys, mangroves and a long canopy walkway.' },
@@ -424,14 +431,14 @@
     { id: 'abj_jabi_lake', icon: '🚣', name: 'Jabi Lake', type: 'outdoors', glyph: 'wave', district: 'abj_jabi', x: 5.0, y: 12.2, acts: ['abj_jabi_boat', 'abj_jabi_gig'], text: 'Boat rides, joggers and car washes by the water.' },
     { id: 'abj_wuse_market', icon: '🧺', name: 'Wuse Market', type: 'food', glyph: 'basket', district: 'abj_wuse', x: 11.8, y: 12.2, acts: ['abj_wuse_gig'], text: 'The big market of the capital. Everything, all day.' },
     { id: 'abj_wuse2', icon: '🍢', name: 'Wuse 2 strip', type: 'nightlife', glyph: 'glass', district: 'abj_wuse', x: 10.0, y: 10.2, acts: ['abj_suya', 'abj_night'], text: 'Suya spots, lounges and clubs. Busy Friday and Saturday.' },
-    { id: 'abj_eagle', icon: '🦅', name: 'Eagle Square', type: 'culture', glyph: 'dome', district: 'abj_garki', x: 17.4, y: 14.0, acts: ['abj_eagle'], text: 'The big parade ground by the National Assembly.' },
+    { id: 'abj_eagle', icon: '🦅', name: 'Eagle Square', type: 'culture', glyph: 'dome', district: 'abj_garki', x: 17.4, y: 14.0, acts: ['abj_carnival', 'abj_eagle'], text: 'The big parade ground by the National Assembly.' },
     { id: 'abj_cbd', icon: '🏢', name: 'Central Business District', type: 'learn', glyph: 'laptop', district: 'abj_garki', x: 15.0, y: 16.0, acts: ['abj_garki_gig'], text: 'Ministries and business centres. The civil service hires here.' },
     { id: 'abj_kubwa_mkt', icon: '🛍️', name: 'Kubwa market', type: 'food', glyph: 'basket', district: 'abj_kubwa', x: 4.8, y: 3.0, acts: ['abj_kubwa_food', 'abj_kubwa_gig'], text: 'Cheap foodstuff for the satellite towns.' },
     { id: 'abj_nyanya_park', icon: '🚌', name: 'Nyanya motor park', type: 'transport', glyph: 'bus', district: 'abj_nyanya', x: 28.6, y: 15.2, acts: ['abj_nyanya_gig', 'abj_nyanya_buka'], text: 'Long-distance buses to Lagos and Port Harcourt.' },
     { id: 'abj_airport_pl', icon: '✈️', name: 'Nnamdi Azikiwe Airport', type: 'transport', glyph: 'plane', district: 'abj_airport', x: 8.6, y: 23.0, acts: ['abj_air_eat', 'abj_air_gig'], text: 'Flights to Lagos and Port Harcourt.' },
     { id: 'ph_airport_pl', icon: '✈️', name: 'Port Harcourt Airport', type: 'transport', glyph: 'plane', district: 'ph_airport', x: 6.6, y: 2.2, acts: ['ph_air_eat', 'ph_air_gig'], text: 'Omagwa. Flights to Lagos and Abuja.' },
     { id: 'ph_uniport', icon: '🎓', name: 'University of Port Harcourt', type: 'learn', glyph: 'cap', district: 'ph_choba', x: 3.2, y: 7.2, acts: ['ph_uniport_lib', 'ph_choba_gig', 'ph_choba_eat'], text: 'Uniport campus, the library and student canteens.' },
-    { id: 'ph_pleasure', icon: '🎡', name: 'Pleasure Park', type: 'outdoors', glyph: 'tree', district: 'ph_rumuokoro', x: 13.8, y: 7.4, acts: ['ph_pleasure'], text: 'Rides, lawns and a lake for weekend families.' },
+    { id: 'ph_pleasure', icon: '🎡', name: 'Pleasure Park', type: 'outdoors', glyph: 'tree', district: 'ph_rumuokoro', x: 13.8, y: 7.4, acts: ['ph_carniriv', 'ph_pleasure'], text: 'Rides, lawns and a lake for weekend families.' },
     { id: 'ph_park', icon: '🚌', name: 'Rumuokoro motor park', type: 'transport', glyph: 'bus', district: 'ph_rumuokoro', x: 12.2, y: 5.4, acts: ['ph_rumu_gig'], text: 'Long-distance buses to Lagos and Abuja.' },
     { id: 'ph_garden', icon: '🍸', name: 'Garden City nightlife', type: 'nightlife', glyph: 'glass', district: 'ph_gra', x: 12.8, y: 12.0, acts: ['ph_night', 'ph_gra_gig'], text: 'Lounges and clubs where the oil money comes out to play.' },
     { id: 'ph_mall', icon: '🎬', name: 'Port Harcourt mall', type: 'culture', glyph: 'film', district: 'ph_gra', x: 11.0, y: 10.6, acts: ['ph_gra_film'], text: 'Cinema, food court and air-conditioning.' },

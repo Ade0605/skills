@@ -897,3 +897,16 @@ test('gifts: the sender pays, the receiver gets mood only (no cash); opened once
   assert.equal(L.openGift(r, 'u_e:1', 'gold').ok, false);
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
 });
+
+test('events: festivals appear only in their month, day and hours', () => {
+  const s = L.newGame({ seed: 44, origin: 'mid', goal: 'freestyle' });
+  s.loc = 'ikeja';
+  const fela = () => L.availableActions(s).find(a => a.id === 'ikeja_felabration');
+  assert.equal(L.monthIndex(s), 9, 'lives start in October');
+  s.t = Math.floor(s.t / 1440) * 1440 + 20 * 60;
+  assert.ok(fela() && !fela().disabled, 'Felabration on an October night');
+  s.t += 5 * 7 * 1440; // November
+  const f2 = fela();
+  assert.ok(!f2 || f2.disabled, 'not in November');
+  for (const [d, list] of Object.entries(D.PLACE_ACTIONS)) for (const a of list) if (a.event) assert.ok(D.PLACES.some(p => p.acts.includes(a.id)), a.id + ' is on a place card');
+});

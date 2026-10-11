@@ -123,6 +123,7 @@
     });
     mountPlayground();
     mountVisit();
+    drawHudAvatar();
     mountInterior();
     drawAvatar();
     syncResidence();
@@ -527,11 +528,12 @@
   }
 
   function needsView() {
-    var labels = { hunger: 'Belle', energy: 'Energy', fun: 'Enjoyment', social: 'Social', hygiene: 'Hygiene', stress: 'Calm' };
-    return '<section class="needs" aria-label="Needs">' + ['hunger', 'energy', 'fun', 'social', 'hygiene', 'stress'].map(function (k) {
+    var labels = { hunger: 'Belle', energy: 'Energy', fun: 'Fun', social: 'Social', hygiene: 'Hygiene', stress: 'Calm' };
+    var icons = { hunger: '🍲', energy: '⚡', fun: '🎉', social: '💬', hygiene: '🫧', stress: '😌' };
+    return '<section class="needs hud" aria-label="Needs"><button type="button" class="hud-face" id="hud-face" data-tab="me" aria-label="Your Lagosian"><canvas id="hud-avatar" width="56" height="56"></canvas></button>' + ['hunger', 'energy', 'fun', 'social', 'hygiene', 'stress'].map(function (k) {
       var v = Math.round(k === 'stress' ? 100 - S.needs.stress : S.needs[k]);
       var cls = v < 25 ? 'low' : v < 50 ? 'mid' : '';
-      return '<div class="need"><div class="row"><span>' + labels[k] + '</span><span class="num">' + v + '</span></div>' +
+      return '<div class="need"><div class="row"><span><span class="need-ic" aria-hidden="true">' + icons[k] + '</span> ' + labels[k] + '</span><span class="num">' + v + '</span></div>' +
         '<div class="bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '" aria-label="' + labels[k] + '"><i class="' + cls + '" style="width:' + v + '%"></i></div></div>';
     }).join('') + '</section>';
   }
@@ -573,6 +575,21 @@
       boards: boardAdsMap(), board: ui.board, gems: gemsLeft(),
       biz: S.businesses.filter(function (b) { return b.site; }).map(function (b) { return { district: b.site, icon: D.BUSINESS_GROWTH[b.id].icon }; })
     };
+  }
+
+  // The face in the HUD: draw the full avatar off-screen, then crop the head.
+  var hudOff = null;
+  function drawHudAvatar() {
+    var c = document.getElementById('hud-avatar');
+    if (!c || !S || !window.LasgidiAvatar) return;
+    if (!hudOff) hudOff = document.createElement('canvas');
+    try {
+      window.LasgidiAvatar.draw(hudOff, S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit || {});
+      var r = hudOff.width / 180, g = c.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
+      c.width = 56 * dpr; c.height = 56 * dpr; c.style.width = '56px'; c.style.height = '56px';
+      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
+      g.drawImage(hudOff, 40 * r, 2 * r, 100 * r, 100 * r, 0, 0, c.width, c.height);
+    } catch (e) { /* the bars still work without a face */ }
   }
 
   /* ---------- first-run tour: four short tips, inline (never blocks a tap) ---------- */
@@ -1433,8 +1450,28 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['messages', '💬', 'Messages'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['travel', '✈️', 'Travel'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['travel', '✈️', 'Travel'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
+  // Every festival, match and concert in every city, with when it is on.
+  function eventsView() {
+    var rows = [];
+    Object.keys(D.PLACE_ACTIONS).forEach(function (d) {
+      D.PLACE_ACTIONS[d].forEach(function (a) { if (a.event) rows.push({ a: a, d: d, pl: D.PLACES.filter(function (p) { return p.acts.indexOf(a.id) >= 0; })[0] }); });
+    });
+    var m = L.monthIndex(S);
+    rows.sort(function (x, y) { var a = !x.a.when.months || x.a.when.months.indexOf(m) >= 0, b = !y.a.when.months || y.a.when.months.indexOf(m) >= 0; return (b ? 1 : 0) - (a ? 1 : 0); });
+    var html = '<div class="section"><h3>🎟️ What\'s on</h3><p class="note">Festivals, concerts and matches across Lagos, Abuja and Port Harcourt. It is ' + esc(D.MONTHS[m]) + ' in your life.</p><div class="list">';
+    html += rows.map(function (r) {
+      var w = r.a.when, thisMonth = !w.months || w.months.indexOf(m) >= 0, now = thisMonth && L.inWindow(S, w), sameCity = L.districtCity(r.d) === L.cityOf(S);
+      var when = (w.months ? w.months.map(function (x) { return D.MONTHS[x]; }).join('/') + ' · ' : 'Every week · ') + (w.days ? w.days.map(function (x) { return D.DAYS[x]; }).join('/') + ' ' : '') + pad(w.from) + ':00–' + pad(w.to) + ':00';
+      var status = now ? '<span class="gain">On now</span>' : thisMonth ? '<span>This month</span>' : '<span class="muted">Coming in ' + esc(D.MONTHS[w.months[0]]) + '</span>';
+      var go = !sameCity ? '<button class="btn sm ghost" id="ev-fly-' + r.a.id + '" data-app="travel">✈️ ' + esc(D.CITIES[L.districtCity(r.d)].name) + '</button>'
+        : S.loc === r.d ? (r.pl ? '<button class="btn sm" id="ev-' + r.a.id + '" data-place="' + r.pl.id + '">Open</button>' : '')
+        : '<button class="btn sm ghost" id="ev-go-' + r.a.id + '" data-tripto="' + r.d + '">Go there</button>';
+      return '<div class="item"><div><h3>' + esc(r.a.label) + '</h3><div class="meta">' + status + '<span>' + esc(r.pl ? r.pl.name : D.DISTRICTS[r.d].name) + ', ' + esc(D.CITIES[L.districtCity(r.d)].name) + '</span><span>' + esc(when) + '</span>' + (r.a.cost ? '<span class="cost num">' + N(L.price(S, r.a.cost)) + '</span>' : '<span>Free</span>') + '</div></div>' + go + '</div>';
+    }).join('');
+    return html + '</div></div>';
+  }
   function phoneView() {
     var app = ui.app, body;
     if (app) {
@@ -1443,6 +1480,7 @@
       else if (app === 'bank') body = '<div class="panel-b">' + bankView() + '</div>';
       else if (app === 'dealers') body = '<div class="panel-b"><div class="section"><h3>Car dealers</h3>' + dealerView('Buy from the phone, or visit the Berger and Lekki dealers on the map.') + '</div></div>';
       else if (app === 'gems') body = '<div class="panel-b">' + gemCard() + '</div>';
+      else if (app === 'events') body = '<div class="panel-b">' + eventsView() + '</div>';
       else if (app === 'travel') body = '<div class="panel-b">' + citiesView() + '</div>';
       else if (app === 'fame') body = '<div class="panel-b">' + (fameView() || '<div class="section"><h3>Lagos Hall of Fame</h3><p class="note">The Hall of Fame is shared with everyone you share Lasgidi with. It works when the game is opened on claude.ai.</p></div>') + '</div>';
       else if (app === 'wardrobe') body = '<div class="panel-b">' + lagosianView() + '</div>';
@@ -1450,7 +1488,9 @@
       return '<div class="phone-top"><button class="btn sm ghost" id="app-back" data-app="">‹ Apps</button><b>' + (a ? a[1] + ' ' + esc(a[2]) : '') + '</b></div>' + body;
     }
     var unread = unreadCount(), id = gemToday(), found = L.gemsFound(S, id).length;
-    var badge = { messages: unread, gems: L.GEM_COUNT - found };
+    var onNow = 0;
+    Object.keys(D.PLACE_ACTIONS).forEach(function (d) { D.PLACE_ACTIONS[d].forEach(function (a) { if (a.event && L.districtCity(d) === L.cityOf(S) && (!a.when.months || a.when.months.indexOf(L.monthIndex(S)) >= 0) && L.inWindow(S, a.when)) onNow++; }); });
+    var badge = { messages: unread, gems: L.GEM_COUNT - found, events: onNow };
     return '<div class="panel-h"><h2>📱 Phone</h2><span class="muted">' + esc(L.clockLabel(S)) + '</span></div><div class="panel-b"><div class="apps">' + APPS.map(function (x) {
       var n = badge[x[0]];
       return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';

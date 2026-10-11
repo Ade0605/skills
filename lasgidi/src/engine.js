@@ -529,6 +529,7 @@
   function inWindow(s, when) {
     if (!when) return true;
     if (when.days && when.days.indexOf(dow(s)) < 0) return false;
+    if (when.months && when.months.indexOf(monthIndex(s)) < 0) return false;
     var h = hour(s);
     if (when.from != null && h < when.from) return false;
     if (when.to != null && h >= when.to) return false;
@@ -537,6 +538,7 @@
   function windowLabel(when) {
     if (!when) return '';
     var parts = [];
+    if (when.months) parts.push(when.months.map(function (m) { return D.MONTHS[m]; }).join('/'));
     if (when.days) parts.push(when.days.map(function (d) { return D.DAYS[d]; }).join('/'));
     if (when.from != null) parts.push(String(when.from).padStart(2, '0') + ':00–' + String(when.to).padStart(2, '0') + ':00');
     return parts.join(' ');
@@ -2536,7 +2538,7 @@
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
-    districtCity: districtCity, cityOf: cityOf, intercityOptions: intercityOptions, intercity: recorded('ic', intercity),
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity),
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
