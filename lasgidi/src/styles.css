@@ -398,3 +398,5 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .dl-group .muted { font-weight: 500; font-size: 12.5px; }
 .pic { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 14px; background: var(--sunk); }
 .dl-pic { width: 84px; border-radius: 10px; }
+.pl-pic { margin: 0 0 10px; }
+.biz .dl-pic { width: 84px; }

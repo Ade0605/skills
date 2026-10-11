@@ -774,7 +774,7 @@
     var names = (online.residents || []).filter(function (r) { return r.home === id && r.id !== online.me; }).slice(0, 4)
       .map(function (r) { return (online.names[r.id] && online.names[r.id].name) || 'A Lagosian'; });
     var why = here ? 'You live here' : S.arrears ? 'Clear your rent arrears first' : (h.owned && !L.ownsHome(S, id)) ? 'Buy a plot first' : (S.cash + S.bank < c.total) ? 'Move-in needs ' + N(c.total) : null;
-    return '<div class="inline" style="justify-content:space-between"><h3>' + esc(h.name) + '</h3><button class="btn sm ghost" id="close-home" data-closepick="1">Close</button></div>' +
+    return pic('home:' + (h.type || 'room'), h.name, '', 'pl-pic') + '<div class="inline" style="justify-content:space-between"><h3>' + esc(h.name) + '</h3><button class="btn sm ghost" id="close-home" data-closepick="1">Close</button></div>' +
       '<p class="note"><b>' + esc(D.HOME_TYPES[h.type].name) + '</b> · ' + esc(D.DISTRICTS[h.district].name) + (n ? ' · <span class="gain">' + n + ' Lagosian' + (n === 1 ? '' : 's') + ' live here' + (names.length ? ': ' + esc(names.join(', ')) : '') + '</span>' : '') + '</p>' +
       (h.perk ? '<p>' + esc(h.perk) + '</p>' : '') +
       '<dl class="kv"><dt>Rent</dt><dd class="num">' + (h.owned ? 'None, you own it' : N(c.rent) + ' a week') + '</dd><dt>Move-in</dt><dd class="num">' + (h.owned ? 'Free' : N(c.total) + ' (4 weeks + 10% agent fee)') + '</dd>' +
@@ -824,7 +824,7 @@
       if (def.when) meta.push(esc(whenText(def.when)));
       return '<div class="item"><div><h3>' + esc(def.label) + '</h3><div class="meta">' + meta.map(function (m) { return '<span>' + m + '</span>'; }).join('') + '</div></div></div>';
     }).join('');
-    return '<div class="inline" style="justify-content:space-between"><h3><span class="pl-ic" style="border-color:' + t.color + '">' + (pl.icon || '•') + '</span> ' + esc(pl.name) + '</h3><button class="btn sm ghost" id="close-place" data-closeplace="1">Close</button></div>' +
+    return pic('place:' + pl.id, pl.name, '', 'pl-pic') + '<div class="inline" style="justify-content:space-between"><h3><span class="pl-ic" style="border-color:' + t.color + '">' + (pl.icon || '•') + '</span> ' + esc(pl.name) + '</h3><button class="btn sm ghost" id="close-place" data-closeplace="1">Close</button></div>' +
       '<p class="note"><span class="pl-type" style="color:' + t.color + '">' + esc(t.name) + '</span> · ' + esc(D.DISTRICTS[pl.district].name) + '</p><p>' + esc(pl.text) + '</p>' +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
@@ -1022,7 +1022,7 @@
   // Pictures: AI-generated illustrations in img/, keyed like 'place:shrine'.
   // Falls back to the given HTML (usually the emoji) when there is none.
   function pic(key, alt, fallback, cls) {
-    var src = D.IMAGES && D.IMAGES[key];
+    var src = (window.LASGIDI_IMAGES || {})[key];
     if (!src) return fallback || '';
     return '<img class="pic ' + (cls || '') + '" src="' + esc(src) + '" alt="' + esc(alt) + '" loading="lazy" decoding="async" width="640" height="400">';
   }
@@ -1068,7 +1068,7 @@
       if (b.level && b.level < 3) btns += '<button class="btn sm" id="upb-' + i + '" data-upb="' + i + '"' + (S.cash + S.bank >= up ? '' : ' disabled') + '>Upgrade ' + N(up) + '</button>';
       if (b.level) btns += b.manager ? '<button class="btn sm ghost" id="fmb-' + i + '" data-fmb="' + i + '">Let manager go</button>' : '<button class="btn sm ghost" id="hmb-' + i + '" data-hmb="' + i + '">Hire manager</button>';
       btns += '<button class="link-btn" id="sell-' + i + '" data-sellb="' + i + '">Sell (60%)</button>';
-      return '<div class="item biz"><div class="dl-ic">' + (g ? g.icon : '🏪') + '</div><div><h3>' + esc(L.businessName(b)) + (stars ? ' <span class="biz-stars">' + stars + '</span>' : '') + '</h3><div class="meta">' + meta.map(function (m) { return '<span>' + m + '</span>'; }).join('') + '</div><div class="inline biz-btns">' + btns + '</div></div></div>';
+      return '<div class="item biz">' + pic('biz:' + b.id, L.businessName(b), '<div class="dl-ic">' + (g ? g.icon : '🏪') + '</div>', 'dl-pic') + '<div><h3>' + esc(L.businessName(b)) + (stars ? ' <span class="biz-stars">' + stars + '</span>' : '') + '</h3><div class="meta">' + meta.map(function (m) { return '<span>' + m + '</span>'; }).join('') + '</div><div class="inline biz-btns">' + btns + '</div></div></div>';
     }).join('') + '</div>' + (S.businesses.some(function (b) { return !b.manager; }) ? '<div class="inline"><button class="btn sm" id="visit" data-visit="1">Check on businesses (2h)</button></div>' : '');
     var site = ui.bizSite || (D.BUSINESS_SITES[S.loc] ? S.loc : 'surulere'), sd = D.BUSINESS_SITES[site];
     html += '<details' + (S.businesses.length && !ui.bizOpen ? '' : ' open') + '><summary>Build a business</summary>' +
@@ -1076,7 +1076,7 @@
         return '<option value="' + k + '"' + (k === site ? ' selected' : '') + '>' + esc(D.DISTRICTS[k].name) + ' · ×' + D.BUSINESS_SITES[k].mult.toFixed(2) + ' · rent ' + N(L.price(S, D.BUSINESS_SITES[k].rent)) + '/wk</option>';
       }).join('') + '</select></div><div class="list">' + Object.keys(D.BUSINESSES).map(function (k) {
         var bz = D.BUSINESSES[k], p = L.price(S, bz.price), g = D.BUSINESS_GROWTH[k];
-        return '<div class="item biz"><div class="dl-ic">' + g.icon + '</div><div><h3>' + esc(bz.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span class="gain num">~' + N(Math.round(bz.daily * S.econ.infl * sd.mult / 50) * 50) + '/day here</span><span>Grows into ' + esc(g.names[2]) + '</span>' + (bz.power ? '<span>Needs light</span>' : '') + (bz.weekend ? '<span>Busy Fri–Sun</span>' : '') + (bz.december ? '<span>Booms in December</span>' : '') + '</div></div>' +
+        return '<div class="item biz">' + pic('biz:' + k, bz.name, '<div class="dl-ic">' + g.icon + '</div>', 'dl-pic') + '<div><h3>' + esc(bz.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span class="gain num">~' + N(Math.round(bz.daily * S.econ.infl * sd.mult / 50) * 50) + '/day here</span><span>Grows into ' + esc(g.names[2]) + '</span>' + (bz.power ? '<span>Needs light</span>' : '') + (bz.weekend ? '<span>Busy Fri–Sun</span>' : '') + (bz.december ? '<span>Booms in December</span>' : '') + '</div></div>' +
           '<button class="btn sm" id="buyb-' + k + '" data-buyb="' + k + '"' + (S.cash + S.bank >= p && S.businesses.length < 12 ? '' : ' disabled') + '>Build</button></div>';
       }).join('') + '</div></details></div>';
     return html;
