@@ -238,7 +238,7 @@
     var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var raf = 0, last = 0, clock = 0;
     var vehicles = [], boats = [];
-    var pins = [], placeHits = [], boardHits = [], homeHits = [];
+    var pins = [], faceBoxes = [], placeHits = [], boardHits = [], homeHits = [];
     var HOME_ICON = { room: '🛏️', share: '👥', selfcon: '🚪', miniflat: '🏠', flat2: '🏢', flat3: '🏢', duplex: '🏡', luxury: '🌆', mansion: '🏰' };
 
     // Vehicles: danfos on roads, ferries on the lagoon.
@@ -689,7 +689,7 @@
       });
 
       // District pins.
-      pins = [];
+      pins = []; faceBoxes = [];
       var pulse = reduce ? 0.5 : (clock % 2200) / 2200;
       keys.forEach(function (k) {
         var d = D.DISTRICTS[k], p = toScreen(d.x, d.y, 0);
@@ -708,6 +708,8 @@
         ctx.lineWidth = sel ? 3 : 2; ctx.strokeStyle = sel ? theme.lagoon : (here ? theme.danfoInk : theme.ink); ctx.stroke();
 
         labels.push({ k: k, here: here, sel: sel, top: top, pri: here ? 0 : sel ? 1 : (k === scene.home || k === scene.work) ? 2 : 3 });
+        var faces = scene.faces || {};
+        if (here && faces.me) { drawFace(faces.me, top.x, top.y - 22, 11, theme.danfo); faceBoxes.push({ x: top.x - 13, y: top.y - 35, w: 26, h: 26 }); }
 
         // Your businesses here: small emoji chips to the left of the pin.
         var biz = (scene.biz || []).filter(function (b) { return b.district === k; });
@@ -721,8 +723,11 @@
         if (biz.length > 3) { ctx.font = '700 9px IBM Plex Mono, monospace'; ctx.fillStyle = theme.ink; ctx.fillText('+' + (biz.length - 3), top.x - 14 - 3 * 17, top.y - 2); }
 
         // Other players here.
-        var n = scene.peers && scene.peers[k];
-        if (n) {
+        var n = scene.peers && scene.peers[k], pf = (scene.faces && scene.faces.peers && scene.faces.peers[k]) || [];
+        if (pf.length) {
+          pf.slice(0, 3).forEach(function (f, fi) { var fx = top.x + 14 + fi * 13, fy = top.y + 2; drawFace(f, fx, fy, 8, theme.muted); faceBoxes.push({ x: fx - 9, y: fy - 9, w: 18, h: 18 }); });
+          if (n > 3) { var cx = top.x + 14 + 3 * 13; ctx.beginPath(); ctx.arc(cx, top.y + 2, 7, 0, Math.PI * 2); ctx.fillStyle = theme.lagoon; ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.font = '700 8px IBM Plex Mono, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+' + Math.min(99, n - 3), cx, top.y + 2.5); }
+        } else if (n) {
           var bx = top.x + 10, by = top.y + 2;
           ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI * 2); ctx.fillStyle = theme.lagoon; ctx.fill();
           ctx.strokeStyle = theme.surface; ctx.lineWidth = 1.5; ctx.stroke();
@@ -745,11 +750,20 @@
       ctx.textBaseline = 'alphabetic';
     }
 
+    // A player's face in a ringed circle.
+    function drawFace(img, x, y, r, ring) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, y, r + 2, 0, Math.PI * 2); ctx.fillStyle = ring; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = theme.surface; ctx.fill(); ctx.clip();
+      ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+      ctx.restore();
+    }
+
     // Name chips, most important first; each takes the first free spot
     // above, below, right or left of its pin, or is left off if crowded.
     function placeLabels(list) {
       list.sort(function (a, b) { return a.pri - b.pri; });
-      var taken = pins.map(function (p) { return { x: p.x - 7, y: p.y - 7, w: 14, h: 14 }; });
+      var taken = pins.map(function (p) { return { x: p.x - 7, y: p.y - 7, w: 14, h: 14 }; }).concat(faceBoxes);
       list.forEach(function (l) {
         var text = l.place ? l.place.name : D.DISTRICTS[l.k].name + (l.k === scene.home ? ' · Home' : '') + (l.k === scene.work ? ' · Work' : '');
         ctx.font = (l.place ? '600 10.5px' : '700 ' + (l.here ? 12 : 11) + 'px') + ' Atkinson Hyperlegible, sans-serif';

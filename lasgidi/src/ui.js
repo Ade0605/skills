@@ -162,10 +162,10 @@
       else if (v === 'bad') failed++;
       else pending++;
     });
-    online.fame = rows.slice(0, BOARD); online.hidden = hidden; online.unverified = failed;
+    online.fameAll = rows; online.fame = rows.slice(0, BOARD); online.hidden = hidden; online.unverified = failed;
     online.pending = rows.length >= BOARD ? 0 : pending;
     if (online.user && online.fame.length) {
-      online.user.profiles(online.fame.map(function (r) { return r.id; })).then(function (ps) { online.names = ps; scheduleRender(); });
+      online.user.profiles(rows.map(function (r) { return r.id; })).then(function (ps) { online.names = ps; scheduleRender(); });
     }
     scheduleRender();
     if (!verifying && rows.length < BOARD) verifyNext(cands);
@@ -286,7 +286,7 @@
         online.peers = counts; online.others = others;
         var seen = {};
         online.peerList = ch.peers.filter(function (p) { return !p.isMe && p.kind === 'viewer' && p.by && p.presence && typeof p.presence.d === 'string' && D.DISTRICTS[p.presence.d]; })
-          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d }; });
+          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look) }; });
         var ids = online.peerList.map(function (p) { return p.by; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
@@ -310,10 +310,41 @@
 
   function syncPresence() {
     if (!online.room) return;
-    var d = S ? S.loc : null;
-    if (d === online.sentLoc) return;
-    online.sentLoc = d;
-    online.room.presence({ d: d }).catch(function () {});
+    var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null;
+    var key = d + '|' + JSON.stringify(lk);
+    if (key === online.sentLoc) return;
+    online.sentLoc = key;
+    online.room.presence({ d: d, look: lk }).catch(function () {});
+  }
+  // A look from another player: only small whole numbers inside D.LOOKS.
+  function cleanLook(lk) {
+    if (!lk || typeof lk !== 'object') return null;
+    var ok = function (v, list) { return typeof v === 'number' && v >= 0 && v < list.length && Math.round(v) === v; };
+    return ok(lk.skin, D.LOOKS.skin) && ok(lk.hair, D.LOOKS.hair) && ok(lk.shape, D.LOOKS.shape) ? { skin: lk.skin, hair: lk.hair, shape: lk.shape } : null;
+  }
+  // A round-ready head crop of an avatar, cached by look and outfit.
+  var faceCache = {};
+  function faceCanvas(look, outfit) {
+    if (!window.LasgidiAvatar) return null;
+    var key = JSON.stringify([look, outfit || {}]);
+    if (faceCache[key]) return faceCache[key];
+    try {
+      var off = document.createElement('canvas'), c = document.createElement('canvas');
+      window.LasgidiAvatar.draw(off, look, outfit || {});
+      var r = off.width / 180; c.width = c.height = 64;
+      c.getContext('2d').drawImage(off, 40 * r, 2 * r, 100 * r, 100 * r, 0, 0, 64, 64);
+      if (Object.keys(faceCache).length > 40) faceCache = {};
+      return (faceCache[key] = c);
+    } catch (e) { return null; }
+  }
+  function mapFaces() {
+    var out = { me: faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit), peers: {} }, n = 0;
+    (online.peerList || []).forEach(function (p) {
+      if (!p.look || n >= 6 || L.districtCity(p.d) !== L.cityOf(S)) return;
+      var f = faceCanvas(p.look, null); if (!f) return;
+      (out.peers[p.d] = out.peers[p.d] || []).push(f); n++;
+    });
+    return out;
   }
 
   /* ---------- Weekly Lagos board: same replay check, ranked by net worth ---------- */
@@ -474,11 +505,21 @@
 
   function fameView() {
     if (!online.db) return '';
-    var rows = online.fame.slice(0, 10);
-    var html = '<div class="section"><h3>Lagos Hall of Fame</h3><p class="note">Everyone this game is shared with. Each person\'s best life. Every entry is replayed move by move in your browser, and only lives that replay to the same result are ranked.' +
+    var city = ui.fameCity || '', all = online.fameAll || online.fame;
+    var homeCity = function (r) { var h = D.HOMES[r.home]; return h ? L.districtCity(h.district) : null; };
+    var rows = (city ? all.filter(function (r) { return homeCity(r) === city; }) : all).slice(0, 10);
+    var html = '<div class="section"><h3>' + (city ? esc(D.CITIES[city].name) : 'Lasgidi') + ' Hall of Fame</h3>' +
+      '<div class="pg-chips" style="padding:0 0 8px" role="group" aria-label="Board">' + [['', 'All Nigeria']].concat(Object.keys(D.CITIES).map(function (k) { return [k, D.CITIES[k].name]; })).map(function (c) {
+        return '<button type="button" class="pg-chip' + (c[0] === city ? ' sel' : '') + '" id="fc-' + (c[0] || 'all') + '" data-famecity="' + c[0] + '">' + esc(c[1]) + '</button>';
+      }).join('') + '</div>';
+    if (S) {
+      var top = all.filter(function (r) { var h = D.HOMES[r.home]; return h && h.district === S.loc; }).sort(function (a, b) { return b.worth - a.worth; })[0];
+      if (top) html += '<p class="note">👑 Richest in ' + esc(D.DISTRICTS[S.loc].name) + ': ' + esc(top.id === online.me ? 'you' : (online.names[top.id] && online.names[top.id].name) || 'Someone') + ', ' + N(top.worth) + '.</p>';
+    }
+    html += '<p class="note">Everyone this game is shared with. Each person\'s best life. Every entry is replayed move by move in your browser, and only lives that replay to the same result are ranked.' +
       (online.hidden + online.unverified ? ' ' + (online.hidden + online.unverified) + ' ' + (online.hidden + online.unverified === 1 ? 'entry failed' : 'entries failed') + ' the check and ' + (online.hidden + online.unverified === 1 ? 'is' : 'are') + ' hidden.' : '') +
       (online.pending ? ' Checking ' + online.pending + '…' : '') + '</p>';
-    if (!rows.length) html += '<p class="note">No one has posted yet. Post your life to be first.</p>';
+    if (!rows.length) html += '<p class="note">' + (city && all.length ? 'No verified lives from ' + esc(D.CITIES[city].name) + ' yet. Live there and post yours.' : 'No one has posted yet. Post your life to be first.') + '</p>';
     else html += '<div class="stmt-wrap"><table class="stmt lives"><thead><tr><th>#</th><th>Lagosian</th><th>Ended as</th><th class="n">Weeks</th><th class="n">Net worth</th><th class="n">Score</th></tr></thead><tbody>' + rows.map(function (r, i) {
       var p = online.names[r.id], mine = r.id === online.me;
       var who = mine ? 'You' : (p && p.name) || 'Someone';
@@ -567,7 +608,7 @@
     return {
       city: L.cityOf(S), loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
-      flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others,
+      flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(),
       clock: L.clockLabel(S), banner: banner,
       places: ui.placeCat === 'boards' || ui.placeCat === 'homes' || ui.placeCat === 'cities' ? [] : D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && (!ui.placeCat || p.type === ui.placeCat); }), place: ui.place,
       homeId: S.home, homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
@@ -1615,7 +1656,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1701,6 +1742,7 @@
     if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
     if (ds.tour) { setTour(+ds.tour); render(); return; }
     if (ds.quest) { goQuest(ds.quest); return; }
+    if (ds.famecity != null && t.hasAttribute('data-famecity')) { ui.fameCity = ds.famecity || null; render(); return; }
     if (ds.wave) {
       var wid = ds.wave; if (!online.room) return;
       online.waved[wid] = Date.now();

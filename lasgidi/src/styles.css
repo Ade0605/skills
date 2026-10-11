@@ -439,7 +439,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 
 /* quest chips over the map */
 .pg-wrap { position: relative; }
-.quests { position: absolute; left: 8px; top: 8px; z-index: 2; display: grid; gap: 5px; max-width: min(240px, 62%); pointer-events: none; }
+.quests { position: absolute; left: 8px; bottom: 8px; align-content: end; z-index: 2; display: grid; gap: 5px; max-width: min(240px, 62%); pointer-events: none; }
 .quest {
   pointer-events: auto; display: flex; align-items: center; gap: 7px; text-align: left; cursor: pointer;
   border: 1.5px solid var(--line); border-radius: 12px; padding: 4px 9px 4px 5px; color: var(--ink);

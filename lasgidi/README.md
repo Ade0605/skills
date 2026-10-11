@@ -59,8 +59,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - the Abuja Carnival in November;
   - the Port Harcourt carnival in December.
 - **HUD:** your Lagosian's face beside the six need bars. Tap it to open your wardrobe.
+- **Quests:** starter goals as chips over the map, such as "Get a job", "Daily gem hunt", "Sleep like Oba" and "Visit another city". Each pays once (₦1,500 to ₦20,000). A quest that's ready to claim shows first; tap an unfinished one to jump to the right screen. All of them are listed in the Quests phone app.
+- **Faces on the map:** your Lagosian's face sits over your district pin. Other players in the same city show as small faces beside their pins.
+- **City boards:** the Hall of Fame filters to All Nigeria, Lagos, Abuja or Port Harcourt by where each life lived. It also names the richest verified player in your district.
 - **First-run tour:** four short tips inline on the Do tab. It never blocks a tap, and you can skip it.
-- **Phone:** a 📱 Phone tab with apps for Messages (with an unread count), Jobs, Bank, Dealers, the Gem hunt, Travel, the Hall of Fame and your Wardrobe.
+- **Phone:** a 📱 Phone tab with apps for Messages (with an unread count), Quests, Jobs, Bank, Dealers, the Gem hunt, Travel, the Hall of Fame and your Wardrobe.
 - **Cities:** Lagos, Abuja and Port Harcourt, each with its own map, districts, landmarks, homes and jobs.
   - **Abuja:** Aso Rock, Millennium Park, Jabi Lake, Wuse Market and Eagle Square, plus the civil service and consulting careers.
   - **Port Harcourt:** Uniport, Pleasure Park, Mile 1 market, the waterfront and the Trans-Amadi yards, plus oil-services jobs.
