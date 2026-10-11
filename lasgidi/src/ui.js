@@ -516,13 +516,15 @@
   function board() {
     var isNarrow = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
     if (!isNarrow && ui.tab === 'map') ui.tab = 'do';
-    var tabs = [['do', 'Do'], ['map', 'Map'], ['home', 'Home'], ['work', 'Work'], ['money', 'Money'], ['me', 'Me'], ['gist', 'Gist']];
-    var debt = L.debts(S) > 0;
+    var tabs = [['do', 'Do'], ['map', 'Map'], ['phone', '📱 Phone'], ['home', 'Home'], ['work', 'Work'], ['money', 'Money'], ['me', 'Me'], ['gist', 'Gist']];
+    var debt = L.debts(S) > 0, unread = unreadCount();
+    if (ui.tab === 'gist') markRead();
     var bar = '<div class="tabs" role="tablist">' + tabs.map(function (t) {
       return '<button class="tab' + (t[0] === 'map' ? ' tab-map' : '') + '" role="tab" id="tab-' + t[0] + '" data-tab="' + t[0] + '" aria-selected="' + (ui.tab === t[0]) + '">' + t[1] +
-        (t[0] === 'money' && debt ? '<span class="dot" title="You owe money"></span>' : '') + '</button>';
+        (t[0] === 'money' && debt ? '<span class="dot" title="You owe money"></span>' : '') +
+        (t[0] === 'phone' && unread ? '<span class="badge" aria-label="' + unread + ' unread">' + (unread > 99 ? '99+' : unread) + '</span>' : '') + '</button>';
     }).join('') + '</div>';
-    var body = { do: doView, map: function () { return mapBlock(); }, home: houseTab, work: workView, money: moneyView, me: meView, gist: gistView }[ui.tab]();
+    var body = { do: doView, map: function () { return mapBlock(); }, phone: phoneView, home: houseTab, work: workView, money: moneyView, me: meView, gist: gistView }[ui.tab]();
     return '<div class="board">' +
       // One map per layout: the desktop panel, or the Map tab on phones.
       (isNarrow ? '' : '<section class="panel map-panel" aria-label="Map of Lagos">' + mapBlock() + '</section>') +
@@ -1313,6 +1315,37 @@
     return html + '</div>';
   }
 
+  /* ---------- the phone: apps over the existing screens ---------- */
+  var READ_KEY = 'lasgidi.read.v1';
+  function lastRead() { try { var v = JSON.parse(localStorage.getItem(READ_KEY) || '{}'); return v.seed === S.seed ? v.t : -1; } catch (e) { return -1; } }
+  function markRead() { try { localStorage.setItem(READ_KEY, JSON.stringify({ seed: S.seed, t: S.t })); } catch (e) {} }
+  function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
+  var APPS = [
+    ['messages', '💬', 'Messages'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['dealers', '🚗', 'Dealers'],
+    ['gems', '💎', 'Gem hunt'], ['travel', '✈️', 'Travel'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+  ];
+  function phoneView() {
+    var app = ui.app, body;
+    if (app) {
+      if (app === 'messages') { body = gistView(); markRead(); }
+      else if (app === 'jobs') body = workView();
+      else if (app === 'bank') body = '<div class="panel-b">' + bankView() + '</div>';
+      else if (app === 'dealers') body = '<div class="panel-b"><div class="section"><h3>Car dealers</h3>' + dealerView('Buy from the phone, or visit the Berger and Lekki dealers on the map.') + '</div></div>';
+      else if (app === 'gems') body = '<div class="panel-b">' + gemCard() + '</div>';
+      else if (app === 'travel') body = '<div class="panel-b">' + citiesView() + '</div>';
+      else if (app === 'fame') body = '<div class="panel-b">' + (fameView() || '<div class="section"><h3>Lagos Hall of Fame</h3><p class="note">The Hall of Fame is shared with everyone you share Lasgidi with. It works when the game is opened on claude.ai.</p></div>') + '</div>';
+      else if (app === 'wardrobe') body = '<div class="panel-b">' + lagosianView() + '</div>';
+      var a = APPS.filter(function (x) { return x[0] === app; })[0];
+      return '<div class="phone-top"><button class="btn sm ghost" id="app-back" data-app="">‹ Apps</button><b>' + (a ? a[1] + ' ' + esc(a[2]) : '') + '</b></div>' + body;
+    }
+    var unread = unreadCount(), id = gemToday(), found = L.gemsFound(S, id).length;
+    var badge = { messages: unread, gems: L.GEM_COUNT - found };
+    return '<div class="panel-h"><h2>📱 Phone</h2><span class="muted">' + esc(L.clockLabel(S)) + '</span></div><div class="panel-b"><div class="apps">' + APPS.map(function (x) {
+      var n = badge[x[0]];
+      return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';
+    }).join('') + '</div></div>';
+  }
+
   function gistView() {
     return '<div class="panel-h"><h2>Gist</h2><span class="muted">What is happening in your Lagos</span></div><div class="panel-b"><ul class="feed">' + S.log.map(function (l) {
       return '<li class="' + l.kind + '"><time>Wk ' + (Math.floor(l.t / 10080) + 1) + ' · ' + D.DAYS[Math.floor(l.t / 1440) % 7] + ' ' + pad(Math.floor(l.t % 1440 / 60)) + ':' + pad(l.t % 60) + '</time>' + esc(l.text) + '</li>';
@@ -1404,7 +1437,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1487,6 +1520,7 @@
     if (ds.tripto) { ui.sel = ds.tripto; render(); return; }
     if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
+    if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
     if (ds.fly) { var fp = ds.fly.split(':'); run(function () { var r = L.intercity(S, fp[0], fp[1]); if (r.ok) { ui.sel = null; ui.place = null; ui.placeCat = null; } return r; }, 'travel'); return; }
     if (ds.gem) { var gid = gemToday(), gn = +ds.gem; run(function () { return L.collectGem(S, gid, gn); }); return; }
     if (ds.picsubmit) {

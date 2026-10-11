@@ -409,3 +409,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .gem-card h3 .muted { font-weight: 500; font-size: 13px; }
 .city-card { margin-top: 10px; }
 .city-card h4 { margin: 6px 0; font-size: 15px; }
+/* Phone */
+.apps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 8px; padding: 8px 0; }
+.app { background: none; border: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; color: var(--ink); font: 600 12.5px var(--font-body); }
+.app-ic { position: relative; width: 58px; height: 58px; border-radius: 16px; display: grid; place-items: center; font-size: 28px; background: var(--sunk); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.app-n { text-align: center; line-height: 1.2; }
+.badge { position: absolute; top: -6px; right: -8px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #e5484d; color: #fff; font: 700 11.5px/20px var(--font-body); text-align: center; }
+.tab .badge { position: static; display: inline-block; margin-left: 6px; vertical-align: 1px; }
+.phone-top { display: flex; align-items: center; gap: 10px; padding: 10px 12px 0; }
