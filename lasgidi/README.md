@@ -51,6 +51,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Birth lottery:** LAPO Baby (50%), Ajepako (35%) or Nepo Baby (15%). This sets your starting cash and home. A Nepo Baby's allowance ends after 8 weeks.
 - **Goals:** Japa (IELTS plus ₦15m proof of funds), Landlord (own a house), Odogwu (top of a career) or Freestyle.
 - **Needs:** Belle, energy, enjoyment, social, hygiene and calm. Neglect them and you end up in General Hospital.
+- **First-run tour:** four short tips inline on the Do tab. It never blocks a tap, and you can skip it.
 - **Phone:** a 📱 Phone tab with apps for Messages (with an unread count), Jobs, Bank, Dealers, the Gem hunt, Travel, the Hall of Fame and your Wardrobe.
 - **Cities:** Lagos, Abuja and Port Harcourt, each with its own map, districts, landmarks, homes and jobs.
   - **Abuja:** Aso Rock, Millennium Park, Jabi Lake, Wuse Market and Eagle Square, plus the civil service and consulting careers.

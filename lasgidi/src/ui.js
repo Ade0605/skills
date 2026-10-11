@@ -575,6 +575,24 @@
     };
   }
 
+  /* ---------- first-run tour: four short tips, inline (never blocks a tap) ---------- */
+  var TOUR_KEY = 'lasgidi.tour.v1';
+  var TOUR = [
+    ['🧭', 'Wetin I go do?', 'The advisor at the top suggests your next three moves. Tap one to do it: eat, sleep, go to work, or catch the right bus.'],
+    ['🗺️', 'The map', 'Tap a district or a place to see what you can do there and how to get there. Gems, billboards, homes and other cities are all on the map.'],
+    ['📱', 'Your phone', 'Messages, jobs, your bank, car dealers, the gem hunt, travel and the Hall of Fame are all in the Phone tab.'],
+    ['💸', 'Money is hard', 'Rent is due every Saturday, prices rise every week, and PAYE comes off every shift. Save in the bank, buy bills, and build a business.']
+  ];
+  function tourStep() { try { var v = localStorage.getItem(TOUR_KEY); return v == null ? 0 : +v; } catch (e) { return TOUR.length; } }
+  function setTour(n) { try { localStorage.setItem(TOUR_KEY, String(n)); } catch (e) {} }
+  function tourCard() {
+    var n = tourStep();
+    if (n >= TOUR.length || S.challenge) return '';
+    var t = TOUR[n];
+    return '<div class="tour" role="note"><span class="tour-ic">' + t[0] + '</span><div><b>' + esc(t[1]) + '</b><p>' + esc(t[2]) + '</p>' +
+      '<div class="inline"><button class="btn sm" id="tour-next" data-tour="' + (n + 1) + '">' + (n + 1 < TOUR.length ? 'Next (' + (n + 1) + '/' + TOUR.length + ')' : 'Got it') + '</button><button class="link-btn" id="tour-skip" data-tour="' + TOUR.length + '">Skip the tour</button></div></div></div>';
+  }
+
   /* ---------- multiplayer life: who is here, waves, home visits, gifts ---------- */
   function nameOf(id) { return (online.names[id] && online.names[id].name) || 'A Lagosian'; }
   // A small public snapshot of your home for visitors; only written when it changes.
@@ -1224,7 +1242,7 @@
     var home = acts.filter(function (a) { return a.atHome; });
     var place = acts.filter(function (a) { return !a.atHome; });
     var d = D.DISTRICTS[S.loc];
-    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + visitView() + adviceView() + gemHere() + giftInbox();
+    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + tourCard() + visitView() + adviceView() + gemHere() + giftInbox();
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
     html += peopleHere() + gemCard();
@@ -1530,7 +1548,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1614,6 +1632,7 @@
     if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
     if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
+    if (ds.tour) { setTour(+ds.tour); render(); return; }
     if (ds.wave) {
       var wid = ds.wave; if (!online.room) return;
       online.waved[wid] = Date.now();

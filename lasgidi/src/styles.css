@@ -422,3 +422,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .person .inline { flex-wrap: wrap; gap: 6px; }
 .person select { max-width: 100%; font-size: 13px; padding: 6px; border-radius: 8px; }
 .visit .visit-slot { margin: 8px 0; }
+/* First-run tour */
+.tour { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; background: color-mix(in srgb, var(--danfo) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--danfo) 55%, var(--line)); border-radius: 16px; padding: 12px 14px; margin: 0 0 12px; }
+.tour-ic { font-size: 28px; line-height: 1; }
+.tour p { margin: 4px 0 8px; font-size: 14px; }
+.tour .link-btn { color: var(--muted); }

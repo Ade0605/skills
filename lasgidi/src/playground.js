@@ -270,7 +270,7 @@
     function resize() {
       var r = wrap.getBoundingClientRect();
       var w = Math.max(240, Math.round(r.width)), h = Math.max(200, Math.round(w * (w < 600 ? 0.82 : 0.66)));
-      dpr = Math.min(2, root.devicePixelRatio || 1);
+      dpr = Math.min(w < 600 ? 1.5 : 2, root.devicePixelRatio || 1); // cheap phones: fewer pixels to fill
       if (w === W && h === H && canvas.width === Math.round(w * dpr)) return false;
       W = w; H = h;
       canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
