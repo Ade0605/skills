@@ -544,9 +544,29 @@
       places: ui.placeCat === 'boards' || ui.placeCat === 'homes' ? [] : D.PLACES.filter(function (p) { return !ui.placeCat || p.type === ui.placeCat; }), place: ui.place,
       homeId: S.home, homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
       myPlot: L.myPlot(S), plotSel: ui.plotSel, plotOwners: plotOwners(),
-      boards: boardAdsMap(), board: ui.board,
+      boards: boardAdsMap(), board: ui.board, gems: gemsLeft(),
       biz: S.businesses.filter(function (b) { return b.site; }).map(function (b) { return { district: b.site, icon: D.BUSINESS_GROWTH[b.id].icon }; })
     };
+  }
+
+  /* ---------- daily gem hunt ---------- */
+  function gemToday() { return L.gemDayId(new Date()); }
+  function gemsLeft() {
+    if (!S || S.challenge) return [];
+    var id = gemToday(), got = L.gemsFound(S, id);
+    return L.gemsFor(id).map(function (g, n) { return { place: g.place, district: g.district, n: n }; }).filter(function (g) { return got.indexOf(g.n) < 0; });
+  }
+  function gemCard() {
+    if (!S || S.challenge) return '';
+    var id = gemToday(), gems = L.gemsFor(id), got = L.gemsFound(S, id), prize = L.nextGemPrize(S, id);
+    var html = '<div class="section gem-card"><h3>💎 Daily gem hunt <span class="muted">· ' + got.length + '/' + gems.length + ' found' + (prize ? ' · next prize ' + N(prize) : ' · all found today') + '</span></h3>' +
+      '<p class="note">Everyone gets the same five gems each day. Go to the place and pick it up; each one pays more than the last. New gems at midnight (UTC).</p><div class="list">';
+    html += gems.map(function (g, n) {
+      var pl = D.PLACES.filter(function (x) { return x.id === g.place; })[0], done = got.indexOf(n) >= 0, here = S.loc === g.district;
+      return '<div class="item"><div><h3>' + (done ? '✅ ' : '💎 ') + esc(pl.name) + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[g.district].name) + '</span></div></div>' +
+        (done ? '<span class="muted">Found</span>' : here ? '<button class="btn sm" id="gem-' + n + '" data-gem="' + n + '">Pick it up</button>' : '<button class="btn sm ghost" id="gemgo-' + n + '" data-tripto="' + g.district + '">Go there</button>') + '</div>';
+    }).join('');
+    return html + '</div></div>';
   }
 
   /* ---------- billboards ---------- */
@@ -931,6 +951,7 @@
       '<p class="note"><span class="pl-type" style="color:' + t.color + '">' + esc(t.name) + '</span> · ' + esc(D.DISTRICTS[pl.district].name) + '</p><p>' + esc(pl.text) + '</p>' +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
+      (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : '<div class="inline"><button class="btn go" id="trip-' + pl.district + '" data-tripto="' + pl.district + '">Plan a trip to ' + esc(D.DISTRICTS[pl.district].name) + '</button></div>');
   }
   function whenText(w) {
@@ -1080,14 +1101,22 @@
       '<a class="btn sm ghost" href="https://wa.me/?text=' + enc + '" target="_blank" rel="noopener">WhatsApp</a></div></div>';
   }
 
+  // A one-line nudge when a gem is hidden in the district you are in.
+  function gemHere() {
+    var g = gemsLeft().filter(function (x) { return x.district === S.loc; })[0];
+    if (!g) return '';
+    var pl = D.PLACES.filter(function (x) { return x.id === g.place; })[0];
+    return '<div class="gem-here"><span>💎 A gem is hidden at <b>' + esc(pl.name) + '</b>.</span><button class="btn sm" id="gemh-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button></div>';
+  }
   function doView() {
     var acts = L.availableActions(S);
     var home = acts.filter(function (a) { return a.atHome; });
     var place = acts.filter(function (a) { return !a.atHome; });
     var d = D.DISTRICTS[S.loc];
-    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + adviceView();
+    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + adviceView() + gemHere();
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
+    html += gemCard();
     if (home.length) html += '<div class="section"><h3>At home · ' + esc(L.homeDef(S).name) + '</h3><div class="list">' + home.sort(sortOpen).map(actionRow).join('') + '</div></div>';
     else html += '<div class="section"><p class="note">Home is ' + esc(L.homeDef(S).name) + ' in ' + esc(D.DISTRICTS[L.homeDef(S).district].name) + '. Sleep, cook and bathe there.</p></div>';
     html += '<div class="section"><div class="inline"><button class="btn ghost" id="wait-1" data-wait="60">Wait 1 hour</button><span class="note">Pantry: ' + S.pantry + ' meals at home</span></div></div>';
@@ -1359,7 +1388,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1442,6 +1471,7 @@
     if (ds.tripto) { ui.sel = ds.tripto; render(); return; }
     if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
+    if (ds.gem) { var gid = gemToday(), gn = +ds.gem; run(function () { return L.collectGem(S, gid, gn); }); return; }
     if (ds.picsubmit) {
       var draft = ui.picDraft, bid = ds.picsubmit, pl = ui.ad.plan || 'day';
       if (!draft) return;

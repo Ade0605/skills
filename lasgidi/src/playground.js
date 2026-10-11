@@ -684,6 +684,18 @@
         }
       });
       placeLabels(labels);
+      // Today's hidden gems: a bobbing diamond over each place still to find.
+      (scene.gems || []).forEach(function (g) {
+        var pl = D.PLACES.filter(function (x) { return x.id === g.place; })[0];
+        if (!pl) return;
+        var p = toScreen(pl.x, pl.y, 0), bob = reduce ? 0 : Math.sin(clock / 380 + pl.x) * 2.5, gy = p.y - pr * 2 - 16 + bob, gr = Math.max(7, pr * 0.85);
+        ctx.strokeStyle = '#2f6fd0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(p.x, gy + gr + 2); ctx.lineTo(p.x, p.y - pr * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x, gy, gr + 3, 0, Math.PI * 2); ctx.fillStyle = '#2f6fd0'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+        if (emojiOk) { ctx.font = Math.round(gr * 1.3) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('💎', p.x, gy); }
+        else { ctx.beginPath(); ctx.moveTo(p.x, gy - gr); ctx.lineTo(p.x + gr * 0.8, gy); ctx.lineTo(p.x, gy + gr); ctx.lineTo(p.x - gr * 0.8, gy); ctx.closePath(); ctx.fillStyle = '#58a6ff'; ctx.fill(); }
+        placeHits.push({ id: pl.id, x: p.x, y: gy });
+      });
+
       ctx.textBaseline = 'alphabetic';
     }
 

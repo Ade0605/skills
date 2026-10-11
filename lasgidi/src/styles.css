@@ -404,3 +404,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .ad-pic img { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover; }
 .item.review { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; align-items: center; }
 .item.review .ad-pic { width: 120px; }
+/* Daily gem hunt */
+.gem-here { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; background: color-mix(in srgb, #58a6ff 14%, var(--surface)); border: 1px solid color-mix(in srgb, #58a6ff 45%, var(--line)); border-radius: 14px; padding: 10px 12px; margin: 8px 0; }
+.gem-card h3 .muted { font-weight: 500; font-size: 13px; }

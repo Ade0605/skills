@@ -58,6 +58,7 @@
     viral:       'Viral: your content blew up',
     detty:       'Survived Detty December',
     promoted:    'Promoted at work',
+    gems:        'Found all five of a day\'s gems',
     debt_free:   'Debt free: cleared every loan',
     top:         'Top of the ladder in a career',
     wedding:     'Wedding bells: got married',
@@ -165,7 +166,7 @@
     var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
     if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
-    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize)/.test(m)) return 'gigs';
+    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car)/.test(m) || /^Car maintenance/.test(m)) return 'transport';
@@ -279,7 +280,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 },
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 },
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -2016,6 +2017,7 @@
     if (!s.vehicles) s.vehicles = [];
     if (s.driving == null) s.driving = -1;
     if (!s.bonds) s.bonds = [];
+    if (!s.gems) s.gems = {};
     if (s.econ && s.econ.cbn === undefined) { s.econ.cbn = null; s.econ.cbnWeeks = 0; }
     if (!s.wardrobe) s.wardrobe = [];
     if (!s.outfit) s.outfit = {};
@@ -2312,6 +2314,47 @@
     return { ok: same, entry: same ? got : e, reason: same ? null : 'does not match its replay' };
   }
 
+  /* ---------- Daily gem hunt ---------- */
+  // Every real-world day hides the same 5 gems for everyone, at places picked
+  // from the date. Each gem pays once per life; prizes grow through the day's
+  // hunt. One hunt day per game day, so old dates cannot be farmed.
+  var GEM_ID = /^\d{4}-\d{2}-\d{2}$/, GEM_COUNT = 5, GEM_PRIZES = [3000, 5000, 8000, 12000, 20000];
+  function gemDayId(date) { return date.getUTCFullYear() + '-' + String(date.getUTCMonth() + 1).padStart(2, '0') + '-' + String(date.getUTCDate()).padStart(2, '0'); }
+  function gemsFor(dayId) {
+    if (!GEM_ID.test(dayId)) return [];
+    var h = 2166136261;
+    for (var i = 0; i < dayId.length; i++) { h ^= dayId.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    var pool = D.PLACES.map(function (p) { return p.id; }), out = [];
+    while (out.length < GEM_COUNT && pool.length) {
+      h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h ^ (h >>> 13)) >>> 0;
+      out.push(pool.splice(h % pool.length, 1)[0]);
+    }
+    return out.map(function (id) { var p = D.PLACES.filter(function (x) { return x.id === id; })[0]; return { place: id, district: p.district }; });
+  }
+  function gemsFound(s, dayId) { return (s.gems && s.gems[dayId] && s.gems[dayId].got) || []; }
+  function nextGemPrize(s, dayId) { var n = gemsFound(s, dayId).length; return n < GEM_COUNT ? price(s, GEM_PRIZES[n]) : 0; }
+  function collectGem(s, dayId, n) {
+    if (!GEM_ID.test(dayId)) return fail('No gem hunt for that day.');
+    var gems = gemsFor(dayId), g = gems[n];
+    if (!g || Math.round(n) !== n) return fail('No such gem.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.loc !== g.district) return fail('That gem is in ' + D.DISTRICTS[g.district].name + '. Go there first.');
+    var rec = s.gems[dayId];
+    if (!rec) {
+      var today = day(s);
+      if (Object.keys(s.gems).some(function (k) { return s.gems[k].day === today; })) return fail('You already hunted today in this life. Sleep, and try tomorrow\'s gems.');
+      rec = s.gems[dayId] = { day: today, got: [] };
+    }
+    if (rec.got.indexOf(n) >= 0) return fail('You already picked up this gem.');
+    var prize = nextGemPrize(s, dayId);
+    s.alerts = [];
+    advance(s, 15);
+    rec.got.push(n);
+    earn(s, prize, 'Gem hunt prize');
+    if (rec.got.length === GEM_COUNT) unlock(s, 'gems');
+    return finish(s, ok('💎 You found a gem! +' + naira(prize) + '.'));
+  }
+
   /* ---------- Weekly Lagos challenge ---------- */
 
   var CHALLENGE_ID = /^\d{4}-W\d{2}$/;
@@ -2418,6 +2461,7 @@
     rentBoard: recorded('rb', rentBoard), boardRent: boardRent, boardQuote: boardQuote, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd, checkPictureAd: checkPictureAd, PIC_MAX: PIC_MAX,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
+    gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
     CATEGORY_NAMES: CATEGORY_NAMES, category: category, SCHEMA: SCHEMA,

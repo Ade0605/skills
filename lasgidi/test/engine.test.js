@@ -828,3 +828,22 @@ test('picture ads: only approved, paid, image-only data shows; payment is a reco
   assert.ok(L.rentBoard(s, 'tmb', 'three').ok);
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('daily gem hunt: same gems for everyone each day, must be there, once each, one hunt per game day', () => {
+  const a = L.gemsFor('2026-10-12'), b = L.gemsFor('2026-10-12'), c = L.gemsFor('2026-10-13');
+  assert.equal(a.length, 5); assert.deepEqual(a, b); assert.notDeepEqual(a, c);
+  assert.equal(new Set(a.map(g => g.place)).size, 5);
+  const s = L.newGame({ seed: 38, origin: 'mid', goal: 'freestyle' });
+  const g = a[0];
+  if (s.loc !== g.district) assert.equal(L.collectGem(s, '2026-10-12', 0).ok, false, 'must be in the district');
+  s.loc = g.district;
+  const cash = s.cash, p1 = L.nextGemPrize(s, '2026-10-12');
+  assert.ok(L.collectGem(s, '2026-10-12', 0).ok);
+  assert.equal(s.cash - cash, p1);
+  assert.equal(L.collectGem(s, '2026-10-12', 0).ok, false, 'once each');
+  assert.ok(L.nextGemPrize(s, '2026-10-12') > p1, 'prizes grow');
+  s.loc = c[0].district;
+  assert.match(L.collectGem(s, '2026-10-13', 0).msg, /already hunted today/, 'one hunt day per game day');
+  assert.equal(L.collectGem(s, 'yesterday', 0).ok, false);
+  assert.equal(L.category('Gem hunt prize', 1), 'gigs');
+});
