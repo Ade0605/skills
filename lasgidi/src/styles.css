@@ -486,3 +486,14 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .st-dots i { width: 14px; height: 6px; border-radius: 3px; background: var(--line); }
 .st-dots i.on { background: var(--danfo-ink); }
 .st-dots i.now { background: var(--danfo); box-shadow: 0 0 0 1.5px var(--danfo-ink); }
+
+/* my story */
+.story-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.story-grid > div { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.story-grid span { grid-row: span 2; font-size: 20px; }
+.story-grid b { font-size: 15px; }
+.story-grid small { color: var(--muted); font-size: 11.5px; }
+.timeline { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 10px; }
+.timeline li { position: relative; font-size: 14px; }
+.timeline li::before { content: ''; position: absolute; left: -20px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--danfo); box-shadow: 0 0 0 2px var(--danfo-ink); }
+.timeline time { display: block; font-size: 11.5px; color: var(--muted); }

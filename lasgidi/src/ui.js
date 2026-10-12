@@ -1557,6 +1557,30 @@
     return html + '</div>';
   }
 
+  /* ---------- my Lagos story: milestones and lifetime numbers ---------- */
+  function when(t) { return 'Week ' + (Math.floor(t / 10080) + 1) + ', ' + D.DAYS[Math.floor(t / 1440) % 7]; }
+  function storyView() {
+    var sum = L.lifeSummary(S), days = L.day(S) + 1, gems = 0;
+    Object.keys(S.gems || {}).forEach(function (k) { gems += S.gems[k].got.length; });
+    var html = '<div class="section" style="padding-top:0"><div class="wallet-card"><div class="wc-l">' + esc(S.name) + ' · day ' + days + ' in ' + esc(D.CITIES[L.cityOf(S)].name) + '</div><div class="wc-big num">' + N(sum.worth) + '</div>' +
+      '<div class="wc-s">Peak ' + N(sum.peak) + ' · ' + esc(sum.title || 'job hunting') + ' · ' + esc(D.HOMES[S.home].name) + ' · score ' + sum.score + '</div></div>';
+    var rows = [
+      ['💰', 'Earned in total', N(S.stats.earned)], ['💸', 'Spent in total', N(S.stats.spent)],
+      ['🚌', 'Trips taken', S.stats.trips.toLocaleString('en')], ['⏰', 'Shifts worked', S.stats.shifts.toLocaleString('en')],
+      ['💎', 'Gems found', gems], ['🎉', 'Festivals and matches', S.stats.events || 0],
+      ['🛍️', 'Sold online', S.shop ? S.shop.sold : 0], ['📈', 'Shares held', N(L.stocksValue(S))],
+      ['🚗', 'Vehicles', (S.vehicles || []).length + (S.car ? 1 : 0)], ['🛋️', 'Furniture', (S.items || []).length],
+      ['🐾', 'Pets', (S.pets || []).length], ['🧑‍🍳', 'Staff', (S.staff || []).length]
+    ];
+    html += '<h3>Lifetime</h3><div class="story-grid">' + rows.map(function (r) { return '<div><span>' + r[0] + '</span><b class="num">' + r[2] + '</b><small>' + esc(r[1]) + '</small></div>'; }).join('') + '</div>';
+    var ms = Object.keys(S.ach).map(function (k) { return { t: S.ach[k], text: L.ACHIEVEMENTS[k] }; });
+    if (S.partner && S.partner.stage === 'married' && !S.ach.wedding) ms.push({ t: S.t, text: 'Married' });
+    ms.sort(function (a, b) { return a.t - b.t; });
+    html += '<h3>Milestones</h3>' + (ms.length ? '<ol class="timeline">' + ms.map(function (m) { return '<li><time>' + when(m.t) + '</time>' + esc(m.text) + '</li>'; }).join('') + '</ol>' : '<p class="note">Your first milestone is waiting: a job, a move, a gem.</p>');
+    html += '<h3>Share it</h3>' + shareBlock();
+    return html + '</div>';
+  }
+
   /* ---------- online shop ---------- */
   function shopView() {
     var sh = S.shop;
@@ -1622,7 +1646,7 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
   function eventsView() {
@@ -1649,6 +1673,7 @@
     if (app) {
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
+      else if (app === 'story') body = '<div class="panel-b">' + storyView() + '</div>';
       else if (app === 'weather') body = '<div class="panel-b">' + weatherView() + '</div>';
       else if (app === 'shop') body = '<div class="panel-b">' + shopView() + '</div>';
       else if (app === 'stocks') body = '<div class="panel-b">' + stocksView() + '</div>';

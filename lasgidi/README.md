@@ -64,6 +64,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - You can trade 10:00–14:30 on weekdays. Every buy and sale costs a 1.5% broker fee, with a ₦500 minimum.
   - Some companies pay a dividend every 13 weeks.
   - Prices can fall, and a retail account is capped at ₦20m invested.
+- **My story:** a 📖 phone app with your life at a glance. It shows lifetime totals (earned, spent, trips, shifts, gems, festivals, online sales, shares, vehicles, pets, staff), a timeline of every milestone with its week and day, and the share card.
 - **Weather (rules 9, new lives only):** each life has its own seeded sky.
   - **Rainy season:** April to October, peaking in June and July, with a break in August. Rain falls from about 11:00 to 18:00.
   - **Rain:** roads are about 35% slower, trekking is harder, and you arrive soaked (−hygiene, +stress) on foot, okada, keke, danfo, BRT or ferry unless you wear an umbrella.
