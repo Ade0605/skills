@@ -185,13 +185,18 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Events:** grid collapse, fuel scarcity, floods, black tax, BVN scam texts, Ponzi schemes, landlord hikes, owambe aso-ebi, checkpoints and area boys. Detty December arrives in week 9.
 - **Policy vote:** every 4 weeks you vote on a governorship policy that changes the rules for a month.
 - **CBN governor race:** two weeks after each policy vote, three candidates compete for the Central Bank, and you can vote for one. The Hawk raises savings and bill rates, makes new loans dearer and slows inflation. The Dove does the opposite. The Builder boosts businesses and cooperative loans. The winner's stance lasts 4 weeks, and its rates show on the bank card.
-- **Making money is hard.** New lives start on rules 10: everything in rules 8, plus weather (rules 9) and mini-games paid for at the start (rules 10). Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
+- **Making money is hard.** New lives start on rules 11: everything in rules 8, plus weather (rules 9), mini-games paid for at the start (rules 10) and malaria (rules 11). Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
   - PAYE starts at ₦3,000 and goes up to 25% on big pay.
   - Every 4 weeks the landlord reviews your rent in line with prices.
   - Vehicle upkeep is 1.5×, and vehicles costing over ₦100m pay 0.2% insurance a week.
   - Promotions take 30% more shifts.
 
   Lives started earlier keep their old rules.
+- **🦟 Malaria (rules 11, new lives only):**
+  - **Catching it:** a night without light (so no fan or AC) and no mosquito net can give you malaria. It is likelier in the rainy season. A ₦6k mosquito net from the furniture shop, a running fan or AC, or a hotel with a generator keeps most mosquitoes off.
+  - **Being sick:** the fever drains energy and enjoyment, raises stress and lowers your work performance. After three untreated days it gets worse.
+  - **Treatment:** antimalarials from a chemist (₦4.5k, or ₦2k with an HMO, 07:00–21:00) cure it in two days.
+  - **Collapsing:** if you collapse, the hospital treats it for ₦15k.
 - **Children (Me tab):** each child has a name and a bond with you.
   - **Homework:** help on school nights (Monday to Friday, 17:00–21:00, at home).
   - **Outings:** take them out at weekends (₦5k, once a week).
@@ -227,7 +232,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (90 tests)
+  test/engine.test.js   node:test suite (91 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

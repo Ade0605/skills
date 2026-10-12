@@ -290,7 +290,7 @@ test('a player who follows the advisor survives and gets promoted', () => {
     let r = null;
     if (tip) {
       const a = tip.act;
-      r = a.type === 'act' ? L.doAction(s, a.id) : a.type === 'travel' ? L.travel(s, a.dest, a.mode) : L.applyJob(s, a.id);
+      r = a.type === 'act' ? L.doAction(s, a.id) : a.type === 'travel' ? L.travel(s, a.dest, a.mode) : a.type === 'treat' ? L.treatMalaria(s) : a.type === 'lodge' ? L.sleepAway(s, a.id) : L.applyJob(s, a.id);
     }
     if (!r || !r.ok) {
       const acts = L.availableActions(s).filter(a => !a.disabled);
@@ -1490,6 +1490,7 @@ test('lodging: a bed away from home, by the night, priced by tier and district',
   assert.equal(L.clockLabel(s).slice(-5), '06:30');
   assert.ok(s.needs.energy > 85, 'rested');
   assert.equal(L.category('Lodging: Five-star hotel', -1), 'housing');
+  while (s.pending.length) L.resolveChoice(s, 0);
   assert.match(L.sleepAway(s, 'hotel').msg, /not tired/);
   assert.equal(L.sleepAway(s, 'guest').ok, false, 'no guest house in Maitama');
   // In your home city the advisor never suggests a hotel.
@@ -1574,4 +1575,36 @@ test('children: homework on school nights, weekend outings, and a report card ea
   assert.ok('ABCDF'.includes(k.reports[0].grade));
   assert.equal(k.hw, 0, 'a new term starts');
   assert.equal(old.reports, undefined, 'no report cards for a child you never helped');
+});
+
+test('malaria (rules 11): nights without light risk it, a net helps, drugs cure it, older lives never catch it', () => {
+  const old = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle', rules: 10 });
+  assert.equal(L.malariaChance(old, 0), 0);
+  const s = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle' });
+  assert.equal(s.rules, 11);
+  // Odds over many nights: a net cuts them sharply.
+  const trial = (protect) => { const g = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle' }); g.power = false; let n = 0; for (let i = 0; i < 4000; i++) n += L.malariaChance(g, protect); return n; };
+  const bare = trial(0), net = trial(0.8);
+  assert.ok(bare > 30 && bare < 200, 'bare ' + bare);
+  assert.ok(net < bare / 3, 'net ' + net + ' vs ' + bare);
+  // Sick: energy drains, work suffers, the chemist cures it.
+  s.sick = { kind: 'malaria', since: L.day(s), drugs: false, cure: -1 };
+  s.t = s.t - (s.t % 1440) + 1440 + 9 * 60; s.needs.energy = 90; s.needs.hunger = 80;
+  assert.ok(L.advise(s).some(t => /malaria/.test(t.text) && t.act && t.act.type === 'treat'));
+  const e0 = s.needs.energy; L.wait(s, 60);
+  assert.ok(e0 - s.needs.energy > 1.5, 'fever drains energy');
+  const r = L.treatMalaria(s);
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.ledger.filter(l => l.memo === 'Chemist: antimalarials').length, 1);
+  assert.equal(L.category('Chemist: antimalarials', -1), 'health');
+  assert.match(L.treatMalaria(s).msg, /already/);
+  for (let i = 0; s.sick && i < 100; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; L.wait(s, 120); }
+  assert.equal(s.sick, null, 'cured');
+  assert.match(L.treatMalaria(s).msg, /not sick/);
+  // Untreated malaria that ends in a collapse is treated at the hospital.
+  s.sick = { kind: 'malaria', since: L.day(s) - 4, drugs: false, cure: -1 }; s.needs.energy = 2;
+  for (let i = 0; s.sick && i < 20; i++) L.wait(s, 60);
+  assert.equal(s.sick, null);
+  assert.ok(s.log.some(l => /collapsed from malaria/.test(l.text)), 'hospital');
+  assert.ok(L.DATA.FURNITURE.net);
 });

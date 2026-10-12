@@ -586,3 +586,4 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .kid-grade.gD, .kid-grade.gF { background: #d0453a; color: #fff; }
 .kid-bond { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 12.5px; }
 .kid-bond .progress { flex: 1; margin: 0; }
+.sick-card { border-left: 4px solid var(--debit); padding-left: 12px; }

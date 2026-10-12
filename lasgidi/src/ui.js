@@ -1615,6 +1615,7 @@
       if (a && a.type === 'act') btn = '<button class="btn sm go" id="adv-' + i + '" data-act="' + a.id + '">Do it</button>';
       if (a && a.type === 'travel') btn = '<button class="btn sm go" id="adv-' + i + '" data-travel="' + a.dest + '" data-mode="' + a.mode + '">Go</button>';
       if (a && a.type === 'apply') btn = '<button class="btn sm go" id="adv-' + i + '" data-apply="' + a.id + '">Apply</button>';
+      if (a && a.type === 'treat') btn = '<button class="btn sm go" id="adv-' + i + '" data-treat="1">Buy drugs</button>';
       if (a && a.type === 'lodge') btn = '<button class="btn sm go" id="adv-' + i + '" data-lodge="' + a.id + '">Book</button>';
       if (a && a.type === 'move') btn = '<button class="btn sm go" id="adv-' + i + '" data-move="' + a.id + '">Move</button>';
       if (a && a.type === 'tab') btn = '<button class="btn sm ghost" id="adv-' + i + '" data-tab="' + a.id + '">Open ' + esc(a.id) + '</button>';
@@ -1679,6 +1680,12 @@
     var dots = ''; for (var i = 0; i < 7; i++) dots += '<i class="' + (i < info.slot ? 'on' : i === info.slot ? 'now' : '') + '"></i>';
     return '<div class="streak"><span class="st-ic">🔥</span><div class="st-t"><b>Day ' + info.n + ' streak</b><span class="st-dots" aria-label="Day ' + (info.slot + 1) + ' of 7">' + dots + '</span></div><button class="btn sm go" id="streak" data-streak="1">Claim ' + N(info.prize) + '</button></div>';
   }
+  function sickCard() {
+    var k = L.sickInfo(S);
+    if (!k) return '';
+    return '<div class="section sick-card"><h3>🦟 Malaria · day ' + (k.days + 1) + '</h3><p class="note">' + (k.drugs ? 'You are on antimalarials. Rest: the fever should break soon.' : k.worse ? 'It is getting worse. Your energy is draining fast and you could collapse.' : 'Fever and chills drain your energy and your work suffers.') + ' A mosquito net, a running fan or AC keeps them off at night.</p>' +
+      (k.drugs ? '' : '<div class="inline"><button class="btn go" id="treat" data-treat="1"' + (k.why ? ' disabled' : '') + '>💊 Buy antimalarials · ' + N(k.cost) + '</button></div>' + (k.why ? '<p class="why">' + esc(k.why) + '.</p>' : '')) + '</div>';
+  }
   // Away from your home district: somewhere to sleep, paid by the night.
   function lodgingView() {
     var opts = L.lodgingOptions(S), hd = L.homeDef(S);
@@ -1697,6 +1704,7 @@
     var d = D.DISTRICTS[S.loc];
     var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + tourCard() + streakCard() + partyInvites() + visitView() + adviceView() + gemHere() + giftInbox();
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
+    html += sickCard();
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
     html += peopleHere() + gemCard();
     if (home.length) html += '<div class="section"><h3>At home · ' + esc(L.homeDef(S).name) + '</h3><div class="list">' + home.sort(sortOpen).map(actionRow).join('') + '</div></div>';
@@ -2242,7 +2250,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2385,6 +2393,7 @@
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
     if (ds.minigame) { openMinigame(ds.minigame); return; }
     if (ds.nysc) { var nk = ds.nysc; run(function () { return nk === 'register' ? L.nyscRegister(S) : nk === 'camp' ? L.nyscCamp(S) : nk === 'cds' ? L.nyscCDS(S) : nk === 'retain' ? L.nyscRetain(S) : L.nyscWork(S); }); return; }
+    if (ds.treat) { run(function () { return L.treatMalaria(S); }); return; }
     if (ds.kid) { var kp = ds.kid.split(':'), ki = +kp[1]; run(function () { return kp[0] === 'hw' ? L.helpHomework(S, ki) : L.kidOuting(S, ki); }); return; }
     if (ds.lodge) { var lg = ds.lodge; run(function () { return L.sleepAway(S, lg); }); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }

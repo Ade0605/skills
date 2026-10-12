@@ -30,8 +30,9 @@
   // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race,
   // PAYE and levies; 8 is harder still (steeper PAYE, rent reviews, luxury
   // upkeep and insurance, slower promotions).
-  // 9 adds weather; 10 charges mini-games when they start, so quitting forfeits.
-  var RULES = 10;
+  // 9 adds weather; 10 charges mini-games when they start, so quitting forfeits;
+  // 11 adds malaria (nights without light or a net can give you a fever).
+  var RULES = 11;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -193,6 +194,7 @@
     if (/^NYSC (allawee|PPA)/.test(m)) return 'wages';
     if (/^Lodging: /.test(m)) return 'housing';
     if (m === 'Family outing') return 'family';
+    if (/^(Chemist|Hospital: malaria)/.test(m)) return 'health';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
@@ -262,7 +264,7 @@
     return sum / NEEDS.length;
   }
   function performance(s) {
-    return clamp(mood(s) / 100 * (1 - s.needs.stress / 250) + 0.25, 0.3, 1.15);
+    return clamp(mood(s) / 100 * (1 - s.needs.stress / 250) + 0.25, 0.3, 1.15) * (s.sick ? 0.8 : 1);
   }
 
   /* ---------- world state ---------- */
@@ -302,7 +304,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null, nysc: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null, nysc: null, sick: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -371,6 +373,7 @@
 
   function onHour(s) {
     if (hour(s) % 3 === 0) rollPower(s);
+    if (s.sick) malariaHour(s);
     var low = 0;
     NEEDS.forEach(function (k) { if (s.needs[k] < 25) low++; });
     s.needs.stress = clamp(s.needs.stress + (low ? low * 2 : -0.5), 0, 100);
@@ -752,8 +755,9 @@
 
     var msg = a.label + '.';
     if (a.special === 'sleep' || a.special === 'nap') {
-      var q = homeDef(s).sleep * (s.power ? 1 : 0.8) + furnitureSleep(s);
+      var q = homeDef(s).sleep * (s.power ? 1 : 0.8) + furnitureSleep(s), bite = a.special === 'sleep' ? malariaChance(s, fxSum(s, 'mosquito')) : 0;
       advance(s, a.mins, { sleep: q });
+      if (bite) catchMalaria(s, bite);
       msg = s.power ? 'You slept well.' : 'NEPA took light. Heat and mosquitoes, you slept badly.';
     } else {
       advance(s, a.mins);
@@ -2177,7 +2181,14 @@
   }
 
   function collapse(s, res) {
-    var why = s.needs.hunger <= 0 ? 'hunger' : 'exhaustion';
+    var why = s.needs.hunger <= 0 ? 'hunger' : s.sick ? 'malaria' : 'exhaustion';
+    if (s.sick) {
+      // The hospital treats the malaria too: a drip and a course of drugs.
+      var mb = price(s, 15000);
+      if (s.hmo) log(s, 'Your ' + D.HMO[s.hmo].name + ' paid for the malaria treatment (' + naira(mb) + ').', 'good');
+      else { var mp = payPartial(s, mb, 'Hospital: malaria treatment'); if (mp < mb) addDebt(s, mb - mp, 'Hospital bill'); }
+      s.sick = null;
+    }
     // One bill per week at most; a broke patient is treated on credit once,
     // then by the hospital's charity fund. No spiral into endless debt.
     if (s.hospitalWeek !== week(s)) {
@@ -2243,6 +2254,7 @@
     if (s.sea === undefined) s.sea = null;
     if (s.mini === undefined) s.mini = null;
     if (s.nysc === undefined) s.nysc = null;
+    if (s.sick === undefined) s.sick = null;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2372,6 +2384,7 @@
   function advise(s) {
     if (s.pending.length || s.over) return [];
     var out = [];
+    if (s.sick && !s.sick.drugs) out.push({ kind: 'warn', text: '🦟 You have malaria' + (day(s) - s.sick.since >= 3 ? ' and it is getting worse' : '') + '. Antimalarials from a chemist cost ' + naira(treatCost(s)) + '.', act: treatBlock(s) ? null : { type: 'treat' } });
     if (s.needs.hunger < 30) out.push(foodHint(s));
     if (s.needs.energy < 25) {
       if (homeDistrict(s) === s.loc) {
@@ -3496,10 +3509,56 @@
     var mins = (24 * 60 + 6 * 60 + 30 - minuteOfDay(s)) % (24 * 60);
     if (mins < 6 * 60) mins = 6 * 60;
     else if (mins > 11 * 60) mins = 8 * 60; // a daytime rest, not a day lost to sleep
+    var bite = malariaChance(s, L.gen ? 0.85 : 0);
     advance(s, mins, { sleep: L.sleep * (L.gen || s.power ? 1 : 0.85) });
     if (L.fx) applyFx(s, L.fx);
+    if (bite) catchMalaria(s, bite);
     return finish(s, ok(L.icon + ' A night in a ' + L.name.toLowerCase() + ' in ' + D.DISTRICTS[s.loc].name + '. ' + (L.gen || s.power ? 'You slept well.' : 'NEPA took light and the generator was off by midnight.')));
   }
+
+  /* ---------- malaria (rules 11) ---------- */
+  // A night without light (no fan, no AC) and no net invites mosquitoes; the rainy
+  // season is worse. Rolled once per night's sleep, only on rules 11, so older lives
+  // draw no extra random numbers. protect: 0..1 from a net, a running fan or AC, or a hotel.
+  function malariaChance(s, protect) {
+    if (!(s.rules >= 11) || s.sick) return 0;
+    var p = s.power ? 0.004 : 0.014, wx = weatherNow(s);
+    if (wx === 'rain' || wx === 'storm' || D.WEATHER_MONTHS && (D.WEATHER_MONTHS[monthIndex(s)] || 0) > 0.4) p *= 1.5;
+    p *= 1 - Math.min(0.95, protect || 0);
+    return rand(s) < p ? 1 : 0;
+  }
+  function catchMalaria(s) {
+    s.sick = { kind: 'malaria', since: day(s), drugs: false, cure: -1 };
+    log(s, '🦟 Fever, chills and a headache: it is malaria. Buy drugs at a chemist (Do tab) before it gets worse.', 'bad');
+  }
+  function malariaHour(s) {
+    var sk = s.sick, f = sk.drugs ? 0.5 : day(s) - sk.since >= 3 ? 2 : 1; // untreated, it gets worse
+    s.needs.energy = clamp(s.needs.energy - 1.5 * f, 0, 100);
+    s.needs.fun = clamp(s.needs.fun - 0.8 * f, 0, 100);
+    s.needs.stress = clamp(s.needs.stress + 0.6 * f, 0, 100);
+    if (sk.drugs && day(s) >= sk.cure && hour(s) === 7) { s.sick = null; log(s, '🦟 The fever has broken. You are well again.', 'good'); }
+  }
+  function treatBlock(s) {
+    if (!s.sick) return 'You are not sick';
+    if (s.sick.drugs) return 'You are already taking the drugs';
+    var h = hour(s); if (h < 7 || h >= 21) return 'Chemists open 07:00 to 21:00';
+    if (s.pending.length) return 'Decide on the open event first';
+    if (s.over) return 'This Weekly Lagos is over';
+    if (!canAfford(s, treatCost(s))) return 'Antimalarials cost ' + naira(treatCost(s));
+    return null;
+  }
+  function treatCost(s) { return price(s, s.hmo ? 2000 : 4500); }
+  function treatMalaria(s) {
+    var why = treatBlock(s); if (why) return fail(why + '.');
+    s.alerts = [];
+    var cost = treatCost(s);
+    pay(s, cost, 'Chemist: antimalarials');
+    advance(s, 30);
+    s.sick.drugs = true; s.sick.cure = day(s) + 2;
+    applyFx(s, { stress: -5 });
+    return finish(s, ok('💊 The chemist sold you a full course of antimalarials (' + naira(cost) + (s.hmo ? ', HMO price' : '') + '). Rest, and the fever should break in two days.'));
+  }
+  function sickInfo(s) { return s.sick ? { kind: s.sick.kind, days: day(s) - s.sick.since, drugs: s.sick.drugs, cost: treatCost(s), why: treatBlock(s), worse: !s.sick.drugs && day(s) - s.sick.since >= 3 } : null; }
 
   /* ---------- daily streak: come back on real consecutive days ---------- */
   var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
@@ -3641,7 +3700,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, sleepAway: recorded('ht', sleepAway),
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaChance: malariaChance, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
