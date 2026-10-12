@@ -1272,3 +1272,18 @@ test('sea plots: one block per life, bounds and size, pay only for added plots, 
   const o = L.newGame({ seed: 70, origin: 'mid', goal: 'freestyle' }); delete o.sea;
   assert.equal(L.deserialize(L.serialize(o)).state.sea, null);
 });
+
+test('dance-off: Saturdays at the event hall, spray capped and scaled by accuracy', () => {
+  const s = L.newGame({ seed: 71, origin: 'nepo', goal: 'freestyle', rules: 8 });
+  assert.match(L.danceOff(s, 50, 60, 20).msg, /event hall/);
+  while (L.dow(s) !== 5 || L.hour(s) < 13) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 60); }
+  s.needs.energy = 90; s.needs.hunger = 90;
+  if (s.loc !== 'surulere') L.travel(s, 'surulere', L.travelOptions(s, 'surulere').find(o => !o.disabled).mode);
+  while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(L.danceOff(s, 70, 60, 10).ok, false, 'more hits than notes');
+  const r = L.danceOff(s, 58, 60, 40);
+  assert.ok(r.ok, r.msg);
+  const spray = (s.alerts.find(a => a.memo === 'Dance-off: guests sprayed') || {}).amt || 0;
+  assert.ok(spray > 0 && spray <= L.price(s, 4000), 'capped spray');
+  assert.ok(s.ach.dancer); // (needs were set by hand above, so no replay check here)
+});

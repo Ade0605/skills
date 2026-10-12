@@ -75,6 +75,7 @@
     danfo:       'Agbero approved: served 50 danfo passengers',
     japa:        'Japa: left Nigeria for a new life abroad',
     seaplot:     'Sea Plots: own a block in the water',
+    dancer:      'Dance-off champion: 90% on the beat',
     vendor:      'Online vendor: sold 100 items'
   };
 
@@ -178,7 +179,7 @@
     var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
     if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
-    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Danfo fares|Daily streak|Quest:|Party: guests)/.test(m)) return 'gigs';
+    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Danfo fares|Daily streak|Quest:|Party: guests|Dance-off: guests)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in|Staff:)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
@@ -3097,6 +3098,25 @@
     return finish(s, ok('"Oya, bring am!" You got the ' + c.name + ' for ' + naira(offer) + (saved > 0 ? ', ' + naira(saved) + ' under the shop price.' : '.')));
   }
 
+  /* ---------- owambe dance-off: guests spray a capped sum ---------- */
+  var DANCE_CAP = 4000;
+  function danceOff(s, hits, total, best) {
+    var a = availableActions(s).filter(function (x) { return x.minigame === 'dance'; })[0];
+    if (!a) return fail('Dance-offs are at the Surulere event hall on Saturdays.');
+    if (a.disabled) return fail(a.disabled);
+    hits = Math.floor(hits); total = Math.floor(total); best = Math.floor(best);
+    if (!(total > 0 && total <= 200 && hits >= 0 && hits <= total && best >= 0 && best <= hits)) return fail('That dance does not add up.');
+    if (!pay(s, a.price, a.label)) return fail('The entry is ' + naira(a.price) + '.');
+    s.alerts = [];
+    advance(s, a.mins);
+    applyFx(s, a.fx); addXp(s, a.xp);
+    var acc = hits / total, spray = acc < 0.4 ? 0 : Math.min(price(s, DANCE_CAP), gigPay(s, 5000 * Math.pow(acc, 2) + best * 25, 1));
+    if (outfitTags(s).owambe) spray = Math.min(price(s, DANCE_CAP), roundTo(spray * 1.2, 50));
+    if (spray > 0) earn(s, spray, 'Dance-off: guests sprayed');
+    if (acc >= 0.9) unlock(s, 'dancer');
+    return finish(s, ok('💃 ' + Math.round(acc * 100) + '% on the beat, best streak ' + best + '. ' + (spray ? 'The guests sprayed you ' + naira(spray) + '!' : 'Nobody sprayed. Practise and come back.') + dressBonus(s, 'owambe')));
+  }
+
   /* ---------- daily streak: come back on real consecutive days ---------- */
   var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
   function nextDayId(id) { var d = new Date(id + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
@@ -3237,7 +3257,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
+    danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,

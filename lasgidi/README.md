@@ -109,6 +109,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The trader opens at 130% of the shop price and has a secret last price, 70–95% of it, that changes daily and drops a little for a good hustler.
   - Offer low and they counter ("Customer, add small!").
   - You get three offers per item a day. Accept the right one and you pay less than the shop price.
+- **Owambe dance-off (mini-game):** on Saturdays at the Surulere event hall. A 40-second rhythm game: notes fall in four lanes to a 112-bpm beat, and you tap the lane (or press ←↓↑→ / D F J K) as each one hits the line.
+  - **Spraying:** every 10 in a row brings guests out to spray money across the screen.
+  - **Pay:** the ₦3k entry buys a spray scaled by your accuracy, capped at ₦4k, with a bonus for an owambe outfit.
+  - **Achievement:** 90% on the beat unlocks "Dance-off champion".
 - **Danfo Run (mini-game):** rent a danfo at the new Ojuelegba danfo park (Surulere) and drive a 90-second arcade run in the spirit of the viral *Lagos Run*.
   - **Driving:** change lanes with ◀ ▶ or a swipe, and hold BRAKE at a 🚏 in the left lane to drop passengers and load new ones while the conductor shouts the route.
   - **Hazards:** dodge potholes, okadas and cars, and never stop in a yellow LASTMA zone.

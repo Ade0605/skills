@@ -1463,6 +1463,26 @@
   }
   function closeDanfo() { if (danfoGame) danfoGame.stop(); danfoGame = null; var ov = document.getElementById('danfo-overlay'); if (ov) ov.remove(); }
 
+  // The owambe dance-off overlay, same pattern as Danfo Run.
+  function openDance() {
+    if (!window.LasgidiDance || document.getElementById('danfo-overlay')) return;
+    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Owambe dance-off');
+    ov.innerHTML = '<div class="sheet danfo-sheet"><div class="inline" style="justify-content:space-between"><b>💃 Owambe dance-off</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
+      '<p class="note">Tap the lane (or press ← ↓ ↑ → or D F J K) as each note hits the line. Every 10 in a row brings the guests out to spray you. The entry is ' + N(L.price(S, 3000)) + ' and spraying is capped at ' + N(L.price(S, 4000)) + '; an owambe outfit helps.</p><div class="danfo-end"></div></div>';
+    document.body.appendChild(ov);
+    var result = null;
+    danfoGame = window.LasgidiDance.create({ seed: (S.seed ^ S.t ^ 77) | 0, onDone: function (r) {
+      result = r;
+      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">Collect the spray</button></div>';
+    } });
+    ov.querySelector('.danfo-slot').appendChild(danfoGame.el); window.__danfo = danfoGame;
+    danfoGame.start();
+    ov.addEventListener('click', function (e) {
+      if (e.target.id === 'danfo-quit') { closeDanfo(); return; }
+      if (e.target.id === 'danfo-collect' && result) { var r = result; closeDanfo(); run(function () { return L.danceOff(S, r.hits, r.total, r.best); }); }
+    });
+  }
+
   /* ---------- Do tab ---------- */
   function actionRow(a) {
     var meta = ['<span>' + dur(a.mins) + '</span>'];
@@ -2147,6 +2167,7 @@
     }
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
     if (ds.minigame === 'danfo') { openDanfo(); return; }
+    if (ds.minigame === 'dance') { openDance(); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.partyact) {
       var host = ui.visit, pt2 = host && partyOf(host), act = ds.partyact;
