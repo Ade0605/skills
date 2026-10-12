@@ -96,6 +96,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The app keeps 25% of the fares, and you pay for your own fuel.
   - Rush hour brings more trips, and night fares are higher.
   - Luxury cars earn premium fares but burn so much fuel that a supercar usually loses money.
+- **Japa:** the life's ending, at Murtala Muhammed Airport's international departures.
+  - **Requirements:** pass IELTS, have ₦15m proof of funds plus the visa and ticket, and owe no debts.
+  - **Destinations:** Toronto, London, Houston or Dubai.
+  - **What happens:** boarding the flight completes the life (and the Japa goal). You get an ending screen with a share card, and can post the life to the Hall of Fame and start a new one. The finished life is frozen, and nothing more is recorded.
 - **Haggling at Balogun:** at Balogun market (Lagos Island, Monday to Saturday, 08:00–18:00), every item in the clothes shop has a **Haggle** button.
   - The trader opens at 130% of the shop price and has a secret last price, 70–95% of it, that changes daily and drops a little for a good hustler.
   - Offer low and they counter ("Customer, add small!").

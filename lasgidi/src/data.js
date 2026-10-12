@@ -37,6 +37,14 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // Where you can japa to, once IELTS is passed and the funds are there.
+  var JAPA_DESTS = {
+    toronto:    { name: 'Toronto, Canada', icon: '🇨🇦', ticket: 3200000, text: 'Snow, Tim Hortons and a cousin in Brampton.' },
+    london:     { name: 'London, UK', icon: '🇬🇧', ticket: 3600000, text: 'Peckham is waiting. So is the rain.' },
+    houston:    { name: 'Houston, USA', icon: '🇺🇸', ticket: 4200000, text: 'Big roads, big church, big Naija community.' },
+    dubai:      { name: 'Dubai, UAE', icon: '🇦🇪', ticket: 2400000, text: 'Tax-free pay and long hours.' }
+  };
+
   // Chieftaincy titles: an installation ceremony and a cheque for the palace.
   // Taken in order; each needs a minimum net worth. Pure status: a title earns nothing.
   var TITLES = [
@@ -489,7 +497,7 @@
     { id: 'ielts', icon: '📝', name: 'IELTS test centre', type: 'learn', glyph: 'cap', district: 'ikeja', x: 9.3, y: 4.9, acts: ['ikeja_ielts'], text: 'Saturday morning sittings. The first step to Japa.' },
     { id: 'berger_cars', icon: '🚗', name: 'Berger car mart', type: 'services', glyph: 'car', district: 'ikeja', x: 9.6, y: 5.8, acts: [], dealer: true, text: 'Rows of tokunbo cars, bikes and kekes. Haggle, then drive it home.' },
     { id: 'allen', icon: '🍢', name: 'Allen Avenue suya spots', type: 'food', glyph: 'bowl', district: 'ikeja', x: 11.3, y: 4.0, acts: ['ikeja_suya'], text: 'Smoky suya after dark.' },
-    { id: 'airport', icon: '✈️', name: 'Murtala Muhammed Airport', type: 'transport', glyph: 'plane', district: 'ikeja', x: 6.6, y: 0.9, acts: ['ikeja_air_lounge', 'ikeja_air_spot'], text: 'Domestic flights to Abuja and Port Harcourt leave from here. International flights need IELTS and proof of funds first.' },
+    { id: 'airport', icon: '✈️', name: 'Murtala Muhammed Airport', type: 'transport', glyph: 'plane', district: 'ikeja', x: 6.6, y: 0.9, acts: ['ikeja_air_lounge', 'ikeja_air_spot'], text: 'Domestic flights to Abuja and Port Harcourt, and international departures: japa once you pass IELTS and show ₦15m proof of funds.' },
     { id: 'iko_jetty', icon: '⛴️', name: 'Ikorodu ferry terminal', type: 'transport', glyph: 'boat', district: 'ikorodu', x: 27.4, y: 3.9, acts: [], text: 'Ferries to Lagos Island, Ikoyi and Lekki. Beats the road at rush hour.' },
     { id: 'iko_market', icon: '🧺', name: 'Ikorodu farm market', type: 'food', glyph: 'basket', district: 'ikorodu', x: 28.6, y: 2.6, acts: ['iko_market', 'iko_eat'], text: 'The cheapest foodstuff in Lagos, fresh from the farms.' },
     { id: 'sawmill', icon: '🪚', name: 'Ikorodu sawmill', type: 'learn', glyph: 'tool', district: 'ikorodu', x: 29.2, y: 3.4, acts: ['iko_sawmill'], text: 'Hard work, steady cash.' },
@@ -860,7 +868,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

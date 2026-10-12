@@ -1197,6 +1197,7 @@
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
       (pl.glyph === 'plane' ? '<div class="inline"><button class="btn" id="checkin-' + pl.id + '" data-app="travel" data-tab="phone">🛫 Check in: flights</button></div>' : '') +
+      (pl.id === 'airport' && !S.challenge ? japaView() : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : '<div class="inline"><button class="btn go" id="trip-' + pl.district + '" data-tripto="' + pl.district + '">Plan a trip to ' + esc(D.DISTRICTS[pl.district].name) + '</button></div>');
   }
@@ -1211,6 +1212,14 @@
       var px = a.x + u * dx - p.x, py = a.y + u * dy - p.y;
       return { name: p.name, d: px * px + py * py, u: u };
     }).filter(function (p) { return p && p.d < 9; }).sort(function (x, y) { return x.d - y.d; }).slice(0, 2).sort(function (x, y) { return x.u - y.u; }).map(function (p) { return p.name; });
+  }
+  function japaView() {
+    var html = '<div class="section"><h3>🌍 International departures: Japa</h3><p class="note">IELTS ' + (S.edu.ieltsPassed ? '✓ passed' : '✗ not yet') + ' · funds ' + N(S.cash + S.bank) + ' of ' + N(L.price(S, 15000000)) + ' proof plus visa and ticket' + (L.debts(S) > 0 ? ' · ✗ clear your debts' : '') + '. Japa ends this life: you can post it to the Hall of Fame and start a new one.</p><div class="list">';
+    html += Object.keys(D.JAPA_DESTS).map(function (k) {
+      var J = D.JAPA_DESTS[k], why = L.japaBlock(S, k);
+      return '<div class="item"><div><h3>' + J.icon + ' ' + esc(J.name) + '</h3><div class="meta"><span class="cost num">' + N(L.price(S, J.ticket) + L.price(S, 1200000)) + ' ticket and visa</span></div><div class="act-note">' + esc(J.text) + '</div></div><button class="btn go" id="japa-' + k + '" data-japa="' + k + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>Japa</button></div>';
+    }).join('');
+    return html + '</div></div>';
   }
   function whenText(w) {
     var parts = [];
@@ -1819,6 +1828,13 @@
 
   /* ---------- modal for choice events ---------- */
   function modal() {
+    if (S.japa && !S.japaSeen) {
+      var J = D.JAPA_DESTS[S.japa.dest];
+      return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="japa-title"><div class="sheet"><span class="label">Life complete · week ' + (L.week(S) + 1) + '</span><h2 id="japa-title">' + J.icon + ' You japa-ed to ' + esc(J.name) + '!</h2>' +
+        '<p>' + esc(L.titledName(S)) + ', ' + esc(D.ORIGINS[S.origin].name) + '. You left Lagos with ' + N(L.netWorth(S)) + ', ' + S.stats.trips + (S.stats.trips === 1 ? ' trip' : ' trips') + ' and ' + S.stats.shifts + (S.stats.shifts === 1 ? ' shift' : ' shifts') + ' behind you. ' + esc(J.text) + '</p>' +
+        shareBlock() + '<div class="opts">' + (online.db && S.replay ? '<button class="btn go" id="japa-post" data-postfame="1">Post this life to the Hall of Fame</button>' : '') +
+        '<button class="btn" id="japa-new" data-new="1">Start a new life</button><button class="btn ghost" id="japa-look" data-japaseen="1">Look back at this life</button></div></div></div>';
+    }
     if (S.over && !S.overSeen) {
       var text = L.challengeShareText(S).split('\n');
       return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ch-title"><div class="sheet"><span class="label">Weekly Lagos ' + esc(S.challenge.id) + ' · time up</span><h2 id="ch-title">' + N(L.netWorth(S)) + '</h2>' +
@@ -1902,7 +1918,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2009,6 +2025,8 @@
       });
       return;
     }
+    if (ds.japa) { var jd = ds.japa; run(function () { return L.japaFly(S, jd); }); return; }
+    if (ds.japaseen) { S.japaSeen = true; S.wonSeen = true; save(); render(); return; }
     if (ds.haggle) { ui.haggle = ui.haggle && ui.haggle.id === ds.haggle ? null : { id: ds.haggle }; render(); return; }
     if (ds.hagoffer && ui.haggle) {
       var hid = ui.haggle.id, off = +ds.hagoffer;

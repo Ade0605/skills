@@ -1237,3 +1237,19 @@ test('haggling at Balogun: counter-offers, a hidden last price, three tries a da
   assert.match(L.haggleBuy(s, 'lace_top', 10).msg, /tomorrow/);
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('japa: IELTS, funds and no debts at Ikeja airport; then the life is frozen', () => {
+  const s = L.newGame({ seed: 68, origin: 'nepo', goal: 'japa', rules: 8 });
+  assert.match(L.japaBlock(s, 'toronto'), /Murtala|IELTS/);
+  s.loc = 'ikeja'; s.edu.ieltsPassed = true; // mechanics only
+  assert.match(L.japaBlock(s, 'toronto'), /You need/);
+  s.bank += 25000000; s.opening.bank += 25000000;
+  assert.equal(L.japaBlock(s, 'toronto'), null);
+  const r = L.japaFly(s, 'toronto');
+  assert.ok(r.ok && r.japa, r.msg);
+  assert.ok(s.japa && s.ach.japa && s.won && s.won.goal === 'japa');
+  assert.match(L.wait(s, 60).msg, /japa-ed/);
+  const n = s.replay.acts.length; L.wait(s, 60);
+  assert.equal(s.replay.acts.length, n, 'nothing more is recorded');
+  assert.ok(L.availableActions(s).every(a => a.disabled));
+});

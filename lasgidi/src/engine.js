@@ -73,6 +73,7 @@
     pet:         'Best friend: adopted a pet',
     chief:       'Chieftaincy: took a title',
     danfo:       'Agbero approved: served 50 danfo passengers',
+    japa:        'Japa: left Nigeria for a new life abroad',
     vendor:      'Online vendor: sold 100 items'
   };
 
@@ -186,6 +187,7 @@
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
+    if (/^Japa/.test(m)) return 'transport';
     return amt < 0 ? 'lifestyle' : 'other';
   }
 
@@ -695,6 +697,7 @@
 
   function blocker(s, a, cost) {
     if (s.over) return 'This Weekly Lagos is over';
+    if (s.japa) return 'You have japa-ed. Start a new life to play again';
     if (s.pending.length) return 'Decide on the open event first';
     if (!inWindow(s, a.when)) return 'Only ' + windowLabel(a.when);
     if (a.req) {
@@ -1059,6 +1062,7 @@
       if (id === 'trek') o.energy = Math.round(m.energyPerKm * km * (wet ? 1.3 : 1));
       if (wet && WET_MODES[id]) o.wet = true;
       if (!o.disabled && s.over) o.disabled = 'This Weekly Lagos is over';
+      if (!o.disabled && s.japa) o.disabled = 'You have japa-ed';
       if (!o.disabled && s.pending.length) o.disabled = 'Decide on the open event first';
       if (!o.disabled && o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost);
       if (!o.disabled && id === 'trek' && s.needs.energy - o.energy - DECAY.energy * o.mins / 60 <= 5) o.disabled = 'Too tired to trek that far';
@@ -2992,6 +2996,34 @@
     log(s, '🚐 Your danfo driver brought ' + naira(got) + ' for the week.', 'good');
   }
 
+  /* ---------- japa: the international flight that ends a life ---------- */
+  var JAPA_FUNDS = 15000000, JAPA_VISA = 1200000;
+  function japaBlock(s, dest) {
+    var J = D.JAPA_DESTS[dest];
+    if (!J) return 'No such destination';
+    if (s.challenge) return 'No japa in Weekly Lagos';
+    if (s.loc !== 'ikeja') return 'International flights leave from Murtala Muhammed Airport, Ikeja';
+    if (!s.edu.ieltsPassed) return 'Pass IELTS first (Ikeja test centre)';
+    var need = price(s, JAPA_FUNDS) + price(s, J.ticket) + price(s, JAPA_VISA);
+    if (s.cash + s.bank < need) return 'You need ' + naira(need) + ': ₦15m proof of funds plus the visa and ticket';
+    if (debts(s) > 0) return 'Clear your debts first. The embassy checks';
+    return null;
+  }
+  function japaFly(s, dest) {
+    var why = japaBlock(s, dest); if (why) return fail(why + '.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var J = D.JAPA_DESTS[dest];
+    s.alerts = [];
+    pay(s, price(s, JAPA_VISA), 'Japa: visa fees');
+    pay(s, price(s, J.ticket), 'Japa: one-way ticket to ' + J.name);
+    advance(s, 120);
+    s.japa = { dest: dest, t: s.t };
+    unlock(s, 'japa');
+    if (!s.won && s.goal === 'japa') s.won = { goal: 'japa', t: s.t };
+    log(s, '✈️ You boarded the flight to ' + J.name + '. Lagos, we go see again.', 'ach');
+    return ok(J.icon + ' Wheels up! Next stop: ' + J.name + '.', { japa: true });
+  }
+
   /* ---------- haggling at Balogun ---------- */
   // The trader opens at 130% and has a secret last price between 75% and 95%
   // (a little lower for a good haggler), fixed for the day. Three offers per item a day.
@@ -3110,6 +3142,7 @@
 
   function shareText(s) {
     if (s.challenge) return challengeShareText(s);
+    if (s.japa) return 'I japa-ed! ' + titledName(s) + ' left Lagos for ' + D.JAPA_DESTS[s.japa.dest].name + ' after ' + (week(s) + 1) + (week(s) ? ' weeks' : ' week') + ' in #Lasgidi, net worth ' + naira(netWorth(s)) + '. Lagos, we go see again.';
     var title = s.job ? D.CAREERS[s.job.id].titles[s.job.level] : 'job hunting';
     var got = Object.keys(s.ach).length, total = Object.keys(ACHIEVEMENTS).length;
     return 'Week ' + (week(s) + 1) + ' in #Lasgidi: ' + titledName(s) + ', ' + D.ORIGINS[s.origin].name + ', now ' + title + ' living in ' + D.DISTRICTS[homeDistrict(s)].name +
@@ -3124,12 +3157,12 @@
   // Every call that changes a life goes through recorded(), so the life can be replayed.
   // A finished challenge is frozen: every recorded call becomes a no-op failure.
   function recorded(code, raw) {
-    var fn = function (s) { return s.over ? fail('This Weekly Lagos is over. Start next week\'s, or go back to your life.') : raw.apply(null, arguments); };
+    var fn = function (s) { return s.over ? fail('This Weekly Lagos is over. Start next week\'s, or go back to your life.') : s.japa ? fail('You have japa-ed. This life is complete: start a new one.') : raw.apply(null, arguments); };
     if (RECORDED[code]) throw new Error('Replay code used twice: ' + code);
     RECORDED[code] = { fn: fn };
     return function (s) {
       var args = Array.prototype.slice.call(arguments, 1);
-      if (s.over) return fn.apply(null, arguments); // frozen: refuse without recording
+      if (s.over || s.japa) return fn.apply(null, arguments); // frozen: refuse without recording
       if (s.replay && s.replay.acts.length < MAX_ACTS) s.replay.acts.push([code].concat(args));
       else if (s.replay) s.replay = null; // too long to verify; stop recording
       return fn.apply(null, arguments);
@@ -3169,6 +3202,7 @@
     buyPhone: recorded('ph', buyPhone), brandDeal: brandDeal, followerGain: followerGain, phoneCam: phoneCam,
     openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
+    japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
     danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
