@@ -45,6 +45,20 @@
     dubai:      { name: 'Dubai, UAE', icon: '🇦🇪', ticket: 2400000, text: 'Tax-free pay and long hours.' }
   };
 
+  // Town Hall: one question a real-world week, voted on by every player. Social only.
+  var TOWNHALL = [
+    { q: 'Should okadas be allowed back on the bridges?', a: ['Yes, we need them', 'Only with helmets', 'No, keep the ban'] },
+    { q: 'What should the next BRT line serve?', a: ['Lekki–Ajah', 'Ikorodu–Ojota', 'Badagry Road'] },
+    { q: 'Monthly sanitation Saturdays: bring them back?', a: ['Yes, every month', 'Once a quarter', 'No'] },
+    { q: 'Free WiFi in danfo parks?', a: ['Yes, everywhere', 'Only the big parks', 'Fix the roads first'] },
+    { q: 'Which should the city fix first?', a: ['Flooding drains', 'Potholes', 'Street lights'] },
+    { q: 'Should the ferries run all night?', a: ['Yes', 'Weekends only', 'No'] },
+    { q: 'Detty December: should clubs close by 3am?', a: ['No, party on', '3am is fine', 'Midnight'] },
+    { q: 'Where should the next big park be built?', a: ['Mainland', 'The Island', 'Lekki'] },
+    { q: 'Should every market get a cooling shed?', a: ['Yes', 'Only the big ones', 'Let traders decide'] },
+    { q: 'Cashless danfos: card and transfer only?', a: ['Yes', 'Both cash and card', 'Cash only'] }
+  ];
+
   // Chieftaincy titles: an installation ceremony and a cheque for the palace.
   // Taken in order; each needs a minimum net worth. Pure status: a title earns nothing.
   var TITLES = [
@@ -876,7 +890,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

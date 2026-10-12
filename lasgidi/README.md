@@ -96,6 +96,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The app keeps 25% of the fares, and you pay for your own fuel.
   - Rush hour brings more trips, and night fares are higher.
   - Luxury cars earn premium fares but burn so much fuel that a supercar usually loses money.
+- **🗳️ Town Hall:** one Lagos question each real-world week, voted on by every player, with a live tally. Examples: okadas on the bridges, the next BRT line, free WiFi in danfo parks. You can change your vote until the week ends. It is social only and never touches money.
 - **Settings (Me tab):**
   - **🗣️ Naija Pidgin:** tabs, app names, headings and buttons, such as "Wetin dey", "Owo", "Mission", "Work wey dey" and "Buy am".
   - **🔠 Large text.**

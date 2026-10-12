@@ -109,7 +109,7 @@
   var PCM = {
     'Do': 'Wetin dey', 'Map': 'Map', '📱 Phone': '📱 Phone', 'Home': 'House', 'Work': 'Work', 'Money': 'Owo', 'Me': 'Me', 'Gist': 'Gist',
     'Messages': 'Messages', 'Quests': 'Mission', 'Jobs': 'Work wey dey', 'Bank': 'Bank', 'Stocks': 'Shares', 'Shop': 'Market', 'Creator': 'Content', 'Games': 'Games',
-    'Dealers': 'Motor dealers', 'Gem hunt': 'Gem hunt', 'What\'s on': 'Wetin dey happen', 'Weather': 'Weather', 'Travel': 'Travel', 'My story': 'My story', 'Hall of Fame': 'Hall of Fame', 'Wardrobe': 'Cloth', 'Guide': 'How to play',
+    'Dealers': 'Motor dealers', 'Gem hunt': 'Gem hunt', 'What\'s on': 'Wetin dey happen', 'Weather': 'Weather', 'Town Hall': 'Town Hall', 'Travel': 'Travel', 'My story': 'My story', 'Hall of Fame': 'Hall of Fame', 'Wardrobe': 'Cloth', 'Guide': 'How to play',
     '‹ Apps': '‹ Apps', 'Buy': 'Buy am', 'Close': 'Close am', 'Leave': 'Comot', 'Hire': 'Hire am', 'Let go': 'Sack am', 'Adopt': 'Carry am go house', 'Rehome': 'Give am out', 'Join': 'Join', 'Cancel': 'Cancel am',
     'Open': 'Open am', 'Host': 'Throw am', 'Take it': 'Take am', 'Claim': 'Collect', 'Go now': 'Go now now', 'Wear': 'Wear am', 'Take off': 'Remove am', 'Haggle': 'Price am', 'Play': 'Play', '▶ Play': '▶ Play am', 'Go there': 'Go there', 'Quit': 'Comot',
     'Wait 1 hour': 'Siddon 1 hour', 'Clock in': 'Clock in', 'Sell': 'Sell am', 'Drive': 'Drive am', 'Showroom': 'Showroom', 'My garage': 'My garage',
@@ -177,7 +177,7 @@
    * Both light up only inside claude.ai; the game is complete without them.
    * No chat and no free text travel between players: presence carries a
    * district key, the board carries numbers. */
-  var online = { sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
+  var online = { votes: [], sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
 
   // Each player's row is a small summary at fame/<id>; the replay log lives
   // beside it at fame/<id>/proof/log. Load every summary (no ordering: a
@@ -303,6 +303,7 @@
           if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
           scheduleRender();
         }, function () { online.sea = []; });
+        db.collection('votes').limit(1000).onSnapshot(function (snap) { online.votes = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); scheduleRender(); }, function () { online.votes = []; });
         db.collection('seaimg').limit(500).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.seaimg = m; scheduleRender(); }, function () { online.seaimg = {}; });
       } catch (e) { online.sea = []; online.seaimg = {}; }
       try {
@@ -1975,7 +1976,7 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
   var GUIDE = [
@@ -1995,6 +1996,29 @@
       return '<div class="item"><div><h3>' + g[0] + ' ' + esc(g[1]) + '</h3><div class="act-note">' + esc(g[2]) + '</div></div>' + btn + '</div>';
     }).join('') + '</div><p class="note">Number keys switch tabs; A does the top suggestion. Your game saves in this browser. Copy the save code on the Me tab to move devices.</p></div>';
   }
+  /* ---------- Town Hall: a weekly vote shared by every player ---------- */
+  function townWeek() { return L.challengeId(new Date()); }
+  function townQuestion() { var id = townWeek(), n = parseInt(id.slice(-2), 10) + parseInt(id.slice(0, 4), 10) * 53; return D.TOWNHALL[n % D.TOWNHALL.length]; }
+  function townTally() {
+    var wk = townWeek(), q = townQuestion(), counts = q.a.map(function () { return 0; }), mine = null;
+    (online.votes || []).forEach(function (v) {
+      var r = v.raw;
+      if (!r || r.week !== wk || typeof r.choice !== 'number' || r.choice < 0 || r.choice >= q.a.length || Math.round(r.choice) !== r.choice) return;
+      counts[r.choice]++;
+      if (v.id === online.me) mine = r.choice;
+    });
+    return { q: q, counts: counts, total: counts.reduce(function (a, b) { return a + b; }, 0), mine: mine, wk: wk };
+  }
+  function townView() {
+    var T = townTally();
+    var html = '<div class="section" style="padding-top:0"><h3>🗳️ Town Hall · ' + esc(T.wk) + '</h3><p class="note">One question a week for every Lasgidi player. Your vote is shared, and you can change it until the week ends. Nothing here touches your money.</p>' +
+      '<h3 class="th-q">' + esc(T.q.q) + '</h3><div class="th-opts">' + T.q.a.map(function (a, i) {
+        var pct = T.total ? Math.round(T.counts[i] / T.total * 100) : 0, on = T.mine === i;
+        return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="vote-' + i + '" data-vote="' + i + '"' + (online.db && online.me ? '' : ' disabled') + '><span class="th-bar" style="width:' + pct + '%"></span><span class="th-t">' + (on ? '✓ ' : '') + esc(a) + '</span><b class="num">' + pct + '%</b></button>';
+      }).join('') + '</div><p class="note">' + T.total + ' vote' + (T.total === 1 ? '' : 's') + ' so far.' + (online.db ? '' : ' Voting works when the game is opened on claude.ai.') + (online.voteStatus ? ' ' + esc(online.voteStatus) : '') + '</p></div>';
+    return html;
+  }
+
   function gamesView() {
     var rows = [
       { icon: '🚐', name: 'Danfo Run', where: 'Ojuelegba danfo park, Surulere', when: 'Every day, 06:00–21:00', best: S.stats.danfoBest ? 'Best fares ' + N(S.stats.danfoBest) + ' · ' + (S.stats.danfoPax || 0) + ' passengers in all' : 'Not played yet', act: 'suru_danfo', kind: 'danfo', place: 'ojuelegba_park', district: 'surulere' },
@@ -2034,6 +2058,7 @@
     if (app) {
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
+      else if (app === 'town') body = '<div class="panel-b">' + townView() + '</div>';
       else if (app === 'guide') body = '<div class="panel-b">' + guideView() + '</div>';
       else if (app === 'games') body = '<div class="panel-b">' + gamesView() + '</div>';
       else if (app === 'creator') body = '<div class="panel-b">' + creatorView() + '</div>';
@@ -2160,7 +2185,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2419,6 +2444,12 @@
     if (ds.postfame) {
       t.disabled = true;
       postFame(L.fameEntry(S)).then(function (msg) { online.status = msg || ''; render(); });
+      return;
+    }
+    if (ds.vote != null && t.hasAttribute('data-vote')) {
+      if (!online.db || !online.me) return;
+      var ch = +ds.vote;
+      online.db.doc('votes/' + online.me).set({ week: townWeek(), choice: ch, at: Date.now() }).then(function () { online.voteStatus = 'Vote saved.'; render(); }, function () { online.voteStatus = 'Your vote could not be saved.'; render(); });
       return;
     }
     if (ds.setpref) {
