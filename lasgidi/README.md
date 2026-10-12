@@ -103,7 +103,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - Serving 50 passengers unlocks "Agbero approved".
   - **Own a danfo:** buy a ₦18m danfo bus from the dealers (Commercial tab). Your own runs then pay no owner's returns. Or hire a driver and it brings weekly returns, with an 8% chance of a crash repair bill and a 5% chance the driver "travels to the village" with the money.
 - **Airports:** Lagos, Abuja and Port Harcourt airports each have a **premium lounge** (shower, buffet and quiet: big boosts to hygiene, hunger and stress), **plane-spotting** at the apron window, and a **🛫 Check in** button that opens flights.
-- **Now passing:** after each trip, a note names the landmarks you passed on the way.
+- **Now passing:** after each trip, a note names the landmarks you passed on the way. On the map, your danfo, cab, keke, okada, car, boat or helicopter rides from district to district ("On the way to Lekki…").
 - **House parties with real players:** when you host, you can add an **event decorator** for half the party's cost again. It turns the house festive, and guests spray 25% more.
   - For 30 real minutes, Lagosians online get a 💌 **party invite** on their Do tab.
   - **Guests:** they walk into your home and see the decorations and a live guest count. Guest faces line the party bar. They can **🔔 Ring bell** (you get a toast), **💃 Dance** or **🥂 Socialise**.

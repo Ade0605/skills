@@ -747,6 +747,20 @@
         placeHits.push({ id: pl.id, x: p.x, y: gy });
       });
 
+      // Your trip: a marker rides from where you were to where you are now.
+      var tr = scene.trip, tp = tr ? (Date.now() - tr.at) / 2400 : 2;
+      if (tr && tp < 1 && !reduce && D.DISTRICTS[tr.from] && D.DISTRICTS[tr.to] && cityOfDistrict(tr.from) === CITY) {
+        var e = tp < 0.5 ? 2 * tp * tp : 1 - Math.pow(-2 * tp + 2, 2) / 2, A = D.DISTRICTS[tr.from], B = D.DISTRICTS[tr.to];
+        var q = toScreen(A.x + (B.x - A.x) * e, A.y + (B.y - A.y) * e, 0), icon = { danfo: '🚌', brt: '🚍', cab: '🚕', keke: '🛺', okada: '🏍️', car: '🚗', ferry: '⛴️', boat: '🚤', heli: '🚁', trek: '🚶' }[tr.mode] || '🚌';
+        ctx.beginPath(); ctx.arc(q.x, q.y - 14, 13, 0, Math.PI * 2); ctx.fillStyle = theme.danfo; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = theme.danfoInk; ctx.stroke();
+        ctx.font = '15px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(icon, q.x, q.y - 13.5);
+        var label = 'On the way to ' + D.DISTRICTS[tr.to].name + '…';
+        ctx.font = '700 12px Atkinson Hyperlegible, sans-serif'; var lw = ctx.measureText(label).width + 18;
+        ctx.fillStyle = theme.dark ? 'rgba(27,28,30,.92)' : 'rgba(255,255,255,.95)'; roundRect(ctx, W / 2 - lw / 2, H - 44, lw, 24, 12); ctx.fill();
+        ctx.fillStyle = theme.ink; ctx.fillText(label, W / 2, H - 31.5);
+        ctx.textBaseline = 'alphabetic';
+      }
+
       // Weather over everything: rain streaks (still when motion is reduced), or harmattan haze.
       if (scene.weather === 'rain' || scene.weather === 'storm') {
         var heavy = scene.weather === 'storm', n = Math.round(W * H / (heavy ? 1200 : 2000)), off = reduce ? 0 : clock * (heavy ? 0.9 : 0.6);
