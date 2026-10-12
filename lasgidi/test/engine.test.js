@@ -1537,3 +1537,41 @@ test('away from home: a real trip to Abuja with a hotel night replays', () => {
   assert.ok(r.ok, r.msg);
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('lodging by day is an 8-hour rest, not a day lost to sleep', () => {
+  const s = L.newGame({ seed: 92, origin: 'nepo', goal: 'freestyle' });
+  s.loc = 'abj_wuse'; s.t = s.t - (s.t % 1440) + 1440 + 9 * 60; s.needs.energy = 30; s.needs.hunger = 60;
+  const t0 = s.t;
+  assert.ok(L.sleepAway(s, 'hotel').ok);
+  assert.equal(s.t - t0, 8 * 60);
+  assert.ok(s.needs.hunger > 20, 'not starved by sleep');
+});
+
+test('children: homework on school nights, weekend outings, and a report card each term', () => {
+  const s = L.newGame({ seed: 93, origin: 'nepo', goal: 'freestyle' });
+  const old = { born: L.day(s), school: 'public', nextFees: L.day(s) + 3 };
+  const k = { born: L.day(s), school: 'private', nextFees: L.day(s) + 10 };
+  s.kids.push(old, k);
+  assert.equal(L.kidName(s, 1), L.kidName(s, 1));
+  assert.ok(L.DATA.KID_NAMES.includes(L.kidName(s, 1)));
+  const home = L.homeDef(s).district;
+  const at = (d, h, loc) => { s.t = d * 1440 + h * 60; s.loc = loc || home; while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 70; };
+  const mon = (L.week(s) + 1) * 7;
+  at(mon, 12); assert.match(L.helpHomework(s, 1).msg, /17:00/);
+  at(mon, 18, 'vi' === home ? 'yaba' : 'vi'); assert.match(L.helpHomework(s, 1).msg, /at home/);
+  at(mon, 18); assert.ok(L.helpHomework(s, 1).ok); assert.match(L.helpHomework(s, 1).msg, /done for today/);
+  at(mon + 5, 18); assert.match(L.helpHomework(s, 1).msg, /school nights/);
+  at(mon + 5, 11);
+  const cash = s.cash + s.bank, r = L.kidOuting(s, 1);
+  assert.ok(r.ok, r.msg); assert.equal(s.ledger.filter(l => l.memo === 'Family outing').reduce((a, l) => a + l.amt, 0), -L.price(s, 5000)); assert.ok(s.cash + s.bank <= cash - L.price(s, 5000));
+  assert.match(L.kidOuting(s, 1).msg, /One outing a week/);
+  assert.equal(L.kidsInfo(s)[1].bond, 13);
+  assert.equal(L.category('Family outing', -1), 'family');
+  // More homework, then the term ends.
+  for (let d = 1; d <= 4; d++) { at(mon + 7 + d - 1, 18); assert.ok(L.helpHomework(s, 1).ok); }
+  for (let i = 0; i < 200 && !(k.reports && k.reports.length); i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 70; s.needs.hygiene = 80; L.wait(s, 240); }
+  assert.equal(k.reports.length, 1);
+  assert.ok('ABCDF'.includes(k.reports[0].grade));
+  assert.equal(k.hw, 0, 'a new term starts');
+  assert.equal(old.reports, undefined, 'no report cards for a child you never helped');
+});

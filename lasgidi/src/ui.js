@@ -596,10 +596,13 @@
       }
     }
     if (S.kids.length) {
-      html += '<h3>Children</h3><ul class="note">' + S.kids.map(function (k, i) {
-        var due = k.nextFees - L.day(S);
-        return '<li>Child ' + (i + 1) + ': ' + (k.school ? esc(L.SCHOOLS[k.school].name) + ', next fees in ' + Math.max(0, due) + ' days' : 'school starts in ' + Math.max(0, due) + ' days') + '</li>';
-      }).join('') + '</ul><p class="note">Each child costs ' + N(L.price(S, 4000)) + ' a week for food and care.</p>';
+      html += '<h3>Children</h3><div class="list">' + L.kidsInfo(S).map(function (k, i) {
+        return '<div class="item kid"><div><h3>🧒 ' + esc(k.name) + (k.last ? ' <span class="kid-grade g' + k.last + '" title="Last report card">' + k.last + '</span>' : '') + '</h3>' +
+          '<div class="meta"><span>' + (k.school ? esc(L.SCHOOLS[k.school].name) + ', next fees in ' + k.feesIn + ' days' : 'school starts in ' + k.feesIn + ' days') + '</span>' + (k.school ? '<span>Homework this term: ' + k.hw + '</span>' : '') + '</div>' +
+          '<div class="kid-bond" aria-label="Bond ' + k.bond + ' of 100"><span>Bond</span><div class="progress"><i style="width:' + k.bond + '%"></i></div></div>' +
+          '<div class="inline"><button class="btn sm" id="kid-hw-' + i + '" data-kid="hw:' + i + '"' + (k.hwWhy ? ' disabled title="' + esc(k.hwWhy) + '"' : '') + '>📚 Homework</button><button class="btn sm" id="kid-out-' + i + '" data-kid="out:' + i + '"' + (k.outWhy ? ' disabled title="' + esc(k.outWhy) + '"' : '') + '>🎡 Outing · ' + N(L.price(S, 5000)) + '</button></div>' +
+          (k.hwWhy && k.outWhy ? '<div class="why">' + esc(k.hwWhy) + '. ' + esc(k.outWhy) + '.</div>' : '') + '</div></div>';
+      }).join('') + '</div><p class="note">Each child costs ' + N(L.price(S, 4000)) + ' a week for food and care. Help with homework on school nights and take them out at weekends: the report card each term follows the school, the homework and your bond.</p>';
     }
     return html + '</div>';
   }
@@ -2239,7 +2242,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2382,6 +2385,7 @@
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
     if (ds.minigame) { openMinigame(ds.minigame); return; }
     if (ds.nysc) { var nk = ds.nysc; run(function () { return nk === 'register' ? L.nyscRegister(S) : nk === 'camp' ? L.nyscCamp(S) : nk === 'cds' ? L.nyscCDS(S) : nk === 'retain' ? L.nyscRetain(S) : L.nyscWork(S); }); return; }
+    if (ds.kid) { var kp = ds.kid.split(':'), ki = +kp[1]; run(function () { return kp[0] === 'hw' ? L.helpHomework(S, ki) : L.kidOuting(S, ki); }); return; }
     if (ds.lodge) { var lg = ds.lodge; run(function () { return L.sleepAway(S, lg); }); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.partyact) {

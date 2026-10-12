@@ -579,3 +579,10 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .nysc-cds.miss { background: #d0453a; border-color: #d0453a; color: #fff; }
 .nysc-done { text-align: center; padding: 12px 0; }
 .nysc-big { font-size: 48px; margin: 0; }
+
+/* Children */
+.kid-grade { display: inline-grid; place-items: center; min-width: 24px; height: 24px; border-radius: 6px; font-size: 13px; font-weight: 800; margin-left: 6px; background: var(--line); }
+.kid-grade.gA { background: #2fa36b; color: #fff; } .kid-grade.gB { background: #2f6fa0; color: #fff; }
+.kid-grade.gD, .kid-grade.gF { background: #d0453a; color: #fff; }
+.kid-bond { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 12.5px; }
+.kid-bond .progress { flex: 1; margin: 0; }

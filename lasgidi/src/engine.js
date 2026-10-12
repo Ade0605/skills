@@ -79,7 +79,8 @@
     dancer:      'Dance-off champion: 90% on the beat',
     quiz:        'Quiz champion: 10 out of 10',
     vendor:      'Online vendor: sold 100 items',
-    corper:      'Corper wee! Finished your NYSC service year'
+    corper:      'Corper wee! Finished your NYSC service year',
+    scholar:     'Straight A: a child brought home an A'
   };
 
   /* ---------- small helpers ---------- */
@@ -191,6 +192,7 @@
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/^NYSC (allawee|PPA)/.test(m)) return 'wages';
     if (/^Lodging: /.test(m)) return 'housing';
+    if (m === 'Family outing') return 'family';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
@@ -1720,9 +1722,70 @@
   }
 
   function chargeFees(s, k) {
+    // Report cards only come for children whose homework you have helped with (a newer system).
+    if (k.hw !== undefined) reportCard(s, k);
     var fee = price(s, SCHOOLS[k.school].fee);
     if (!pay(s, fee, 'School fees (' + SCHOOLS[k.school].name + ')')) { addDebt(s, fee, 'School fees'); applyFx(s, { stress: 20 }); }
     k.nextFees = day(s) + 84;
+  }
+
+  /* ---------- children: homework, outings and report cards ---------- */
+  function kidName(s, i) { var k = s.kids[i]; return k ? D.KID_NAMES[parseInt(fnv(s.seed + ':kid:' + k.born + ':' + i), 16) % D.KID_NAMES.length] : ''; }
+  function homeworkBlock(s, i) {
+    var k = s.kids[i];
+    if (!k) return 'No such child';
+    if (!k.school) return kidName(s, i) + ' has not started school yet';
+    if (homeDistrict(s) !== s.loc) return 'Homework is done at home';
+    if (dow(s) > 4) return 'Homework is for school nights (Monday to Friday)';
+    var h = hour(s); if (h < 17 || h >= 21) return 'Homework time is 17:00 to 21:00';
+    if (k.hwDay === day(s)) return 'Homework is done for today';
+    if (s.needs.energy < 15) return 'Too tired';
+    return nyscBusy(s);
+  }
+  function helpHomework(s, i) {
+    var why = homeworkBlock(s, i); if (why) return fail(why + '.');
+    var k = s.kids[i];
+    s.alerts = [];
+    k.hw = (k.hw || 0) + 1; k.hwDay = day(s); k.bond = Math.min(100, (k.bond || 0) + 3);
+    advance(s, 60); applyFx(s, { social: 6, stress: 3, energy: -5 });
+    return finish(s, ok('📚 You did homework with ' + kidName(s, i) + '. ' + ['Long division, and a lot of patience.', 'A Basic Science project on the water cycle.', 'Reading practice: ' + kidName(s, i) + ' read you a whole story.', 'Spellings for Friday\'s test.'][k.hw % 4]));
+  }
+  function outingBlock(s, i) {
+    var k = s.kids[i];
+    if (!k) return 'No such child';
+    if (cityOf(s) !== districtCity(homeDistrict(s))) return 'Outings are in your home city';
+    if (dow(s) < 5) return 'Outings are at the weekend';
+    var h = hour(s); if (h < 10 || h >= 18) return 'Outings are from 10:00 to 18:00';
+    if (k.outWeek === week(s)) return 'One outing a week';
+    if (!canAfford(s, price(s, 5000))) return 'An outing costs ' + naira(price(s, 5000));
+    if (s.needs.energy < 25) return 'Too tired';
+    return nyscBusy(s);
+  }
+  function kidOuting(s, i) {
+    var why = outingBlock(s, i); if (why) return fail(why + '.');
+    var k = s.kids[i];
+    s.alerts = [];
+    pay(s, price(s, 5000), 'Family outing');
+    k.outWeek = week(s); k.bond = Math.min(100, (k.bond || 0) + 10);
+    if (k.hw === undefined && k.school) k.hw = 0; // report cards start once you are involved
+    advance(s, 180); applyFx(s, { fun: 20, social: 15, stress: -10, energy: -8 });
+    return finish(s, ok('🎡 A day out with ' + kidName(s, i) + ': ' + ['ice cream and the beach.', 'the zoo and puff-puff.', 'the cinema and popcorn.', 'the park and a football match.'][k.outWeek % 4]));
+  }
+  var GRADE_BONUS = { public: 0, private: 12, intl: 25 };
+  function reportCard(s, k) {
+    var i = s.kids.indexOf(k), name = kidName(s, i);
+    var score = (GRADE_BONUS[k.school] || 0) + Math.min(45, (k.hw || 0) * 5) + (k.bond || 0) / 5 + parseInt(fnv(s.seed + ':rc:' + i + ':' + day(s)), 16) % 15;
+    var grade = score >= 70 ? 'A' : score >= 55 ? 'B' : score >= 40 ? 'C' : score >= 25 ? 'D' : 'F';
+    (k.reports = k.reports || []).push({ day: day(s), grade: grade });
+    k.hw = 0;
+    if (grade === 'A') { unlock(s, 'scholar'); applyFx(s, { fun: 10, stress: -5 }); log(s, '📜 ' + name + '\'s report card: straight A! The teacher says "A joy to teach."', 'good'); }
+    else if (grade === 'F') { applyFx(s, { stress: 10 }); log(s, '📜 ' + name + '\'s report card: F. The teacher wants to see you. More homework help next term.', 'bad'); }
+    else log(s, '📜 ' + name + '\'s report card: ' + grade + '.' + (grade === 'B' ? ' Very good.' : ' Room to improve.'), 'info');
+  }
+  function kidsInfo(s) {
+    return (s.kids || []).map(function (k, i) {
+      return { name: kidName(s, i), school: k.school, feesIn: Math.max(0, k.nextFees - day(s)), bond: k.bond || 0, hw: k.hw || 0, last: k.reports && k.reports.length ? k.reports[k.reports.length - 1].grade : null, hwWhy: homeworkBlock(s, i), outWhy: outingBlock(s, i) };
+    });
   }
 
   function weddingOptions(s) {
@@ -3429,9 +3492,10 @@
     var L = D.LODGING[id];
     s.alerts = [];
     pay(s, o.price, 'Lodging: ' + L.name);
-    // Sleep till 06:30 the next morning (at least 6 hours). Hotels run a generator; guest houses wait for NEPA.
+    // Sleep till 06:30 the next morning (at least 6 hours; by day, 8 hours). Hotels run a generator; guest houses wait for NEPA.
     var mins = (24 * 60 + 6 * 60 + 30 - minuteOfDay(s)) % (24 * 60);
     if (mins < 6 * 60) mins = 6 * 60;
+    else if (mins > 11 * 60) mins = 8 * 60; // a daytime rest, not a day lost to sleep
     advance(s, mins, { sleep: L.sleep * (L.gen || s.power ? 1 : 0.85) });
     if (L.fx) applyFx(s, L.fx);
     return finish(s, ok(L.icon + ' A night in a ' + L.name.toLowerCase() + ' in ' + D.DISTRICTS[s.loc].name + '. ' + (L.gen || s.power ? 'You slept well.' : 'NEPA took light and the generator was off by midnight.')));
@@ -3577,7 +3641,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), lodgingOptions: lodgingOptions, sleepAway: recorded('ht', sleepAway),
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

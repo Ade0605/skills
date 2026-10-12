@@ -192,6 +192,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - Promotions take 30% more shifts.
 
   Lives started earlier keep their old rules.
+- **Children (Me tab):** each child has a name and a bond with you.
+  - **Homework:** help on school nights (Monday to Friday, 17:00–21:00, at home).
+  - **Outings:** take them out at weekends (₦5k, once a week).
+  - **Report cards:** once you get involved, a report card arrives every term. The grade follows the school, the homework and your bond. An A unlocks "Straight A"; an F means the teacher wants to see you.
 - **Advisor ("Wetin I go do?"):** up to three next moves, each one tap away. It tells you when to leave so you're on time, picks the cheapest ride that still arrives on time, warns when a shift would make you collapse, and suggests a gig when rent is due and you're short.
 - **Sleep with alarm:** wakes you in time to commute to your next shift.
 - **Weekly report card:** every Monday you see money in and out by category, the change in your net worth and a chart of it by week. A one-tap share text is ready for X or WhatsApp.
@@ -223,7 +227,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (88 tests)
+  test/engine.test.js   node:test suite (90 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 
