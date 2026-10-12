@@ -1582,7 +1582,7 @@ test('malaria (rules 11): nights without light risk it, a net helps, drugs cure 
   const old = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle', rules: 10 });
   assert.equal(L.malariaOdds(old, 0), 0);
   const s = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle' });
-  assert.equal(s.rules, 11);
+  assert.ok(s.rules >= 11);
   // Odds over many nights: a net cuts them sharply.
   const g = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle' }); g.power = false;
   const rng = g.rng, bare = L.malariaOdds(g, 0), net = L.malariaOdds(g, 0.8);
@@ -1678,4 +1678,36 @@ test('the next generation: an heir inherits a share, keeps their schooling, repl
   // Weekly Lagos lives never make heirs.
   const w = L.newGame({ challenge: '2026-W42' }); w.kids.push({ born: 0, school: null, nextFees: 9 });
   assert.equal(L.heirOffer(w), null);
+});
+
+test('car wear (rules 12): kilometres wear the car, worn cars break down, Ladipo services them', () => {
+  const old = L.newGame({ seed: 100, origin: 'nepo', goal: 'freestyle', rules: 11 });
+  old.vehicles.push({ id: 'tokunbo', paid: 8000000 }); old.loc = 'ikeja'; old.t = old.t - (old.t % 1440) + 1440 + 10 * 60;
+  L.travel(old, 'yaba', 'car');
+  assert.equal(old.vehicles[0].wear, undefined, 'older lives have no wear');
+  const s = L.newGame({ seed: 100, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(s.rules >= 12);
+  s.vehicles.push({ id: 'tokunbo', paid: 8000000 }); s.loc = 'ikeja'; s.t = s.t - (s.t % 1440) + 1440 + 10 * 60;
+  const km = L.travelOptions(s, 'yaba').find(o => o.mode === 'car').km;
+  const r = L.travel(s, 'yaba', 'car');
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.vehicles[0].wear, km);
+  assert.ok(L.breakdownOdds({ id: 'tokunbo', wear: 2000 }) > L.breakdownOdds({ id: 'tokunbo', wear: 0 }) * 5);
+  assert.ok(L.breakdownOdds({ id: 'suv', wear: 500 }) < L.breakdownOdds({ id: 'tokunbo', wear: 500 }), 'a luxury SUV is sturdier');
+  // A badly worn car breaks down sooner or later.
+  s.vehicles[0].wear = 5000;
+  for (let i = 0; i < 40 && !s.stats.breakdowns; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; s.t = s.t - (s.t % 1440) + 1440 + 10 * 60; L.travel(s, s.loc === 'yaba' ? 'ikeja' : 'yaba', 'car'); }
+  assert.ok(s.stats.breakdowns >= 1);
+  assert.ok(s.ledger.some(l => /^Roadside mechanic/.test(l.memo)) || s.loans.some(l => l.name === 'Roadside mechanic'));
+  // Service at Ladipo, Mushin.
+  while (s.pending.length) L.resolveChoice(s, 0);
+  assert.match(L.serviceCars(s).msg, /Mushin/);
+  s.loc = 'mushin'; s.t = (L.week(s) + 1) * 7 * 1440 + 10 * 60; // a Monday morning
+  const cost = L.serviceCost(s), r2 = L.serviceCars(s);
+  assert.ok(r2.ok, r2.msg);
+  assert.equal(s.vehicles[0].wear, 0);
+  assert.equal(s.ledger.filter(l => l.memo === 'Ladipo: car service').reduce((a, l) => a - l.amt, 0), cost);
+  assert.equal(L.category('Ladipo: car service', -1), 'transport');
+  assert.match(L.serviceCars(s).msg, /freshly serviced/);
+  assert.ok(L.DATA.PLACES.find(p => p.id === 'ladipo').nogem, 'gems still replay');
 });

@@ -31,8 +31,9 @@
   // PAYE and levies; 8 is harder still (steeper PAYE, rent reviews, luxury
   // upkeep and insurance, slower promotions).
   // 9 adds weather; 10 charges mini-games when they start, so quitting forfeits;
-  // 11 adds malaria (nights without light or a net can give you a fever).
-  var RULES = 11;
+  // 11 adds malaria (nights without light or a net can give you a fever);
+  // 12 adds car wear and breakdowns (service at Ladipo).
+  var RULES = 12;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -195,6 +196,7 @@
     if (/^Lodging: /.test(m)) return 'housing';
     if (m === 'Family outing') return 'family';
     if (/^Chemist/.test(m)) return 'health';
+    if (/^(Ladipo|Roadside mechanic)/.test(m)) return 'transport';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
@@ -1122,6 +1124,7 @@
     if (s.stats.trips >= 50) unlock(s, 'commuter');
     if (mode === 'ferry') unlock(s, 'ferry');
     var msg = 'You reached ' + D.DISTRICTS[dest].name + ' in ' + fmtMins(o.mins) + '.' + (soaked ? ' You are soaked: rain, no umbrella.' : '');
+    if (mode === 'car' && s.rules >= 12) { var bd = carWear(s, o.km); if (bd) msg += ' ' + bd; }
     if (o.risk && rand(s) < 0.2) {
       var fine = price(s, 5000);
       payPartial(s, fine, 'Task force fine');
@@ -2001,6 +2004,57 @@
   }
 
   /* ---------- garage and hangar ---------- */
+
+  /* ---------- car wear and Ladipo (rules 12) ---------- */
+  // The car instance you drive: your pick, else the fastest car (as bestCar).
+  function drivenVehicle(s) {
+    var dv = s.vehicles && s.driving >= 0 ? s.vehicles[s.driving] : null;
+    if (dv && D.VEHICLES[dv.id].kind === 'car') return dv;
+    var best = null;
+    (s.vehicles || []).forEach(function (v) { var V = D.VEHICLES[v.id]; if (V.kind === 'car' && (!best || V.speed > D.VEHICLES[best.id].speed)) best = v; });
+    return best;
+  }
+  // Wear builds with every km; the older and cheaper the car, the likelier a breakdown.
+  function breakdownOdds(v) {
+    var V = D.VEHICLES[v.id], w = v.wear || 0;
+    return Math.min(0.25, (0.004 + w / 40000) * (V.price < 10000000 ? 1.5 : V.price >= 40000000 ? 0.6 : 1));
+  }
+  function carWear(s, km) {
+    var v = drivenVehicle(s); if (!v) return '';
+    v.wear = Math.round(((v.wear || 0) + km) * 10) / 10;
+    if (rand(s) >= breakdownOdds(v)) return '';
+    var V = D.VEHICLES[v.id], fix = price(s, Math.max(5000, V.upkeep * 2));
+    pay(s, fix, 'Roadside mechanic: ' + V.name) || addDebt(s, fix, 'Roadside mechanic');
+    advance(s, 90);
+    applyFx(s, { stress: 12 });
+    s.stats.breakdowns = (s.stats.breakdowns || 0) + 1;
+    log(s, '🔧 Your ' + V.name + ' broke down on the way. A roadside mechanic fixed it for ' + naira(fix) + '.', 'bad');
+    return 'Your ' + V.name + ' broke down on the way: 90 minutes and ' + naira(fix) + ' at a roadside mechanic. Service it at Ladipo.';
+  }
+  function serviceCost(s) {
+    return (s.vehicles || []).reduce(function (a, v) { var V = D.VEHICLES[v.id]; return a + (V.kind === 'car' && (v.wear || 0) > 0 ? price(s, Math.max(15000, V.upkeep * 3)) : 0); }, 0);
+  }
+  function serviceBlock(s) {
+    if (!(s.rules >= 12)) return 'This life started before car wear came to Lagos';
+    if (!(s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === 'car'; })) return 'You do not own a car';
+    if (!serviceCost(s)) return 'Your cars are freshly serviced';
+    if (s.loc !== 'mushin') return 'Ladipo auto market is in Mushin';
+    if (dow(s) === 6) return 'Ladipo is closed on Sundays';
+    var h = hour(s); if (h < 8 || h >= 18) return 'Mechanics work 08:00 to 18:00';
+    if (busyBlock(s)) return busyBlock(s);
+    if (!canAfford(s, serviceCost(s))) return 'A service costs ' + naira(serviceCost(s));
+    return null;
+  }
+  function serviceCars(s) {
+    var why = serviceBlock(s); if (why) return fail(why + '.');
+    var cost = serviceCost(s);
+    s.alerts = [];
+    pay(s, cost, 'Ladipo: car service');
+    (s.vehicles || []).forEach(function (v) { if (D.VEHICLES[v.id].kind === 'car') v.wear = 0; });
+    advance(s, 120);
+    return finish(s, ok('🔧 Oil, filters, brake pads and a "small something" for the boys: your cars are serviced (' + naira(cost) + ').'));
+  }
+  function wearInfo(s, i) { var v = s.vehicles[i]; return v && s.rules >= 12 && D.VEHICLES[v.id].kind === 'car' ? { wear: Math.round(v.wear || 0), odds: breakdownOdds(v) } : null; }
 
   function bestCar(s) {
     var dv = s.vehicles && s.driving >= 0 ? s.vehicles[s.driving] : null;
@@ -3748,7 +3802,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, sleepAway: recorded('ht', sleepAway),
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

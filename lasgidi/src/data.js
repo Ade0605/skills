@@ -620,6 +620,7 @@
     { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
     { id: 'ojuelegba_park', icon: '🚐', name: 'Ojuelegba danfo park', type: 'transport', glyph: 'bus', district: 'surulere', x: 12.2, y: 16.8, acts: ['suru_danfo'], nogem: true, text: 'Under the bridge, conductors shout routes and danfos fill up. Rent one from the owner for a run to Yaba and back.' },
+    { id: 'ladipo', icon: '🔧', name: 'Ladipo auto market', type: 'services', glyph: 'tool', district: 'mushin', x: 12.9, y: 12.2, acts: [], nogem: true, text: 'Spare parts for every car ever made, and a mechanic for each one. Service your car here (Garage, Monday to Saturday, 08:00–18:00).' },
     { id: 'nysc_camp', icon: '🎖️', name: 'NYSC Orientation Camp, Kubwa', type: 'learn', glyph: 'hall', district: 'abj_kubwa', x: 3.4, y: 1.6, acts: [], nogem: true, text: 'The FCT orientation camp. Three weeks of 5 am drills, Man O\'War, lectures and Mammy market, squeezed into three camp days. Register in Phone → NYSC.' }
   ];
 
