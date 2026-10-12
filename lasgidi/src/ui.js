@@ -1309,6 +1309,18 @@
         color: SEA_COLORS[parseInt(String(k.id).replace(/\W/g, '').slice(-6), 36) % SEA_COLORS.length || 0], label: (nm[0] || '🌊').toUpperCase() };
     });
   }
+  // A new life owns no sea: give back the last life's block on the shared map.
+  function releaseOldSea() {
+    if (!online.db || !online.me || (S && S.sea)) return;
+    var doc = (online.sea || []).filter(function (d) { return d.id === online.me; })[0];
+    if (doc && cleanRect(doc.raw)) online.db.doc('sea/' + online.me).set({ x: 0, y: 0, w: 0, h: 0, at: Date.now() }).catch(function () {});
+  }
+  // Your block lost the water to an older claim (another device got there first).
+  function seaDropped() {
+    if (!S || !S.sea) return false;
+    var me = online.me || 'me';
+    return !seaClaims().some(function (k) { return k.id === me; });
+  }
   function seaSel() {
     if (!ui.seaSel) return null;
     var s2 = Object.assign({}, ui.seaSel), S2 = D.SEA;
@@ -1336,7 +1348,9 @@
         : '<div class="inline" style="margin-top:8px"><button class="btn go" id="sea-buy" data-seabuy="1"' + (cost > S.cash + S.bank ? ' disabled' : '') + '>' + (mine ? 'Move here' : 'Buy') + ' ' + sel.w + '×' + sel.h + (cost ? ' · ' + N(cost) : ' · free (same size or smaller)') + '</button></div>';
     }
     if (mine) {
-      var rv = online.mySeaReview, live = online.me && online.seaimg[online.me] && okImg(online.seaimg[online.me].img);
+      var rv = online.mySeaReview, si = online.me && online.seaimg[online.me];
+      var live = si && okImg(si.img) && si.x === mine.x && si.y === mine.y && si.w === mine.w && si.h === mine.h;
+      if (seaDropped()) html += '<p class="why" id="sea-dropped">Someone claimed part of this water before you, so your block is hidden on the shared map. Pick a free spot and move there: moving is free.</p>';
       html += '<div class="section"><h3>Your block · ' + mine.w + '×' + mine.h + ' at ' + (mine.x + 1) + '·' + (mine.y + 1) + '</h3><p class="note">' +
         (live ? '✅ Your picture is live.' : rv && !rv.status ? '⏳ Your picture is waiting for an editor.' : rv && rv.status === 'rejected' ? '❌ Your last picture was not approved. Try another.' : 'No picture yet.') + (online.db ? '' : ' Pictures need the shared board (open the game on claude.ai).') + '</p>' +
         (online.db && online.me ? '<label class="btn sm" for="sea-file">📷 Upload a picture</label><input type="file" id="sea-file" accept="image/jpeg,image/png,image/webp" hidden>' : '') +
@@ -1484,104 +1498,95 @@
       }).join('') + '</div></div>';
   }
 
-  /* ---------- Danfo Run mini-game: an overlay outside the render tree ---------- */
-  var danfoGame = null;
-  function openDanfo() {
-    if (!window.LasgidiDanfo || document.getElementById('danfo-overlay')) return;
-    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Danfo Run');
-    ov.innerHTML = '<div class="sheet danfo-sheet"><div class="inline" style="justify-content:space-between"><b>🚐 Danfo Run · Ojuelegba to Yaba</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
-      '<p class="note">◀ ▶ (or swipe) to change lanes. Hold BRAKE (or ↓/space) at a 🚏 in the left lane to drop and load. Never stop in a yellow LASTMA zone. Dodge potholes, okadas and cars. Takings are capped at ' + N(L.price(S, 12000)) + '. The owner takes ' + N(L.price(S, 4000)) + ' and fuel is on you.</p><div class="danfo-end"></div></div>';
+  /* ---------- mini-games: one overlay, outside the render tree, for all five ---------- */
+  // From rules 10 the engine charges a game when it starts (L.startMinigame), so
+  // quitting forfeits the run; older lives pay on collect, as they always did.
+  var MINIGAMES = {
+    danfo: { lib: 'LasgidiDanfo', label: 'Danfo Run', title: '🚐 Danfo Run · Ojuelegba to Yaba', salt: 0, collect: 'Collect and end the shift',
+      note: function () { return '◀ ▶ (or swipe) to change lanes. Hold BRAKE (or ↓/space) at a 🚏 in the left lane to drop and load. Never stop in a yellow LASTMA zone. Dodge potholes, okadas and cars. Takings are capped at ' + N(L.price(S, 12000)) + '. The owner takes ' + N(L.price(S, 4000)) + ' and fuel is on you.'; },
+      live: function (st) { return st.served + ' passengers, ' + N(st.fares) + ' in fares' + (st.fines ? ', ' + N(st.fines) + ' in fines' : ''); },
+      done: function (r) { return 'Run over: ' + r.served + ' passengers, ' + N(r.fares) + ' in fares.'; },
+      pay: function (r) { return L.danfoShift(S, r.fares, r.fines, r.served); } },
+    dance: { lib: 'LasgidiDance', label: 'Owambe dance-off', title: '💃 Owambe dance-off', salt: 77, collect: 'Collect the spray',
+      note: function () { return 'Tap the lane (or press ← ↓ ↑ → or D F J K) as each note hits the line. Every 10 in a row brings the guests out to spray you. The entry is ' + N(L.price(S, 3000)) + ' and spraying is capped at ' + N(L.price(S, 4000)) + '; an owambe outfit helps.'; },
+      live: function (st) { return st.hits + ' of ' + st.total + ' beats, streak ' + st.combo; },
+      done: function (r) { return 'The DJ cuts the music: ' + r.hits + ' of ' + r.total + ' beats.'; },
+      pay: function (r) { return L.danceOff(S, r.hits, r.total, r.best); } },
+    hawk: { lib: 'LasgidiHawker', label: 'Go-slow hawker', title: '🛒 Hawk in the Oshodi go-slow', salt: 313, collect: 'Count the money and go home',
+      note: function () { return 'When a driver raises a hand, pick what they want from your tray (or press 1–4) and tap their car before the light turns green. Hold 🙈 HIDE (or space) when the task force van comes. Your tray costs ' + N(L.price(S, 4000)) + ' and sales are capped at ' + N(L.price(S, 10000)) + '.'; },
+      live: function (st) { return st.served + ' sales, ' + st.goods + ' items left' + (st.van ? '. Task force van coming!' : ''); },
+      done: function (r) { return 'Shift over: ' + r.served + ' sales.'; },
+      pay: function (r) { return L.hawkShift(S, r.sales, r.served, r.wrong, r.seized); } },
+    bole: { lib: 'LasgidiBole', label: 'Bole grill', title: '🍌 Bole grill · Old GRA', salt: 919, collect: 'Collect your share',
+      note: function () { return 'Pick plantain, fish or yam (or press 1–3) and tap an empty spot on the grill. When it turns golden, tap it to serve whoever ordered it. Leave it too long and it burns. Mama keeps half the takings and charges for anything burnt, and your share is capped at ' + N(L.price(S, 9000)) + '.'; },
+      live: function (st) { return st.served + ' plates served, ' + st.burnt + ' burnt'; },
+      done: function (r) { return 'Grill closed: ' + r.served + ' plates served.'; },
+      pay: function (r) { return L.boleShift(S, r.sales, r.served, r.burnt); } },
+    quiz: { lib: 'LasgidiQuiz', label: 'Naija Quiz', title: '🎤 Naija Quiz · Millennium Park', salt: 7919, collect: 'Collect your prize',
+      note: function () { return 'Ten questions, 12 seconds each. Tap an answer or press A–D. Five right wins a prize, rising to ' + N(L.price(S, 8000)) + ' for 10 out of 10. One show a day.'; },
+      live: null, // the quiz is buttons and text already
+      done: function (r) { return 'That\'s the show: ' + r.correct + ' out of ' + r.total + '.'; },
+      pay: function (r) { return L.quizShow(S, r.correct, r.total); } }
+  };
+  var mini = null; // { kind, game, ov, result, timer, onKey }
+  function miniFocusables(ov) { return Array.prototype.filter.call(ov.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'), function (el) { return el.offsetParent !== null; }); }
+  function openMinigame(kind) {
+    var g = MINIGAMES[kind];
+    if (!g || !window[g.lib] || document.getElementById('danfo-overlay')) return;
+    var paid = false;
+    if (L.miniStarts(S)) {
+      var started = null;
+      run(function () { started = L.startMinigame(S, kind); return started; });
+      if (!started || !started.ok || S.over) return;
+      paid = true;
+    }
+    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', g.label);
+    ov.innerHTML = '<div class="sheet danfo-sheet" tabindex="-1"><div class="inline" style="justify-content:space-between"><b>' + g.title + '</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
+      '<p class="note">' + g.note() + (paid ? ' <b>Paid up front: quitting forfeits this run.</b>' : '') + ' Esc quits.</p><p class="sr-only" id="mini-live" aria-live="polite"></p><div class="danfo-end"></div></div>';
     document.body.appendChild(ov);
-    var result = null;
-    danfoGame = window.LasgidiDanfo.create({ seed: (S.seed ^ S.t) | 0, onDone: function (r) {
-      result = r;
-      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">Collect and end the shift</button></div>';
+    var m = mini = { kind: kind, ov: ov, result: null, timer: 0 };
+    var reduce = document.documentElement.classList.contains('lite');
+    m.game = window[g.lib].create({ seed: (S.seed ^ S.t ^ g.salt) | 0, reduce: reduce, onDone: function (r) {
+      m.result = r;
+      ov.querySelector('#mini-live').textContent = g.done(r) + ' Press ' + g.collect + '.';
+      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">' + g.collect + '</button></div>';
+      var c = ov.querySelector('#danfo-collect'); if (c) c.focus();
     } });
-    ov.querySelector('.danfo-slot').appendChild(danfoGame.el); window.__danfo = danfoGame; // handle for tests
-    danfoGame.start();
+    ov.querySelector('.danfo-slot').appendChild(m.game.el);
+    window.__mini = window.__danfo = m.game; // handle for tests
+    // A spoken score for screen readers: the canvas label follows the game, once a second.
+    var cv = m.game.el.querySelector('canvas');
+    if (g.live && cv && m.game.state) m.timer = setInterval(function () { var st = m.game.state(); if (st && !st.over) cv.setAttribute('aria-label', g.label + ': ' + g.live(st)); }, 1000);
+    m.game.start();
+    // Focus the sheet, not a button: space and the arrows belong to the game.
+    ov.querySelector('.danfo-sheet').focus();
+    m.onKey = function (e) {
+      if (mini !== m) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (!window.confirm(m.result ? 'Leave without collecting your pay?' : paid ? 'Quit this run? You have already paid for it.' : 'Quit this run? You will not be paid for it.')) return;
+        closeMinigame(); return;
+      }
+      if (e.key === 'Tab') {
+        var f = miniFocusables(ov); if (!f.length) { e.preventDefault(); return; }
+        var i = f.indexOf(document.activeElement);
+        if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && (i < 0 || i === f.length - 1)) { e.preventDefault(); f[0].focus(); }
+      }
+    };
+    document.addEventListener('keydown', m.onKey, true);
     ov.addEventListener('click', function (e) {
-      if (e.target.id === 'danfo-quit') { closeDanfo(); return; }
-      if (e.target.id === 'danfo-collect' && result) { var r = result; closeDanfo(); run(function () { return L.danfoShift(S, r.fares, r.fines, r.served); }); }
+      if (e.target.id === 'danfo-quit') { closeMinigame(); return; }
+      if (e.target.id === 'danfo-collect' && m.result) { var r = m.result; closeMinigame(); run(function () { return g.pay(r); }); refocusPlay(kind); }
     });
   }
-  function closeDanfo() { if (danfoGame) danfoGame.stop(); danfoGame = null; var ov = document.getElementById('danfo-overlay'); if (ov) ov.remove(); }
-
-  // The owambe dance-off overlay, same pattern as Danfo Run.
-  function openDance() {
-    if (!window.LasgidiDance || document.getElementById('danfo-overlay')) return;
-    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Owambe dance-off');
-    ov.innerHTML = '<div class="sheet danfo-sheet"><div class="inline" style="justify-content:space-between"><b>💃 Owambe dance-off</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
-      '<p class="note">Tap the lane (or press ← ↓ ↑ → or D F J K) as each note hits the line. Every 10 in a row brings the guests out to spray you. The entry is ' + N(L.price(S, 3000)) + ' and spraying is capped at ' + N(L.price(S, 4000)) + '; an owambe outfit helps.</p><div class="danfo-end"></div></div>';
-    document.body.appendChild(ov);
-    var result = null;
-    danfoGame = window.LasgidiDance.create({ seed: (S.seed ^ S.t ^ 77) | 0, onDone: function (r) {
-      result = r;
-      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">Collect the spray</button></div>';
-    } });
-    ov.querySelector('.danfo-slot').appendChild(danfoGame.el); window.__danfo = danfoGame;
-    danfoGame.start();
-    ov.addEventListener('click', function (e) {
-      if (e.target.id === 'danfo-quit') { closeDanfo(); return; }
-      if (e.target.id === 'danfo-collect' && result) { var r = result; closeDanfo(); run(function () { return L.danceOff(S, r.hits, r.total, r.best); }); }
-    });
+  function closeMinigame() {
+    var m = mini; mini = null;
+    if (m) { if (m.game) m.game.stop(); clearInterval(m.timer); document.removeEventListener('keydown', m.onKey, true); m.ov.remove(); refocusPlay(m.kind); }
+    var ov = document.getElementById('danfo-overlay'); if (ov) ov.remove();
   }
-
-  function openHawk() {
-    if (!window.LasgidiHawker || document.getElementById('danfo-overlay')) return;
-    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Go-slow hawker');
-    ov.innerHTML = '<div class="sheet danfo-sheet"><div class="inline" style="justify-content:space-between"><b>🛒 Hawk in the Oshodi go-slow</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
-      '<p class="note">When a driver raises a hand, pick what they want from your tray (or press 1–4) and tap their car before the light turns green. Hold 🙈 HIDE (or space) when the task force van comes. Your tray costs ' + N(L.price(S, 4000)) + ' and sales are capped at ' + N(L.price(S, 10000)) + '.</p><div class="danfo-end"></div></div>';
-    document.body.appendChild(ov);
-    var result = null;
-    danfoGame = window.LasgidiHawker.create({ seed: (S.seed ^ S.t ^ 313) | 0, onDone: function (r) {
-      result = r;
-      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">Count the money and go home</button></div>';
-    } });
-    ov.querySelector('.danfo-slot').appendChild(danfoGame.el); window.__danfo = danfoGame;
-    danfoGame.start();
-    ov.addEventListener('click', function (e) {
-      if (e.target.id === 'danfo-quit') { closeDanfo(); return; }
-      if (e.target.id === 'danfo-collect' && result) { var r = result; closeDanfo(); run(function () { return L.hawkShift(S, r.sales, r.served, r.wrong, r.seized); }); }
-    });
-  }
-
-  function openBole() {
-    if (!window.LasgidiBole || document.getElementById('danfo-overlay')) return;
-    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Bole grill');
-    ov.innerHTML = '<div class="sheet danfo-sheet"><div class="inline" style="justify-content:space-between"><b>🍌 Bole grill · Old GRA</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
-      '<p class="note">Pick plantain, fish or yam (or press 1–3) and tap an empty spot on the grill. When it turns golden, tap it to serve whoever ordered it. Leave it too long and it burns. Mama keeps half the takings and charges for anything burnt, and your share is capped at ' + N(L.price(S, 9000)) + '.</p><div class="danfo-end"></div></div>';
-    document.body.appendChild(ov);
-    var result = null;
-    danfoGame = window.LasgidiBole.create({ seed: (S.seed ^ S.t ^ 919) | 0, onDone: function (r) {
-      result = r;
-      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">Collect your share</button></div>';
-    } });
-    ov.querySelector('.danfo-slot').appendChild(danfoGame.el); window.__danfo = danfoGame;
-    danfoGame.start();
-    ov.addEventListener('click', function (e) {
-      if (e.target.id === 'danfo-quit') { closeDanfo(); return; }
-      if (e.target.id === 'danfo-collect' && result) { var r = result; closeDanfo(); run(function () { return L.boleShift(S, r.sales, r.served, r.burnt); }); }
-    });
-  }
-
-  function openQuiz() {
-    if (!window.LasgidiQuiz || document.getElementById('danfo-overlay')) return;
-    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Naija Quiz');
-    ov.innerHTML = '<div class="sheet danfo-sheet"><div class="inline" style="justify-content:space-between"><b>🎤 Naija Quiz · Millennium Park</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
-      '<p class="note">Ten questions, 12 seconds each. Tap an answer or press A–D. Five right wins a prize, rising to ' + N(L.price(S, 8000)) + ' for 10 out of 10. One show a day.</p><div class="danfo-end"></div></div>';
-    document.body.appendChild(ov);
-    var result = null;
-    danfoGame = window.LasgidiQuiz.create({ seed: (S.seed ^ L.day(S) * 7919) | 0, onDone: function (r) {
-      result = r;
-      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">Collect your prize</button></div>';
-    } });
-    ov.querySelector('.danfo-slot').appendChild(danfoGame.el); window.__danfo = danfoGame;
-    danfoGame.start();
-    ov.addEventListener('click', function (e) {
-      if (e.target.id === 'danfo-quit') { closeDanfo(); return; }
-      if (e.target.id === 'danfo-collect' && result) { var r = result; closeDanfo(); run(function () { return L.quizShow(S, r.correct, r.total); }); }
-    });
-  }
+  // Back to the Play button that opened the game (the page re-rendered behind the overlay).
+  function refocusPlay(kind) { var b = document.querySelector('[data-minigame="' + kind + '"]:not([disabled])') || document.getElementById('tab-do'); if (b) b.focus(); }
 
   /* ---------- Do tab ---------- */
   function actionRow(a) {
@@ -2199,6 +2204,7 @@
       introState();
       S = L.newGame({ name: ui.draftName.trim() || 'Ade', goal: ui.draftGoal, seed: ui.seed });
       ui.tab = 'do'; ui.sel = null; ui.draftOrigin = null;
+      releaseOldSea();
       save(); render(); return;
     }
     if (ds.import) {
@@ -2325,11 +2331,7 @@
       return;
     }
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
-    if (ds.minigame === 'danfo') { openDanfo(); return; }
-    if (ds.minigame === 'dance') { openDance(); return; }
-    if (ds.minigame === 'hawk') { openHawk(); return; }
-    if (ds.minigame === 'bole') { openBole(); return; }
-    if (ds.minigame === 'quiz') { openQuiz(); return; }
+    if (ds.minigame) { openMinigame(ds.minigame); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.partyact) {
       var host = ui.visit, pt2 = host && partyOf(host), act = ds.partyact;

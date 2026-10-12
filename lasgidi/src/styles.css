@@ -564,3 +564,7 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .th-opt.sel { border-color: var(--danfo-ink); }
 .th-bar { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--danfo) 35%, transparent); z-index: 0; }
 .th-t, .th-opt b { position: relative; z-index: 1; }
+
+/* Read by screen readers, hidden on screen. */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.danfo-sheet:focus { outline: none; }

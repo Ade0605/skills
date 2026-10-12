@@ -78,6 +78,7 @@
         render(); stopTimer();
         timer = setInterval(function () { if (!wrap.isConnected) { stopTimer(); return; } if (st.chosen != null || st.over) return; st.left -= 0.25; if (st.left <= 0) { st.chosen = -1; render(); setTimeout(next, 700); } else if (Math.abs(st.left - Math.round(st.left)) < 0.01) render(); }, 250);
       },
+      state: function () { return st; },
       stop: function () { stopTimer(); root.removeEventListener('keydown', onKey); },
       // For tests: answer every question (right or wrong) instantly.
       tick: function (_s, auto) { while (st && !st.over) { st.chosen = null; var k = auto ? st.qs[st.i].ans : (st.qs[st.i].ans + 1) % 4; if (k === st.qs[st.i].ans) st.correct++; next(); } return { correct: st.correct, total: N, over: st.over }; }

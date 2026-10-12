@@ -1089,7 +1089,8 @@ test('weather (rules 9): seeded rain slows roads, storms park okadas and boats, 
   const old = L.newGame({ seed: 58, origin: 'mid', goal: 'freestyle', rules: 8 });
   assert.equal(L.weatherNow(old), null, 'no weather before rules 9');
   const s = L.newGame({ seed: 58, origin: 'mid', goal: 'freestyle' });
-  assert.equal(s.rules, 9);
+  assert.equal(s.rules, L.RULES);
+  assert.ok(s.rules >= 9);
   assert.equal(L.weatherOn(s, 40), L.weatherOn(L.newGame({ seed: 58, origin: 'lapo', goal: 'freestyle' }), 40), 'same seed, same sky');
   // Find a rainy and a stormy day in this life, then compare trips at noon.
   let rain = -1, storm = -1;
@@ -1112,11 +1113,11 @@ test('weather (rules 9): seeded rain slows roads, storms park okadas and boats, 
   let jun = 0, jan = 0;
   for (let d = 0; d < 365; d++) { const g = at(d, 12); const m = L.monthIndex(g), w = L.weatherOn(g, d); if (w === 'rain' || w === 'storm') { if (m === 5) jun++; if (m === 0) jan++; } }
   assert.ok(jun > jan * 3, jun + ' vs ' + jan);
-  // Rules 9 lives replay; rules 10 is refused.
+  // Rules 9 lives replay; a rules version from the future is refused.
   const v = L.newGame({ seed: 59, origin: 'mid', goal: 'freestyle' });
   for (let i = 0; i < 40; i++) { if (v.pending.length) L.resolveChoice(v, 0); else L.wait(v, 180); }
   assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
-  assert.equal(L.replayLife(Object.assign({}, v.replay, { rules: 10 })), null);
+  assert.equal(L.replayLife(Object.assign({}, v.replay, { rules: L.RULES + 1 })), null);
 });
 
 test('creators: followers grow per post (faster with a better phone), brand deals weekly on rules 9', () => {
@@ -1327,4 +1328,53 @@ test('Naija Quiz (Abuja): weekend show, once a day, prize from 5 right', () => {
   assert.ok(s.ach.quiz);
   assert.match(L.quizShow(s, 9, 10).msg, /already played today/);
   assert.equal(L.category('Quiz show prize', 1), 'gigs');
+});
+
+test('mini-games (rules 10): paid at the start, so quitting forfeits; collect needs a started game', () => {
+  const s = L.newGame({ seed: 72, origin: 'mid', goal: 'freestyle' });
+  assert.ok(s.rules >= 10);
+  assert.match(L.startMinigame(s, 'hawk').msg, /Oshodi/);
+  assert.equal(L.startMinigame(s, 'nope').ok, false);
+  L.travel(s, 'oshodi', L.travelOptions(s, 'oshodi').find(o => !o.disabled).mode);
+  while (L.hour(s) < 7 || s.pending.length) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 60); }
+  assert.match(L.hawkShift(s, 5000, 15, 0, 0).msg, /Start the game first/, 'no collect without a start');
+  const cash = s.cash + s.bank, t0 = s.t;
+  const st = L.startMinigame(s, 'hawk');
+  assert.ok(st.ok, st.msg);
+  assert.equal(s.cash + s.bank, cash - L.price(s, 4000), 'the tray is paid up front');
+  assert.ok(s.t > t0, 'the time is spent up front');
+  const t1 = s.t, r = L.hawkShift(s, 999999, 28, 2, 0);
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.t, t1, 'collecting spends no more time');
+  assert.ok(!s.alerts.some(a => a.memo === 'Hawking stock'), 'no second charge on collect');
+  assert.equal(s.mini, null);
+  assert.match(L.hawkShift(s, 5000, 15, 0, 0).msg, /Start the game first/, 'one collect per start');
+  const rp = L.replayLife(s.replay);
+  assert.equal(rp.ledgerHash, s.ledgerHash, 'a rules 10 life replays');
+  // Quit and start again: each tray is paid for, and the effort is spent again.
+  s.needs.energy = 95; s.needs.hunger = 95;
+  const c2 = s.cash + s.bank;
+  assert.ok(L.startMinigame(s, 'hawk').ok);
+  assert.ok(s.cash + s.bank <= c2 - L.price(s, 4000));
+  assert.equal(s.mini.kind, 'hawk');
+});
+
+test('quiz (rules 10): the day is used at the start, and Play is disabled after', () => {
+  const s = L.newGame({ seed: 74, origin: 'nepo', goal: 'freestyle' });
+  s.loc = 'abj_maitama'; s.t = (Math.floor(s.t / 1440) + ((4 - L.dow(s) + 7) % 7)) * 1440 + 16 * 60; s.needs.energy = 90; s.needs.hunger = 80;
+  assert.ok(L.startMinigame(s, 'quiz').ok);
+  const a = L.availableActions(s).find(x => x.minigame === 'quiz');
+  assert.match(a.disabled || '', /One show a day/);
+  assert.equal(L.startMinigame(s, 'quiz').ok, false, 'no second show after quitting');
+  assert.ok(L.quizShow(s, 7, 10).ok);
+});
+
+test('advisor: gig tips never quote a gig without a set pay', () => {
+  const s = L.newGame({ seed: 72, origin: 'mid', goal: 'freestyle' });
+  s.loc = 'oshodi'; s.t = s.t - (s.t % 1440) + 12 * 60; s.t += L.minutesUntilRent(s) - 24 * 60; s.cash = 0; s.bank = 0; s.rentRate = 50000;
+  const games = L.availableActions(s).filter(a => a.minigame).map(a => a.id);
+  assert.ok(games.length, 'the hawking game is here');
+  const tips = L.advise(s);
+  assert.ok(tips.some(t => /short/.test(t.text)), 'the rent warning shows');
+  tips.forEach(t => { assert.doesNotMatch(t.text, /NaN|undefined|₦0\b/); assert.ok(!(t.act && games.includes(t.act.id)), 'no tip points at a mini-game'); });
 });

@@ -245,7 +245,8 @@
     })();
     var scene = null, theme = null, staticLayer = null, staticKey = '';
     var W = 0, H = 0, dpr = 1, cam = { z: 1, px: 0, py: 0 }, base = { s: 1, ox: 0, oy: 0 };
-    var reduce = (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches) || (root.document && document.documentElement.classList.contains('lite'));
+    var lite = !!(root.document && document.documentElement.classList.contains('lite'));
+    var reduce = (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches) || lite;
     var raf = 0, last = 0, clock = 0;
     var vehicles = [], boats = [];
     var pins = [], faceBoxes = [], placeHits = [], boardHits = [], homeHits = [];
@@ -804,7 +805,8 @@
     var seaImgs = {};
     function seaImage(key, src) {
       var im = seaImgs[key];
-      if (!im) { if (Object.keys(seaImgs).length > 80) seaImgs = {}; im = seaImgs[key] = new Image(); im.onload = function () { kick(); }; im.src = src; }
+      // Room for every block on the board (500 docs); past that, drop the oldest, not the lot.
+      if (!im) { var ks = Object.keys(seaImgs); if (ks.length >= 600) delete seaImgs[ks[0]]; im = seaImgs[key] = new Image(); im.onload = function () { kick(); }; im.src = src; }
       return im.complete && im.naturalWidth ? im : null;
     }
     function seaQuad(c, r, w, h) {
@@ -817,7 +819,8 @@
       var all = seaQuad(0, 0, S.cols, S.rows);
       pathQuad(all); ctx.fillStyle = theme.dark ? 'rgba(80,140,190,.16)' : 'rgba(255,255,255,.18)'; ctx.fill();
       var cell = Math.hypot(all[1].x - all[0].x, all[1].y - all[0].y) / S.cols;
-      if (cell > 2.2) {
+      // Lite mode draws the grid lines only once you zoom in.
+      if (cell > 2.2 && (!lite || cam.z >= 1.5)) {
         ctx.strokeStyle = theme.dark ? 'rgba(170,210,240,.22)' : 'rgba(255,255,255,.45)'; ctx.lineWidth = 0.6; ctx.beginPath();
         var step = cell > 5 ? 1 : cell > 3 ? 2 : 4;
         for (var c = 0; c <= S.cols; c += step) { var a = toScreen(S.x0 + c * g, S.y0, 0), b = toScreen(S.x0 + c * g, S.y0 + S.rows * g, 0); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
@@ -983,6 +986,8 @@
     function lift(e) { delete touches[e.pointerId]; if (Object.keys(touches).length < 2 && pinch) { pinch = null; drag = { moved: true }; } }
     canvas.addEventListener('pointercancel', function (e) { lift(e); drag = null; });
     canvas.addEventListener('wheel', function (e) {
+      // Only take the wheel when it zooms: at full zoom in or out, let the page scroll.
+      if ((e.deltaY < 0 && cam.z >= MAXZ) || (e.deltaY > 0 && cam.z <= 1)) return;
       e.preventDefault();
       var p = local(e);
       zoomAt(cam.z * (e.deltaY < 0 ? 1.2 : 1 / 1.2), p.x, p.y);

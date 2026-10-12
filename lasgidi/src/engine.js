@@ -30,7 +30,8 @@
   // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race,
   // PAYE and levies; 8 is harder still (steeper PAYE, rent reviews, luxury
   // upkeep and insurance, slower promotions).
-  var RULES = 9;
+  // 9 adds weather; 10 charges mini-games when they start, so quitting forfeits.
+  var RULES = 10;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -296,7 +297,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -708,6 +709,7 @@
     }
     if (a.fx && a.fx.hunger > 0 && s.needs.hunger >= 90 && a.special !== 'owambe') return 'You are full';
     if (cost && !canAfford(s, cost)) return 'Costs ' + naira(cost);
+    if (a.minigame === 'quiz' && s.quizDay === day(s)) return 'One show a day: come back tomorrow';
     switch (a.special) {
       case 'cook': if (s.pantry <= 0) return 'No foodstuff at home'; break;
       case 'enrol': if (s.edu.enrolled || s.edu.degree) return 'Already enrolled'; break;
@@ -2172,6 +2174,7 @@
     if (s.danfoDriver === undefined) s.danfoDriver = false;
     if (!s.haggles) s.haggles = {};
     if (s.sea === undefined) s.sea = null;
+    if (s.mini === undefined) s.mini = null;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2319,7 +2322,7 @@
     }
     var due = minutesUntilRent(s);
     if (s.rentRate && due <= 48 * 60 && s.cash + s.bank < s.rentRate) {
-      var gig = availableActions(s).filter(function (a) { return a.gig && !a.disabled; })[0];
+      var gig = availableActions(s).filter(function (a) { return a.gig && a.earn && !a.disabled; })[0];
       out.push({ kind: 'warn', text: 'Rent of ' + naira(s.rentRate) + ' is due in ' + fmtMins(due) + '. You are ' + naira(s.rentRate - s.cash - s.bank) + ' short.' + (gig ? ' ' + gig.label + ' pays about ' + naira(gig.earnEst) + '.' : ''), act: gig ? { type: 'act', id: gig.id } : { type: 'tab', id: 'money' } });
     }
     if (s.pantry <= 1 && !out.some(function (t) { return t.kind === 'warn' && t.act && t.act.type !== 'tab'; })) {
@@ -2348,13 +2351,13 @@
     if (s.loc !== homeDistrict(s) && !out.some(function (t) { return t.act; })) {
       var home = route(s, homeDistrict(s), 'cheap');
       if (home && home.mode === 'trek' && s.cash + s.bank < price(s, 300)) {
-        var g = availableActions(s).filter(function (a) { return a.gig && !a.disabled; })[0];
+        var g = availableActions(s).filter(function (a) { return a.gig && a.earn && !a.disabled; })[0];
         out.push(g ? { kind: 'warn', text: 'You are broke and far from home. ' + g.label + ' pays about ' + naira(g.earnEst) + ', enough for a ride.', act: { type: 'act', id: g.id } }
           : { kind: 'warn', text: 'You are broke and far from home. Trek back to ' + D.DISTRICTS[homeDistrict(s)].name + ' (' + fmtMins(home.mins) + ').', act: { type: 'travel', dest: homeDistrict(s), mode: 'trek' } });
       }
     }
     if (!out.length && s.cash + s.bank < s.rentRate * 2) {
-      var gig2 = availableActions(s).filter(function (a) { return a.gig && !a.disabled; })[0];
+      var gig2 = availableActions(s).filter(function (a) { return a.gig && a.earn && !a.disabled; })[0];
       if (gig2) out.push({ kind: 'info', text: 'Money is tight. ' + gig2.label + ' pays about ' + naira(gig2.earnEst) + '.', act: { type: 'act', id: gig2.id } });
     }
     if (s.needs.hygiene < 20 && homeDistrict(s) === s.loc) out.push({ kind: 'info', text: 'You smell. A bucket bath takes 30 minutes.', act: { type: 'act', id: 'home_bath' } });
@@ -2465,7 +2468,7 @@
     if (!rp || typeof rp.seed !== 'number' || !Array.isArray(rp.acts) || rp.acts.length > MAX_ACTS) return null;
     if (!D.GOALS[rp.goal] || (rp.origin !== null && !D.ORIGINS[rp.origin])) return null;
     var rules = rp.rules == null ? 5 : rp.rules;
-    if (!(rules >= 5 && rules <= 9 && Math.round(rules) === rules)) return null;
+    if (!(rules >= 5 && rules <= RULES && Math.round(rules) === rules)) return null;
     if (rp.challenge != null && !CHALLENGE_ID.test(rp.challenge)) return null;
     var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined });
     for (var i = 0; i < rp.acts.length; i++) {
@@ -2960,22 +2963,28 @@
   /* ---------- Danfo Run: a shift paid from the mini-game's result ---------- */
   var DANFO_CAP = 12000, DANFO_RETURNS = 4000, DANFO_FUEL = 2000;
   function danfoShift(s, fares, fines, served) {
-    var a = availableActions(s).filter(function (x) { return x.minigame === 'danfo'; })[0];
-    if (!a) return fail('Rent a danfo at the Ojuelegba park.');
-    if (a.disabled) return fail(a.disabled);
+    var m = miniClaim(s, 'danfo'), a;
+    if (m && m.fail) return m.fail;
+    if (!m) {
+      a = miniAction(s, 'danfo');
+      if (!a) return fail(MINI_WHERE.danfo);
+      if (a.disabled) return fail(a.disabled);
+    }
     fares = Math.floor(fares); fines = Math.floor(fines); served = Math.floor(served);
     if (!(fares >= 0 && fines >= 0 && served >= 0 && served <= 120)) return fail('That run does not add up.');
     // A run's takings are capped: no 90 seconds of driving pays more than a real day.
     fares = Math.min(fares, price(s, DANFO_CAP), served * price(s, 400));
     fines = Math.min(fines, price(s, 30000));
     s.alerts = [];
-    advance(s, a.mins);
-    applyFx(s, a.fx); addXp(s, a.xp);
+    if (m) s.mini = null;
+    else { advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp); }
     var got = gigPay(s, fares, 1);
     if (got) earn(s, got, 'Danfo fares');
-    var mine = ownsDanfo(s), owner = mine ? 0 : price(s, DANFO_RETURNS), fuel = price(s, DANFO_FUEL * s.econ.fuel);
-    if (owner) pay(s, owner, 'Danfo owner returns') || addDebt(s, owner, 'Danfo owner returns');
-    pay(s, fuel, 'Danfo fuel') || addDebt(s, fuel, 'Danfo fuel');
+    var mine = m ? m.cost.mine : ownsDanfo(s), owner = m ? m.cost.owner : mine ? 0 : price(s, DANFO_RETURNS), fuel = m ? m.cost.fuel : price(s, DANFO_FUEL * s.econ.fuel);
+    if (!m) {
+      if (owner) pay(s, owner, 'Danfo owner returns') || addDebt(s, owner, 'Danfo owner returns');
+      pay(s, fuel, 'Danfo fuel') || addDebt(s, fuel, 'Danfo fuel');
+    }
     if (fines) payPartial(s, fines, 'Danfo fines and settlements');
     s.stats.danfoPax = (s.stats.danfoPax || 0) + served;
     if (got > (s.stats.danfoBest || 0)) s.stats.danfoBest = got;
@@ -3099,18 +3108,71 @@
     return finish(s, ok('"Oya, bring am!" You got the ' + c.name + ' for ' + naira(offer) + (saved > 0 ? ', ' + naira(saved) + ' under the shop price.' : '.')));
   }
 
+  /* ---------- mini-games: from rules 10 a game is paid for when it starts ---------- */
+  // startMinigame spends the entry or stock, the time and the effort up front,
+  // so quitting a bad run forfeits them and every attempt is a new run. The
+  // collect call (danfoShift, danceOff, ...) then only pays out. Lives on rules
+  // 9 or earlier keep the old pay-on-collect flow, so their replays still match.
+  var MINI_RULES = 10;
+  var MINI_WHERE = {
+    danfo: 'Rent a danfo at the Ojuelegba park.',
+    dance: 'Dance-offs are at the Surulere event hall on Saturdays.',
+    hawk: 'Hawk in the Oshodi go-slow.',
+    bole: 'The bole grill is in Old GRA, Port Harcourt.',
+    quiz: 'The quiz show is at Millennium Park, Abuja, Friday to Sunday from 15:00.'
+  };
+  function miniAction(s, kind) { return availableActions(s).filter(function (x) { return x.minigame === kind; })[0]; }
+  function miniStarts(s) { return s.rules >= MINI_RULES; }
+  // Rules 10: the game must have been started; returns the started game, or { fail } if not.
+  function miniClaim(s, kind) {
+    if (!miniStarts(s)) return null;
+    if (!s.mini || s.mini.kind !== kind) return { fail: fail('Start the game first.') };
+    return s.mini;
+  }
+  function startMinigame(s, kind) {
+    if (!MINI_WHERE[kind]) return fail('No such game.');
+    if (!miniStarts(s)) return fail('This life plays by older rules: play the game and collect at the end.');
+    var a = miniAction(s, kind);
+    if (!a) return fail(MINI_WHERE[kind]);
+    if (a.disabled) return fail(a.disabled);
+    var cost = {};
+    s.alerts = [];
+    if (kind === 'dance') {
+      cost.entry = a.price;
+      if (!pay(s, a.price, a.label)) return fail('The entry is ' + naira(a.price) + '.');
+    } else if (kind === 'hawk') {
+      cost.stock = price(s, HAWK_STOCK);
+      if (!pay(s, cost.stock, 'Hawking stock')) return fail('Stock for the tray costs ' + naira(cost.stock) + '.');
+    } else if (kind === 'danfo') {
+      cost.mine = ownsDanfo(s); cost.owner = cost.mine ? 0 : price(s, DANFO_RETURNS); cost.fuel = price(s, DANFO_FUEL * s.econ.fuel);
+      if (cost.owner) pay(s, cost.owner, 'Danfo owner returns') || addDebt(s, cost.owner, 'Danfo owner returns');
+      pay(s, cost.fuel, 'Danfo fuel') || addDebt(s, cost.fuel, 'Danfo fuel');
+    }
+    advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp);
+    if (kind === 'quiz') s.quizDay = day(s);
+    s.mini = { kind: kind, t: s.t, cost: cost };
+    var spent = (cost.entry || 0) + (cost.stock || 0) + (cost.owner || 0) + (cost.fuel || 0);
+    return finish(s, ok('▶ ' + a.label.replace(/ \(mini-game\)$/, '') + (spent ? ': ' + naira(spent) + ' paid up front' : '') + '. Quitting forfeits the run.'));
+  }
+
   /* ---------- owambe dance-off: guests spray a capped sum ---------- */
   var DANCE_CAP = 4000;
   function danceOff(s, hits, total, best) {
-    var a = availableActions(s).filter(function (x) { return x.minigame === 'dance'; })[0];
-    if (!a) return fail('Dance-offs are at the Surulere event hall on Saturdays.');
-    if (a.disabled) return fail(a.disabled);
+    var m = miniClaim(s, 'dance'), a;
+    if (m && m.fail) return m.fail;
+    if (!m) {
+      a = miniAction(s, 'dance');
+      if (!a) return fail(MINI_WHERE.dance);
+      if (a.disabled) return fail(a.disabled);
+    }
     hits = Math.floor(hits); total = Math.floor(total); best = Math.floor(best);
     if (!(total > 0 && total <= 200 && hits >= 0 && hits <= total && best >= 0 && best <= hits)) return fail('That dance does not add up.');
-    if (!pay(s, a.price, a.label)) return fail('The entry is ' + naira(a.price) + '.');
     s.alerts = [];
-    advance(s, a.mins);
-    applyFx(s, a.fx); addXp(s, a.xp);
+    if (m) s.mini = null;
+    else {
+      if (!pay(s, a.price, a.label)) return fail('The entry is ' + naira(a.price) + '.');
+      advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp);
+    }
     var acc = hits / total, spray = acc < 0.4 ? 0 : Math.min(price(s, DANCE_CAP), gigPay(s, 5000 * Math.pow(acc, 2) + best * 25, 1));
     if (outfitTags(s).owambe) spray = Math.min(price(s, DANCE_CAP), roundTo(spray * 1.2, 50));
     if (spray > 0) earn(s, spray, 'Dance-off: guests sprayed');
@@ -3122,16 +3184,22 @@
   /* ---------- go-slow hawker: a capped shift from the mini-game ---------- */
   var HAWK_STOCK = 4000, HAWK_CAP = 10000;
   function hawkShift(s, sales, served, wrong, seized) {
-    var a = availableActions(s).filter(function (x) { return x.minigame === 'hawk'; })[0];
-    if (!a) return fail('Hawk in the Oshodi go-slow.');
-    if (a.disabled) return fail(a.disabled);
+    var m = miniClaim(s, 'hawk'), a;
+    if (m && m.fail) return m.fail;
+    if (!m) {
+      a = miniAction(s, 'hawk');
+      if (!a) return fail(MINI_WHERE.hawk);
+      if (a.disabled) return fail(a.disabled);
+    }
     sales = Math.floor(sales); served = Math.floor(served); wrong = Math.floor(wrong); seized = Math.floor(seized);
     if (!(sales >= 0 && served >= 0 && served <= 30 && wrong >= 0 && seized >= 0 && seized <= 30 && served + seized <= 30)) return fail('That shift does not add up.');
-    var stock = price(s, HAWK_STOCK);
+    var stock = m ? m.cost.stock : price(s, HAWK_STOCK);
     s.alerts = [];
-    if (!pay(s, stock, 'Hawking stock')) return fail('Stock for the tray costs ' + naira(stock) + '.');
-    advance(s, a.mins);
-    applyFx(s, a.fx); addXp(s, a.xp);
+    if (m) s.mini = null;
+    else {
+      if (!pay(s, stock, 'Hawking stock')) return fail('Stock for the tray costs ' + naira(stock) + '.');
+      advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp);
+    }
     var got = Math.min(price(s, HAWK_CAP), served * price(s, 500), gigPay(s, sales, 1));
     if (got) earn(s, got, 'Hawking sales');
     s.stats.hawkBest = Math.max(s.stats.hawkBest || 0, got);
@@ -3141,14 +3209,18 @@
   /* ---------- bole grill (Port Harcourt): a capped shift from the mini-game ---------- */
   var BOLE_CUT = 0.5, BOLE_CAP = 9000;
   function boleShift(s, sales, served, burnt) {
-    var a = availableActions(s).filter(function (x) { return x.minigame === 'bole'; })[0];
-    if (!a) return fail('The bole grill is in Old GRA, Port Harcourt.');
-    if (a.disabled) return fail(a.disabled);
+    var m = miniClaim(s, 'bole'), a;
+    if (m && m.fail) return m.fail;
+    if (!m) {
+      a = miniAction(s, 'bole');
+      if (!a) return fail(MINI_WHERE.bole);
+      if (a.disabled) return fail(a.disabled);
+    }
     sales = Math.floor(sales); served = Math.floor(served); burnt = Math.floor(burnt);
     if (!(sales >= 0 && served >= 0 && served <= 60 && burnt >= 0 && burnt <= 60 && sales <= served * 900)) return fail('That shift does not add up.');
     s.alerts = [];
-    advance(s, a.mins);
-    applyFx(s, a.fx); addXp(s, a.xp);
+    if (m) s.mini = null;
+    else { advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp); }
     // Mama keeps half of the takings and charges for what you burnt.
     var share = Math.min(price(s, BOLE_CAP), gigPay(s, sales * BOLE_CUT, 1)), burn = price(s, 150) * burnt;
     if (share) earn(s, share, 'Bole grill share');
@@ -3159,15 +3231,19 @@
 
   /* ---------- Naija Quiz (Abuja): a capped prize, once a game day ---------- */
   function quizShow(s, correct, total) {
-    var a = availableActions(s).filter(function (x) { return x.minigame === 'quiz'; })[0];
-    if (!a) return fail('The quiz show is at Millennium Park, Abuja, Friday to Sunday from 15:00.');
-    if (a.disabled) return fail(a.disabled);
+    var m = miniClaim(s, 'quiz'), a;
+    if (m && m.fail) return m.fail;
+    if (!m) {
+      if (s.quizDay === day(s)) return fail('You already played today. Come back tomorrow.');
+      a = miniAction(s, 'quiz');
+      if (!a) return fail(MINI_WHERE.quiz);
+      if (a.disabled) return fail(a.disabled);
+    }
     correct = Math.floor(correct); total = Math.floor(total);
     if (!(total === 10 && correct >= 0 && correct <= total)) return fail('That score does not add up.');
-    if (s.quizDay === day(s)) return fail('You already played today. Come back tomorrow.');
     s.alerts = [];
-    advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp);
-    s.quizDay = day(s);
+    if (m) s.mini = null;
+    else { advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp); s.quizDay = day(s); }
     var prize = correct >= 5 ? price(s, [0, 0, 0, 0, 0, 1000, 1500, 2500, 4000, 6000, 8000][correct]) : 0;
     if (prize) earn(s, prize, 'Quiz show prize');
     s.stats.quizBest = Math.max(s.stats.quizBest || 0, correct);
@@ -3315,7 +3391,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
+    startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,

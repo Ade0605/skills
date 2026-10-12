@@ -16,7 +16,7 @@
     pad.innerHTML = '<button type="button" class="dg-btn" data-dg="left" aria-label="Left lane">◀</button><button type="button" class="dg-btn brake" data-dg="brake" aria-label="Brake (hold)">BRAKE</button><button type="button" class="dg-btn" data-dg="right" aria-label="Right lane">▶</button>';
     wrap.appendChild(canvas); wrap.appendChild(pad);
     var ctx = canvas.getContext('2d'), W = 360, H = 560, dpr = 1;
-    var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var reduce = !!(opts && opts.reduce) || !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
     var seed = (opts && opts.seed) || 1;
     function rnd() { seed = (seed + 0x6D2B79F5) | 0; var t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
 

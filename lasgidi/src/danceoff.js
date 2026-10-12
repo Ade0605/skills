@@ -17,6 +17,7 @@
     var ctx = canvas.getContext('2d'), W = 360, H = 520, dpr = 1, seed = (opts && opts.seed) || 7;
     function rnd() { seed = (seed + 0x6D2B79F5) | 0; var t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
     var st, raf = 0, last = 0, beat = 60 / BPM, fall = 1.6; // seconds a note takes to reach the line
+    var reduce = !!(opts && opts.reduce) || !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     function reset() {
       st = { t: 0, notes: [], hits: 0, total: 0, combo: 0, best: 0, flash: [0, 0, 0, 0], msg: 'Tap as each note hits the line!', msgT: 2.5, cash: [], over: false };
@@ -56,7 +57,7 @@
     }
     function draw() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      var pulse = 0.5 + 0.5 * Math.cos((st.t / beat) * Math.PI * 2);
+      var pulse = reduce ? 0.4 : 0.5 + 0.5 * Math.cos((st.t / beat) * Math.PI * 2); // lite / reduced motion: steady lights
       var bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#2b0f3a'); bg.addColorStop(1, '#6b3fa0');
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
       // party lights

@@ -101,6 +101,7 @@
     return {
       el: wrap,
       start: function () { reset(); last = 0; size(); if (!raf) raf = root.requestAnimationFrame(frame); },
+      state: function () { return st; },
       stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; root.removeEventListener('keydown', onKey); },
       // For tests: a bot that grills what is ordered and serves when golden.
       tick: function (sec, auto) {

@@ -114,6 +114,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The trader opens at 130% of the shop price and has a secret last price, 70–95% of it, that changes daily and drops a little for a good hustler.
   - Offer low and they counter ("Customer, add small!").
   - You get three offers per item a day. Accept the right one and you pay less than the shop price.
+- **How the mini-games pay (rules 10, new lives):** you pay for a game when you press Play. The entry, the tray, the owner's returns and fuel, the time and the effort are all spent up front, so quitting a bad run forfeits it and every try is a fresh run. Collecting at the end only pays out. Lives begun on rules 9 or earlier keep paying on collect. All five games run in one overlay: Esc quits (it asks first), focus stays inside it, and screen readers hear the score and the result. Lite mode keeps the lights steady and turns off the screen shake.
 - **Go-slow hawker (mini-game):** at Oshodi market, 06:00–21:00. A 45-second shift in the go-slow under the bridge.
   - **Selling:** when a driver raises a hand for 💧 water, 🌭 gala, 📱 airtime or 🍌 plantain chips, pick the item (or press 1–4) and tap the car before the light turns green.
   - **Task force:** hold 🙈 HIDE when the task force van comes, or they seize your goods.
@@ -174,7 +175,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Events:** grid collapse, fuel scarcity, floods, black tax, BVN scam texts, Ponzi schemes, landlord hikes, owambe aso-ebi, checkpoints and area boys. Detty December arrives in week 9.
 - **Policy vote:** every 4 weeks you vote on a governorship policy that changes the rules for a month.
 - **CBN governor race:** two weeks after each policy vote, three candidates compete for the Central Bank, and you can vote for one. The Hawk raises savings and bill rates, makes new loans dearer and slows inflation. The Dove does the opposite. The Builder boosts businesses and cooperative loans. The winner's stance lasts 4 weeks, and its rates show on the bank card.
-- **Making money is hard.** New lives start on rules 9: everything in rules 8, plus weather. Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
+- **Making money is hard.** New lives start on rules 10: everything in rules 8, plus weather (rules 9) and mini-games paid for at the start (rules 10). Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
   - PAYE starts at ₦3,000 and goes up to 25% on big pay.
   - Every 4 weeks the landlord reviews your rent in line with prices.
   - Vehicle upkeep is 1.5×, and vehicles costing over ₦100m pay 0.2% insurance a week.
@@ -207,11 +208,12 @@ lasgidi/
   src/data.js           content: districts, homes, careers, actions, NPCs, businesses
   src/engine.js         pure game engine (no DOM), shared by browser and tests
   src/playground.js     the isometric city view (canvas)
+  src/danfo.js, src/danceoff.js, src/hawker.js, src/bole.js, src/quiz.js   the five mini-games (canvas, plus buttons for the quiz)
   src/ui.js             rendering and input
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite
+  test/engine.test.js   node:test suite (82 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 
