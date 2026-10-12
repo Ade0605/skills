@@ -443,12 +443,12 @@
       // Rail lines: a coloured track with sleepers, and a station dot at each stop.
       if (CITY === 'lagos' && D.RAIL_LINES) Object.keys(D.RAIL_LINES).forEach(function (k) {
         var Ln = D.RAIL_LINES[k], pts = Ln.stops.map(function (d) { var a = D.DISTRICTS[d]; return toScreen(a.x + 0.35, a.y + 0.35, 0); });
-        g.strokeStyle = Ln.color; g.lineWidth = Math.max(1.5, 2 * s); g.globalAlpha = 0.85;
+        g.strokeStyle = Ln.color; g.lineWidth = Math.max(2.5, 3.2 * s); g.globalAlpha = 0.9;
         g.beginPath(); pts.forEach(function (p, i) { if (i) g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y); }); g.stroke();
         g.lineWidth = Math.max(0.6, 0.8 * s); g.setLineDash([1 * s, 4 * s]); g.strokeStyle = theme.dark ? '#111' : '#fff';
         g.beginPath(); pts.forEach(function (p, i) { if (i) g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y); }); g.stroke(); g.setLineDash([]);
         g.globalAlpha = 1; g.fillStyle = Ln.color;
-        pts.forEach(function (p) { g.beginPath(); g.arc(p.x, p.y, Math.max(2, 2.6 * s), 0, Math.PI * 2); g.fill(); });
+        pts.forEach(function (p) { g.beginPath(); g.arc(p.x, p.y, Math.max(3, 3.6 * s), 0, Math.PI * 2); g.fill(); });
       });
 
       // Road names along the roads; minor roads and streets appear as you zoom in.

@@ -1516,6 +1516,7 @@ test('NYSC retention: an offer for corpers who showed up, accepted within 14 day
   assert.ok(r.ok, r.msg);
   assert.equal(s.job.id, 'bank'); assert.equal(s.job.level, 0);
   assert.equal(L.nyscRetain(s).ok, false, 'once');
+  assert.match(L.nyscInfo(s).retainWhy, /You took the job/);
   const late = mk(25); late.t += 15 * 1440;
   assert.match(L.nyscRetain(late).msg, /expired/);
 });
@@ -1579,14 +1580,16 @@ test('children: homework on school nights, weekend outings, and a report card ea
 
 test('malaria (rules 11): nights without light risk it, a net helps, drugs cure it, older lives never catch it', () => {
   const old = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle', rules: 10 });
-  assert.equal(L.malariaChance(old, 0), 0);
+  assert.equal(L.malariaOdds(old, 0), 0);
   const s = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle' });
   assert.equal(s.rules, 11);
   // Odds over many nights: a net cuts them sharply.
-  const trial = (protect) => { const g = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle' }); g.power = false; let n = 0; for (let i = 0; i < 4000; i++) n += L.malariaChance(g, protect); return n; };
-  const bare = trial(0), net = trial(0.8);
-  assert.ok(bare > 30 && bare < 200, 'bare ' + bare);
+  const g = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle' }); g.power = false;
+  const rng = g.rng, bare = L.malariaOdds(g, 0), net = L.malariaOdds(g, 0.8);
+  assert.equal(g.rng, rng, 'reading the odds draws no random number');
+  assert.ok(bare >= 0.014 && bare <= 0.021, 'bare ' + bare);
   assert.ok(net < bare / 3, 'net ' + net + ' vs ' + bare);
+  g.power = true; assert.ok(L.malariaOdds(g, 0) < bare, 'light means a running fan');
   // Sick: energy drains, work suffers, the chemist cures it.
   s.sick = { kind: 'malaria', since: L.day(s), drugs: false, cure: -1 };
   s.t = s.t - (s.t % 1440) + 1440 + 9 * 60; s.needs.energy = 90; s.needs.hunger = 80;
@@ -1626,4 +1629,23 @@ test('Lagos rail: Blue and Red Line stops, flat fare, 06:00 to 21:00, no traffic
   const r = L.travel(s, 'yaba', 'rail');
   assert.ok(r.ok, r.msg);
   assert.equal(s.loc, 'yaba');
+});
+
+test('review fixes: train arrives by 21:00, sibling names differ, sick floor, one malaria bill a week', () => {
+  const s = L.newGame({ seed: 97, origin: 'lapo', goal: 'freestyle' });
+  s.loc = 'ikeja'; s.t = s.t - (s.t % 1440) + 1440 + 20 * 60 + 55;
+  assert.match(L.travelOptions(s, 'yaba').find(x => x.mode === 'rail').disabled, /06:00 to 21:00/);
+  s.t -= 60; assert.ok(!L.travelOptions(s, 'yaba').find(x => x.mode === 'rail').disabled);
+  for (let i = 0; i < 3; i++) s.kids.push({ born: 5, school: null, nextFees: 99 });
+  const names = s.kids.map((k, i) => L.kidName(s, i));
+  assert.equal(new Set(names).size, 3, names.join());
+  s.needs.fun = 0; s.needs.social = 0; s.needs.stress = 100; s.sick = { kind: 'malaria', since: L.day(s), drugs: false, cure: -1 };
+  assert.ok(L.performance(s) >= 0.3);
+  // Broke, no HMO: two malaria collapses in a week bring one malaria bill.
+  s.cash = 0; s.bank = 0; s.opening.cash = 0; s.opening.bank = 0; s.ledgerSum = { cash: 0, bank: 0 };
+  for (let n = 0; n < 2; n++) { s.sick = { kind: 'malaria', since: L.day(s) - 4, drugs: false, cure: -1 }; s.needs.energy = 1; for (let i = 0; s.sick && i < 10; i++) L.wait(s, 60); }
+  const wk = L.week(s), bills = s.loans.filter(l => l.name === 'Hospital bill');
+  assert.ok(s.log.filter(l => /collapsed from malaria/.test(l.text)).length >= 2, 'two collapses');
+  assert.equal(L.week(s), wk);
+  assert.ok(bills.reduce((a, l) => a + l.bal, 0) <= L.price(s, 8000) + L.price(s, 15000), 'one ward bill and one malaria bill: ' + bills.map(b => b.bal));
 });

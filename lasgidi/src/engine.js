@@ -194,7 +194,7 @@
     if (/^NYSC (allawee|PPA)/.test(m)) return 'wages';
     if (/^Lodging: /.test(m)) return 'housing';
     if (m === 'Family outing') return 'family';
-    if (/^(Chemist|Hospital: malaria)/.test(m)) return 'health';
+    if (/^Chemist/.test(m)) return 'health';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
@@ -264,7 +264,7 @@
     return sum / NEEDS.length;
   }
   function performance(s) {
-    return clamp(mood(s) / 100 * (1 - s.needs.stress / 250) + 0.25, 0.3, 1.15) * (s.sick ? 0.8 : 1);
+    return clamp((mood(s) / 100 * (1 - s.needs.stress / 250) + 0.25) * (s.sick ? 0.8 : 1), 0.3, 1.15);
   }
 
   /* ---------- world state ---------- */
@@ -1056,7 +1056,6 @@
       else if (m.stops === 'ferry' && (D.FERRY_STOPS.indexOf(from) < 0 || D.FERRY_STOPS.indexOf(dest) < 0)) o.disabled = 'No jetty on this route';
       else if (m.stops === 'brt' && (D.BRT_STOPS.indexOf(from) < 0 || D.BRT_STOPS.indexOf(dest) < 0)) o.disabled = 'No BRT on this route';
       else if (m.stops === 'rail' && !railLine(from, dest)) o.disabled = 'No train on this route';
-      else if (m.stops === 'rail' && (hour(s) < 6 || hour(s) >= 21)) o.disabled = 'Trains run 06:00 to 21:00';
       else if (m.noBridge && crossing) o.disabled = 'Keke cannot use the bridges';
       else if (km > m.maxKm) o.disabled = 'Too far (' + km + ' km)';
       else if (wx === 'storm' && (id === 'okada' || id === 'keke')) o.disabled = 'Riders have parked till the storm passes';
@@ -1071,6 +1070,7 @@
       o.traffic = Math.round(f * 10) / 10;
       var spd = ride ? Math.max(m.speed, ride.speed) : m.speed;
       o.mins = Math.max(STEP, ceilTo(m.wait + km / spd * 60 * f, STEP));
+      if (m.stops === 'rail' && !o.disabled && (hour(s) < 6 || minuteOfDay(s) + o.mins > 21 * 60)) o.disabled = 'Trains run 06:00 to 21:00';
       var fare;
       if (id === 'ferry' || m.flat) fare = m.min;
       else fare = Math.max(m.min, (ride ? ride.fuel : m.perKm) * km);
@@ -1738,7 +1738,14 @@
   }
 
   /* ---------- children: homework, outings and report cards ---------- */
-  function kidName(s, i) { var k = s.kids[i]; return k ? D.KID_NAMES[parseInt(fnv(s.seed + ':kid:' + k.born + ':' + i), 16) % D.KID_NAMES.length] : ''; }
+  // Siblings never share a name: walk on from the seeded pick past older siblings' names.
+  function kidName(s, i) {
+    var k = s.kids[i]; if (!k) return '';
+    var N = D.KID_NAMES, j = parseInt(fnv(s.seed + ':kid:' + k.born + ':' + i), 16) % N.length, taken = {};
+    for (var b = 0; b < i; b++) taken[kidName(s, b)] = 1;
+    while (taken[N[j]]) j = (j + 1) % N.length;
+    return N[j];
+  }
   function homeworkBlock(s, i) {
     var k = s.kids[i];
     if (!k) return 'No such child';
@@ -1748,7 +1755,7 @@
     var h = hour(s); if (h < 17 || h >= 21) return 'Homework time is 17:00 to 21:00';
     if (k.hwDay === day(s)) return 'Homework is done for today';
     if (s.needs.energy < 15) return 'Too tired';
-    return nyscBusy(s);
+    return busyBlock(s);
   }
   function helpHomework(s, i) {
     var why = homeworkBlock(s, i); if (why) return fail(why + '.');
@@ -1767,7 +1774,7 @@
     if (k.outWeek === week(s)) return 'One outing a week';
     if (!canAfford(s, price(s, 5000))) return 'An outing costs ' + naira(price(s, 5000));
     if (s.needs.energy < 25) return 'Too tired';
-    return nyscBusy(s);
+    return busyBlock(s);
   }
   function kidOuting(s, i) {
     var why = outingBlock(s, i); if (why) return fail(why + '.');
@@ -2187,10 +2194,13 @@
   function collapse(s, res) {
     var why = s.needs.hunger <= 0 ? 'hunger' : s.sick ? 'malaria' : 'exhaustion';
     if (s.sick) {
-      // The hospital treats the malaria too: a drip and a course of drugs.
-      var mb = price(s, 15000);
-      if (s.hmo) log(s, 'Your ' + D.HMO[s.hmo].name + ' paid for the malaria treatment (' + naira(mb) + ').', 'good');
-      else { var mp = payPartial(s, mb, 'Hospital: malaria treatment'); if (mp < mb) addDebt(s, mb - mp, 'Hospital bill'); }
+      // The hospital treats the malaria too: a drip and a course of drugs. Like the
+      // ward bill, it is charged once a week at most; after that the charity fund pays.
+      if (s.hospitalWeek !== week(s)) {
+        var mb = price(s, 15000);
+        if (s.hmo) log(s, 'Your ' + D.HMO[s.hmo].name + ' paid for the malaria treatment (' + naira(mb) + ').', 'good');
+        else { var mp = payPartial(s, mb, 'Hospital: malaria treatment'); if (mp < mb) addDebt(s, mb - mp, 'Hospital bill'); }
+      }
       s.sick = null;
     }
     // One bill per week at most; a broke patient is treated on credit once,
@@ -2387,7 +2397,7 @@
   }
   function advise(s) {
     if (s.pending.length || s.over) return [];
-    var out = [];
+    var out = [], lh0;
     if (s.sick && !s.sick.drugs) out.push({ kind: 'warn', text: '🦟 You have malaria' + (day(s) - s.sick.since >= 3 ? ' and it is getting worse' : '') + '. Antimalarials from a chemist cost ' + naira(treatCost(s)) + '.', act: treatBlock(s) ? null : { type: 'treat' } });
     if (s.needs.hunger < 30) out.push(foodHint(s));
     if (s.needs.energy < 25) {
@@ -2397,7 +2407,7 @@
           ? { kind: 'warn', text: 'You are exhausted. Sleep with your alarm set so you do not miss work.', act: { type: 'act', id: 'home_alarm' } }
           : { kind: 'warn', text: 'You are exhausted. Sleep before you collapse.', act: { type: 'act', id: 'home_sleep' } });
       }
-      else if (lodgeHint(s)) out.push(lodgeHint(s));
+      else if ((lh0 = lodgeHint(s))) out.push(lh0);
       else {
         var r = route(s, homeDistrict(s), 'cheap');
         out.push({ kind: 'warn', text: 'You are exhausted. Go home to sleep' + (r ? ' (' + D.MODES[r.mode].name + ', ' + fmtMins(r.mins) + ').' : '.'), act: r ? { type: 'travel', dest: homeDistrict(s), mode: r.mode } : null });
@@ -3353,11 +3363,11 @@
   // The posting comes from the seed (no rng draw), so other randomness is untouched.
   function nyscPosting(s) { return D.NYSC_PPAS[parseInt(fnv(s.seed + ':nysc'), 16) % D.NYSC_PPAS.length]; }
   function nyscPPA(s) { return s.nysc ? D.NYSC_PPAS.filter(function (p) { return p.id === s.nysc.ppa; })[0] : null; }
-  function nyscBusy(s) { return s.over ? 'This Weekly Lagos is over' : s.pending.length ? 'Decide on the open event first' : null; }
+  function busyBlock(s) { return s.over ? 'This Weekly Lagos is over' : s.pending.length ? 'Decide on the open event first' : null; }
   function nyscRegister(s) {
     if (s.nysc) return fail('You have already registered for NYSC.');
     if (!s.edu.degree) return fail('NYSC is for graduates. Finish your degree at UNILAG first.');
-    var b = nyscBusy(s); if (b) return fail(b + '.');
+    var b = busyBlock(s); if (b) return fail(b + '.');
     var fee = price(s, D.NYSC.callup);
     s.alerts = [];
     if (!pay(s, fee, 'NYSC call-up letter and registration')) return fail('Registration costs ' + naira(fee) + '.');
@@ -3373,7 +3383,7 @@
     if (s.loc !== 'abj_kubwa') return 'The camp is in Kubwa, Abuja';
     var h = hour(s); if (h < 5 || h >= 20) return 'The camp gate is open from 05:00 to 20:00';
     if (s.needs.energy < 35) return 'Too tired for drills';
-    return nyscBusy(s);
+    return busyBlock(s);
   }
   var CAMP_DAYS = [
     'Drills on the parade ground, then lectures on the history of NYSC. Man O\'War made everyone crawl in the mud.',
@@ -3409,7 +3419,7 @@
     var h = hour(s); if (h < 8 || h >= 10) return 'Report to your PPA between 08:00 and 09:59';
     if (n.ppaDay === day(s)) return 'You already worked at your PPA today';
     if (s.needs.energy < 25) return 'Too tired for work';
-    return nyscBusy(s);
+    return busyBlock(s);
   }
   function nyscWork(s) {
     var why = nyscWorkBlock(s); if (why) return fail(why + '.');
@@ -3430,7 +3440,7 @@
     if (dow(s) !== D.NYSC.cdsDay) return 'CDS is on Thursdays';
     var h = hour(s); if (h < 10 || h >= 14) return 'CDS meets from 10:00 to 14:00';
     if (n.cds[week(s)]) return 'You already signed the CDS register this week';
-    return nyscBusy(s);
+    return busyBlock(s);
   }
   function nyscCDS(s) {
     var why = nyscCdsBlock(s); if (why) return fail(why + '.');
@@ -3460,15 +3470,16 @@
   function nyscRetainBlock(s) {
     var n = s.nysc;
     if (!n || n.stage !== 'done') return 'Finish your service year first';
+    if (n.retained) return 'You took the job: ' + D.CAREERS[n.retained].titles[0] + ' (' + D.CAREERS[n.retained].name + ')';
     if (!n.offer) return D.NYSC_RETAIN[n.ppa] ? 'No offer: your PPA retains corpers who worked at least ' + NYSC_RETAIN_DAYS + ' days there' : 'Your PPA does not retain corpers';
     if (day(s) > n.offer.until) return 'The offer has expired';
     if (s.job && s.job.id === n.offer.career) return 'You already work there';
-    return nyscBusy(s);
+    return busyBlock(s);
   }
   function nyscRetain(s) {
     var why = nyscRetainBlock(s); if (why) return fail(why + '.');
     var cid = s.nysc.offer.career, ppa = nyscPPA(s);
-    s.nysc.offer = null;
+    s.nysc.offer = null; s.nysc.retained = cid;
     log(s, '🎖️ Retained by ' + ppa.name + '!', 'good');
     return applyJob(s, cid, true);
   }
@@ -3495,8 +3506,7 @@
     return Object.keys(D.LODGING).filter(function (k) { return D.LODGING[k].where.indexOf(s.loc) >= 0; }).map(function (k) {
       var L = D.LODGING[k], o = { id: k, name: L.name, icon: L.icon, price: price(s, L.price), sleep: L.sleep };
       if (home) o.disabled = 'You are at home: sleep there';
-      else if (s.over) o.disabled = 'This Weekly Lagos is over';
-      else if (s.pending.length) o.disabled = 'Decide on the open event first';
+      else if (busyBlock(s)) o.disabled = busyBlock(s);
       else if (s.needs.energy > 85) o.disabled = 'You are not tired';
       else if (!canAfford(s, o.price)) o.disabled = 'A night costs ' + naira(o.price);
       return o;
@@ -3524,13 +3534,14 @@
   // A night without light (no fan, no AC) and no net invites mosquitoes; the rainy
   // season is worse. Rolled once per night's sleep, only on rules 11, so older lives
   // draw no extra random numbers. protect: 0..1 from a net, a running fan or AC, or a hotel.
-  function malariaChance(s, protect) {
+  function malariaOdds(s, protect) {
     if (!(s.rules >= 11) || s.sick) return 0;
-    var p = s.power ? 0.004 : 0.014, wx = weatherNow(s);
-    if (wx === 'rain' || wx === 'storm' || D.WEATHER_MONTHS && (D.WEATHER_MONTHS[monthIndex(s)] || 0) > 0.4) p *= 1.5;
-    p *= 1 - Math.min(0.95, protect || 0);
-    return rand(s) < p ? 1 : 0;
+    var p = s.power ? 0.004 : 0.014, wx = weatherOn(s, day(s)); // the day's weather: wet days mean wet nights
+    if (wx === 'rain' || wx === 'storm' || (D.WEATHER_MONTHS[monthIndex(s)] || 0) > 0.4) p *= 1.5;
+    return p * (1 - Math.min(0.95, protect || 0));
   }
+  // Rolls the seeded RNG: only call it from inside a recorded action.
+  function malariaChance(s, protect) { var p = malariaOdds(s, protect); return p && rand(s) < p ? 1 : 0; }
   function catchMalaria(s) {
     s.sick = { kind: 'malaria', since: day(s), drugs: false, cure: -1 };
     log(s, '🦟 Fever, chills and a headache: it is malaria. Buy drugs at a chemist (Do tab) before it gets worse.', 'bad');
@@ -3546,8 +3557,7 @@
     if (!s.sick) return 'You are not sick';
     if (s.sick.drugs) return 'You are already taking the drugs';
     var h = hour(s); if (h < 7 || h >= 21) return 'Chemists open 07:00 to 21:00';
-    if (s.pending.length) return 'Decide on the open event first';
-    if (s.over) return 'This Weekly Lagos is over';
+    if (busyBlock(s)) return busyBlock(s);
     if (!canAfford(s, treatCost(s))) return 'Antimalarials cost ' + naira(treatCost(s));
     return null;
   }
@@ -3704,7 +3714,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaChance: malariaChance, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, sleepAway: recorded('ht', sleepAway),
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

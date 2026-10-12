@@ -232,7 +232,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (92 tests)
+  test/engine.test.js   node:test suite (93 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 
