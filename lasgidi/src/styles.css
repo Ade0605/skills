@@ -554,3 +554,7 @@ html.pg-full-open { overflow: hidden; }
 .qz-opt.right { background: #2fa36b; border-color: #2fa36b; }
 .qz-opt.wrong { background: #d0453a; border-color: #d0453a; }
 .qz-big { font-size: 44px; font-weight: 800; margin: 0; text-align: center; }
+
+/* settings */
+html.big-text .panel-b, html.big-text .panel-h, html.big-text .tabs, html.big-text .needs, html.big-text .sheet { zoom: 1.12; }
+html.lite *, html.lite *::before, html.lite *::after { animation: none !important; transition: none !important; }

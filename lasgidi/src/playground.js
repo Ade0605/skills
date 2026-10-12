@@ -245,7 +245,7 @@
     })();
     var scene = null, theme = null, staticLayer = null, staticKey = '';
     var W = 0, H = 0, dpr = 1, cam = { z: 1, px: 0, py: 0 }, base = { s: 1, ox: 0, oy: 0 };
-    var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var reduce = (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches) || (root.document && document.documentElement.classList.contains('lite'));
     var raf = 0, last = 0, clock = 0;
     var vehicles = [], boats = [];
     var pins = [], faceBoxes = [], placeHits = [], boardHits = [], homeHits = [];

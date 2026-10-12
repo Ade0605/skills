@@ -103,6 +103,47 @@
   }
 
   /* ---------- top-level render ---------- */
+  /* ---------- settings: language, text size, lite mode ---------- */
+  // Naija Pidgin for the interface chrome (tabs, app names, headings, buttons).
+  // Whole text nodes are swapped after each render; story text stays in English.
+  var PCM = {
+    'Do': 'Wetin dey', 'Map': 'Map', '📱 Phone': '📱 Phone', 'Home': 'House', 'Work': 'Work', 'Money': 'Owo', 'Me': 'Me', 'Gist': 'Gist',
+    'Messages': 'Messages', 'Quests': 'Mission', 'Jobs': 'Work wey dey', 'Bank': 'Bank', 'Stocks': 'Shares', 'Shop': 'Market', 'Creator': 'Content', 'Games': 'Games',
+    'Dealers': 'Motor dealers', 'Gem hunt': 'Gem hunt', 'What\'s on': 'Wetin dey happen', 'Weather': 'Weather', 'Travel': 'Travel', 'My story': 'My story', 'Hall of Fame': 'Hall of Fame', 'Wardrobe': 'Cloth', 'Guide': 'How to play',
+    '‹ Apps': '‹ Apps', 'Buy': 'Buy am', 'Close': 'Close am', 'Leave': 'Comot', 'Hire': 'Hire am', 'Let go': 'Sack am', 'Adopt': 'Carry am go house', 'Rehome': 'Give am out', 'Join': 'Join', 'Cancel': 'Cancel am',
+    'Open': 'Open am', 'Host': 'Throw am', 'Take it': 'Take am', 'Claim': 'Collect', 'Go now': 'Go now now', 'Wear': 'Wear am', 'Take off': 'Remove am', 'Haggle': 'Price am', 'Play': 'Play', '▶ Play': '▶ Play am', 'Go there': 'Go there', 'Quit': 'Comot',
+    'Wait 1 hour': 'Siddon 1 hour', 'Clock in': 'Clock in', 'Sell': 'Sell am', 'Drive': 'Drive am', 'Showroom': 'Showroom', 'My garage': 'My garage',
+    'Achievements': 'Wetin you don do', 'Skills': 'Wetin you sabi', 'People': 'Your people', 'Save': 'Save am', 'Settings': 'Settings',
+    'Wetin I go do?': 'Wetin I go do?', 'Lagosians here': 'Lagos people wey dey here', 'Gifts for you': 'Gift for you', 'Party invites': 'Party invite',
+    'Furniture shop': 'Furniture shop', 'Clothes shop': 'Cloth shop', 'In storage': 'For store', 'Domestic staff': 'House staff', 'Pets': 'Pets', 'Health plan': 'Hospital plan',
+    'Chieftaincy': 'Chieftaincy', 'Phones': 'Phones', 'Lifetime': 'All your life', 'Milestones': 'Big moments', 'Share it': 'Share am', 'Share your life': 'Share your life',
+    'Copy': 'Copy am', 'New life': 'New life', 'Copy save code': 'Copy save code', 'Sound on': 'Sound dey', 'Sound off': 'Sound no dey', 'Light at home': 'Light dey house', 'NEPA took light': 'NEPA don take light',
+    'Mini-games': 'Mini-games', 'Biggest blocks': 'Biggest blocks', 'Your block': 'Your block', 'Places': 'Places', 'All': 'Everything', 'Billboards': 'Billboards'
+  };
+  function translateDom(root) {
+    if (prefs.lang !== 'pcm' || !root) return;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: function (n) { var p = n.parentNode; return p && /^(SCRIPT|STYLE|TEXTAREA|CANVAS)$/.test(p.nodeName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; } }), n;
+    while ((n = w.nextNode())) {
+      var v = n.nodeValue, k = v.trim();
+      if (k && PCM.hasOwnProperty(k) && PCM[k] !== k) n.nodeValue = v.replace(k, PCM[k]);
+    }
+  }
+  function applyPrefs() {
+    var h = document.documentElement;
+    h.classList.toggle('big-text', !!prefs.big);
+    h.classList.toggle('lite', !!prefs.lite);
+    h.setAttribute('lang', prefs.lang === 'pcm' ? 'pcm' : 'en');
+  }
+  applyPrefs();
+  function settingsView() {
+    var opt = function (id, label, on, desc) { return '<div class="item"><div><h3>' + label + '</h3><div class="act-note">' + desc + '</div></div><button class="btn sm' + (on ? ' go' : ' ghost') + '" id="set-' + id + '" data-setpref="' + id + '" aria-pressed="' + !!on + '">' + (on ? 'On' : 'Off') + '</button></div>'; };
+    return '<div class="section"><h3>Settings</h3><div class="list">' +
+      opt('lang', '🗣️ Naija Pidgin', prefs.lang === 'pcm', 'Tabs, app names, headings and buttons in Pidgin. Story text stays in English.') +
+      opt('big', '🔠 Large text', prefs.big, 'Bigger text everywhere.') +
+      opt('lite', '🪶 Lite mode', prefs.lite, 'Fewer animations and no moving traffic on the map, for cheap phones and low data. The page reloads.') +
+      '</div></div>';
+  }
+
   function render() {
     // Live updates re-render at any moment, so keep what the viewer is typing.
     var kept = {};
@@ -128,6 +169,7 @@
     drawAvatar();
     syncResidence();
     if (focusId) { var f = document.getElementById(focusId); if (f) f.focus(); }
+    translateDom(app);
     syncPresence();
   }
 
@@ -1819,6 +1861,7 @@
     html += '<div class="section"><h3>Achievements</h3><div class="ach">' + Object.keys(L.ACHIEVEMENTS).map(function (k) {
       return '<div class="' + (S.ach[k] ? 'got' : 'not') + '">' + (S.ach[k] ? '✓ ' : '· ') + esc(L.ACHIEVEMENTS[k]) + '</div>';
     }).join('') + '</div></div>';
+    html += settingsView();
     html += '<div class="section"><h3>Save</h3><p class="note">The game saves in this browser. Copy the save code to move to another device.</p>' +
       '<div class="inline"><button class="btn sm" id="copy-save" data-copy="1">Copy save code</button><button class="btn sm ghost" id="new-game" data-new="1">New life</button></div>' +
       '<textarea id="save-code" readonly rows="3" style="width:100%" aria-label="Save code">' + esc(L.serialize(S)) + '</textarea>' +
@@ -1931,7 +1974,7 @@
   function markRead() { try { localStorage.setItem(READ_KEY, JSON.stringify({ seed: S.seed, t: S.t })); } catch (e) {} }
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
-    ['guide', '📖', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
+    ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
@@ -1947,7 +1990,7 @@
     ['✈️', 'The end', 'Pass IELTS, save ₦15m proof of funds and japa from Ikeja airport to complete a life. Or play forever.', 'app', 'travel']
   ];
   function guideView() {
-    return '<div class="section" style="padding-top:0"><h3>📖 How to play Lasgidi</h3><div class="list">' + GUIDE.map(function (g, i) {
+    return '<div class="section" style="padding-top:0"><h3>❓ How to play Lasgidi</h3><div class="list">' + GUIDE.map(function (g, i) {
       var btn = g[3] === 'tab' ? '<button class="btn sm ghost" id="guide-' + i + '" data-tab="' + g[4] + '">Open</button>' : g[3] === 'app' ? '<button class="btn sm ghost" id="guide-' + i + '" data-app="' + g[4] + '">Open</button>' : '<button class="btn sm ghost" id="guide-' + i + '" data-seaopen="1" data-tab="map">Open</button>';
       return '<div class="item"><div><h3>' + g[0] + ' ' + esc(g[1]) + '</h3><div class="act-note">' + esc(g[2]) + '</div></div>' + btn + '</div>';
     }).join('') + '</div><p class="note">Number keys switch tabs; A does the top suggestion. Your game saves in this browser. Copy the save code on the Me tab to move devices.</p></div>';
@@ -2117,7 +2160,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2377,6 +2420,13 @@
       t.disabled = true;
       postFame(L.fameEntry(S)).then(function (msg) { online.status = msg || ''; render(); });
       return;
+    }
+    if (ds.setpref) {
+      var k = ds.setpref;
+      if (k === 'lang') prefs.lang = prefs.lang === 'pcm' ? 'en' : 'pcm'; else prefs[k] = !prefs[k];
+      writeJSON(PREF_KEY, prefs); applyPrefs();
+      if (k === 'lite') { location.reload(); return; }
+      render(); return;
     }
     if (ds.sound) { prefs.sound = !prefs.sound; writeJSON(PREF_KEY, prefs); if (prefs.sound) { ctx(); play('credit'); } render(); return; }
     if (ds.repok) { S.reportSeen = S.report.w; save(); render(); return; }

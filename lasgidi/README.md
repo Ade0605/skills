@@ -96,6 +96,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The app keeps 25% of the fares, and you pay for your own fuel.
   - Rush hour brings more trips, and night fares are higher.
   - Luxury cars earn premium fares but burn so much fuel that a supercar usually loses money.
+- **Settings (Me tab):**
+  - **🗣️ Naija Pidgin:** tabs, app names, headings and buttons, such as "Wetin dey", "Owo", "Mission", "Work wey dey" and "Buy am".
+  - **🔠 Large text.**
+  - **🪶 Lite mode:** fewer animations and no moving traffic, for cheap phones.
 - **Interactive map:** zoom with the mouse wheel, by pinching, or by double-tapping, up to 6×. Drag to pan. The ⛶ button enlarges the map to full screen (Esc or ✕ to exit), and **+**/**-** zoom when the map has focus.
 - **🌊 Sea Plots:** a grid of 1,152 plots in the Atlantic below Victoria Island and Lekki, shared by every player, like a million-naira homepage.
   - **Buying:** tap a spot (or the 🌊 Sea Plots chip) and pick a block size, up to 12×12. A block costs ₦5,000 a plot. Moving or enlarging charges only for the extra plots.
@@ -152,7 +156,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Faces on the map:** your Lagosian's face sits over your district pin. Other players in the same city show as small faces beside their pins.
 - **City boards:** the Hall of Fame filters to All Nigeria, Lagos, Abuja or Port Harcourt by where each life lived. It also names the richest verified player in your district.
 - **First-run tour:** four short tips inline on the Do tab. It never blocks a tap, and you can skip it.
-- **Phone:** a 📱 Phone tab with a 📖 Guide (how to play, with a button to each feature), and apps for Messages (with an unread count), Quests, Jobs, Bank, Stocks, Shop, Creator, Games, Dealers, the Gem hunt, Travel, the Hall of Fame and your Wardrobe.
+- **Phone:** a 📱 Phone tab with a ❓ Guide (how to play, with a button to each feature), and apps for Messages (with an unread count), Quests, Jobs, Bank, Stocks, Shop, Creator, Games, Dealers, the Gem hunt, Travel, the Hall of Fame and your Wardrobe.
 - **Cities:** Lagos, Abuja and Port Harcourt, each with its own map, districts, landmarks, homes and jobs.
   - **Abuja:** Aso Rock, Millennium Park, Jabi Lake, Wuse Market and Eagle Square, plus the civil service and consulting careers.
   - **Port Harcourt:** Uniport, Pleasure Park, Mile 1 market, the waterfront and the Trans-Amadi yards, plus oil-services jobs.
