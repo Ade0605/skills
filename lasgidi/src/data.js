@@ -158,6 +158,15 @@
     { id: 'oil',      name: 'Oil services firm',          icon: '🛢️', district: 'ph_transamadi', pay: 2000, text: 'The posting everyone prays for. Safety boots and a canteen.' },
     { id: 'tech',     name: 'Tech hub, Yaba',             icon: '💻', district: 'yaba',          pay: 1000, text: 'Help run a startup bootcamp. Free Wi-Fi, free jollof on Fridays.' }
   ];
+  // A PPA that pays a stipend can retain a corper who showed up: the career it offers.
+  var NYSC_RETAIN = { bank: 'bank', oil: 'oil', tech: 'tech', ministry: 'civil' };
+  // Somewhere to sleep away from home. where: which districts offer each tier.
+  var LODGING = {
+    guest:    { name: 'Guest house',         icon: '🛏️', price: 8000,   sleep: 0.8,  where: ['ikorodu', 'mushin', 'oshodi', 'festac', 'ajah', 'abj_nyanya', 'abj_kubwa', 'ph_borokiri', 'ph_dline', 'ph_rumuokoro', 'ph_choba'] },
+    hotel:    { name: 'Hotel room',          icon: '🏨', price: 35000,  sleep: 1.0,  gen: true, fx: { hygiene: 30 }, where: ['ikeja', 'surulere', 'yaba', 'island', 'ikoyi', 'vi', 'lekki', 'abj_maitama', 'abj_wuse', 'abj_jabi', 'abj_asokoro', 'abj_garki', 'abj_airport', 'ph_airport', 'ph_gra', 'ph_transamadi', 'ph_oldgra'] },
+    shortlet: { name: 'Short-let apartment', icon: '🏙️', price: 90000,  sleep: 1.1,  gen: true, fx: { hygiene: 35, stress: -10 }, where: ['ikoyi', 'vi', 'lekki', 'abj_maitama', 'abj_wuse', 'abj_jabi'] },
+    luxury:   { name: 'Five-star hotel',     icon: '⭐', price: 180000, sleep: 1.15, gen: true, fx: { hygiene: 40, stress: -15, hunger: 35 }, where: ['vi', 'ikoyi', 'abj_maitama', 'abj_asokoro', 'ph_gra'] }
+  };
   var NYSC = { callup: 5000, allowance: 77000, campDays: 3, weeks: 12, cdsDay: 3 };
 
   var QUESTS = [
@@ -906,7 +915,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

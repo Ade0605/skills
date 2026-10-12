@@ -1471,3 +1471,69 @@ test('NYSC: a real graduate registers and goes to camp, and the life replays', (
   assert.ok(s.replay, 'still recording');
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('lodging: a bed away from home, by the night, priced by tier and district', () => {
+  const s = L.newGame({ seed: 90, origin: 'nepo', goal: 'freestyle' });
+  const home = L.homeDef(s).district;
+  s.loc = home; assert.ok(L.lodgingOptions(s).every(o => o.disabled), 'sleep at home instead');
+  s.loc = 'abj_maitama'; s.t = s.t - (s.t % 1440) + 1440 + 22 * 60; s.needs.energy = 20; s.needs.hunger = 70;
+  const ids = L.lodgingOptions(s).map(o => o.id);
+  assert.deepEqual(ids, ['hotel', 'shortlet', 'luxury']);
+  s.loc = 'abj_kubwa'; assert.deepEqual(L.lodgingOptions(s).map(o => o.id), ['guest']);
+  // The advisor offers the cheapest bed when you are stranded in another city.
+  const tip = L.advise(s).find(t => t.act && t.act.type === 'lodge');
+  assert.ok(tip && tip.act.id === 'guest', JSON.stringify(L.advise(s)));
+  s.loc = 'abj_maitama';
+  const cash = s.cash + s.bank, r = L.sleepAway(s, 'luxury');
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.cash + s.bank, cash - L.price(s, 180000));
+  assert.equal(L.clockLabel(s).slice(-5), '06:30');
+  assert.ok(s.needs.energy > 85, 'rested');
+  assert.equal(L.category('Lodging: Five-star hotel', -1), 'housing');
+  assert.match(L.sleepAway(s, 'hotel').msg, /not tired/);
+  assert.equal(L.sleepAway(s, 'guest').ok, false, 'no guest house in Maitama');
+  // In your home city the advisor never suggests a hotel.
+  const g = L.newGame({ seed: 90, origin: 'lapo', goal: 'freestyle' });
+  g.loc = 'vi'; g.t = g.t - (g.t % 1440) + 1440 + 22 * 60; g.needs.energy = 20;
+  assert.ok(!L.advise(g).some(t => t.act && t.act.type === 'lodge'));
+});
+
+test('NYSC retention: an offer for corpers who showed up, accepted within 14 days', () => {
+  const mk = (days) => {
+    const s = L.newGame({ seed: 81, origin: 'nepo', goal: 'freestyle' });
+    s.edu.degree = true; L.nyscRegister(s);
+    s.nysc.ppa = 'bank'; s.nysc.stage = 'service'; s.nysc.start = L.week(s) - 11; s.nysc.days = days;
+    for (let i = 0; s.nysc.stage === 'service' && i < 100; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 70; L.wait(s, 240); }
+    return s;
+  };
+  const lazy = mk(5);
+  assert.equal(lazy.nysc.stage, 'done');
+  assert.match(L.nyscRetain(lazy).msg, /at least 20 days/);
+  const s = mk(25);
+  assert.equal(s.nysc.offer.career, 'bank');
+  const r = L.nyscRetain(s);
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.job.id, 'bank'); assert.equal(s.job.level, 0);
+  assert.equal(L.nyscRetain(s).ok, false, 'once');
+  const late = mk(25); late.t += 15 * 1440;
+  assert.match(L.nyscRetain(late).msg, /expired/);
+});
+
+test('away from home: a real trip to Abuja with a hotel night replays', () => {
+  const s = L.newGame({ seed: 91, origin: 'nepo', goal: 'freestyle' });
+  const go = d => { if (s.loc === d) return true; const o = L.travelOptions(s, d).filter(o => !o.disabled).sort((a, b) => a.mins - b.mins)[0]; return !!o && L.travel(s, d, o.mode).ok; };
+  for (let g = 0; L.cityOf(s) !== 'abuja' && g < 50; g++) {
+    while (s.pending.length) L.resolveChoice(s, 0);
+    const o = L.intercityOptions(s, 'abuja').filter(o => o.cost <= s.cash + s.bank).sort((a, b) => a.cost - b.cost)[0];
+    if (!o) break; if (s.loc !== o.from) { go(o.from) || L.wait(s, 30); continue; }
+    if (o.disabled) { L.wait(s, 30); continue; }
+    L.intercity(s, 'abuja', o.mode);
+  }
+  assert.equal(L.cityOf(s), 'abuja');
+  go('abj_wuse');
+  while (L.hour(s) < 22) { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 60); }
+  while (s.pending.length) L.resolveChoice(s, 0);
+  const r = L.sleepAway(s, 'hotel');
+  assert.ok(r.ok, r.msg);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

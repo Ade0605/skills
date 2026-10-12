@@ -190,6 +190,7 @@
     if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch|^Sea Plots|^Danfo (owner|fuel|repairs|returns)|^Hawking stock/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/^NYSC (allawee|PPA)/.test(m)) return 'wages';
+    if (/^Lodging: /.test(m)) return 'housing';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
@@ -2299,6 +2300,12 @@
     return { kind: 'go', text: 'You have no job. ' + c.titles[0] + ' in ' + D.DISTRICTS[c.district].name + ' will take you (' + naira(c.pay[0]) + '/shift). Apply in person.', act: { type: 'travel', dest: c.district, mode: best.r.mode } };
   }
 
+  // Far from home (another city) and tired or late: the cheapest bed here you can pay for.
+  function lodgeHint(s) {
+    if (districtCity(homeDistrict(s)) === cityOf(s)) return null;
+    var o = lodgingOptions(s).filter(function (x) { return !x.disabled; }).sort(function (a, b) { return a.price - b.price; })[0];
+    return o ? { kind: 'warn', text: 'You are far from home. ' + o.name + ' here: ' + naira(o.price) + ' a night.', act: { type: 'lodge', id: o.id } } : null;
+  }
   function advise(s) {
     if (s.pending.length || s.over) return [];
     var out = [];
@@ -2310,11 +2317,13 @@
           ? { kind: 'warn', text: 'You are exhausted. Sleep with your alarm set so you do not miss work.', act: { type: 'act', id: 'home_alarm' } }
           : { kind: 'warn', text: 'You are exhausted. Sleep before you collapse.', act: { type: 'act', id: 'home_sleep' } });
       }
+      else if (lodgeHint(s)) out.push(lodgeHint(s));
       else {
         var r = route(s, homeDistrict(s), 'cheap');
         out.push({ kind: 'warn', text: 'You are exhausted. Go home to sleep' + (r ? ' (' + D.MODES[r.mode].name + ', ' + fmtMins(r.mins) + ').' : '.'), act: r ? { type: 'travel', dest: homeDistrict(s), mode: r.mode } : null });
       }
     }
+    if (s.needs.energy >= 25 && hour(s) >= 21 && districtCity(homeDistrict(s)) !== cityOf(s)) { var lh = lodgeHint(s); if (lh) out.push(lh); }
     if (s.job) { var sh = shiftHint(s); if (sh) out.push(sh); }
     if (s.job && hour(s) >= 20 && s.needs.energy < 70 && homeDistrict(s) === s.loc && !out.some(function (t) { return t.act && t.act.id === 'home_sleep'; })) {
       var nc = D.CAREERS[s.job.id];
@@ -3326,7 +3335,7 @@
     var why = nyscWorkBlock(s); if (why) return fail(why + '.');
     var n = s.nysc, ppa = nyscPPA(s);
     s.alerts = [];
-    n.ppaDay = day(s);
+    n.ppaDay = day(s); n.days = (n.days || 0) + 1;
     advance(s, 6 * 60);
     applyFx(s, { energy: -20, hunger: -15, stress: 6 });
     addXp(s, ppa.id === 'tech' ? { tech: 2 } : ppa.id === 'bank' ? { hustle: 1, charisma: 1 } : ppa.id === 'school' ? { charisma: 2 } : { hustle: 1 });
@@ -3362,16 +3371,35 @@
     else { n.withheld++; log(s, '🎖️ Your clearance was not signed: you attended ' + att + ' of 4 CDS days. No allowance this month.', 'bad'); }
     if (served >= D.NYSC.weeks) {
       n.stage = 'done'; unlock(s, 'corper');
-      var ppa = nyscPPA(s);
-      log(s, '🎖️ Passing out! You have your Certificate of National Service.' + (ppa.pay >= 1000 ? ' ' + ppa.name + ' says they may retain you: watch the Jobs app.' : ''), 'ach');
+      var ppa = nyscPPA(s), cid = D.NYSC_RETAIN[ppa.id];
+      if (cid && (n.days || 0) >= NYSC_RETAIN_DAYS) n.offer = { career: cid, until: day(s) + 14 };
+      log(s, '🎖️ Passing out! You have your Certificate of National Service.' + (n.offer ? ' ' + ppa.name + ' wants to retain you as ' + D.CAREERS[cid].titles[0] + ': accept in Phone → NYSC within 14 days.' : ''), 'ach');
     }
+  }
+  var NYSC_RETAIN_DAYS = 20;
+  function nyscRetainBlock(s) {
+    var n = s.nysc;
+    if (!n || n.stage !== 'done') return 'Finish your service year first';
+    if (!n.offer) return D.NYSC_RETAIN[n.ppa] ? 'No offer: your PPA retains corpers who worked at least ' + NYSC_RETAIN_DAYS + ' days there' : 'Your PPA does not retain corpers';
+    if (day(s) > n.offer.until) return 'The offer has expired';
+    if (s.job && s.job.id === n.offer.career) return 'You already work there';
+    return nyscBusy(s);
+  }
+  function nyscRetain(s) {
+    var why = nyscRetainBlock(s); if (why) return fail(why + '.');
+    var cid = s.nysc.offer.career, ppa = nyscPPA(s);
+    s.nysc.offer = null;
+    log(s, '🎖️ Retained by ' + ppa.name + '!', 'good');
+    return applyJob(s, cid, true);
   }
   function nyscInfo(s) {
     var n = s.nysc, ppa = n ? nyscPPA(s) : null;
     var out = { stage: n ? n.stage : s.edu.degree ? 'eligible' : 'locked', fee: price(s, D.NYSC.callup), allowance: price(s, D.NYSC.allowance), ppa: ppa };
     if (!n) return out;
     out.campDays = n.campDays; out.paid = n.paid; out.withheld = n.withheld;
-    out.camp = nyscCampBlock(s); out.work = nyscWorkBlock(s); out.cdsWhy = nyscCdsBlock(s);
+    out.camp = nyscCampBlock(s); out.work = nyscWorkBlock(s); out.cdsWhy = nyscCdsBlock(s); out.days = n.days || 0;
+    out.offer = n.offer ? { career: n.offer.career, title: D.CAREERS[n.offer.career].titles[0], name: D.CAREERS[n.offer.career].name, pay: D.CAREERS[n.offer.career].pay[0], until: n.offer.until } : null;
+    out.retainWhy = nyscRetainBlock(s);
     if (n.stage === 'service') {
       var served = week(s) - n.start, blockStart = week(s) - (served % 4);
       out.weeksLeft = Math.max(0, D.NYSC.weeks - served);
@@ -3379,6 +3407,34 @@
       out.cds = []; for (var w = blockStart; w < blockStart + 4; w++) out.cds.push(w < week(s) ? !!n.cds[w] : w === week(s) ? (n.cds[w] ? true : null) : null);
     }
     return out;
+  }
+
+  /* ---------- somewhere to sleep away from home ---------- */
+  function lodgingOptions(s) {
+    var home = homeDef(s).district === s.loc;
+    return Object.keys(D.LODGING).filter(function (k) { return D.LODGING[k].where.indexOf(s.loc) >= 0; }).map(function (k) {
+      var L = D.LODGING[k], o = { id: k, name: L.name, icon: L.icon, price: price(s, L.price), sleep: L.sleep };
+      if (home) o.disabled = 'You are at home: sleep there';
+      else if (s.over) o.disabled = 'This Weekly Lagos is over';
+      else if (s.pending.length) o.disabled = 'Decide on the open event first';
+      else if (s.needs.energy > 85) o.disabled = 'You are not tired';
+      else if (!canAfford(s, o.price)) o.disabled = 'A night costs ' + naira(o.price);
+      return o;
+    });
+  }
+  function sleepAway(s, id) {
+    var o = lodgingOptions(s).filter(function (x) { return x.id === id; })[0];
+    if (!o) return fail('There is no ' + (D.LODGING[id] ? D.LODGING[id].name.toLowerCase() : 'such place') + ' in ' + D.DISTRICTS[s.loc].name + '.');
+    if (o.disabled) return fail(o.disabled + '.');
+    var L = D.LODGING[id];
+    s.alerts = [];
+    pay(s, o.price, 'Lodging: ' + L.name);
+    // Sleep till 06:30 the next morning (at least 6 hours). Hotels run a generator; guest houses wait for NEPA.
+    var mins = (24 * 60 + 6 * 60 + 30 - minuteOfDay(s)) % (24 * 60);
+    if (mins < 6 * 60) mins = 6 * 60;
+    advance(s, mins, { sleep: L.sleep * (L.gen || s.power ? 1 : 0.85) });
+    if (L.fx) applyFx(s, L.fx);
+    return finish(s, ok(L.icon + ' A night in a ' + L.name.toLowerCase() + ' in ' + D.DISTRICTS[s.loc].name + '. ' + (L.gen || s.power ? 'You slept well.' : 'NEPA took light and the generator was off by midnight.')));
   }
 
   /* ---------- daily streak: come back on real consecutive days ---------- */
@@ -3521,7 +3577,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting,
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), lodgingOptions: lodgingOptions, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

@@ -1612,6 +1612,7 @@
       if (a && a.type === 'act') btn = '<button class="btn sm go" id="adv-' + i + '" data-act="' + a.id + '">Do it</button>';
       if (a && a.type === 'travel') btn = '<button class="btn sm go" id="adv-' + i + '" data-travel="' + a.dest + '" data-mode="' + a.mode + '">Go</button>';
       if (a && a.type === 'apply') btn = '<button class="btn sm go" id="adv-' + i + '" data-apply="' + a.id + '">Apply</button>';
+      if (a && a.type === 'lodge') btn = '<button class="btn sm go" id="adv-' + i + '" data-lodge="' + a.id + '">Book</button>';
       if (a && a.type === 'move') btn = '<button class="btn sm go" id="adv-' + i + '" data-move="' + a.id + '">Move</button>';
       if (a && a.type === 'tab') btn = '<button class="btn sm ghost" id="adv-' + i + '" data-tab="' + a.id + '">Open ' + esc(a.id) + '</button>';
       return '<div class="tip ' + t.kind + '"><p>' + esc(t.text) + '</p>' + btn + '</div>';
@@ -1675,6 +1676,17 @@
     var dots = ''; for (var i = 0; i < 7; i++) dots += '<i class="' + (i < info.slot ? 'on' : i === info.slot ? 'now' : '') + '"></i>';
     return '<div class="streak"><span class="st-ic">🔥</span><div class="st-t"><b>Day ' + info.n + ' streak</b><span class="st-dots" aria-label="Day ' + (info.slot + 1) + ' of 7">' + dots + '</span></div><button class="btn sm go" id="streak" data-streak="1">Claim ' + N(info.prize) + '</button></div>';
   }
+  // Away from your home district: somewhere to sleep, paid by the night.
+  function lodgingView() {
+    var opts = L.lodgingOptions(S), hd = L.homeDef(S);
+    var note = '<p class="note">Home is ' + esc(hd.name) + ' in ' + esc(D.DISTRICTS[hd.district].name) + (L.districtCity(hd.district) !== L.cityOf(S) ? ', ' + esc(D.CITIES[L.districtCity(hd.district)].name) : '') + '. Sleep, cook and bathe there' + (opts.length ? ', or pay for a night here.' : '.') + '</p>';
+    if (!opts.length) return '<div class="section">' + note + '</div>';
+    return '<div class="section"><h3>🛏️ Somewhere to sleep</h3>' + note + '<div class="list">' + opts.map(function (o) {
+      var L2 = D.LODGING[o.id];
+      return '<div class="item"><div><h3>' + o.icon + ' ' + esc(o.name) + '</h3><div class="meta"><span class="cost num">' + N(o.price) + ' a night</span><span>till 06:30</span>' + (L2.gen ? '<span>generator</span>' : '<span>NEPA light only</span>') + (L2.fx && L2.fx.hunger ? '<span>breakfast</span>' : '') + '</div>' + (o.disabled ? '<div class="why">' + esc(o.disabled) + '</div>' : '') + '</div>' +
+        '<button class="btn sm" id="lodge-' + o.id + '" data-lodge="' + o.id + '"' + (o.disabled ? ' disabled' : '') + '>Sleep here</button></div>';
+    }).join('') + '</div></div>';
+  }
   function doView() {
     var acts = L.availableActions(S);
     var home = acts.filter(function (a) { return a.atHome; });
@@ -1685,7 +1697,7 @@
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
     html += peopleHere() + gemCard();
     if (home.length) html += '<div class="section"><h3>At home · ' + esc(L.homeDef(S).name) + '</h3><div class="list">' + home.sort(sortOpen).map(actionRow).join('') + '</div></div>';
-    else html += '<div class="section"><p class="note">Home is ' + esc(L.homeDef(S).name) + ' in ' + esc(D.DISTRICTS[L.homeDef(S).district].name) + '. Sleep, cook and bathe there.</p></div>';
+    else html += lodgingView();
     html += '<div class="section"><div class="inline"><button class="btn ghost" id="wait-1" data-wait="60">Wait 1 hour</button><span class="note">Pantry: ' + S.pantry + ' meals at home</span></div></div>';
     return html + '</div>';
   }
@@ -1990,7 +2002,7 @@
     ['💼', 'Earn', 'Get a job (Phone → Jobs), work shifts, and take side gigs where you are. Ride-hail if you own a car. Money is hard on purpose: taxes, levies and January sapa.', 'app', 'jobs'],
     ['🎮', 'Mini-games', 'Danfo Run at Ojuelegba, hawking in the Oshodi go-slow, and the Saturday owambe dance-off. All pay capped amounts into your life.', 'app', 'games'],
     ['🏦', 'Save and invest', 'Savings, treasury bills, the stock exchange, an online shop, businesses and property. Watch the fees.', 'app', 'bank'],
-    ['🗺️', 'Explore', 'Three cities. Zoom the map (pinch, wheel or ⛶ full screen), tap places, and hunt the daily gems. The rainy season slows the roads.', 'tab', 'map'],
+    ['🗺️', 'Explore', 'Three cities. Zoom the map (pinch, wheel or ⛶ full screen), tap places, and hunt the daily gems. Away from home, book a guest house, hotel or short-let for the night. The rainy season slows the roads.', 'tab', 'map'],
     ['🌊', 'Sea Plots', 'Buy a block of plots in the Atlantic and put your picture on it for every player to see, after an editor checks it.', 'sea', ''],
     ['🏠', 'Home life', 'Furnish your home, hire staff, adopt pets, take a health plan, and host parties (with a decorator) that online friends can join.', 'tab', 'home'],
     ['📸', 'Fame', 'Grow followers for brand deals, post your life to the Hall of Fame, and take chieftaincy titles.', 'app', 'creator'],
@@ -2032,7 +2044,9 @@
         '<div class="inline"><button class="btn go" id="nysc-work" data-nysc="work"' + (n.work ? ' disabled' : '') + '>' + p.icon + ' Work at your PPA</button>' + goBtn('nysc-go-ppa', p.district) + '</div>' + (n.work ? '<p class="why">' + esc(n.work) + '.</p>' : '') +
         '<p class="note">Allawee paid ' + n.paid + ' time' + (n.paid === 1 ? '' : 's') + (n.withheld ? ', withheld ' + n.withheld : '') + '.</p></div>';
     }
-    return html + '<div class="nysc-done"><p class="nysc-big">🎖️</p><h3>Certificate of National Service</h3><p class="note">You served at ' + esc(p.name) + '. Allawee paid ' + n.paid + ' time' + (n.paid === 1 ? '' : 's') + (n.withheld ? ', withheld ' + n.withheld : '') + '. Corper wee! 🫡</p></div></div>';
+    var off = n.offer && !n.retainWhy ? '<div class="item"><div><h3>💼 Job offer: ' + esc(n.offer.title) + ' · ' + esc(n.offer.name) + '</h3><div class="meta"><span class="gain">' + N(n.offer.pay) + ' a shift to start</span><span>' + Math.max(0, n.offer.until - L.day(S)) + ' days to accept</span></div></div>' +
+      '<button class="btn go" id="nysc-retain" data-nysc="retain">Accept</button></div>' : '<p class="note">' + esc(n.retainWhy) + '.</p>';
+    return html + '<div class="nysc-done"><p class="nysc-big">🎖️</p><h3>Certificate of National Service</h3><p class="note">You served at ' + esc(p.name) + ' for ' + n.days + ' PPA day' + (n.days === 1 ? '' : 's') + '. Allawee paid ' + n.paid + ' time' + (n.paid === 1 ? '' : 's') + (n.withheld ? ', withheld ' + n.withheld : '') + '. Corper wee! 🫡</p></div><div class="list">' + off + '</div></div>';
   }
 
   /* ---------- Town Hall: a weekly vote shared by every player ---------- */
@@ -2225,7 +2239,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2367,7 +2381,8 @@
     }
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
     if (ds.minigame) { openMinigame(ds.minigame); return; }
-    if (ds.nysc) { var nk = ds.nysc; run(function () { return nk === 'register' ? L.nyscRegister(S) : nk === 'camp' ? L.nyscCamp(S) : nk === 'cds' ? L.nyscCDS(S) : L.nyscWork(S); }); return; }
+    if (ds.nysc) { var nk = ds.nysc; run(function () { return nk === 'register' ? L.nyscRegister(S) : nk === 'camp' ? L.nyscCamp(S) : nk === 'cds' ? L.nyscCDS(S) : nk === 'retain' ? L.nyscRetain(S) : L.nyscWork(S); }); return; }
+    if (ds.lodge) { var lg = ds.lodge; run(function () { return L.sleepAway(S, lg); }); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.partyact) {
       var host = ui.visit, pt2 = host && partyOf(host), act = ds.partyact;
