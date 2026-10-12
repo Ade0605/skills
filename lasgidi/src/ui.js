@@ -1893,10 +1893,27 @@
   function markRead() { try { localStorage.setItem(READ_KEY, JSON.stringify({ seed: S.seed, t: S.t })); } catch (e) {} }
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
-    ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
+    ['guide', '📖', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
+  var GUIDE = [
+    ['🧭', 'Survive the week', 'Eat, sleep and bathe, and keep stress down. Rent is due every Friday at noon. The advisor on the Do tab suggests your next move.', 'tab', 'do'],
+    ['💼', 'Earn', 'Get a job (Phone → Jobs), work shifts, and take side gigs where you are. Ride-hail if you own a car. Money is hard on purpose: taxes, levies and January sapa.', 'app', 'jobs'],
+    ['🎮', 'Mini-games', 'Danfo Run at Ojuelegba, hawking in the Oshodi go-slow, and the Saturday owambe dance-off. All pay capped amounts into your life.', 'app', 'games'],
+    ['🏦', 'Save and invest', 'Savings, treasury bills, the stock exchange, an online shop, businesses and property. Watch the fees.', 'app', 'bank'],
+    ['🗺️', 'Explore', 'Three cities. Zoom the map (pinch, wheel or ⛶ full screen), tap places, and hunt the daily gems. The rainy season slows the roads.', 'tab', 'map'],
+    ['🌊', 'Sea Plots', 'Buy a block of plots in the Atlantic and put your picture on it for every player to see, after an editor checks it.', 'sea', ''],
+    ['🏠', 'Home life', 'Furnish your home, hire staff, adopt pets, take a health plan, and host parties (with a decorator) that online friends can join.', 'tab', 'home'],
+    ['📸', 'Fame', 'Grow followers for brand deals, post your life to the Hall of Fame, and take chieftaincy titles.', 'app', 'creator'],
+    ['✈️', 'The end', 'Pass IELTS, save ₦15m proof of funds and japa from Ikeja airport to complete a life. Or play forever.', 'app', 'travel']
+  ];
+  function guideView() {
+    return '<div class="section" style="padding-top:0"><h3>📖 How to play Lasgidi</h3><div class="list">' + GUIDE.map(function (g, i) {
+      var btn = g[3] === 'tab' ? '<button class="btn sm ghost" id="guide-' + i + '" data-tab="' + g[4] + '">Open</button>' : g[3] === 'app' ? '<button class="btn sm ghost" id="guide-' + i + '" data-app="' + g[4] + '">Open</button>' : '<button class="btn sm ghost" id="guide-' + i + '" data-seaopen="1" data-tab="map">Open</button>';
+      return '<div class="item"><div><h3>' + g[0] + ' ' + esc(g[1]) + '</h3><div class="act-note">' + esc(g[2]) + '</div></div>' + btn + '</div>';
+    }).join('') + '</div><p class="note">Number keys switch tabs; A does the top suggestion. Your game saves in this browser. Copy the save code on the Me tab to move devices.</p></div>';
+  }
   function gamesView() {
     var rows = [
       { icon: '🚐', name: 'Danfo Run', where: 'Ojuelegba danfo park, Surulere', when: 'Every day, 06:00–21:00', best: S.stats.danfoBest ? 'Best fares ' + N(S.stats.danfoBest) + ' · ' + (S.stats.danfoPax || 0) + ' passengers in all' : 'Not played yet', act: 'suru_danfo', kind: 'danfo', place: 'ojuelegba_park', district: 'surulere' },
@@ -1934,6 +1951,7 @@
     if (app) {
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
+      else if (app === 'guide') body = '<div class="panel-b">' + guideView() + '</div>';
       else if (app === 'games') body = '<div class="panel-b">' + gamesView() + '</div>';
       else if (app === 'creator') body = '<div class="panel-b">' + creatorView() + '</div>';
       else if (app === 'story') body = '<div class="panel-b">' + storyView() + '</div>';
@@ -2099,7 +2117,7 @@
       ui.confirmRestart = false; ui.flash = ''; playWeekly(true); return;
     }
     if (ds.wpost) { t.disabled = true; postWeekly().then(function (m) { online.wStatus = m; render(); }); return; }
-    if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; if (t.hasAttribute('data-app')) ui.app = ds.app || null; if (ds.tripto) { clearPicks(); ui.sel = ds.tripto === S.loc ? null : ds.tripto; } render(); return; }
+    if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; if (t.hasAttribute('data-app')) ui.app = ds.app || null; if (ds.tripto) { clearPicks(); ui.sel = ds.tripto === S.loc ? null : ds.tripto; } if (ds.seaopen) { clearPicks(); ui.seaOpen = true; } render(); if (ds.seaopen && playground && playground.focusSea) playground.focusSea(); return; }
     if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
     if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
     if (ds.place) { ui.place = ds.place; ui.board = null; ui.sel = null; render(); return; }
