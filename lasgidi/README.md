@@ -96,6 +96,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The app keeps 25% of the fares, and you pay for your own fuel.
   - Rush hour brings more trips, and night fares are higher.
   - Luxury cars earn premium fares but burn so much fuel that a supercar usually loses money.
+- **House parties with real players:** when you host, you can add an **event decorator** for half the party's cost again. It turns the house festive, and guests spray 25% more.
+  - For 30 real minutes, Lagosians online get a 💌 **party invite** on their Do tab.
+  - **Guests:** they walk into your home and see the decorations and a live guest count. They can **🔔 Ring bell** (you get a toast), **💃 Dance** or **🥂 Socialise**.
+  - **Mood only:** guest actions only lift mood. No money moves between lives.
+  - **Host:** a banner on your Do tab shows how many guests are in.
 - **Domestic staff:** hire a house help, a cook, a driver (you need a car) or a gateman from the Home tab.
   - Each helps every day: fresh hygiene, a ready breakfast, rest instead of driving yourself, or easier sleep.
   - Each costs a weekly salary, from ₦30k to ₦60k. Staff you can't pay pack up and leave.

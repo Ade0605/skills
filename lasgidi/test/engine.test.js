@@ -1161,3 +1161,23 @@ test('chieftaincy: titles in order, gated by net worth, add status and a name pr
   assert.equal(L.nextTitle(rich).id, 'chief');
   assert.equal(L.category('Chieftaincy: Baale of your street', -1), 'lifestyle');
 });
+
+test('party extras: a decorator costs more and pays more spray; guests join for mood only', () => {
+  const s = L.newGame({ seed: 50, origin: 'nepo', goal: 'freestyle', rules: 8 });
+  while (L.dow(s) !== 5 || L.hour(s) < 12) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 60); }
+  if (s.loc !== L.homeDef(s).district) L.travel(s, L.homeDef(s).district, L.travelOptions(s, L.homeDef(s).district).find(o => !o.disabled).mode);
+  const b0 = s.cash + s.bank, r = L.hostParty(s, 'small', true);
+  assert.ok(r.ok, r.msg);
+  assert.ok(s.lastParty && s.lastParty.planner);
+  assert.ok(s.alerts.some(a => a.amt === -L.price(s, 120000 * 1.5)), 'decorator adds half again');
+  const g = L.newGame({ seed: 64, origin: 'mid', goal: 'freestyle' });
+  const cash = g.cash + g.bank, fun = g.needs.fun;
+  assert.ok(L.joinParty(g, 'u_host:123', 'dance').ok);
+  assert.equal(g.cash + g.bank, cash, 'no money changes hands');
+  assert.ok(g.needs.fun > fun - 5);
+  assert.equal(L.joinParty(g, 'u_host:123', 'dance').ok, false, 'once per party');
+  assert.ok(L.joinParty(g, 'u_host:123', 'socialise').ok);
+  assert.equal(L.joinParty(g, 'u_host:123', 'steal').ok, false);
+  assert.equal(L.replayLife(g.replay).ledgerHash, g.ledgerHash);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

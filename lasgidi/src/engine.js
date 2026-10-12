@@ -290,7 +290,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {},
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -2158,6 +2158,7 @@
     if (!s.creator) s.creator = { followers: 0, posts: 0, lastPost: -1 };
     if (s.phone === undefined) s.phone = null;
     if (s.title === undefined) s.title = null;
+    if (!s.partyJoins) s.partyJoins = {};
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2902,23 +2903,44 @@
     if (s.partyDay != null && day(s) - s.partyDay < PARTY_GAP) return 'You hosted on day ' + (s.partyDay + 1) + '. Wait ' + (PARTY_GAP - (day(s) - s.partyDay)) + ' more days';
     return null;
   }
-  function hostParty(s, kind) {
+  function hostParty(s, kind, planner) {
     var P = D.PARTIES[kind], why = partyBlock(s, kind);
     if (why) return fail(why + '.');
-    var cost = price(s, P.cost);
+    planner = !!planner;
+    var cost = price(s, P.cost * (planner ? 1 + D.PLANNER_FACTOR : 1));
     s.alerts = [];
-    if (!pay(s, cost, 'Party: ' + P.name)) return fail('This party costs ' + naira(cost) + '.');
+    if (!pay(s, cost, 'Party: ' + P.name + (planner ? ' with a decorator' : ''))) return fail('This party costs ' + naira(cost) + '.');
     advance(s, P.mins);
     applyFx(s, P.fx); applyFx(s, { hunger: 40, energy: -25 });
     // Guests spray more for a well-dressed, well-connected host.
     var charm = 1 + skillLevel(s, 'charisma') * 0.1 + Math.min(1.5, statusPoints(s) / 40) + (outfitTags(s).owambe ? 0.3 : 0);
-    var spray = Math.round(price(s, P.guests * 400 * charm * (0.7 + rand(s) * 0.6)) / 50) * 50;
+    var spray = Math.round(price(s, P.guests * 400 * charm * (planner ? 1.25 : 1) * (0.7 + rand(s) * 0.6)) / 50) * 50;
+    if (planner) applyFx(s, { social: 10, fun: 10 });
     if (spray > 0) earn(s, spray, 'Party: guests sprayed');
     Object.keys(s.friends).forEach(function (k) { if (s.friends[k].seen >= 0) s.friends[k].lvl = clamp(s.friends[k].lvl + (kind === 'small' ? 4 : 8), 0, 100); });
     s.partyDay = day(s);
+    s.lastParty = { kind: kind, planner: planner, t: s.t };
     unlock(s, 'host');
     log(s, 'You hosted ' + P.guests + ' guests: ' + P.name.toLowerCase() + '. They sprayed ' + naira(spray) + '.', 'good');
     return finish(s, ok(P.icon + ' What a party! Guests sprayed ' + naira(spray) + ' (it cost ' + naira(cost) + ').'));
+  }
+
+  // A guest at another player's party (keyed by host and party time). Mood only;
+  // each act once per party, and at most 6 a game day.
+  function joinParty(s, key, act) {
+    var A = D.PARTY_ACTS[act];
+    if (!A) return fail('Nothing like that here.');
+    if (typeof key !== 'string' || key.length > 80) return fail('No such party.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (!s.partyJoins) s.partyJoins = {};
+    var k = key + ':' + act, today = day(s);
+    if (Object.prototype.hasOwnProperty.call(s.partyJoins, k)) return fail('You already did that at this party.');
+    if (Object.keys(s.partyJoins).filter(function (x) { return s.partyJoins[x] === today; }).length >= 6) return fail('You have partied enough today.');
+    s.alerts = [];
+    advance(s, 30);
+    applyFx(s, A.fx);
+    s.partyJoins[k] = today;
+    return finish(s, ok(A.icon + ' ' + (act === 'dance' ? 'You danced till your legs shook.' : 'You met three new people and swapped numbers.')));
   }
 
   /* ---------- daily streak: come back on real consecutive days ---------- */
@@ -3057,6 +3079,7 @@
     buyPhone: recorded('ph', buyPhone), brandDeal: brandDeal, followerGain: followerGain, phoneCam: phoneCam,
     openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
+    joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,

@@ -286,7 +286,7 @@
         online.peers = counts; online.others = others;
         var seen = {};
         online.peerList = ch.peers.filter(function (p) { return !p.isMe && p.kind === 'viewer' && p.by && p.presence && typeof p.presence.d === 'string' && D.DISTRICTS[p.presence.d]; })
-          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look) }; });
+          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look), party: cleanParty(p.presence.party), at: typeof p.presence.at === 'string' && p.presence.at.length < 80 ? p.presence.at : null }; });
         var ids = online.peerList.map(function (p) { return p.by; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
@@ -295,7 +295,7 @@
         room.on('wave', function (msg) {
           if (!msg || !msg.by || !msg.data || msg.data.to !== online.me) return;
           var nm = (online.names[msg.by] && online.names[msg.by].name) || 'A Lagosian';
-          ui.toasts.push({ msg: '👋 ' + nm + ' waved at you.', ok: true }); scheduleRender();
+          ui.toasts.push({ msg: msg.data.bell ? '🔔 ' + nm + ' rang your bell. They are at your party!' : '👋 ' + nm + ' waved at you.', ok: true }); scheduleRender();
         });
       } catch (e) {}
       syncPresence();
@@ -310,11 +310,38 @@
 
   function syncPresence() {
     if (!online.room) return;
-    var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null;
-    var key = d + '|' + JSON.stringify(lk);
+    var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null, pt = myParty();
+    var pres = { d: d, look: lk, party: pt, at: ui.visit || null };
+    var key = JSON.stringify(pres);
     if (key === online.sentLoc) return;
     online.sentLoc = key;
-    online.room.presence({ d: d, look: lk }).catch(function () {});
+    online.room.presence(pres).catch(function () {});
+  }
+  // Your own party stays open to online friends for 30 real minutes.
+  var PARTY_KEY = 'lasgidi.party.v1', PARTY_OPEN = 30 * 60 * 1000;
+  function myParty() {
+    try { var v = JSON.parse(localStorage.getItem(PARTY_KEY) || 'null'); if (v && S && v.seed === S.seed && D.PARTIES[v.kind] && Date.now() - v.at < PARTY_OPEN) return { kind: v.kind, planner: !!v.planner, at: v.at }; } catch (e) {}
+    return null;
+  }
+  function cleanParty(p) {
+    if (!p || typeof p !== 'object' || !D.PARTIES[p.kind] || typeof p.at !== 'number' || !(Date.now() - p.at < PARTY_OPEN && p.at <= Date.now() + 60000)) return null;
+    return { kind: p.kind, planner: !!p.planner, at: Math.floor(p.at) };
+  }
+  function guestsAt(host) { return (online.peerList || []).filter(function (p) { return p.at === host; }).length; }
+  function partyOf(host) {
+    var pr = (online.peerList || []).filter(function (p) { return p.by === host; })[0];
+    return (pr && pr.party) || (online.homes[host] && cleanParty(online.homes[host].party)) || null;
+  }
+  function partyInvites() {
+    if (!S || S.challenge) return '';
+    var mine = myParty(), html = '';
+    if (mine) html += '<div class="party-banner">🎉 <b>Your party is on</b> (' + esc(D.PARTIES[mine.kind].name.toLowerCase()) + (mine.planner ? ', decorated' : '') + '). ' + guestsAt(online.me) + ' guest' + (guestsAt(online.me) === 1 ? '' : 's') + ' here now · open ' + Math.max(1, Math.round((PARTY_OPEN - (Date.now() - mine.at)) / 60000)) + ' more min</div>';
+    var hosts = (online.peerList || []).filter(function (p) { return p.party && p.by !== ui.visit; });
+    if (hosts.length) html += '<div class="section"><h3>💌 Party invites</h3><div class="list">' + hosts.slice(0, 4).map(function (p) {
+      var P = D.PARTIES[p.party.kind];
+      return '<div class="item"><div><h3>' + P.icon + ' ' + esc(nameOf(p.by)) + ' is throwing a party</h3><div class="meta"><span>' + esc(P.name) + (p.party.planner ? ' · decorated' : '') + '</span><span>' + guestsAt(p.by) + ' here</span></div></div><button class="btn sm go" id="join-' + esc(p.by) + '" data-joinparty="' + esc(p.by) + '">Go now</button></div>';
+    }).join('') + '</div></div>';
+    return html;
   }
   // A look from another player: only small whole numbers inside D.LOOKS.
   function cleanLook(lk) {
@@ -657,7 +684,7 @@
   function homeSnapshot() {
     var h = L.homeDef(S);
     return { home: S.home, items: S.items.filter(function (it) { return it.x != null; }).slice(0, 60).map(function (it) { return { id: it.id, x: it.x, y: it.y, r: it.r ? 1 : 0 }; }),
-      vehicles: S.vehicles.slice(0, 24).map(function (v) { return v.id; }), at: Date.now() };
+      vehicles: S.vehicles.slice(0, 24).map(function (v) { return v.id; }), party: myParty(), at: Date.now() };
   }
   var homeTimer = null;
   function publishHome() {
@@ -665,7 +692,7 @@
     if (homeTimer) return;
     homeTimer = setTimeout(function () {
       homeTimer = null;
-      var snap = homeSnapshot(), key = JSON.stringify([snap.home, snap.items, snap.vehicles]);
+      var snap = homeSnapshot(), key = JSON.stringify([snap.home, snap.items, snap.vehicles, snap.party]);
       if (key === online.sentHome) return;
       online.sentHome = key;
       online.db.doc('homes/' + online.me).set(snap).catch(function () { online.sentHome = ''; });
@@ -708,7 +735,12 @@
     if (!ui.visit) return '';
     var v = checkHome(online.homes[ui.visit]);
     if (!v) { ui.visit = null; return ''; }
-    return '<div class="section visit"><div class="inline" style="justify-content:space-between"><h3>🏠 ' + esc(nameOf(ui.visit)) + '\'s home · ' + esc(v.h.name) + '</h3><button class="btn sm ghost" id="visit-close" data-visit2="">Leave</button></div><div class="visit-slot"></div>' +
+    var pt = partyOf(ui.visit), key = pt ? ui.visit + ':' + pt.at : '';
+    var acts = pt ? '<div class="party-bar"><span>🎉 You are at ' + esc(nameOf(ui.visit)) + '\'s ' + esc(D.PARTIES[pt.kind].name.toLowerCase()) + ' · ' + (guestsAt(ui.visit) + 1) + ' here</span><div class="inline">' +
+      '<button class="btn sm ghost" id="pbell" data-bell="' + esc(ui.visit) + '">🔔 Ring bell</button>' +
+      Object.keys(D.PARTY_ACTS).map(function (k) { var A = D.PARTY_ACTS[k], done = Object.prototype.hasOwnProperty.call(S.partyJoins || {}, key + ':' + k);
+        return '<button class="btn sm' + (done ? ' ghost' : ' go') + '" id="pact-' + k + '" data-partyact="' + k + '"' + (done ? ' disabled' : '') + '>' + A.icon + ' ' + esc(A.name) + '</button>'; }).join('') + '</div></div>' : '';
+    return '<div class="section visit' + (pt ? ' party-on' : '') + '"><div class="inline" style="justify-content:space-between"><h3>🏠 ' + esc(nameOf(ui.visit)) + '\'s home · ' + esc(v.h.name) + '</h3><button class="btn sm ghost" id="visit-close" data-visit2="">Leave</button></div>' + acts + '<div class="visit-slot' + (pt && pt.planner ? ' decorated' : '') + '"></div>' +
       '<p class="note">' + v.items.length + ' pieces of furniture · ' + v.vehicles.length + ' vehicles. You can look, not touch.</p></div>';
   }
   function mountVisit() {
@@ -992,10 +1024,10 @@
       return '<div class="item"><div><h3>' + H.icon + ' ' + esc(H.name) + (on ? ' <span class="gain">· active</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(L.price(S, H.weekly)) + '/wk</span></div><div class="act-note">' + esc(H.text) + '</div></div>' +
         (on ? '<button class="btn ghost" id="hmo-off" data-hmooff="1">Cancel</button>' : '<button class="btn" id="hmo-' + k + '" data-hmo="' + k + '">' + (S.hmo ? 'Switch' : 'Join') + '</button>') + '</div>';
     }).join('') + '</div></div>';
-    html += '<div class="section"><h3>🎉 Host a party</h3><p class="note">Saturdays at home, 11:00 to 18:00, once every 4 weeks. Guests spray money, more for a well-dressed, well-connected host, but a party never pays for itself. Your friends will remember it.</p><div class="list">' + Object.keys(D.PARTIES).map(function (k) {
+    html += '<div class="section"><h3>🎉 Host a party</h3><p class="note">Saturdays at home, 11:00 to 18:00, once every 4 weeks. Guests spray money, more for a well-dressed, well-connected host, but a party never pays for itself. Your friends will remember it. Add an event decorator (half the cost again) to transform the house; guests spray 25% more. Lagosians online get an invite for 30 minutes.</p><div class="list">' + Object.keys(D.PARTIES).map(function (k) {
       var P = D.PARTIES[k], why = L.partyBlock(S, k);
       return '<div class="item"><div><h3>' + P.icon + ' ' + esc(P.name) + '</h3><div class="meta"><span>' + P.guests + ' guests</span><span>' + dur(P.mins) + '</span><span class="cost num">' + N(L.price(S, P.cost)) + '</span>' + (P.types ? '<span>Needs a ' + esc(D.HOME_TYPES[P.types[0]].name.toLowerCase()) + ' or bigger</span>' : '') + '</div>' +
-        (why ? '<div class="why">' + esc(why) + '</div>' : '') + '</div><button class="btn" id="party-' + k + '" data-party="' + k + '"' + (why ? ' disabled' : '') + '>Host</button></div>';
+        (why ? '<div class="why">' + esc(why) + '</div>' : '') + '</div><div class="inline"><button class="btn" id="party-' + k + '" data-party="' + k + '"' + (why ? ' disabled' : '') + '>Host</button><button class="btn ghost" id="partyp-' + k + '" data-partyplan="' + k + '"' + (why ? ' disabled' : '') + ' title="Event decorator: +' + esc(N(L.price(S, P.cost * D.PLANNER_FACTOR))) + ', guests spray 25% more">+ Decorator</button></div></div>';
     }).join('') + '</div></div>';
     var stored = S.items.map(function (it, i) { return { it: it, i: i }; }).filter(function (o) { return o.it.x == null; });
     if (stored.length) html += '<div class="section"><h3>In storage</h3><div class="list">' + stored.map(function (o) {
@@ -1373,7 +1405,7 @@
     var home = acts.filter(function (a) { return a.atHome; });
     var place = acts.filter(function (a) { return !a.atHome; });
     var d = D.DISTRICTS[S.loc];
-    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + tourCard() + streakCard() + visitView() + adviceView() + gemHere() + giftInbox();
+    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + tourCard() + streakCard() + partyInvites() + visitView() + adviceView() + gemHere() + giftInbox();
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
     html += peopleHere() + gemCard();
@@ -1817,7 +1849,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1915,7 +1947,27 @@
     if (ds.shoprestock) { var sr = +ds.shoprestock; run(function () { return L.restockShop(S, sr); }); return; }
     if (ds.shopads) { var sa = ds.shopads; run(function () { return L.setShopAds(S, sa); }); return; }
     if (ds.shopclose) { run(function () { return L.closeShop(S); }); return; }
-    if (ds.party) { var pk = ds.party; run(function () { return L.hostParty(S, pk); }); return; }
+    if (ds.party || ds.partyplan) {
+      var pk = ds.party || ds.partyplan, plan = !!ds.partyplan;
+      run(function () {
+        var r = L.hostParty(S, pk, plan);
+        if (r.ok) { try { localStorage.setItem(PARTY_KEY, JSON.stringify({ seed: S.seed, kind: pk, planner: plan, at: Date.now() })); } catch (e) {} syncPresence(); publishHome(); }
+        return r;
+      });
+      return;
+    }
+    if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
+    if (ds.partyact) {
+      var host = ui.visit, pt2 = host && partyOf(host), act = ds.partyact;
+      if (!pt2) return;
+      run(function () { return L.joinParty(S, host + ':' + pt2.at, act); });
+      return;
+    }
+    if (ds.bell) {
+      if (!online.room) return;
+      online.room.emit('wave', { to: ds.bell, bell: true }).then(function () { ui.toasts.push({ msg: '🔔 Ding dong! ' + nameOf(ds.bell) + ' knows you are here.', ok: true }); render(); }, function () {});
+      return;
+    }
     if (ds.streak) { var sid = gemToday(); run(function () { return L.claimStreak(S, sid); }); return; }
     if (ds.stock) { ui.stock = ui.stock === ds.stock ? null : ds.stock; render(); return; }
     if (ds.stockbuy) { var sb = ds.stockbuy.split(':'); run(function () { return L.buyStock(S, sb[0], +sb[1]); }); return; }
@@ -1927,7 +1979,7 @@
       online.room.emit('wave', { to: wid }).then(function () { ui.toasts.push({ msg: '👋 You waved at ' + nameOf(wid) + '.', ok: true }); render(); }, function () { ui.toasts.push({ msg: 'Waving is not open here yet.', ok: false }); render(); });
       render(); return;
     }
-    if (t.hasAttribute('data-visit2')) { ui.visit = ds.visit2 || null; ui.tab = 'do'; render(); return; }
+    if (t.hasAttribute('data-visit2')) { ui.visit = ds.visit2 || null; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.gift) {
       var to = ds.gift, sel = document.getElementById('giftsel-' + to), gid2 = sel ? sel.value : 'suya';
       var gr = L.sendGift(S, gid2);
