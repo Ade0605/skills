@@ -197,9 +197,13 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Wear:** every kilometre you drive wears your car. Each trip in a worn car risks a breakdown, which costs 90 minutes, a roadside mechanic and stress.
   - **Which cars:** cheap cars break down more often than luxury SUVs.
   - **Servicing:** the garage shows each car's wear and risk. A service at Ladipo auto market in Mushin (Monday to Saturday, 08:00–18:00) resets the wear on all your cars.
-- **👪 The next generation:** when you end a life that has children, the start screen offers to continue the family as your eldest child.
+- **👪 The next generation:** when you end a life that has children, the start screen lists every child. Choose who carries the family on.
   - **Inheritance:** the heir gets their share of the estate, which is net worth after debts, minus 10% for estate costs, divided among the children. It is capped at ₦50m, and the size of the share decides where they start living.
   - **Schooling:** an international school counts as a degree, private school gives Charisma, and straight-A report cards give Tech. A close bond means they start calm.
+  - **Dynasty:** each heir carries the family line and its generation number.
+    - My story shows a 🌳 family tree.
+    - The Hall of Fame and your past lives show a "Gen N" chip.
+    - The third generation unlocks "Dynasty".
   - **Fair ranking:** heir lives replay like any other. The Hall of Fame checks their wealth against what they inherited, and forged inheritances are refused.
 - **🦟 Malaria (rules 11, new lives only):**
   - **Catching it:** a night without light (so no fan or AC) and no mosquito net can give you malaria. It is likelier in the rainy season. A ₦6k mosquito net from the furniture shop, a running fan or AC, or a hotel with a generator keeps most mosquitoes off.
@@ -241,7 +245,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (95 tests)
+  test/engine.test.js   node:test suite (96 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

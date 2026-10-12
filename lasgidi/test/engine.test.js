@@ -1711,3 +1711,33 @@ test('car wear (rules 12): kilometres wear the car, worn cars break down, Ladipo
   assert.match(L.serviceCars(s).msg, /freshly serviced/);
   assert.ok(L.DATA.PLACES.find(p => p.id === 'ladipo').nogem, 'gems still replay');
 });
+
+test('dynasties: choose any child, the family line grows, generation 3 is a dynasty', () => {
+  const p = L.newGame({ seed: 101, origin: 'nepo', goal: 'freestyle', name: 'Bayo' });
+  p.kids.push({ born: 0, school: 'public', nextFees: 99, bond: 20 }, { born: 2, school: 'intl', nextFees: 99, bond: 80, reports: [{ day: 1, grade: 'A' }] });
+  const offers = L.heirOffers(p);
+  assert.equal(offers.length, 2);
+  assert.equal(offers[0].inherit, offers[1].inherit, 'equal shares');
+  assert.equal(offers[1].school, 'intl'); assert.equal(offers[1].as, 1); assert.equal(offers[0].as, 0);
+  assert.deepEqual(offers[1].line, ['Bayo']); assert.equal(offers[1].gen, 2);
+  // The younger child carries on, has children, and their heir is generation 3.
+  const c = L.newGame({ seed: 102, origin: 'heir', goal: 'freestyle', heir: offers[1] });
+  assert.ok(!c.ach.dynasty);
+  c.kids.push({ born: 0, school: null, nextFees: 99 });
+  const g3 = L.heirOffers(c)[0];
+  assert.deepEqual(g3.line, ['Bayo', c.name]); assert.equal(g3.gen, 3);
+  const d = L.newGame({ seed: 103, origin: 'heir', goal: 'freestyle', heir: g3 });
+  assert.ok(d.ach.dynasty, 'the third generation is a dynasty');
+  for (let i = 0; i < 10; i++) { while (d.pending.length) L.resolveChoice(d, 0); L.wait(d, 180); }
+  assert.equal(L.replayLife(d.replay).ledgerHash, d.ledgerHash);
+  const e = L.fameEntry(d);
+  assert.equal(e.gen, 3); assert.equal(L.checkFame(e).gen, 3);
+  assert.equal(L.checkFame(Object.assign({}, e, { gen: 99 })), null);
+  assert.equal(L.checkFame(Object.assign({}, L.fameEntry(p), { gen: 2 })), null, 'only heirs have a generation');
+  assert.equal(L.lifeSummary(d).gen, 3);
+  // A heir from before dynasties (no line, no gen) still works as generation 2.
+  const legacy = { name: 'Tobi', parent: 'Ade', inherit: 500000, school: null, as: 0, bond: 10 };
+  const l2 = L.newGame({ seed: 104, origin: 'heir', goal: 'freestyle', heir: legacy });
+  assert.equal(l2.origin, 'heir'); assert.equal(l2.heir.gen, 2); assert.deepEqual(l2.heir.line, ['Ade']);
+  assert.ok(L.replayLife(Object.assign({}, l2.replay, { heir: legacy })));
+});

@@ -47,7 +47,11 @@
   var prefs = readJSON(PREF_KEY, { sound: false });
   function lives() { return readJSON(LIVES_KEY, []); }
   var HEIR_KEY = 'lasgidi.heir.v1';
-  function heirWaiting() { var h = readJSON(HEIR_KEY, null); return h && typeof h.name === 'string' && typeof h.inherit === 'number' ? h : null; }
+  // The children who can carry the family on (an array; a single offer from v60 also reads).
+  function heirsWaiting() {
+    var h = readJSON(HEIR_KEY, null), list = Array.isArray(h) ? h : h ? [h] : [];
+    return list.filter(function (x) { return x && typeof x.name === 'string' && typeof x.inherit === 'number'; });
+  }
   function archiveLife() {
     if (!S) return;
     var list = lives();
@@ -630,7 +634,7 @@
       var p = online.names[r.id], mine = r.id === online.me;
       var who = mine ? 'You' : (p && p.name) || 'Someone';
       var title = r.career ? D.CAREERS[r.career].titles[r.level] : 'Jobless';
-      return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + esc(who) + ' <span class="muted">· ' + esc(D.ORIGINS[r.origin].name) + '</span> <span class="ver" title="Replayed and verified">✓ replayed</span>' + (r.won ? ' <span class="gain">✓ ' + esc(D.GOALS[r.goal].name) + '</span>' : '') + '</td><td>' + esc(title) + '</td><td class="n num">' + r.weeks + '</td><td class="n num">' + N(r.worth) + '</td><td class="n num"><b>' + r.score + '</b></td></tr>';
+      return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + esc(who) + ' <span class="muted">· ' + esc(D.ORIGINS[r.origin].name) + '</span>' + (r.gen > 1 ? '<span class="gen-chip">Gen ' + r.gen + '</span>' : '') + ' <span class="ver" title="Replayed and verified">✓ replayed</span>' + (r.won ? ' <span class="gain">✓ ' + esc(D.GOALS[r.goal].name) + '</span>' : '') + '</td><td>' + esc(title) + '</td><td class="n num">' + r.weeks + '</td><td class="n num">' + N(r.worth) + '</td><td class="n num"><b>' + r.score + '</b></td></tr>';
     }).join('') + '</tbody></table></div>';
     if (S && !S.replay) html += '<p class="note">This life began before verified scores, so it cannot be posted. Your next life can.</p>';
     else if (S && online.me && online.canWrite !== false) html += '<div class="inline"><button class="btn sm" id="post-fame" data-postfame="1">Post this life (' + L.fameEntry(S).score + ')</button><span class="note">' + esc(online.status) + '</span></div>';
@@ -1929,8 +1933,18 @@
     if (S.partner && S.partner.stage === 'married' && !S.ach.wedding) ms.push({ t: S.t, text: 'Married' });
     ms.sort(function (a, b) { return a.t - b.t; });
     html += '<h3>Milestones</h3>' + (ms.length ? '<ol class="timeline">' + ms.map(function (m) { return '<li><time>' + when(m.t) + '</time>' + esc(m.text) + '</li>'; }).join('') + '</ol>' : '<p class="note">Your first milestone is waiting: a job, a move, a gem.</p>');
+    html += familyTree();
     html += '<h3>Share it</h3>' + shareBlock();
     return html + '</div>';
+  }
+  // The family line, oldest first, then you, your partner and your children.
+  function familyTree() {
+    var line = S.heir ? (S.heir.line || [S.heir.parent]) : [], gen = S.heir ? S.heir.gen || 2 : 1, kids = L.kidsInfo(S);
+    if (!line.length && !kids.length && !S.partner) return '';
+    var people = line.map(function (n) { return '<li class="ft-anc">' + esc(n) + '</li>'; }).join('') +
+      '<li class="ft-me"><b>' + esc(S.name) + '</b>' + (S.partner && S.partner.stage === 'married' ? ' ♥ ' + esc(S.partner.name) : '') + '</li>' +
+      (kids.length ? '<li class="ft-kids">' + kids.map(function (k) { return '<span>🧒 ' + esc(k.name) + (k.last ? ' <span class="kid-grade g' + k.last + '">' + k.last + '</span>' : '') + '</span>'; }).join('') + '</li>' : '');
+    return '<h3>🌳 Family tree</h3><p class="note">Generation ' + gen + ' of your family in Lagos.' + (kids.length ? ' End this life and one of your children can carry the family on.' : '') + '</p><ol class="ftree">' + people + '</ol>';
   }
 
   /* ---------- creator: followers, phones, brand deals ---------- */
@@ -2210,7 +2224,7 @@
     var list = lives().slice(0, limit || 5);
     if (!list.length) return '';
     return '<div class="stmt-wrap"><table class="stmt lives"><thead><tr><th>Life</th><th>Ended as</th><th class="n">Weeks</th><th class="n">Net worth</th><th class="n">Score</th></tr></thead><tbody>' + list.map(function (l) {
-      return '<tr><td>' + esc(l.name) + ' <span class="muted">· ' + esc(D.ORIGINS[l.origin] ? D.ORIGINS[l.origin].name : l.origin) + '</span>' + (l.won ? ' <span class="gain">✓ ' + esc(D.GOALS[l.goal].name) + '</span>' : '') + (l.tampered ? ' <span class="cost">edited save</span>' : '') + '</td><td>' + esc(l.title || 'Jobless') + '</td><td class="n num">' + l.weeks + '</td><td class="n num">' + N(l.worth) + '</td><td class="n num"><b>' + l.score + '</b></td></tr>';
+      return '<tr><td>' + esc(l.name) + ' <span class="muted">· ' + esc(D.ORIGINS[l.origin] ? D.ORIGINS[l.origin].name : l.origin) + '</span>' + (l.gen > 1 ? '<span class="gen-chip">Gen ' + l.gen + '</span>' : '') + (l.won ? ' <span class="gain">✓ ' + esc(D.GOALS[l.goal].name) + '</span>' : '') + (l.tampered ? ' <span class="cost">edited save</span>' : '') + '</td><td>' + esc(l.title || 'Jobless') + '</td><td class="n num">' + l.weeks + '</td><td class="n num">' + N(l.worth) + '</td><td class="n num"><b>' + l.score + '</b></td></tr>';
     }).join('') + '</tbody></table></div>';
   }
 
@@ -2219,12 +2233,14 @@
     var goals = Object.keys(D.GOALS).map(function (k, i) {
       return '<div class="goal"><input type="radio" name="goal" id="goal-' + k + '" value="' + k + '"' + (i === 0 ? ' checked' : '') + '><label for="goal-' + k + '"><b>' + esc(D.GOALS[k].name) + '</b><span>' + esc(D.GOALS[k].text) + '</span></label></div>';
     }).join('');
-    var o = ui.draftOrigin ? D.ORIGINS[ui.draftOrigin] : null, h = heirWaiting();
-    var heirCard = h ? '<div class="lottery heir"><span class="label">The next generation</span><b>👪 Continue the family as ' + esc(h.name) + '</b>' +
-      '<p style="margin:0">' + esc(h.name) + ', child of ' + esc(h.parent) + ', inherits ' + N(h.inherit) + ' after the estate costs and the family share.' +
-      (h.school === 'intl' ? ' An international school education counts as a degree.' : h.school === 'private' ? ' Private school left them confident (Charisma).' : '') +
-      (h.as ? ' ' + h.as + ' straight-A report card' + (h.as === 1 ? '' : 's') + ' (Tech).' : '') + (h.bond >= 60 ? ' A close bond: they start calm.' : '') + '</p>' +
-      '<div class="inline"><button class="btn go" id="heir-start" data-heir="1">Play as ' + esc(h.name) + '</button><button class="btn ghost" id="heir-skip" data-heir="skip">Start someone new</button></div></div>' : '';
+    var o = ui.draftOrigin ? D.ORIGINS[ui.draftOrigin] : null, hs = heirsWaiting();
+    var heirCard = hs.length ? '<div class="lottery heir"><span class="label">The next generation · generation ' + (hs[0].gen || 2) + '</span><b>👪 Continue the family of ' + esc(hs[0].parent) + '</b>' +
+      '<p style="margin:0">Each child inherits ' + N(hs[0].inherit) + ' after the estate costs and the family share. Choose who carries the family on.</p><div class="list">' + hs.map(function (h, i) {
+        var perks = [h.school === 'intl' ? 'International school: counts as a degree' : h.school === 'private' ? 'Private school: Charisma' : h.school ? 'Public school' : 'Not yet in school',
+          h.as ? h.as + ' straight-A report card' + (h.as === 1 ? '' : 's') + ': Tech' : '', h.bond >= 60 ? 'Close bond: starts calm' : 'Bond ' + h.bond].filter(Boolean);
+        return '<div class="item"><div><h3>🧒 ' + esc(h.name) + '</h3><div class="meta">' + perks.map(function (p) { return '<span>' + esc(p) + '</span>'; }).join('') + '</div></div>' +
+          '<button class="btn sm go" id="heir-start-' + i + '" data-heir="' + i + '">Play as ' + esc(h.name) + '</button></div>';
+      }).join('') + '</div><div class="inline"><button class="btn ghost" id="heir-skip" data-heir="skip">Start someone new</button></div></div>' : '';
     return '<div class="intro">' +
       '<h1>LASGIDI<span>Make it in Lagos. One week of rent at a time.</span></h1>' + heirCard +
       '<p class="lede">Work, hustle, sleep through NEPA, take the danfo or the ferry, join an ajo, dodge the loan apps and the Ponzi schemes. Rent is due every Saturday at noon.</p>' +
@@ -2274,7 +2290,7 @@
       return;
     }
     if (ds.heir) {
-      var hw = heirWaiting();
+      var hw = heirsWaiting()[+ds.heir || 0];
       try { localStorage.removeItem(HEIR_KEY); } catch (err) { /* ignore */ }
       if (ds.heir === 'skip' || !hw) { render(); return; }
       introState();
@@ -2572,8 +2588,8 @@
       if (S.challenge) { backToLife(); return; }
       if (S && !S.tampered) postFame(L.fameEntry(S), true);
       // A life with children can be continued by the eldest (see introView).
-      var offer = S && !S.tampered ? L.heirOffer(S) : null;
-      if (offer) writeJSON(HEIR_KEY, offer); else { try { localStorage.removeItem(HEIR_KEY); } catch (err) { /* ignore */ } }
+      var offer = S && !S.tampered ? L.heirOffers(S) : [];
+      if (offer.length) writeJSON(HEIR_KEY, offer); else { try { localStorage.removeItem(HEIR_KEY); } catch (err) { /* ignore */ } }
       archiveLife();
       S = null;
       try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }

@@ -588,3 +588,12 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .kid-bond .progress { flex: 1; margin: 0; }
 .sick-card { border-left: 4px solid var(--debit); padding-left: 12px; }
 .lottery.heir { border-color: #2fa36b; }
+
+/* Family tree */
+.ftree { list-style: none; margin: 6px 0 12px; padding: 0 0 0 14px; border-left: 2px solid var(--line); }
+.ftree li { position: relative; padding: 4px 0 4px 10px; }
+.ftree li::before { content: ''; position: absolute; left: -19px; top: 11px; width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.ftree .ft-me::before { background: #2fa36b; }
+.ftree .ft-anc { color: var(--muted); }
+.ftree .ft-kids { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.gen-chip { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: #2fa36b; color: #fff; margin-left: 4px; }

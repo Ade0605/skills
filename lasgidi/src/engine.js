@@ -82,7 +82,8 @@
     quiz:        'Quiz champion: 10 out of 10',
     vendor:      'Online vendor: sold 100 items',
     corper:      'Corper wee! Finished your NYSC service year',
-    scholar:     'Straight A: a child brought home an A'
+    scholar:     'Straight A: a child brought home an A',
+    dynasty:     'Dynasty: the third generation of your family in Lagos'
   };
 
   /* ---------- small helpers ---------- */
@@ -339,6 +340,7 @@
       if (heir.school === 'private' || heir.school === 'intl') addXp(s, { charisma: heir.school === 'intl' ? 25 : 12 });
       if (heir.as > 0) addXp(s, { tech: Math.min(25, heir.as * 10) });
       if (heir.bond >= 60) s.needs.stress = Math.max(0, s.needs.stress - 15);
+      if (heir.gen >= 3) unlock(s, 'dynasty');
     }
     if (o.allowance) { s.allowance = o.allowance; s.allowanceWeeks = o.allowanceWeeks; }
     if (originId === 'nepo') s.friends.kunle.lvl = 60; // Daddy's banker friend
@@ -2575,23 +2577,30 @@
     var int = function (v, lo, hi) { return typeof v === 'number' && Math.round(v) === v && v >= lo && v <= hi; };
     if (typeof h.name !== 'string' || !h.name || h.name.length > 24 || typeof h.parent !== 'string' || h.parent.length > 24) return null;
     if (!int(h.inherit, 0, HEIR_CAP) || !int(h.as, 0, 50) || !int(h.bond, 0, 100) || (h.school != null && !SCHOOLS[h.school])) return null;
-    return { name: h.name, parent: h.parent, inherit: h.inherit, school: h.school || null, as: h.as, bond: h.bond };
+    // The family line (oldest first) and the generation; heirs from before dynasties default to generation 2.
+    var line = h.line == null ? [h.parent] : h.line, gen = h.gen == null ? 2 : h.gen;
+    if (!Array.isArray(line) || !line.length || line.length > 8 || line.some(function (n) { return typeof n !== 'string' || !n || n.length > 24; }) || !int(gen, 2, 50)) return null;
+    return { name: h.name, parent: h.parent, inherit: h.inherit, school: h.school || null, as: h.as, bond: h.bond, line: line.slice(), gen: gen };
   }
-  // When a life with children ends: the eldest child's share of the estate.
-  function heirOffer(s) {
-    if (!s || s.challenge || !s.kids || !s.kids.length) return null;
-    var k = s.kids[0], estate = Math.max(0, netWorth(s)); // net worth is after debts
+  // When a life with children ends: each child's share of the estate, and the family line.
+  function heirOffers(s) {
+    if (!s || s.challenge || !s.kids || !s.kids.length) return [];
+    var estate = Math.max(0, netWorth(s)); // net worth is after debts
     var share = Math.min(HEIR_CAP, roundTo(estate * (1 - ESTATE_CUT) / s.kids.length, 1000));
-    return cleanHeir({ name: kidName(s, 0), parent: String(s.name || 'Ade').slice(0, 24), inherit: share, school: k.school || null,
-      as: (k.reports || []).filter(function (r) { return r.grade === 'A'; }).length, bond: Math.round(k.bond || 0) });
+    var me = String(s.name || 'Ade').slice(0, 24), line = ((s.heir && s.heir.line) || []).concat([me]).slice(-8), gen = (s.heir ? s.heir.gen || 2 : 1) + 1;
+    return s.kids.map(function (k, i) {
+      return cleanHeir({ name: kidName(s, i), parent: me, inherit: share, school: k.school || null, line: line, gen: Math.min(50, gen),
+        as: Math.min(50, (k.reports || []).filter(function (r) { return r.grade === 'A'; }).length), bond: Math.round(k.bond || 0) });
+    }).filter(Boolean);
   }
+  function heirOffer(s) { return heirOffers(s)[0] || null; }
 
   function lifeSummary(s) {
     var weeks = week(s) + 1, worth = netWorth(s), achievements = Object.keys(s.ach).length;
     var score = scoreOf({ worth: worth, weeks: weeks, achievements: achievements, won: !!s.won, level: s.job ? s.job.level : 0,
       married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length, status: statusPoints(s) });
     return {
-      name: s.name, origin: s.origin, goal: s.goal, won: !!s.won, weeks: weeks, worth: worth,
+      name: s.name, origin: s.origin, gen: s.heir ? s.heir.gen || 2 : 1, goal: s.goal, won: !!s.won, weeks: weeks, worth: worth,
       peak: s.stats.peakWorth, title: s.job ? D.CAREERS[s.job.id].titles[s.job.level] : null,
       home: s.home, achievements: achievements, score: score, tampered: !!s.tampered
     };
@@ -2618,7 +2627,7 @@
       married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length, status: statusPoints(s)
     };
     e.score = scoreOf(e);
-    if (s.heir) e.inherit = s.heir.inherit;
+    if (s.heir) { e.inherit = s.heir.inherit; e.gen = s.heir.gen || 2; }
     if (s.replay) { e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, rules: s.replay.rules, challenge: s.replay.challenge || null, acts: s.replay.acts }; if (s.replay.heir) e.replay.heir = s.replay.heir; }
     return e;
   }
@@ -2638,7 +2647,8 @@
     e.career = typeof raw.career === 'string' && D.CAREERS[raw.career] ? raw.career : null;
     e.home = typeof raw.home === 'string' && D.HOMES[raw.home] ? raw.home : null;
     // Ceiling on wealth: starting cash plus a generous ₦3m a week.
-    if (e.origin === 'heir') { if (!int(raw.inherit, 0, HEIR_CAP)) return null; e.inherit = raw.inherit; }
+    if (e.origin === 'heir') { if (!int(raw.inherit, 0, HEIR_CAP)) return null; e.inherit = raw.inherit; if (raw.gen != null) { if (!int(raw.gen, 2, 50)) return null; e.gen = raw.gen; } }
+    else if (raw.gen != null) return null;
     if (e.worth > (e.origin === 'heir' ? e.inherit : D.ORIGINS[e.origin].cash) * 2 + e.weeks * 3000000) return null;
     if (e.level > 0 && !e.career) return null;
     e.score = scoreOf(e);
@@ -3802,7 +3812,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
