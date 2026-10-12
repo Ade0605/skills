@@ -37,6 +37,14 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // Phones: a better camera grows your following faster. status adds to your flex.
+  var PHONES = {
+    budget:   { name: 'Budget Android',   icon: '📱', price: 90000,   cam: 1,   status: 0 },
+    mid:      { name: 'Mid-range Android', icon: '📱', price: 350000,  cam: 1.6, status: 1 },
+    flagship: { name: 'Flagship Android', icon: '📲', price: 1400000, cam: 2.4, status: 3 },
+    promax:   { name: '"Pro Max" phone',  icon: '📲', price: 2800000, cam: 3,   status: 6 }
+  };
+
   // Chance of rain on a day, by month (Jan..Dec). The rainy season peaks in June
   // and July, with the "August break". Harmattan dust in December and January.
   var WEATHER_MONTHS = [0.05, 0.1, 0.25, 0.45, 0.55, 0.7, 0.7, 0.45, 0.6, 0.5, 0.2, 0.05];
@@ -116,7 +124,8 @@
     { id: 'business',    icon: '🏪', title: 'Build a business',      hint: 'Money tab → Businesses',       reward: 20000, go: 'business' },
     { id: 'shares',      icon: '📈', title: 'Buy your first shares', hint: 'Phone → Stocks',               reward: 3000,  go: 'stocks' },
     { id: 'party',       icon: '🎉', title: 'Host an owambe',        hint: 'Home tab, on a Saturday',      reward: 5000,  go: 'home' },
-    { id: 'shop',        icon: '🛍️', title: 'Open an online shop',   hint: 'Phone → Shop',                 reward: 3000,  go: 'shop' }
+    { id: 'shop',        icon: '🛍️', title: 'Open an online shop',   hint: 'Phone → Shop',                 reward: 3000,  go: 'shop' },
+    { id: 'creator',     icon: '📸', title: 'Reach 1,000 followers', hint: 'Shoot content, or film skits at home', reward: 5000, go: 'creator' }
   ];
 
   var CITIES = {
@@ -718,6 +727,7 @@
     { id: 'home_sleep', label: 'Sleep (8h)', mins: 480, special: 'sleep' },
     { id: 'home_alarm', label: 'Sleep with alarm set for work', mins: 480, special: 'sleep', alarm: true },
     { id: 'home_nap', label: 'Nap (2h)', mins: 120, special: 'nap' },
+    { id: 'home_skit', label: 'Film a skit at home', mins: 90, fx: { fun: 6, energy: -6 }, xp: { charisma: 2 }, special: 'content', skit: true, when: { from: 8, to: 23 } },
     { id: 'home_bath', label: 'Bucket bath', mins: 30, fx: { hygiene: 60 } },
     { id: 'home_cook', label: 'Cook a meal', mins: 45, fx: { hunger: 55, fun: 3 }, xp: { cooking: 3 }, special: 'cook' },
     { id: 'home_nollywood', label: 'Watch Nollywood', mins: 120, fx: { fun: 30, stress: -10 }, power: true },
@@ -825,7 +835,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

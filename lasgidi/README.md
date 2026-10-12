@@ -64,6 +64,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - You can trade 10:00–14:30 on weekdays. Every buy and sale costs a 1.5% broker fee, with a ₦500 minimum.
   - Some companies pay a dividend every 13 weeks.
   - Prices can fall, and a retail account is capped at ₦20m invested.
+- **Creator:** a 📸 Creator phone app.
+  - **Followers:** every post adds followers, from shooting content at Lekki beach or a new "Film a skit at home" action. Charisma, your phone's camera, a club or owambe outfit and your existing reach all help, and a viral post brings thousands at once.
+  - **Phones:** budget, mid-range, flagship or "Pro Max", with a 30% trade-in on upgrades and no downgrades for cash.
+  - **Brand deals:** from 2,000 followers you earn weekly brand deals of ₦1,200 per thousand followers (rules 9), as long as you post that week. A quiet week loses 3% of your followers.
 - **My story:** a 📖 phone app with your life at a glance. It shows lifetime totals (earned, spent, trips, shifts, gems, festivals, online sales, shares, vehicles, pets, staff), a timeline of every milestone with its week and day, and the share card.
 - **Weather (rules 9, new lives only):** each life has its own seeded sky.
   - **Rainy season:** April to October, peaking in June and July, with a break in August. Rain falls from about 11:00 to 18:00.
@@ -97,7 +101,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Faces on the map:** your Lagosian's face sits over your district pin. Other players in the same city show as small faces beside their pins.
 - **City boards:** the Hall of Fame filters to All Nigeria, Lagos, Abuja or Port Harcourt by where each life lived. It also names the richest verified player in your district.
 - **First-run tour:** four short tips inline on the Do tab. It never blocks a tap, and you can skip it.
-- **Phone:** a 📱 Phone tab with apps for Messages (with an unread count), Quests, Jobs, Bank, Stocks, Shop, Dealers, the Gem hunt, Travel, the Hall of Fame and your Wardrobe.
+- **Phone:** a 📱 Phone tab with apps for Messages (with an unread count), Quests, Jobs, Bank, Stocks, Shop, Creator, Dealers, the Gem hunt, Travel, the Hall of Fame and your Wardrobe.
 - **Cities:** Lagos, Abuja and Port Harcourt, each with its own map, districts, landmarks, homes and jobs.
   - **Abuja:** Aso Rock, Millennium Park, Jabi Lake, Wuse Market and Eagle Square, plus the civil service and consulting careers.
   - **Port Harcourt:** Uniport, Pleasure Park, Mile 1 market, the waterfront and the Trans-Amadi yards, plus oil-services jobs.

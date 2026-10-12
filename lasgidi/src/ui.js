@@ -1228,7 +1228,7 @@
         (claimed ? '' : '<button class="btn sm' + (done ? '' : ' ghost') + '" id="qa-' + q.id + '" data-quest="' + q.id + '">' + (done ? 'Claim' : 'Go') + '</button>') + '</div>';
     }).join('') + '</div></div>';
   }
-  var QUEST_APPS = { shop: 1, stocks: 1, jobs: 1, gems: 1, bank: 1, events: 1, dealers: 1, travel: 1 };
+  var QUEST_APPS = { creator: 1, shop: 1, stocks: 1, jobs: 1, gems: 1, bank: 1, events: 1, dealers: 1, travel: 1 };
   function goQuest(id) {
     var q = D.QUESTS.filter(function (x) { return x.id === id; })[0];
     if (!q) return;
@@ -1581,6 +1581,21 @@
     return html + '</div>';
   }
 
+  /* ---------- creator: followers, phones, brand deals ---------- */
+  function creatorView() {
+    var c = S.creator || { followers: 0, posts: 0, lastPost: -1 }, deal = L.brandDeal(S), active = c.lastPost >= L.day(S) - 7;
+    var html = '<div class="section" style="padding-top:0"><div class="wallet-card"><div class="wc-l">📸 ' + esc(S.name) + ' · ' + c.posts + ' posts</div><div class="wc-big num">' + c.followers.toLocaleString('en') + ' <span style="font-size:.45em">followers</span></div>' +
+      '<div class="wc-s">' + (S.rules >= 9 ? (deal ? 'Brand deals: about ' + N(deal) + ' a week while you keep posting' : 'Brand deals start at 2,000 followers') : 'Weekly brand deals come with your next life') + ' · next post +' + L.followerGain(S, false).toLocaleString('en') + '</div></div>' +
+      '<p class="note">' + (active || !c.followers ? 'Post at least once a week. A quiet week loses 3% of your followers.' : '⚠️ No post this week: you are losing followers.') + ' Shoot at Lekki beach, or film a skit at home. Charisma, a sharp phone and a club or owambe outfit all help. Viral posts bring thousands at once.</p>';
+    html += '<h3>Phones</h3><div class="list">' + Object.keys(D.PHONES).map(function (k) {
+      var P = D.PHONES[k], have = S.phone === k, trade = S.phone ? Math.floor(L.price(S, D.PHONES[S.phone].price) * 0.3) : 0, cost = L.price(S, P.price) - trade;
+      return '<div class="item"><div><h3>' + P.icon + ' ' + esc(P.name) + (have ? ' <span class="gain">· yours</span>' : '') + '</h3><div class="meta"><span>Camera ×' + P.cam + '</span>' + (P.status ? '<span>+' + P.status + ' status</span>' : '') + (have || (S.phone && D.PHONES[S.phone].price >= P.price) ? '' : '<span class="cost num">' + N(cost) + (trade ? ' after trade-in' : '') + '</span>') + '</div></div>' +
+        (have || (S.phone && D.PHONES[S.phone].price >= P.price) ? '' : '<button class="btn" id="phone-' + k + '" data-buyphone="' + k + '"' + (cost > S.cash + S.bank ? ' disabled' : '') + '>Buy</button>') + '</div>';
+    }).join('') + '</div>';
+    if (!S.phone) html += '<p class="note">You are shooting on an old phone (camera ×0.6).</p>';
+    return html + '</div>';
+  }
+
   /* ---------- online shop ---------- */
   function shopView() {
     var sh = S.shop;
@@ -1645,7 +1660,7 @@
   function markRead() { try { localStorage.setItem(READ_KEY, JSON.stringify({ seed: S.seed, t: S.t })); } catch (e) {} }
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
-    ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['dealers', '🚗', 'Dealers'],
+    ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
@@ -1673,6 +1688,7 @@
     if (app) {
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
+      else if (app === 'creator') body = '<div class="panel-b">' + creatorView() + '</div>';
       else if (app === 'story') body = '<div class="panel-b">' + storyView() + '</div>';
       else if (app === 'weather') body = '<div class="panel-b">' + weatherView() + '</div>';
       else if (app === 'shop') body = '<div class="panel-b">' + shopView() + '</div>';
@@ -1789,7 +1805,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1881,6 +1897,7 @@
     if (ds.rehome) { var rp = ds.rehome; run(function () { return L.rehomePet(S, rp); }); return; }
     if (ds.hmo) { var hp = ds.hmo; run(function () { return L.joinHmo(S, hp); }); return; }
     if (ds.hmooff) { run(function () { return L.leaveHmo(S); }); return; }
+    if (ds.buyphone) { var bph = ds.buyphone; run(function () { return L.buyPhone(S, bph); }); return; }
     if (ds.shopopen) { var so = ds.shopopen; run(function () { return L.openShop(S, so); }); return; }
     if (ds.shoprestock) { var sr = +ds.shoprestock; run(function () { return L.restockShop(S, sr); }); return; }
     if (ds.shopads) { var sa = ds.shopads; run(function () { return L.setShopAds(S, sa); }); return; }

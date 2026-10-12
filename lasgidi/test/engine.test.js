@@ -1118,3 +1118,29 @@ test('weather (rules 9): seeded rain slows roads, storms park okadas and boats, 
   assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
   assert.equal(L.replayLife(Object.assign({}, v.replay, { rules: 10 })), null);
 });
+
+test('creators: followers grow per post (faster with a better phone), brand deals weekly on rules 9', () => {
+  const s = L.newGame({ seed: 60, origin: 'nepo', goal: 'freestyle' });
+  while (L.hour(s) < 8) L.wait(s, 60);
+  const sk = () => L.availableActions(s).find(a => a.id === 'home_skit');
+  assert.ok(sk() && !sk().disabled, 'film a skit at home');
+  const g0 = L.followerGain(s, false);
+  assert.ok(L.doAction(s, 'home_skit').ok);
+  assert.ok(s.creator.followers >= g0 && s.creator.posts === 1);
+  assert.ok(L.buyPhone(s, 'mid').ok);
+  assert.ok(L.followerGain(s, false) > g0, 'better camera, more followers');
+  assert.equal(L.buyPhone(s, 'mid').ok, false);
+  assert.match(L.buyPhone(s, 'budget').msg, /already better/, 'no downgrades for cash');
+  assert.equal(L.brandDeal(s), 0, 'no deals under 2,000 followers');
+  const t = L.newGame({ seed: 61, origin: 'mid', goal: 'freestyle' });
+  t.creator = { followers: 12000, posts: 50, lastPost: 0 };
+  assert.equal(L.brandDeal(t), L.price(t, 12 * 1200));
+  const b0 = t.cash + t.bank;
+  for (let i = 0; i < 9 && L.week(t) < 1; i++) { if (t.pending.length) L.resolveChoice(t, 0); else L.wait(t, 24 * 60); }
+  assert.ok(t.log.some(l => /sponsored posts/.test(l.text)), 'weekly brand deal');
+  const r8 = L.newGame({ seed: 61, origin: 'mid', goal: 'freestyle', rules: 8 });
+  r8.creator = { followers: 12000, posts: 50, lastPost: 0 };
+  for (let i = 0; i < 9 && L.week(r8) < 1; i++) { if (r8.pending.length) L.resolveChoice(r8, 0); else L.wait(r8, 24 * 60); }
+  assert.ok(!r8.log.some(l => /sponsored posts/.test(l.text)), 'no weekly deals before rules 9');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

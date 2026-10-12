@@ -288,7 +288,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -422,6 +422,7 @@
     weeklyStaff(s);
     weeklyPets(s);
     weeklyShop(s);
+    weeklyCreator(s);
     weeklyBusinessCosts(s);
     weeklyAjo(s);
     weeklyLoans(s);
@@ -808,16 +809,21 @@
       return 'Great night.' + dressBonus(s, 'club');
     },
     content: function (s) {
-      var chance = 0.03 + skillLevel(s, 'charisma') * 0.01;
+      var chance = 0.03 + skillLevel(s, 'charisma') * 0.01, viral = false, msg;
       if (week(s) !== s.viralWeek && rand(s) < chance) {
         s.viralWeek = week(s);
         var pay2 = price(s, roundTo(15000 + rand(s) * 35000, 1000)) * (1 + Math.floor(skillLevel(s, 'charisma') / 3));
         earn(s, pay2, 'Brand deal from viral post');
         applyFx(s, { social: 20, fun: 10 });
         unlock(s, 'viral');
-        return 'Your video went viral. A brand paid ' + naira(pay2) + '.';
+        viral = true;
+        msg = 'Your video went viral. A brand paid ' + naira(pay2) + '.';
       }
-      return 'Posted. A few hundred views.';
+      // Followers: no money and no rng draw, so older lives replay unchanged.
+      var got = followerGain(s, viral);
+      if (!s.creator) s.creator = { followers: 0, posts: 0, lastPost: -1 };
+      s.creator.followers += got; s.creator.posts++; s.creator.lastPost = day(s);
+      return (msg || 'Posted. A few hundred views.') + ' +' + got.toLocaleString('en') + ' followers (' + s.creator.followers.toLocaleString('en') + ').';
     },
     npc: function (s, a) {
       var gain = 5 + skillLevel(s, 'charisma');
@@ -1800,6 +1806,7 @@
     (s.wardrobe || []).forEach(function (w) { t += D.CLOTHES[w.id].status || 0; });
     (s.items || []).forEach(function (it) { t += D.FURNITURE[it.id].status || 0; });
     (s.vehicles || []).forEach(function (v) { t += D.VEHICLES[v.id].status || 0; });
+    if (s.phone) t += D.PHONES[s.phone].status;
     return t;
   }
 
@@ -2145,6 +2152,8 @@
     if (!s.pets) s.pets = [];
     if (s.hmo === undefined) s.hmo = null;
     if (s.shop === undefined) s.shop = null;
+    if (!s.creator) s.creator = { followers: 0, posts: 0, lastPost: -1 };
+    if (s.phone === undefined) s.phone = null;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2633,7 +2642,8 @@
     business:    function (s) { return (s.businesses || []).length > 0; },
     shares:      function (s) { return Object.keys(s.stocks || {}).length > 0; },
     party:       function (s) { return !!s.ach.host; },
-    shop:        function (s) { return !!s.shop; }
+    shop:        function (s) { return !!s.shop; },
+    creator:     function (s) { return !!(s.creator && s.creator.followers >= 1000); }
   };
   function questDef(id) { return D.QUESTS.filter(function (q) { return q.id === id; })[0]; }
   function questDone(s, id) { var c = QUEST_CHECKS[id]; return !!(c && c(s)); }
@@ -2692,6 +2702,41 @@
       log(s, 'You could not pay your ' + D.STAFF[id].name.toLowerCase() + '. They packed their bags and left.', 'bad');
       return false;
     });
+  }
+
+  /* ---------- creators: phones, followers and weekly brand deals ---------- */
+  function phoneCam(s) { return s.phone ? D.PHONES[s.phone].cam : 0.6; }
+  function followerGain(s, viral) {
+    var f = (s.creator && s.creator.followers) || 0;
+    var reach = 1 + Math.min(2, f / 20000), look = outfitTags(s).club || outfitTags(s).owambe ? 1.2 : 1;
+    var g = Math.round(40 * phoneCam(s) * (1 + skillLevel(s, 'charisma') * 0.15) * reach * look);
+    return viral ? g * 4 + 2000 : g;
+  }
+  function brandDeal(s) {
+    var c = s.creator;
+    if (!c || c.followers < 2000) return 0;
+    return price(s, Math.min(400, Math.floor(c.followers / 1000)) * 1200);
+  }
+  function weeklyCreator(s) {
+    var c = s.creator; if (!c || !c.followers) return;
+    var active = c.lastPost >= day(s) - 7;
+    if (!active) { c.followers = Math.floor(c.followers * 0.97); return; }
+    if (s.rules >= 9) {
+      var deal = brandDeal(s);
+      if (deal) { earn(s, deal, 'Brand deal: sponsored posts'); log(s, '📸 Brands paid ' + naira(deal) + ' for this week\'s sponsored posts (' + c.followers.toLocaleString('en') + ' followers).', 'good'); }
+    }
+  }
+  function buyPhone(s, id) {
+    var P = D.PHONES[id];
+    if (!P) return fail('No such phone.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.phone === id) return fail('You already have this phone.');
+    if (s.phone && D.PHONES[s.phone].price >= P.price) return fail('Your ' + D.PHONES[s.phone].name + ' is already better.');
+    var cost = price(s, P.price), trade = s.phone ? Math.floor(price(s, D.PHONES[s.phone].price) * 0.3) : 0;
+    s.alerts = [];
+    if (!pay(s, cost - trade, 'Phone: ' + P.name + (trade ? ' (after trade-in)' : ''))) return fail('This phone costs ' + naira(cost - trade) + (trade ? ' after your trade-in' : '') + '.');
+    s.phone = id;
+    return finish(s, ok(P.icon + ' New phone: ' + P.name + '. Your content looks ' + (P.cam >= 2.4 ? 'premium' : 'sharper') + ' now.'));
   }
 
   /* ---------- online shop ---------- */
@@ -2980,6 +3025,7 @@
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     buyStock: recorded('sk', buyStock), sellStock: recorded('xs', sellStock), stockPrice: stockPrice, stockHistory: stockHistory, stocksValue: stocksValue, marketOpen: marketOpen, brokerFee: brokerFee,
     hireStaff: recorded('hs', hireStaff), fireStaff: recorded('fs', fireStaff), staffRoom: staffRoom, staffPay: staffPay,
+    buyPhone: recorded('ph', buyPhone), brandDeal: brandDeal, followerGain: followerGain, phoneCam: phoneCam,
     openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
