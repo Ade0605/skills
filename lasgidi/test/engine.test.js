@@ -799,7 +799,7 @@ test('more luxury: jet ski, houseboat, business jet; private island needs a boat
 });
 
 test('rules 8: steeper PAYE, rent reviews, luxury insurance, slower promotions; rules 7 unchanged', () => {
-  const s = L.newGame({ seed: 35, origin: 'mid', goal: 'freestyle' });
+  const s = L.newGame({ seed: 35, origin: 'mid', goal: 'freestyle', rules: 8 });
   assert.equal(s.rules, 8);
   const r7 = L.newGame({ seed: 35, origin: 'mid', goal: 'freestyle', rules: 7 });
   assert.ok(L.payeTax(s, 100000) > L.payeTax(r7, 100000), 'rules 8 taxes big pay harder');
@@ -991,7 +991,7 @@ test('daily streak: grows on consecutive real days, once per game day, resets af
 });
 
 test('parties: Saturday at home, size needs a big enough home, guests spray but it never pays', () => {
-  const s = L.newGame({ seed: 50, origin: 'nepo', goal: 'freestyle' });
+  const s = L.newGame({ seed: 50, origin: 'nepo', goal: 'freestyle', rules: 8 });
   assert.match(L.hostParty(s, 'small').msg, /Saturdays/);
   while (L.dow(s) !== 5 || L.hour(s) < 12) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 60); }
   if (s.loc !== L.homeDef(s).district) L.travel(s, L.homeDef(s).district, L.travelOptions(s, L.homeDef(s).district).find(o => !o.disabled).mode);
@@ -1083,4 +1083,38 @@ test('online shop: setup, stock, weekly sales net of fees, spoilage, ads, close,
   // A save missing the field loads with no shop.
   const o = L.newGame({ seed: 57, origin: 'mid', goal: 'freestyle' }); delete o.shop;
   assert.equal(L.deserialize(L.serialize(o)).state.shop, null);
+});
+
+test('weather (rules 9): seeded rain slows roads, storms park okadas and boats, umbrellas keep you dry', () => {
+  const old = L.newGame({ seed: 58, origin: 'mid', goal: 'freestyle', rules: 8 });
+  assert.equal(L.weatherNow(old), null, 'no weather before rules 9');
+  const s = L.newGame({ seed: 58, origin: 'mid', goal: 'freestyle' });
+  assert.equal(s.rules, 9);
+  assert.equal(L.weatherOn(s, 40), L.weatherOn(L.newGame({ seed: 58, origin: 'lapo', goal: 'freestyle' }), 40), 'same seed, same sky');
+  // Find a rainy and a stormy day in this life, then compare trips at noon.
+  let rain = -1, storm = -1;
+  for (let d = 0; d < 400 && (rain < 0 || storm < 0); d++) { const w = L.weatherOn(s, d); if (w === 'rain' && rain < 0) rain = d; if (w === 'storm' && storm < 0) storm = d; }
+  assert.ok(rain >= 0 && storm >= 0);
+  const at = (d, h) => { const g = L.newGame({ seed: 58, origin: 'mid', goal: 'freestyle' }); g.t = d * 1440 + h * 60; return g; };
+  const dry = at(rain, 8), wet = at(rain, 12), st = at(storm, 13);
+  assert.equal(L.weatherNow(dry), 'clear', 'rain holds off till 11:00');
+  const mins = (g) => L.travelOptions(g, 'ikeja').find(o => o.mode === 'danfo').mins;
+  const w8 = L.newGame({ seed: 58, origin: 'mid', goal: 'freestyle', rules: 8 }); w8.t = wet.t;
+  assert.ok(mins(wet) > mins(w8), 'rain slows the danfo');
+  assert.match(L.travelOptions(st, 'ikeja').find(o => o.mode === 'okada').disabled || '', /storm/);
+  const r = L.travel(wet, 'ikeja', 'danfo');
+  assert.ok(r.ok && /soaked/.test(r.msg), r.msg);
+  const u = at(rain, 12);
+  assert.ok(L.buyClothes(u, 'umbrella').ok && L.wear(u, 'umbrella').ok);
+  const ru = L.travel(u, 'ikeja', 'danfo');
+  assert.ok(ru.ok && !/soaked/.test(ru.msg), ru.msg);
+  // A year of weather: June is far wetter than January.
+  let jun = 0, jan = 0;
+  for (let d = 0; d < 365; d++) { const g = at(d, 12); const m = L.monthIndex(g), w = L.weatherOn(g, d); if (w === 'rain' || w === 'storm') { if (m === 5) jun++; if (m === 0) jan++; } }
+  assert.ok(jun > jan * 3, jun + ' vs ' + jan);
+  // Rules 9 lives replay; rules 10 is refused.
+  const v = L.newGame({ seed: 59, origin: 'mid', goal: 'freestyle' });
+  for (let i = 0; i < 40; i++) { if (v.pending.length) L.resolveChoice(v, 0); else L.wait(v, 180); }
+  assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
+  assert.equal(L.replayLife(Object.assign({}, v.replay, { rules: 10 })), null);
 });

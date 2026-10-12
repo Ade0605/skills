@@ -608,7 +608,7 @@
     return {
       city: L.cityOf(S), loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
-      flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(),
+      flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(), weather: L.weatherNow(S),
       clock: L.clockLabel(S), banner: banner,
       places: ui.placeCat === 'boards' || ui.placeCat === 'homes' || ui.placeCat === 'cities' ? [] : D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && (!ui.placeCat || p.type === ui.placeCat); }), place: ui.place,
       homeId: S.home, homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
@@ -1257,14 +1257,30 @@
     var opts = L.travelOptions(S, dest);
     var km = opts.length ? opts[0].km : 0;
     var rows = opts.filter(function (o) { return !(o.mode === 'car' && !S.car); }).map(function (o) {
-      var meta = dur(o.mins) + ' · ' + (o.cost ? N(o.cost) : 'free') + (o.energy ? ' · −' + o.energy + ' energy' : '') + (o.traffic > 1.3 ? ' · go-slow ×' + o.traffic : '');
+      var meta = dur(o.mins) + ' · ' + (o.cost ? N(o.cost) : 'free') + (o.energy ? ' · −' + o.energy + ' energy' : '') + (o.traffic > 1.3 ? ' · go-slow ×' + o.traffic : '') + (o.wet && !L.outfitTags(S).rain ? ' · you will get wet' : '');
       return '<div class="mode' + (o.disabled ? ' dis' : '') + '"><b>' + esc(o.name) + '</b><div class="meta">' + (o.disabled ? esc(o.disabled) : meta) +
         (o.risk && !o.disabled ? '<em>' + esc(o.risk) + '</em>' : '') + '</div>' +
         '<button class="btn sm go" id="go-' + o.mode + '" data-travel="' + dest + '" data-mode="' + o.mode + '"' + (o.disabled ? ' disabled' : '') + '>Go</button></div>';
     }).join('');
     return '<div class="inline" style="justify-content:space-between"><h3>To ' + esc(D.DISTRICTS[dest].name) + ' <span class="muted num">· ' + km + ' km</span></h3>' +
       '<button class="btn sm ghost" id="clear-sel" data-clear-sel="1">Close</button></div>' +
-      '<p>' + esc(D.DISTRICTS[dest].blurb) + '</p><div class="modes">' + rows + '</div>';
+      '<p>' + esc(D.DISTRICTS[dest].blurb) + '</p>' + weatherNote() + '<div class="modes">' + rows + '</div>';
+  }
+  var WX_INFO = { clear: ['☀️', 'Clear'], rain: ['🌧️', 'Rain'], storm: ['⛈️', 'Storm'], harmattan: ['🌫️', 'Harmattan'] };
+  function weatherNote() {
+    var w = L.weatherNow(S);
+    if (w === 'rain') return '<p class="note">🌧️ Rain: roads are about 35% slower, and you get soaked on foot, okada, keke, danfo, BRT or ferry without an umbrella.</p>';
+    if (w === 'storm') return '<p class="note">⛈️ Storm: roads are about 70% slower, okadas and kekes have parked, and boats are not sailing.</p>';
+    return '';
+  }
+  function weatherView() {
+    if (!(S.rules >= 9)) return '<div class="section"><h3>🌦️ Weather</h3><p class="note">This life began before the weather update, so the sky stays clear. Your next life gets rainy seasons, storms and harmattan.</p></div>';
+    var now = L.weatherNow(S), d0 = L.day(S);
+    return '<div class="section"><h3>🌦️ Weather</h3><p class="note">Now: ' + WX_INFO[now][0] + ' ' + WX_INFO[now][1] + '. Rain falls from about 11:00 to 18:00. The rainy season runs from April to October, with a break in August. Harmattan dust comes in December and January. An umbrella (Wardrobe → Accessories) keeps you dry.</p><div class="list">' +
+      L.weatherForecast(S, 7).map(function (f) {
+        var I = WX_INFO[f.wx];
+        return '<div class="item"><div><h3>' + I[0] + ' ' + (f.day === d0 ? 'Today' : D.DAYS[f.day % 7]) + '</h3><div class="meta"><span>' + I[1] + (f.wx === 'rain' || f.wx === 'storm' ? ' · 11:00–18:00' : '') + '</span></div></div></div>';
+      }).join('') + '</div></div>';
   }
 
   /* ---------- Do tab ---------- */
@@ -1606,7 +1622,7 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['travel', '✈️', 'Travel'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
   function eventsView() {
@@ -1633,6 +1649,7 @@
     if (app) {
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
+      else if (app === 'weather') body = '<div class="panel-b">' + weatherView() + '</div>';
       else if (app === 'shop') body = '<div class="panel-b">' + shopView() + '</div>';
       else if (app === 'stocks') body = '<div class="panel-b">' + stocksView() + '</div>';
       else if (app === 'quests') body = '<div class="panel-b">' + questsView() + '</div>';

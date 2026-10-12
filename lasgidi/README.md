@@ -64,6 +64,13 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - You can trade 10:00–14:30 on weekdays. Every buy and sale costs a 1.5% broker fee, with a ₦500 minimum.
   - Some companies pay a dividend every 13 weeks.
   - Prices can fall, and a retail account is capped at ₦20m invested.
+- **Weather (rules 9, new lives only):** each life has its own seeded sky.
+  - **Rainy season:** April to October, peaking in June and July, with a break in August. Rain falls from about 11:00 to 18:00.
+  - **Rain:** roads are about 35% slower, trekking is harder, and you arrive soaked (−hygiene, +stress) on foot, okada, keke, danfo, BRT or ferry unless you wear an umbrella.
+  - **Storms:** roads are about 70% slower, okadas and kekes park, and boats stop sailing.
+  - **Harmattan:** dust and haze in December and January.
+  - **On screen:** the map shows rain streaks or a haze, and the 🌦️ Weather phone app has a 7-day forecast.
+  - Lives started under rules 5–8 keep a clear sky and replay unchanged.
 - **Online shop:** a 🛍️ Shop app on the phone. Pick a niche: okrika thrift clothes, phone accessories, hair and wigs, or small chops trays.
   - Buy stock wholesale, up to 500 at a time.
   - Pick a weekly ad plan, from none through WhatsApp status and an Instagram boost to an influencer shout-out.
@@ -106,7 +113,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Events:** grid collapse, fuel scarcity, floods, black tax, BVN scam texts, Ponzi schemes, landlord hikes, owambe aso-ebi, checkpoints and area boys. Detty December arrives in week 9.
 - **Policy vote:** every 4 weeks you vote on a governorship policy that changes the rules for a month.
 - **CBN governor race:** two weeks after each policy vote, three candidates compete for the Central Bank, and you can vote for one. The Hawk raises savings and bill rates, makes new loans dearer and slows inflation. The Dove does the opposite. The Builder boosts businesses and cooperative loans. The winner's stance lasts 4 weeks, and its rates show on the bank card.
-- **Making money is hard.** New lives start on rules 8, the hardest. Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
+- **Making money is hard.** New lives start on rules 9: everything in rules 8, plus weather. Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
   - PAYE starts at ₦3,000 and goes up to 25% on big pay.
   - Every 4 weeks the landlord reviews your rent in line with prices.
   - Vehicle upkeep is 1.5×, and vehicles costing over ₦100m pay 0.2% insurance a week.

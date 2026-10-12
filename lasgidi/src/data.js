@@ -37,6 +37,11 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // Chance of rain on a day, by month (Jan..Dec). The rainy season peaks in June
+  // and July, with the "August break". Harmattan dust in December and January.
+  var WEATHER_MONTHS = [0.05, 0.1, 0.25, 0.45, 0.55, 0.7, 0.7, 0.45, 0.6, 0.5, 0.2, 0.05];
+  var HARMATTAN_MONTHS = { 11: 0.45, 0: 0.5, 1: 0.2 };
+
   // An online shop run from your phone: buy stock, pay for ads, ship by dispatch rider.
   // demand: orders a week with no ads. spoils: unsold stock is lost at the week's end.
   var SHOP_NICHES = {
@@ -603,7 +608,8 @@
     cap:        { name: 'Face cap', slot: 'head', fabric: 'plain', color: '#17181a', price: 6000, tags: ['gym'] },
     beads:      { name: 'Coral beads', slot: 'acc', fabric: 'plain', color: '#e2463f', price: 150000, tags: ['owambe'], status: 3 },
     watch:      { name: 'Luxury watch', slot: 'acc', fabric: 'plain', color: '#c9a77a', price: 4000000, tags: ['office', 'club'], status: 20 },
-    chain:      { name: 'Iced-out chain', slot: 'acc', fabric: 'plain', color: '#d8dce2', price: 6500000, tags: ['club'], status: 25 }
+    chain:      { name: 'Iced-out chain', slot: 'acc', fabric: 'plain', color: '#d8dce2', price: 6500000, tags: ['club'], status: 25 },
+    umbrella:   { name: 'Umbrella', slot: 'acc', fabric: 'plain', color: '#2f6fa0', price: 4500, tags: ['rain'] }
   };
 
   // Vehicles: road cars use the "Own car" travel mode with their own speed and
@@ -819,7 +825,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

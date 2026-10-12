@@ -747,6 +747,20 @@
         placeHits.push({ id: pl.id, x: p.x, y: gy });
       });
 
+      // Weather over everything: rain streaks (still when motion is reduced), or harmattan haze.
+      if (scene.weather === 'rain' || scene.weather === 'storm') {
+        var heavy = scene.weather === 'storm', n = Math.round(W * H / (heavy ? 1200 : 2000)), off = reduce ? 0 : clock * (heavy ? 0.9 : 0.6);
+        ctx.fillStyle = theme.dark ? 'rgba(20,30,50,.18)' : 'rgba(60,80,110,.12)'; ctx.fillRect(0, 0, W, H);
+        ctx.strokeStyle = theme.dark ? 'rgba(190,210,240,.55)' : 'rgba(30,60,110,.5)'; ctx.lineWidth = 1.3; ctx.beginPath();
+        for (var ri = 0; ri < n; ri++) {
+          var rx = (hash(ri, 3, 11) * (W + 60) + off * 0.35) % (W + 60) - 30, ry = (hash(ri, 7, 13) * (H + 40) + off) % (H + 40) - 20, len = heavy ? 18 : 12;
+          ctx.moveTo(rx, ry); ctx.lineTo(rx - len * 0.35, ry + len);
+        }
+        ctx.stroke();
+      } else if (scene.weather === 'harmattan') {
+        ctx.fillStyle = theme.dark ? 'rgba(160,130,90,.14)' : 'rgba(214,190,150,.22)'; ctx.fillRect(0, 0, W, H);
+      }
+
       ctx.textBaseline = 'alphabetic';
     }
 
@@ -833,6 +847,8 @@
       var esc = function (v) { return String(v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
       if (scene.others) bits.push('<span class="pg-pill"><i class="pg-live"></i>' + scene.others + ' online</span>');
       bits.push('<span class="pg-pill">' + esc(scene.clock) + '</span>');
+      var WX = { rain: '🌧️ Rain', storm: '⛈️ Storm', harmattan: '🌫️ Harmattan' };
+      if (WX[scene.weather]) bits.push('<span class="pg-pill">' + WX[scene.weather] + '</span>');
       bits.push('<span class="pg-pill' + (scene.power ? '' : ' off') + '">' + (scene.power ? 'Light at home' : 'NEPA took light') + '</span>');
       var banner = scene.banner ? '<div class="pg-banner">' + esc(scene.banner) + '</div>' : '';
       return '<div class="pg-pills">' + bits.join('') + '</div>' + banner;

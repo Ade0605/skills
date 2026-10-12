@@ -30,7 +30,7 @@
   // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race,
   // PAYE and levies; 8 is harder still (steeper PAYE, rent reviews, luxury
   // upkeep and insurance, slower promotions).
-  var RULES = 8;
+  var RULES = 9;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -986,6 +986,28 @@
     return f;
   }
 
+  /* ---------- weather (rules 9) ---------- */
+  // Seeded by the life and the day, never by s.rng, so it is the same on replay.
+  function monthOfDay(s, d) { var t0 = s.t; s.t = d * 1440; var m = monthIndex(s); s.t = t0; return m; }
+  function weatherOn(s, d) {
+    var m = monthOfDay(s, d), u = parseInt(fnv(s.seed + ':wx:' + d), 16) / 4294967296, v = parseInt(fnv(s.seed + ':wx2:' + d), 16) / 4294967296;
+    if (u < D.WEATHER_MONTHS[m]) return v < 0.15 ? 'storm' : 'rain';
+    if (v < (D.HARMATTAN_MONTHS[m] || 0)) return 'harmattan';
+    return 'clear';
+  }
+  function weatherNow(s) {
+    if (!(s.rules >= 9)) return null;
+    var w = weatherOn(s, day(s)), h = hour(s);
+    if ((w === 'rain' || w === 'storm') && (h < 11 || h >= 18)) return 'clear';
+    return w;
+  }
+  function weatherForecast(s, n) {
+    var out = [], d = day(s);
+    for (var i = 0; i < (n || 7); i++) out.push({ day: d + i, wx: s.rules >= 9 ? weatherOn(s, d + i) : 'clear' });
+    return out;
+  }
+  var WET_MODES = { trek: 1, okada: 1, keke: 1, danfo: 1, brt: 1, ferry: 1 };
+
   function travelOptions(s, dest) {
     var from = s.loc;
     if (from === dest) return [];
@@ -993,6 +1015,7 @@
     var km = distance(from, dest);
     var crossing = D.DISTRICTS[from].side !== D.DISTRICTS[dest].side;
     var flood = s.econ.flood > 0 && (D.DISTRICTS[dest].side === 'island' || D.DISTRICTS[from].side === 'island');
+    var wx = weatherNow(s), wet = wx === 'rain' || wx === 'storm';
     return Object.keys(D.MODES).map(function (id) {
       var m = D.MODES[id];
       var o = { mode: id, name: m.name, km: km };
@@ -1003,11 +1026,14 @@
       else if (m.stops === 'brt' && (D.BRT_STOPS.indexOf(from) < 0 || D.BRT_STOPS.indexOf(dest) < 0)) o.disabled = 'No BRT on this route';
       else if (m.noBridge && crossing) o.disabled = 'Keke cannot use the bridges';
       else if (km > m.maxKm) o.disabled = 'Too far (' + km + ' km)';
+      else if (wx === 'storm' && (id === 'okada' || id === 'keke')) o.disabled = 'Riders have parked till the storm passes';
+      else if (wx === 'storm' && (id === 'ferry' || id === 'boat')) o.disabled = 'Boats are not sailing in this storm';
       var f = 1;
       if (m.road) {
         f = traffic(s, crossing);
         if (m.weave) f = 1 + (f - 1) * m.weave;
         if (flood) f *= 1.6;
+        if (wet) f *= wx === 'storm' ? 1.7 : 1.35;
       }
       o.traffic = Math.round(f * 10) / 10;
       var spd = ride ? Math.max(m.speed, ride.speed) : m.speed;
@@ -1019,7 +1045,8 @@
       if (s.econ.policy === 'fares' && id !== 'car' && id !== 'trek') fare *= 0.8;
       o.cost = id === 'trek' ? 0 : roundTo(fare * priceFactor(s), 50);
       o.risk = id === 'okada' && (okadaBanned(s, from) || okadaBanned(s, dest)) ? 'Okada is banned here. Task force may seize it.' : null;
-      if (id === 'trek') o.energy = Math.round(m.energyPerKm * km);
+      if (id === 'trek') o.energy = Math.round(m.energyPerKm * km * (wet ? 1.3 : 1));
+      if (wet && WET_MODES[id]) o.wet = true;
       if (!o.disabled && s.over) o.disabled = 'This Weekly Lagos is over';
       if (!o.disabled && s.pending.length) o.disabled = 'Decide on the open event first';
       if (!o.disabled && o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost);
@@ -1041,11 +1068,13 @@
     var m = D.MODES[mode];
     if (m.stress) applyFx(s, { stress: m.stress * o.traffic * o.mins / 60 });
     if (mode === 'cab' || mode === 'ferry') applyFx(s, { stress: -3 });
+    var soaked = o.wet && !outfitTags(s).rain;
+    if (soaked) applyFx(s, { hygiene: -10, stress: 4 });
     s.loc = dest;
     s.stats.trips++;
     if (s.stats.trips >= 50) unlock(s, 'commuter');
     if (mode === 'ferry') unlock(s, 'ferry');
-    var msg = 'You reached ' + D.DISTRICTS[dest].name + ' in ' + fmtMins(o.mins) + '.';
+    var msg = 'You reached ' + D.DISTRICTS[dest].name + ' in ' + fmtMins(o.mins) + '.' + (soaked ? ' You are soaked: rain, no umbrella.' : '');
     if (o.risk && rand(s) < 0.2) {
       var fine = price(s, 5000);
       payPartial(s, fine, 'Task force fine');
@@ -2409,7 +2438,7 @@
     if (!rp || typeof rp.seed !== 'number' || !Array.isArray(rp.acts) || rp.acts.length > MAX_ACTS) return null;
     if (!D.GOALS[rp.goal] || (rp.origin !== null && !D.ORIGINS[rp.origin])) return null;
     var rules = rp.rules == null ? 5 : rp.rules;
-    if (!(rules >= 5 && rules <= 8 && Math.round(rules) === rules)) return null;
+    if (!(rules >= 5 && rules <= 9 && Math.round(rules) === rules)) return null;
     if (rp.challenge != null && !CHALLENGE_ID.test(rp.challenge)) return null;
     var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined });
     for (var i = 0; i < rp.acts.length; i++) {
@@ -2957,6 +2986,7 @@
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
+    weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
     districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity),
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
