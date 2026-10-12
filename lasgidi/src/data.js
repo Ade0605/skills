@@ -37,6 +37,13 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // Parties you host at home (Saturdays). Guests spray money, but a party never pays for itself.
+  var PARTIES = {
+    small:  { name: 'Small chops and drinks', icon: '🥤', guests: 25,  cost: 120000,   mins: 240, fx: { social: 30, fun: 25, stress: -8 },  types: null },
+    owambe: { name: 'Full owambe: DJ, jollof, canopy', icon: '🎉', guests: 120, cost: 1200000,  mins: 360, fx: { social: 50, fun: 45, stress: -12 }, types: ['flat2', 'flat3', 'duplex', 'luxury', 'mansion'] },
+    grand:  { name: 'Society party: live band, MC, aso-ebi', icon: '🎷', guests: 400, cost: 12000000, mins: 420, fx: { social: 70, fun: 60, stress: -15 }, types: ['duplex', 'luxury', 'mansion'] }
+  };
+
   // The Lagos stock exchange. Fictional companies; prices follow a seeded random walk.
   // base: opening price in naira; drift/vol: daily; div: yearly dividend yield, paid quarterly.
   var STOCKS = {
@@ -63,7 +70,8 @@
     { id: 'car',         icon: '🚗', title: 'Buy your first car',    hint: 'Phone → Dealers',              reward: 15000, go: 'dealers' },
     { id: 'fly',         icon: '✈️', title: 'Visit another city',    hint: 'Phone → Travel',               reward: 10000, go: 'travel' },
     { id: 'business',    icon: '🏪', title: 'Build a business',      hint: 'Money tab → Businesses',       reward: 20000, go: 'business' },
-    { id: 'shares',      icon: '📈', title: 'Buy your first shares', hint: 'Phone → Stocks',               reward: 3000,  go: 'stocks' }
+    { id: 'shares',      icon: '📈', title: 'Buy your first shares', hint: 'Phone → Stocks',               reward: 3000,  go: 'stocks' },
+    { id: 'party',       icon: '🎉', title: 'Host an owambe',        hint: 'Home tab, on a Saturday',      reward: 5000,  go: 'home' }
   ];
 
   var CITIES = {
@@ -771,7 +779,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

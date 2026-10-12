@@ -973,6 +973,11 @@
       '<dt>Gen fuel</dt><dd class="num">' + N(Math.round(1500 * S.econ.fuel * S.econ.infl * (1 - L.furnitureGen(S)) / 50) * 50) + ' per use</dd>' +
       '<dt>Every day</dt><dd>' + (daily ? esc(Object.keys(daily).map(function (k) { return (daily[k] > 0 ? '+' : '') + daily[k] + ' ' + FX_NAMES[k]; }).join(', ')) : 'Nothing yet') + '</dd>' +
       '<dt>Status</dt><dd class="num">' + L.statusPoints(S) + '</dd></dl></div>';
+    html += '<div class="section"><h3>🎉 Host a party</h3><p class="note">Saturdays at home, 11:00 to 18:00, once every 4 weeks. Guests spray money, more for a well-dressed, well-connected host, but a party never pays for itself. Your friends will remember it.</p><div class="list">' + Object.keys(D.PARTIES).map(function (k) {
+      var P = D.PARTIES[k], why = L.partyBlock(S, k);
+      return '<div class="item"><div><h3>' + P.icon + ' ' + esc(P.name) + '</h3><div class="meta"><span>' + P.guests + ' guests</span><span>' + dur(P.mins) + '</span><span class="cost num">' + N(L.price(S, P.cost)) + '</span>' + (P.types ? '<span>Needs a ' + esc(D.HOME_TYPES[P.types[0]].name.toLowerCase()) + ' or bigger</span>' : '') + '</div>' +
+        (why ? '<div class="why">' + esc(why) + '</div>' : '') + '</div><button class="btn" id="party-' + k + '" data-party="' + k + '"' + (why ? ' disabled' : '') + '>Host</button></div>';
+    }).join('') + '</div></div>';
     var stored = S.items.map(function (it, i) { return { it: it, i: i }; }).filter(function (o) { return o.it.x == null; });
     if (stored.length) html += '<div class="section"><h3>In storage</h3><div class="list">' + stored.map(function (o) {
       var f = D.FURNITURE[o.it.id];
@@ -1696,7 +1701,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1782,6 +1787,7 @@
     if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
     if (ds.tour) { setTour(+ds.tour); render(); return; }
     if (ds.quest) { goQuest(ds.quest); return; }
+    if (ds.party) { var pk = ds.party; run(function () { return L.hostParty(S, pk); }); return; }
     if (ds.streak) { var sid = gemToday(); run(function () { return L.claimStreak(S, sid); }); return; }
     if (ds.stock) { ui.stock = ui.stock === ds.stock ? null : ds.stock; render(); return; }
     if (ds.stockbuy) { var sb = ds.stockbuy.split(':'); run(function () { return L.buyStock(S, sb[0], +sb[1]); }); return; }

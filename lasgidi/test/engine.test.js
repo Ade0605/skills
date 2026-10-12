@@ -989,3 +989,17 @@ test('daily streak: grows on consecutive real days, once per game day, resets af
   assert.equal(L.claimStreak(s, 'tomorrow').ok, false);
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('parties: Saturday at home, size needs a big enough home, guests spray but it never pays', () => {
+  const s = L.newGame({ seed: 50, origin: 'nepo', goal: 'freestyle' });
+  assert.match(L.hostParty(s, 'small').msg, /Saturdays/);
+  while (L.dow(s) !== 5 || L.hour(s) < 12) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 60); }
+  if (s.loc !== L.homeDef(s).district) L.travel(s, L.homeDef(s).district, L.travelOptions(s, L.homeDef(s).district).find(o => !o.disabled).mode);
+  assert.match(L.hostParty(s, 'grand').msg, /too small/);
+  const b0 = s.cash + s.bank, r = L.hostParty(s, 'small');
+  assert.ok(r.ok, r.msg);
+  assert.ok(s.cash + s.bank < b0, 'a party costs more than the spraying');
+  assert.ok(s.ach.host);
+  assert.match(L.partyBlock(s, 'small'), /Wait \d+ more days/);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

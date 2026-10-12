@@ -65,7 +65,10 @@
     top:         'Top of the ladder in a career',
     wedding:     'Wedding bells: got married',
     parent:      'Proud parent: welcomed a child',
-    billboard:   'On the billboard: rented an ad board'
+    billboard:   'On the billboard: rented an ad board',
+    investor:    'Investor: bought shares on the exchange',
+    host:        'Owambe host: threw a party at home',
+    streak7:     'Seven-day streak'
   };
 
   /* ---------- small helpers ---------- */
@@ -168,7 +171,7 @@
     var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
     if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
-    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Daily streak|Quest:)/.test(m)) return 'gigs';
+    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Daily streak|Quest:|Party: guests)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
@@ -2530,6 +2533,7 @@
     if (invested + cost + fee > cap) return fail('Your broker caps a retail account at ' + naira(cap) + ' invested. You have ' + naira(invested) + ' in.');
     var h = s.stocks[id] || (s.stocks[id] = { u: 0, cost: 0 });
     h.u += units; h.cost += cost + fee;
+    unlock(s, 'investor');
     return finish(s, ok('Bought ' + units.toLocaleString('en') + ' ' + S.ticker + ' at ' + (px < 100 ? '₦' + px.toFixed(2) : naira(px)) + '. Broker fee ' + naira(fee) + '.'));
   }
   function sellStock(s, id, units) {
@@ -2573,7 +2577,8 @@
     car:         function (s) { return !!s.car || (s.vehicles || []).length > 0; },
     fly:         function (s) { return !!s.ach.traveller; },
     business:    function (s) { return (s.businesses || []).length > 0; },
-    shares:      function (s) { return Object.keys(s.stocks || {}).length > 0; }
+    shares:      function (s) { return Object.keys(s.stocks || {}).length > 0; },
+    party:       function (s) { return !!s.ach.host; }
   };
   function questDef(id) { return D.QUESTS.filter(function (q) { return q.id === id; })[0]; }
   function questDone(s, id) { var c = QUEST_CHECKS[id]; return !!(c && c(s)); }
@@ -2599,6 +2604,38 @@
     return finish(s, ok(q.icon + ' ' + q.title + ' done. +' + naira(got) + '.'));
   }
 
+  /* ---------- hosting a party at home ---------- */
+  var PARTY_GAP = 28;
+  function partyBlock(s, kind) {
+    var P = D.PARTIES[kind];
+    if (!P) return 'No such party.';
+    if (s.pending.length) return 'Decide on the open event first';
+    if (homeDistrict(s) !== s.loc) return 'Parties are at home. Go home first';
+    if (P.types && P.types.indexOf(homeDef(s).type) < 0) return 'Your home is too small for ' + P.guests + ' guests';
+    if (dow(s) !== 5) return 'Owambes are on Saturdays';
+    var h = hour(s); if (h < 11 || h >= 18) return 'Guests come from 11:00; start by 18:00';
+    if (s.partyDay != null && day(s) - s.partyDay < PARTY_GAP) return 'You hosted on day ' + (s.partyDay + 1) + '. Wait ' + (PARTY_GAP - (day(s) - s.partyDay)) + ' more days';
+    return null;
+  }
+  function hostParty(s, kind) {
+    var P = D.PARTIES[kind], why = partyBlock(s, kind);
+    if (why) return fail(why + '.');
+    var cost = price(s, P.cost);
+    s.alerts = [];
+    if (!pay(s, cost, 'Party: ' + P.name)) return fail('This party costs ' + naira(cost) + '.');
+    advance(s, P.mins);
+    applyFx(s, P.fx); applyFx(s, { hunger: 40, energy: -25 });
+    // Guests spray more for a well-dressed, well-connected host.
+    var charm = 1 + skillLevel(s, 'charisma') * 0.1 + Math.min(1.5, statusPoints(s) / 40) + (outfitTags(s).owambe ? 0.3 : 0);
+    var spray = Math.round(price(s, P.guests * 400 * charm * (0.7 + rand(s) * 0.6)) / 50) * 50;
+    if (spray > 0) earn(s, spray, 'Party: guests sprayed');
+    Object.keys(s.friends).forEach(function (k) { if (s.friends[k].seen >= 0) s.friends[k].lvl = clamp(s.friends[k].lvl + (kind === 'small' ? 4 : 8), 0, 100); });
+    s.partyDay = day(s);
+    unlock(s, 'host');
+    log(s, 'You hosted ' + P.guests + ' guests: ' + P.name.toLowerCase() + '. They sprayed ' + naira(spray) + '.', 'good');
+    return finish(s, ok(P.icon + ' What a party! Guests sprayed ' + naira(spray) + ' (it cost ' + naira(cost) + ').'));
+  }
+
   /* ---------- daily streak: come back on real consecutive days ---------- */
   var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
   function nextDayId(id) { var d = new Date(id + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
@@ -2619,6 +2656,7 @@
     s.alerts = [];
     s.streak = { last: dayId, n: info.n, gday: day(s) };
     earn(s, info.prize, 'Daily streak');
+    if (info.n >= 7) unlock(s, 'streak7');
     return finish(s, ok('🔥 Day ' + info.n + ' streak: +' + naira(info.prize) + '.' + (info.slot === 6 ? ' Full week! The bonus resets tomorrow.' : '')));
   }
 
@@ -2729,6 +2767,7 @@
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     buyStock: recorded('sk', buyStock), sellStock: recorded('xs', sellStock), stockPrice: stockPrice, stockHistory: stockHistory, stocksValue: stocksValue, marketOpen: marketOpen, brokerFee: brokerFee,
+    hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
