@@ -980,6 +980,18 @@
       return '<div class="item"><div><h3>' + St.icon + ' ' + esc(St.name) + (have ? ' <span class="gain">· hired</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(L.staffPay(S, k)) + '/wk</span><span>' + esc(fx) + ' a day</span></div><div class="act-note">' + esc(St.text) + '</div>' + (why ? '<div class="why">' + esc(why) + '</div>' : '') + '</div>' +
         (have ? '<button class="btn ghost" id="fire-' + k + '" data-firestaff="' + k + '">Let go</button>' : '<button class="btn" id="hire-' + k + '" data-hirestaff="' + k + '"' + (why ? ' disabled' : '') + '>Hire</button>') + '</div>';
     }).join('') + '</div></div>';
+    var yard = L.hasYard(S);
+    html += '<div class="section"><h3>🐾 Pets</h3><p class="note">Up to 3. Food and the vet are paid every week; a pet you cannot feed goes to a neighbour. Dogs need a compound' + (yard ? ' (you have one).' : ': a 2-bedroom flat or bigger.') + '</p><div class="list">' + Object.keys(D.PETS).map(function (k) {
+      var P = D.PETS[k], have = S.pets.indexOf(k) >= 0, fx = Object.keys(P.daily).map(function (n) { return (P.daily[n] > 0 ? '+' : '') + P.daily[n] + ' ' + FX_NAMES[n]; }).join(', ');
+      var why = have ? '' : P.yard && !yard ? 'Needs a compound' : S.pets.length >= 3 ? 'Three pets is plenty' : '';
+      return '<div class="item"><div><h3>' + P.icon + ' ' + esc(P.name) + (have ? ' <span class="gain">· yours</span>' : '') + '</h3><div class="meta">' + (have ? '' : '<span class="cost num">' + N(L.price(S, P.price)) + '</span>') + '<span class="num">' + N(L.price(S, P.weekly)) + '/wk</span><span>' + esc(fx) + ' a day</span></div>' + (why ? '<div class="why">' + esc(why) + '</div>' : '') + '</div>' +
+        (have ? '<button class="btn ghost" id="rehome-' + k + '" data-rehome="' + k + '">Rehome</button>' : '<button class="btn" id="pet-' + k + '" data-buypet="' + k + '"' + (why ? ' disabled' : '') + '>Adopt</button>') + '</div>';
+    }).join('') + '</div></div>';
+    html += '<div class="section"><h3>🩺 Health plan</h3><p class="note">' + (S.hmo ? 'You are on ' + esc(D.HMO[S.hmo].name) + '.' : 'Without a plan, every collapse costs a hospital bill.') + ' Premiums are paid every week; if one bounces, the plan lapses.</p><div class="list">' + Object.keys(D.HMO).map(function (k) {
+      var H = D.HMO[k], on = S.hmo === k;
+      return '<div class="item"><div><h3>' + H.icon + ' ' + esc(H.name) + (on ? ' <span class="gain">· active</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(L.price(S, H.weekly)) + '/wk</span></div><div class="act-note">' + esc(H.text) + '</div></div>' +
+        (on ? '<button class="btn ghost" id="hmo-off" data-hmooff="1">Cancel</button>' : '<button class="btn" id="hmo-' + k + '" data-hmo="' + k + '">' + (S.hmo ? 'Switch' : 'Join') + '</button>') + '</div>';
+    }).join('') + '</div></div>';
     html += '<div class="section"><h3>🎉 Host a party</h3><p class="note">Saturdays at home, 11:00 to 18:00, once every 4 weeks. Guests spray money, more for a well-dressed, well-connected host, but a party never pays for itself. Your friends will remember it.</p><div class="list">' + Object.keys(D.PARTIES).map(function (k) {
       var P = D.PARTIES[k], why = L.partyBlock(S, k);
       return '<div class="item"><div><h3>' + P.icon + ' ' + esc(P.name) + '</h3><div class="meta"><span>' + P.guests + ' guests</span><span>' + dur(P.mins) + '</span><span class="cost num">' + N(L.price(S, P.cost)) + '</span>' + (P.types ? '<span>Needs a ' + esc(D.HOME_TYPES[P.types[0]].name.toLowerCase()) + ' or bigger</span>' : '') + '</div>' +
@@ -1708,7 +1720,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1796,6 +1808,10 @@
     if (ds.quest) { goQuest(ds.quest); return; }
     if (ds.hirestaff) { var hk = ds.hirestaff; run(function () { return L.hireStaff(S, hk); }); return; }
     if (ds.firestaff) { var fk = ds.firestaff; run(function () { return L.fireStaff(S, fk); }); return; }
+    if (ds.buypet) { var bp = ds.buypet; run(function () { return L.buyPet(S, bp); }); return; }
+    if (ds.rehome) { var rp = ds.rehome; run(function () { return L.rehomePet(S, rp); }); return; }
+    if (ds.hmo) { var hp = ds.hmo; run(function () { return L.joinHmo(S, hp); }); return; }
+    if (ds.hmooff) { run(function () { return L.leaveHmo(S); }); return; }
     if (ds.party) { var pk = ds.party; run(function () { return L.hostParty(S, pk); }); return; }
     if (ds.streak) { var sid = gemToday(); run(function () { return L.claimStreak(S, sid); }); return; }
     if (ds.stock) { ui.stock = ui.stock === ds.stock ? null : ds.stock; render(); return; }

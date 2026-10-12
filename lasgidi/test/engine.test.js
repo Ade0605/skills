@@ -1029,3 +1029,24 @@ test('saves stamped with a newer schema but missing new fields still load whole'
   assert.ok(L.hireStaff(back, 'help').ok || true);
   assert.ok(Array.isArray(L.activeQuests(back)));
 });
+
+test('pets and HMO: yards for dogs, weekly care, HMO pays the hospital, and replay', () => {
+  const s = L.newGame({ seed: 53, origin: 'nepo', goal: 'freestyle' }); // Lekki studio: a 2-bedroom flat
+  assert.ok(L.buyPet(s, 'cat').ok);
+  assert.equal(L.buyPet(s, 'cat').ok, false, 'one of each');
+  assert.equal(L.hasYard(s), true);
+  assert.ok(L.buyPet(s, 'dog').ok);
+  assert.ok(s.ach.pet);
+  assert.ok(L.joinHmo(s, 'basic').ok);
+  s.loc = 'island'; // for the check-up price only
+  const ck = L.availableActions(s).find(a => a.id === 'island_checkup');
+  assert.equal(ck.price, Math.round(L.price(s, 8000) * 0.5 / 50) * 50, 'half-price check-up');
+  const m = L.newGame({ seed: 54, origin: 'mid', goal: 'freestyle' });
+  assert.match(L.buyPet(m, 'dog').msg, /compound/);
+  assert.ok(L.buyPet(m, 'cat').ok && L.joinHmo(m, 'basic').ok);
+  for (let i = 0; i < 9 && L.week(m) < 1; i++) { if (m.pending.length) L.resolveChoice(m, 0); else L.wait(m, 24 * 60); }
+  assert.equal(L.replayLife(m.replay).ledgerHash, m.ledgerHash);
+  assert.ok(L.leaveHmo(m).ok && m.hmo === null);
+  assert.ok(L.rehomePet(m, 'cat').ok && m.pets.length === 0);
+  assert.equal(L.category('HMO premium', -1), 'health');
+});

@@ -69,7 +69,8 @@
     investor:    'Investor: bought shares on the exchange',
     host:        'Owambe host: threw a party at home',
     streak7:     'Seven-day streak',
-    oga:         'Oga at the top: hired domestic staff'
+    oga:         'Oga at the top: hired domestic staff',
+    pet:         'Best friend: adopted a pet'
   };
 
   /* ---------- small helpers ---------- */
@@ -180,7 +181,7 @@
     if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
-    if (/Hospital|Check-up/.test(m)) return 'health';
+    if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     return amt < 0 ? 'lifestyle' : 'other';
   }
 
@@ -286,7 +287,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [],
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -366,6 +367,7 @@
     var fd = furnitureDaily(s);
     if (fd) applyFx(s, fd);
     (s.staff || []).forEach(function (id) { var St = D.STAFF[id]; if (!St.needsCar || rideCar(s)) applyFx(s, St.daily); });
+    (s.pets || []).forEach(function (id) { applyFx(s, D.PETS[id].daily); });
     matureBonds(s);
     var d = day(s), yesterday = d - 1, yDow = yesterday % 7;
     // Missed shift check.
@@ -417,6 +419,7 @@
     if (s.rules >= 8 && w > 0 && w % 4 === 0) rentReview(s);
 
     weeklyStaff(s);
+    weeklyPets(s);
     weeklyBusinessCosts(s);
     weeklyAjo(s);
     weeklyLoans(s);
@@ -669,6 +672,7 @@
       else { out.mins = am; out.label = 'Sleep, alarm for work (' + fmtMins(am) + ')'; }
     }
     out.price = price(s, a.cost);
+    if (s.hmo && /checkup$/.test(a.id)) out.price = roundTo(out.price * D.HMO[s.hmo].checkup, 50);
     if (a.power && out.atHome && !s.power) { out.price += genCost(s); out.gen = true; }
     if (a.earn) out.earnEst = gigPay(s, a.earn, 1);
     if (a.when) out.whenLabel = windowLabel(a.when);
@@ -2059,16 +2063,20 @@
     if (s.hospitalWeek !== week(s)) {
       s.hospitalWeek = week(s);
       var bill = price(s, 8000);
-      var paid = payPartial(s, bill, 'General Hospital bill');
-      if (paid < bill) addDebt(s, bill - paid, 'Hospital bill');
+      if (s.hmo) log(s, 'Your ' + D.HMO[s.hmo].name + ' paid the hospital bill (' + naira(bill) + ').', 'good');
+      else {
+        var paid = payPartial(s, bill, 'General Hospital bill');
+        if (paid < bill) addDebt(s, bill - paid, 'Hospital bill');
+      }
     }
-    advance(s, 360);
+    var ward = s.hmo === 'premium';
+    advance(s, ward ? 240 : 360);
     var hc = D.CITIES[cityOf(s)];
     s.loc = hc.hospital;
     s.needs.hunger = Math.max(s.needs.hunger, 60);
     s.needs.energy = Math.max(s.needs.energy, 60);
-    s.needs.stress = clamp(s.needs.stress + 15, 0, 100);
-    var msg = 'You collapsed from ' + why + ' and woke up in ' + hc.hospitalName + '.';
+    s.needs.stress = clamp(s.needs.stress + (ward ? 5 : 15), 0, 100);
+    var msg = 'You collapsed from ' + why + ' and woke up in ' + (ward ? 'a private ward near ' : '') + hc.hospitalName + '.';
     log(s, msg, 'bad');
     res.msg = (res.msg ? res.msg + ' ' : '') + msg;
     res.collapsed = true;
@@ -2103,6 +2111,8 @@
     if (!s.stocks) s.stocks = {};
     if (s.streak === undefined) s.streak = null;
     if (!s.staff) s.staff = [];
+    if (!s.pets) s.pets = [];
+    if (s.hmo === undefined) s.hmo = null;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2651,6 +2661,58 @@
     });
   }
 
+  /* ---------- pets ---------- */
+  function hasYard(s) { return D.YARD_HOMES.indexOf(homeDef(s).type) >= 0; }
+  function buyPet(s, id) {
+    var P = D.PETS[id];
+    if (!P) return fail('No such pet.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.pets.indexOf(id) >= 0) return fail('You already have a ' + P.name.toLowerCase() + '.');
+    if (s.pets.length >= 3) return fail('Three pets is plenty.');
+    if (P.yard && !hasYard(s)) return fail('A ' + P.name.toLowerCase() + ' needs a compound. A 2-bedroom flat or bigger has one.');
+    var cost = price(s, P.price);
+    s.alerts = [];
+    if (!pay(s, cost, 'Pet: ' + P.name)) return fail('A ' + P.name.toLowerCase() + ' costs ' + naira(cost) + '.');
+    s.pets.push(id);
+    unlock(s, 'pet');
+    return finish(s, ok(P.icon + ' Welcome home! Food and the vet come to ' + naira(price(s, P.weekly)) + ' a week.'));
+  }
+  function rehomePet(s, id) {
+    var i = s.pets.indexOf(id);
+    if (i < 0) return fail('You have no ' + (D.PETS[id] ? D.PETS[id].name.toLowerCase() : 'such pet') + '.');
+    s.pets.splice(i, 1);
+    applyFx(s, { fun: -10 });
+    return ok('You found your ' + D.PETS[id].name.toLowerCase() + ' a new home.');
+  }
+  function weeklyPets(s) {
+    if (s.pets && s.pets.length) s.pets = s.pets.filter(function (id) {
+      var P = D.PETS[id];
+      if (P.yard && !hasYard(s)) { log(s, 'No compound for your ' + P.name.toLowerCase() + ' here. A neighbour with a yard took them in.', 'bad'); return false; }
+      if (pay(s, price(s, P.weekly), 'Pet care: ' + P.name)) return true;
+      log(s, 'You could not feed your ' + P.name.toLowerCase() + '. A neighbour took them in.', 'bad');
+      return false;
+    });
+    if (s.hmo) {
+      var H = D.HMO[s.hmo];
+      if (!pay(s, price(s, H.weekly), 'HMO premium')) { log(s, 'Your ' + H.name + ' lapsed: the premium bounced.', 'bad'); s.hmo = null; }
+    }
+  }
+  function joinHmo(s, plan) {
+    var H = D.HMO[plan];
+    if (!H) return fail('No such plan.');
+    if (s.hmo === plan) return fail('You are already on ' + H.name + '.');
+    var fee = price(s, H.weekly);
+    s.alerts = [];
+    if (!pay(s, fee, 'HMO premium')) return fail('The first premium is ' + naira(fee) + '.');
+    s.hmo = plan;
+    return ok(H.icon + ' You are on ' + H.name + ': ' + naira(fee) + ' a week.');
+  }
+  function leaveHmo(s) {
+    if (!s.hmo) return fail('You have no HMO plan.');
+    s.hmo = null;
+    return ok('You cancelled your HMO plan.');
+  }
+
   /* ---------- hosting a party at home ---------- */
   var PARTY_GAP = 28;
   function partyBlock(s, kind) {
@@ -2815,6 +2877,7 @@
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     buyStock: recorded('sk', buyStock), sellStock: recorded('xs', sellStock), stockPrice: stockPrice, stockHistory: stockHistory, stocksValue: stocksValue, marketOpen: marketOpen, brokerFee: brokerFee,
     hireStaff: recorded('hs', hireStaff), fireStaff: recorded('fs', fireStaff), staffRoom: staffRoom, staffPay: staffPay,
+    buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,

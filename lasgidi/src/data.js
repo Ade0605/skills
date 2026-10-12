@@ -37,6 +37,20 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // Pets: a one-off price, then food and vet every week. Dogs need a compound.
+  var PETS = {
+    cat:      { name: 'Cat',                 icon: '🐈', price: 15000,  weekly: 2500,  daily: { fun: 4, stress: -2 } },
+    parrot:   { name: 'African grey parrot', icon: '🦜', price: 120000, weekly: 2000,  daily: { fun: 3, social: 3 } },
+    dog:      { name: 'Dog',                 icon: '🐕', price: 80000,  weekly: 6000,  daily: { fun: 5, stress: -3 }, yard: true },
+    boerboel: { name: 'Boerboel guard dog',  icon: '🐕‍🦺', price: 450000, weekly: 15000, daily: { stress: -5, fun: 2 }, yard: true }
+  };
+  var YARD_HOMES = ['flat2', 'flat3', 'duplex', 'luxury', 'mansion'];
+  // HMO health plans: a weekly premium; covers the hospital when you collapse.
+  var HMO = {
+    basic:   { name: 'Basic HMO',   icon: '🩺', weekly: 2000, checkup: 0.5, text: 'Hospital bills covered. Check-ups half price.' },
+    premium: { name: 'Premium HMO', icon: '🏥', weekly: 7000, checkup: 0,   text: 'Bills covered, a private ward (shorter, calmer stays) and free check-ups.' }
+  };
+
   // Live-in and daily staff. Paid every week; unpaid staff leave.
   var STAFF = {
     help:   { name: 'House help', icon: '🧹', pay: 35000, daily: { hygiene: 12, stress: -3 }, text: 'Cleans, washes and runs errands. Your home stays fresh.' },
@@ -789,7 +803,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

@@ -72,6 +72,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - Each helps every day: fresh hygiene, a ready breakfast, rest instead of driving yourself, or easier sleep.
   - Each costs a weekly salary, from ₦30k to ₦60k. Staff you can't pay pack up and leave.
   - How many you can have depends on your home: none in a room or flat share, 1 in a self-con, up to 4 in a duplex or a mansion.
+- **Pets:** a cat, an African grey parrot, a dog or a Boerboel guard dog, up to 3. Each gives a small boost to fun or stress every day and costs food and vet bills every week. Dogs need a compound, which a 2-bedroom flat or bigger has. A pet you can't feed goes to a neighbour.
+- **Health plan (HMO):**
+  - Basic: ₦2k a week. It covers the hospital bill when you collapse, and check-ups are half price.
+  - Premium: ₦7k a week. It also gets you a private ward, with a shorter and calmer stay, and free check-ups.
+  - If a premium bounces, the plan lapses.
 - **Host a party:** on Saturdays, from the Home tab. Choose small chops and drinks (25 guests), a full owambe (120 guests, which needs a 2-bedroom flat) or a society party (400 guests, which needs a duplex). Guests spray more money for a well-dressed, well-connected host, but a party never pays for itself. Your friends remember it, and you can host once every 4 weeks.
 - **Daily streak:** claim a reward each real day you come back, from ₦1,000 on day 1 up to ₦10,000 on day 7. Miss a day and it starts again. You can claim once per game day, and there is no streak in Weekly Lagos.
 - **Quests:** starter goals as chips over the map, such as "Get a job", "Daily gem hunt", "Sleep like Oba" and "Visit another city". Each pays once (₦1,500 to ₦20,000). A quest that's ready to claim shows first; tap an unfinished one to jump to the right screen. All of them are listed in the Quests phone app.
