@@ -174,7 +174,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Port Harcourt:** Uniport, Pleasure Park, Mile 1 market, the waterfront and the Trans-Amadi yards, plus oil-services jobs.
   - **Getting there:** fly from the airport (about ₦150k, or free in your own jet) or take the long-distance bus from the motor park. The bus is cheaper, takes 11 to 12 hours, and doesn't run at night.
 - **Districts:** 12 in Lagos. Ikeja, Ikorodu, Oshodi, Mushin, Festac, Surulere and Yaba are on the mainland. Lagos Island, Ikoyi, VI, Lekki and Ajah are on the Island.
-- **Transport:** 8 modes. Keke cannot cross the bridges, BRT and the ferry run only between their stops, and okada carries task-force risk in the ban areas. Go-slow peaks 06–10 and 16–21.
+- **Transport:** 9 modes, including the **🚆 Lagos rail**: the Blue Line (Lagos Island, Surulere, Mile 2/Festac) and the Red Line (Ikeja, Oshodi, Mushin, Yaba). Trains run 06:00–21:00 at a flat ₦750, with no go-slow and no rain. Both lines are drawn on the map. Keke cannot cross the bridges, BRT and the ferry run only between their stops, and okada carries task-force risk in the ban areas. Go-slow peaks 06–10 and 16–21.
 - **Careers:** 9 careers × 5 levels, from Dispatch Rider to Logistics Boss and from Backup Singer to Afrobeats Giant.
 - **Design your home:** buy 30 pieces of furniture and place, rotate or store them on a tile grid inside your home. Bigger homes are split into a bedroom, guest room, kitchen, living room and bathroom. Beds help sleep, solar and inverters help with light, and an AC or a pool table lifts your mood. Furniture moves house with you.
 - **Garage, hangar and car dealers:** buy from 9 cars (tokunbo saloon to supercar and limousine), 6 boats (from a ₦15m jet ski to a houseboat and a ₦25bn superyacht), a helicopter, or 4 jets (from a light jet to a ₦150bn VIP airliner). My garage groups them into a Garage, a Marina and a Hangar, each with its weekly upkeep and resale value. A boat unlocks a private-island day from the Lekki VIP jetty, and a houseboat moored by an Island home helps you sleep; at the Berger car mart, at Lekki luxury motors, or from your home. **My garage** lists each vehicle, what the dealer would pay for it, and lets you pick which car you **Drive**. Cars set your own-car speed. Boats skip the ferry queue, a helicopter flies anywhere in Lagos, and the jet unlocks weekends in Dubai. Everything has weekly upkeep.
@@ -232,7 +232,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (91 tests)
+  test/engine.test.js   node:test suite (92 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

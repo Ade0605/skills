@@ -1608,3 +1608,22 @@ test('malaria (rules 11): nights without light risk it, a net helps, drugs cure 
   assert.ok(s.log.some(l => /collapsed from malaria/.test(l.text)), 'hospital');
   assert.ok(L.DATA.FURNITURE.net);
 });
+
+test('Lagos rail: Blue and Red Line stops, flat fare, 06:00 to 21:00, no traffic or rain', () => {
+  const s = L.newGame({ seed: 96, origin: 'mid', goal: 'freestyle' });
+  s.loc = 'ikeja'; s.t = s.t - (s.t % 1440) + 1440 + 8 * 60;
+  const o = L.travelOptions(s, 'yaba').find(x => x.mode === 'rail');
+  assert.ok(!o.disabled, o.disabled);
+  assert.equal(o.cost, L.travelOptions(s, 'oshodi').find(x => x.mode === 'rail').cost, 'a flat fare, near or far');
+  assert.equal(o.traffic, 1, 'no go-slow on the tracks');
+  assert.ok(!o.wet);
+  assert.equal(L.railLine('island', 'festac'), 'blue');
+  assert.equal(L.railLine('ikeja', 'island'), null);
+  assert.match(L.travelOptions(s, 'island').find(x => x.mode === 'rail').disabled, /No train/);
+  s.t += 14 * 60; // 22:00
+  assert.match(L.travelOptions(s, 'yaba').find(x => x.mode === 'rail').disabled, /06:00 to 21:00/);
+  s.t -= 14 * 60;
+  const r = L.travel(s, 'yaba', 'rail');
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.loc, 'yaba');
+});

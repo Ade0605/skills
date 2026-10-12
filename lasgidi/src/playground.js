@@ -440,6 +440,16 @@
         g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
       });
       g.setLineDash([]);
+      // Rail lines: a coloured track with sleepers, and a station dot at each stop.
+      if (CITY === 'lagos' && D.RAIL_LINES) Object.keys(D.RAIL_LINES).forEach(function (k) {
+        var Ln = D.RAIL_LINES[k], pts = Ln.stops.map(function (d) { var a = D.DISTRICTS[d]; return toScreen(a.x + 0.35, a.y + 0.35, 0); });
+        g.strokeStyle = Ln.color; g.lineWidth = Math.max(1.5, 2 * s); g.globalAlpha = 0.85;
+        g.beginPath(); pts.forEach(function (p, i) { if (i) g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y); }); g.stroke();
+        g.lineWidth = Math.max(0.6, 0.8 * s); g.setLineDash([1 * s, 4 * s]); g.strokeStyle = theme.dark ? '#111' : '#fff';
+        g.beginPath(); pts.forEach(function (p, i) { if (i) g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y); }); g.stroke(); g.setLineDash([]);
+        g.globalAlpha = 1; g.fillStyle = Ln.color;
+        pts.forEach(function (p) { g.beginPath(); g.arc(p.x, p.y, Math.max(2, 2.6 * s), 0, Math.PI * 2); g.fill(); });
+      });
 
       // Road names along the roads; minor roads and streets appear as you zoom in.
       g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -766,7 +776,7 @@
       var tr = scene.trip, tp = tr ? (Date.now() - tr.at) / 2400 : 2;
       if (tr && tp < 1 && !reduce && D.DISTRICTS[tr.from] && D.DISTRICTS[tr.to] && cityOfDistrict(tr.from) === CITY) {
         var e = tp < 0.5 ? 2 * tp * tp : 1 - Math.pow(-2 * tp + 2, 2) / 2, A = D.DISTRICTS[tr.from], B = D.DISTRICTS[tr.to];
-        var q = toScreen(A.x + (B.x - A.x) * e, A.y + (B.y - A.y) * e, 0), icon = { danfo: '🚌', brt: '🚍', cab: '🚕', keke: '🛺', okada: '🏍️', car: '🚗', ferry: '⛴️', boat: '🚤', heli: '🚁', trek: '🚶' }[tr.mode] || '🚌';
+        var q = toScreen(A.x + (B.x - A.x) * e, A.y + (B.y - A.y) * e, 0), icon = { danfo: '🚌', brt: '🚍', cab: '🚕', keke: '🛺', okada: '🏍️', car: '🚗', ferry: '⛴️', boat: '🚤', heli: '🚁', trek: '🚶', rail: '🚆' }[tr.mode] || '🚌';
         ctx.beginPath(); ctx.arc(q.x, q.y - 14, 13, 0, Math.PI * 2); ctx.fillStyle = theme.danfo; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = theme.danfoInk; ctx.stroke();
         ctx.font = '15px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(icon, q.x, q.y - 13.5);
         var label = 'On the way to ' + D.DISTRICTS[tr.to].name + '…';

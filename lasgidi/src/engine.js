@@ -1035,6 +1035,8 @@
     for (var i = 0; i < (n || 7); i++) out.push({ day: d + i, wx: s.rules >= 9 ? weatherOn(s, d + i) : 'clear' });
     return out;
   }
+  // The rail line that serves both districts, if any.
+  function railLine(a, b) { var L = D.RAIL_LINES || {}; return Object.keys(L).filter(function (k) { return L[k].stops.indexOf(a) >= 0 && L[k].stops.indexOf(b) >= 0; })[0] || null; }
   var WET_MODES = { trek: 1, okada: 1, keke: 1, danfo: 1, brt: 1, ferry: 1 };
 
   function travelOptions(s, dest) {
@@ -1053,6 +1055,8 @@
       else if (m.needsKind && !(s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === m.needsKind; })) o.disabled = m.needsKind === 'heli' ? 'You do not own a helicopter' : 'You do not own a boat';
       else if (m.stops === 'ferry' && (D.FERRY_STOPS.indexOf(from) < 0 || D.FERRY_STOPS.indexOf(dest) < 0)) o.disabled = 'No jetty on this route';
       else if (m.stops === 'brt' && (D.BRT_STOPS.indexOf(from) < 0 || D.BRT_STOPS.indexOf(dest) < 0)) o.disabled = 'No BRT on this route';
+      else if (m.stops === 'rail' && !railLine(from, dest)) o.disabled = 'No train on this route';
+      else if (m.stops === 'rail' && (hour(s) < 6 || hour(s) >= 21)) o.disabled = 'Trains run 06:00 to 21:00';
       else if (m.noBridge && crossing) o.disabled = 'Keke cannot use the bridges';
       else if (km > m.maxKm) o.disabled = 'Too far (' + km + ' km)';
       else if (wx === 'storm' && (id === 'okada' || id === 'keke')) o.disabled = 'Riders have parked till the storm passes';
@@ -1068,9 +1072,9 @@
       var spd = ride ? Math.max(m.speed, ride.speed) : m.speed;
       o.mins = Math.max(STEP, ceilTo(m.wait + km / spd * 60 * f, STEP));
       var fare;
-      if (id === 'ferry') fare = m.min;
+      if (id === 'ferry' || m.flat) fare = m.min;
       else fare = Math.max(m.min, (ride ? ride.fuel : m.perKm) * km);
-      if (id !== 'trek') fare *= s.econ.fuel;
+      if (id !== 'trek' && !m.flat) fare *= s.econ.fuel;
       if (s.econ.policy === 'fares' && id !== 'car' && id !== 'trek') fare *= 0.8;
       o.cost = id === 'trek' ? 0 : roundTo(fare * priceFactor(s), 50);
       o.risk = id === 'okada' && (okadaBanned(s, from) || okadaBanned(s, dest)) ? 'Okada is banned here. Task force may seize it.' : null;
@@ -3700,7 +3704,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaChance: malariaChance, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, sleepAway: recorded('ht', sleepAway),
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaChance: malariaChance, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

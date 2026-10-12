@@ -215,6 +215,12 @@
   ];
   var FERRY_STOPS = ['ikorodu', 'island', 'ikoyi', 'lekki'];
   var BRT_STOPS = ['ikorodu', 'ikeja', 'oshodi', 'yaba', 'island'];
+  // Lagos rail: the Blue Line (Marina to Mile 2) and the Red Line (Ikeja to Oyingbo).
+  // You ride within one line; trains run 06:00 to 21:00 at a flat fare.
+  var RAIL_LINES = {
+    blue: { name: 'Blue Line', color: '#2f6fa0', stops: ['island', 'surulere', 'festac'] },
+    red:  { name: 'Red Line',  color: '#c0392b', stops: ['ikeja', 'oshodi', 'mushin', 'yaba'] }
+  };
   // 2022 commercial okada ban LGAs, mapped onto our districts.
   var OKADA_BAN = ['ikeja', 'surulere', 'yaba', 'island', 'ikoyi', 'vi', 'lekki'];
 
@@ -228,6 +234,7 @@
     cab:   { name: 'Cab',   speed: 32, wait: 8,  perKm: 350, min: 1500, maxKm: 99, road: true },
     car:   { name: 'Own car', speed: 32, wait: 0, perKm: 120, min: 0,   maxKm: 99, road: true, needsCar: true },
     boat:  { name: 'Own boat', speed: 45, wait: 5, perKm: 600, min: 0, maxKm: 99, road: false, stops: 'ferry', needsKind: 'boat' },
+    rail:  { name: 'Train', speed: 45, wait: 12, perKm: 0, min: 750, maxKm: 99, road: false, stops: 'rail', flat: true },
     heli:  { name: 'Helicopter', speed: 200, wait: 15, perKm: 0, min: 250000, maxKm: 99, road: false, needsKind: 'heli' }
   };
 
@@ -913,7 +920,7 @@
   var DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   var DATA = {
-    DISTRICTS: DISTRICTS, ROADS: ROADS, FERRY_STOPS: FERRY_STOPS, BRT_STOPS: BRT_STOPS,
+    DISTRICTS: DISTRICTS, ROADS: ROADS, FERRY_STOPS: FERRY_STOPS, BRT_STOPS: BRT_STOPS, RAIL_LINES: RAIL_LINES,
     OKADA_BAN: OKADA_BAN, MODES: MODES, HOMES: HOMES, HOME_TYPES: HOME_TYPES, SKILLS: SKILLS, SKILL_XP: SKILL_XP,
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
