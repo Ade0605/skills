@@ -135,7 +135,7 @@
    * Both light up only inside claude.ai; the game is complete without them.
    * No chat and no free text travel between players: presence carries a
    * district key, the board carries numbers. */
-  var online = { ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
+  var online = { sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
 
   // Each player's row is a small summary at fame/<id>; the replay log lives
   // beside it at fame/<id>/proof/log. Load every summary (no ordering: a
@@ -193,6 +193,7 @@
     window.claude.use('db').then(function (db) {
       if (!db || myReviewOn) return; myReviewOn = true;
       try { db.doc('adreview/' + online.me).onSnapshot(function (d) { online.myReview = d && d.exists ? d.data() : null; scheduleRender(); }, function () { online.myReview = null; }); } catch (e) { online.myReview = null; }
+      try { db.doc('seareview/' + online.me).onSnapshot(function (d) { online.mySeaReview = d && d.exists ? d.data() : null; scheduleRender(); }, function () { online.mySeaReview = null; }); } catch (e) { online.mySeaReview = null; }
     });
   }
   function subscribeReviews() {
@@ -205,6 +206,10 @@
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
       }, function () { online.adreview = []; }); } catch (e) { online.adreview = []; }
+      try { db.collection('seareview').limit(100).onSnapshot(function (snap) {
+        online.seareview = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }).filter(function (r) { return r.raw && !r.raw.status; });
+        scheduleRender();
+      }, function () { online.seareview = []; }); } catch (e) { online.seareview = []; }
     });
   }
 
@@ -249,6 +254,15 @@
         var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.adpaid = m; scheduleRender();
       }, function () { online.adpaid = {}; }); } catch (e) { online.adimg = []; online.adpaid = {}; }
       subscribeMyReview(); if (online.canEdit) subscribeReviews();
+      try {
+        db.collection('sea').limit(500).onSnapshot(function (snap) {
+          online.sea = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
+          var ids = online.sea.map(function (d) { return d.id; }).filter(function (i) { return !online.names[i]; });
+          if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+          scheduleRender();
+        }, function () { online.sea = []; });
+        db.collection('seaimg').limit(500).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.seaimg = m; scheduleRender(); }, function () { online.seaimg = {}; });
+      } catch (e) { online.sea = []; online.seaimg = {}; }
       try {
         db.collection('homes').limit(300).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.homes = m; scheduleRender(); }, function () { online.homes = {}; });
         db.collection('gifts').limit(300).onSnapshot(function (snap) {
@@ -651,7 +665,7 @@
     return {
       city: L.cityOf(S), loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
-      flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(), weather: L.weatherNow(S), trip: ui.trip && Date.now() - ui.trip.at < 2600 ? ui.trip : null,
+      flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(), weather: L.weatherNow(S), sea: { claims: seaClaims(), mine: online.me || 'me', sel: ui.seaOpen ? seaSel() : null }, trip: ui.trip && Date.now() - ui.trip.at < 2600 ? ui.trip : null,
       clock: L.clockLabel(S), banner: banner,
       places: ui.placeCat === 'boards' || ui.placeCat === 'homes' || ui.placeCat === 'cities' ? [] : D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && (!ui.placeCat || p.type === ui.placeCat); }), place: ui.place,
       homeId: S.home, homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
@@ -893,12 +907,12 @@
     }).join('') + '</div></div>';
   }
   // Read a picked file, crop it to the board's 2:1 shape and re-encode as JPEG.
-  function preparePicture(file) {
+  function preparePicture(file, aspect) {
     return new Promise(function (resolve, reject) {
       if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 15 * 1024 * 1024) return reject(new Error('Pick a JPEG, PNG or WebP picture under 15 MB.'));
       var url = URL.createObjectURL(file), im = new Image();
       im.onload = function () {
-        var W = 320, H = 160, c = document.createElement('canvas'); c.width = W; c.height = H;
+        var ar = aspect || 2, W = ar >= 1 ? 320 : Math.round(320 * ar), H = ar >= 1 ? Math.round(320 / ar) : 320, c = document.createElement('canvas'); c.width = W; c.height = H;
         var g = c.getContext('2d'), r = Math.max(W / im.naturalWidth, H / im.naturalHeight), w = im.naturalWidth * r, h = im.naturalHeight * r;
         g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H); g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
         URL.revokeObjectURL(url);
@@ -1107,7 +1121,7 @@
   }
 
   /* ---------- homes and the Mainland Estate ---------- */
-  function clearPicks() { ui.sel = null; ui.place = null; ui.board = null; ui.homeSel = null; ui.plotSel = null; online.status = ''; }
+  function clearPicks() { ui.sel = null; ui.place = null; ui.board = null; ui.homeSel = null; ui.plotSel = null; ui.seaSel = null; ui.seaOpen = false; online.status = ''; }
   function marketHomes() {
     return Object.keys(D.HOMES).filter(function (k) { var h = D.HOMES[k]; return !h.hidden && (!h.owned || L.ownsHome(S, k)); })
       .sort(function (a, b) { return D.HOMES[a].rent - D.HOMES[b].rent; });
@@ -1227,6 +1241,66 @@
     if (w.from != null) parts.push(String(w.from).padStart(2, '0') + ':00–' + String(w.to).padStart(2, '0') + ':00');
     return parts.join(' ');
   }
+  /* ---------- Sea Plots: shared claims, approved pictures ---------- */
+  var SEA_COLORS = ['#c0392b', '#2f6fa0', '#2fa36b', '#6b3fa0', '#d9822b', '#17181a', '#d0453a', '#0f6f78'];
+  function cleanRect(r) {
+    var S = D.SEA, i = function (v) { return typeof v === 'number' && Math.round(v) === v && v >= 0; };
+    if (!r || !i(r.x) || !i(r.y) || !i(r.w) || !i(r.h) || r.w < 1 || r.h < 1 || r.w > S.maxSide || r.h > S.maxSide || r.x + r.w > S.cols || r.y + r.h > S.rows) return null;
+    return { x: r.x, y: r.y, w: r.w, h: r.h, at: typeof r.at === 'number' ? r.at : 0 };
+  }
+  function overlap(a, b) { return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
+  function okImg(s) { return typeof s === 'string' && s.length <= L.PIC_MAX && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+\/]+={0,2}$/.test(s); }
+  // Everyone's blocks, oldest claim first; a later claim that overlaps is ignored.
+  function seaClaims() {
+    var list = (online.sea || []).map(function (d) { var r = cleanRect(d.raw); return r ? Object.assign(r, { id: d.id }) : null; }).filter(Boolean)
+      .sort(function (a, b) { return a.at - b.at || (a.id < b.id ? -1 : 1); }), out = [];
+    // Your own block comes from your life, so it shows even offline.
+    if (S && S.sea && online.me) { var myDoc = list.filter(function (k) { return k.id === online.me; })[0]; list = list.filter(function (k) { return k.id !== online.me; }).concat([Object.assign({ id: online.me, at: myDoc ? myDoc.at : Infinity }, S.sea)]); list.sort(function (a, b) { return a.at - b.at; }); }
+    else if (S && S.sea) list.push(Object.assign({ id: 'me', at: Infinity }, S.sea));
+    list.forEach(function (k) { if (!out.some(function (o) { return overlap(o, k); })) out.push(k); });
+    return out.map(function (k) {
+      var im = online.seaimg[k.id], pend = k.id === (online.me || 'me') && online.mySeaReview && !online.mySeaReview.status ? online.mySeaReview : null;
+      var src = im && okImg(im.img) && im.x === k.x && im.y === k.y && im.w === k.w && im.h === k.h ? im : null;
+      var nm = (online.names[k.id] && online.names[k.id].name) || '';
+      return { id: k.id, x: k.x, y: k.y, w: k.w, h: k.h, img: src ? src.img : null, imgAt: src ? src.approvedAt || 0 : 0, pending: !!pend,
+        color: SEA_COLORS[parseInt(String(k.id).replace(/\W/g, '').slice(-6), 36) % SEA_COLORS.length || 0], label: (nm[0] || '🌊').toUpperCase() };
+    });
+  }
+  function seaSel() {
+    if (!ui.seaSel) return null;
+    var s2 = Object.assign({}, ui.seaSel), S2 = D.SEA;
+    s2.w = Math.min(s2.w, S2.cols - s2.x); s2.h = Math.min(s2.h, S2.rows - s2.y);
+    s2.bad = seaClaims().some(function (k) { return k.id !== (online.me || 'me') && overlap(k, s2); });
+    return s2;
+  }
+  function seaView() {
+    var sel = seaSel(), mine = S.sea, S2 = D.SEA;
+    var html = '<div class="inline" style="justify-content:space-between"><h3>🌊 Sea Plots</h3><button class="btn sm ghost" id="sea-close" data-seaclose="1">Close</button></div>' +
+      '<p class="note">A grid of ' + (S2.cols * S2.rows).toLocaleString('en') + ' plots in the water off Lagos Island. Buy a block (up to ' + S2.maxSide + '×' + S2.maxSide + ') and put a picture on it for every Lagosian to see. Pictures are checked by an editor before they go live. ' + N(L.price(S, S2.price)) + ' a plot. Zoom in to see the small ones.</p>';
+    if (sel) {
+      var cost = L.seaCost(S, sel.w, sel.h);
+      html += '<div class="label">Block size from plot ' + (sel.x + 1) + '·' + (sel.y + 1) + '</div><div class="pg-chips" style="padding:0">' + [[1, 1], [2, 2], [3, 2], [4, 4], [6, 4], [8, 8], [12, 12]].map(function (z) {
+        return '<button type="button" class="pg-chip' + (ui.seaSel.w === z[0] && ui.seaSel.h === z[1] ? ' sel' : '') + '" id="seasz-' + z[0] + 'x' + z[1] + '" data-seasize="' + z[0] + 'x' + z[1] + '">' + z[0] + '×' + z[1] + '</button>';
+      }).join('') + '</div>';
+      html += sel.bad ? '<p class="why">Someone already owns part of that block. Pick another spot.</p>'
+        : '<div class="inline" style="margin-top:8px"><button class="btn go" id="sea-buy" data-seabuy="1"' + (cost > S.cash + S.bank ? ' disabled' : '') + '>' + (mine ? 'Move here' : 'Buy') + ' ' + sel.w + '×' + sel.h + (cost ? ' · ' + N(cost) : ' · free (same size or smaller)') + '</button></div>';
+    }
+    if (mine) {
+      var rv = online.mySeaReview, live = online.me && online.seaimg[online.me] && okImg(online.seaimg[online.me].img);
+      html += '<div class="section"><h3>Your block · ' + mine.w + '×' + mine.h + ' at ' + (mine.x + 1) + '·' + (mine.y + 1) + '</h3><p class="note">' +
+        (live ? '✅ Your picture is live.' : rv && !rv.status ? '⏳ Your picture is waiting for an editor.' : rv && rv.status === 'rejected' ? '❌ Your last picture was not approved. Try another.' : 'No picture yet.') + (online.db ? '' : ' Pictures need the shared board (open the game on claude.ai).') + '</p>' +
+        (online.db && online.me ? '<label class="btn sm" for="sea-file">📷 Upload a picture</label><input type="file" id="sea-file" accept="image/jpeg,image/png,image/webp" hidden>' : '') +
+        ' <button class="btn sm ghost" id="sea-release" data-searelease="1">Let it go</button>' + (online.seaStatus ? '<p class="note">' + esc(online.seaStatus) + '</p>' : '') + '</div>';
+    } else if (!sel) html += '<p class="note">Tap a spot on the sea grid to pick a block.</p>';
+    if (online.canEdit) {
+      var q = (online.seareview || []).filter(function (r) { return okImg(r.raw.img) && cleanRect(r.raw); });
+      html += '<div class="section"><h3>Review sea pictures <span class="muted">· ' + q.length + ' waiting</span></h3>' + (q.length ? '<div class="list">' + q.map(function (r) {
+        return '<div class="item review"><img class="sea-prev" alt="" src="' + r.raw.img + '"><div><h3>' + esc(nameOf(r.id)) + '</h3><div class="meta"><span>' + r.raw.w + '×' + r.raw.h + '</span></div><div class="inline"><button class="btn sm" id="sr-ok-' + esc(r.id) + '" data-srok="' + esc(r.id) + '">Approve</button><button class="btn sm ghost" id="sr-no-' + esc(r.id) + '" data-srno="' + esc(r.id) + '">Reject</button></div></div></div>';
+      }).join('') + '</div>' : '<p class="note">Nothing to review.</p>') + '</div>';
+    }
+    return html;
+  }
+
   function mountPlayground() {
     if (!S || !window.LasgidiPlayground) return;
     var narrow = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
@@ -1237,9 +1311,10 @@
       onSelectPlace: function (id) { clearPicks(); ui.place = id; render(); },
       onSelectBoard: function (id) { clearPicks(); ui.board = id; render(); },
       onSelectHome: function (id) { clearPicks(); ui.homeSel = id; render(); },
-      onSelectPlot: function (n) { clearPicks(); ui.plotSel = n; render(); }
+      onSelectPlot: function (n) { clearPicks(); ui.plotSel = n; render(); },
+      onSelectSea: function (c, r) { clearPicks(); var w = ui.seaSel ? ui.seaSel.w : 2, h = ui.seaSel ? ui.seaSel.h : 2; ui.seaSel = { x: c, y: r, w: w, h: h }; ui.seaOpen = true; render(); }
     });
-    slot.appendChild(playground.el);
+    slot.appendChild(playground.el); window.__pg = playground;
     playground.update(sceneFor());
   }
 
@@ -1261,7 +1336,7 @@
     var html = '<div class="pg-chips" role="group" aria-label="Show places"><span class="label">Places</span>' +
       '<button type="button" class="pg-chip' + (!ui.placeCat ? ' sel' : '') + '" id="pc-all" data-placecat="">All</button>' +
       cats.map(function (c) { return '<button type="button" class="pg-chip' + (ui.placeCat === c ? ' sel' : '') + '" id="pc-' + c + '" data-placecat="' + c + '"><i class="sw" style="background:' + D.PLACE_TYPES[c].color + '"></i>' + esc(D.PLACE_TYPES[c].name) + '</button>'; }).join('') +
-      (L.cityOf(S) === 'lagos' ? '<button type="button" class="pg-chip' + (ui.placeCat === 'boards' ? ' sel' : '') + '" id="pc-boards" data-placecat="boards">📣 Billboards</button>' : '') +
+      (L.cityOf(S) === 'lagos' ? '<button type="button" class="pg-chip' + (ui.placeCat === 'boards' ? ' sel' : '') + '" id="pc-boards" data-placecat="boards">📣 Billboards</button><button type="button" class="pg-chip' + (ui.seaOpen ? ' sel' : '') + '" id="pc-sea" data-seaopen="1">🌊 Sea Plots</button>' : '') +
       '<button type="button" class="pg-chip' + (ui.placeCat === 'homes' ? ' sel' : '') + '" id="pc-homes" data-placecat="homes">🏠 Homes</button>' +
       '<button type="button" class="pg-chip' + (ui.placeCat === 'cities' ? ' sel' : '') + '" id="pc-cities" data-placecat="cities">✈️ Cities</button></div>';
     if (ui.placeCat === 'cities') return html + citiesView();
@@ -1321,7 +1396,7 @@
       '<div class="pg-wrap">' + questChips() + '<div class="pg-slot"></div></div>' + placeFilters() + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
       '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
-        : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : ui.homeSel ? homeView(ui.homeSel) : ui.plotSel != null ? plotView(ui.plotSel)
+        : ui.seaOpen ? seaView() : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : ui.homeSel ? homeView(ui.homeSel) : ui.plotSel != null ? plotView(ui.plotSel)
         : '<p>' + esc(d.blurb) + ' Tap a district, a place, a home or a billboard.</p>') + '</div>';
   }
 
@@ -1920,7 +1995,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2025,6 +2100,28 @@
         if (r.ok) openParty(pk, plan);
         return r;
       });
+      return;
+    }
+    if (ds.seaopen) { clearPicks(); ui.seaOpen = true; render(); if (playground && playground.focusSea) playground.focusSea(); return; }
+    if (ds.seaclose) { ui.seaOpen = false; ui.seaSel = null; render(); return; }
+    if (ds.seasize) { var sz = ds.seasize.split('x'); if (ui.seaSel) { ui.seaSel.w = +sz[0]; ui.seaSel.h = +sz[1]; } render(); return; }
+    if (ds.seabuy) {
+      var sel = seaSel(); if (!sel || sel.bad) return;
+      run(function () {
+        var r = L.buySeaPlots(S, sel.x, sel.y, sel.w, sel.h);
+        if (r.ok && online.db && online.me) online.db.doc('sea/' + online.me).set({ x: sel.x, y: sel.y, w: sel.w, h: sel.h, at: Date.now() }).catch(function () { online.seaStatus = 'Saved in your life, but the shared map refused it.'; render(); });
+        if (r.ok) ui.seaSel = null;
+        return r;
+      });
+      return;
+    }
+    if (ds.searelease) { run(function () { var r = L.releaseSeaPlots(S); if (r.ok && online.db && online.me) online.db.doc('sea/' + online.me).set({ x: 0, y: 0, w: 0, h: 0, at: Date.now() }).catch(function () {}); return r; }); return; }
+    if (ds.srok || ds.srno) {
+      var rid = ds.srok || ds.srno, rr = (online.seareview || []).filter(function (x) { return x.id === rid; })[0];
+      if (!rr || !online.db) return;
+      if (ds.srno) { online.db.doc('seareview/' + rid).update({ status: 'rejected' }).then(function () { render(); }); return; }
+      online.db.doc('seaimg/' + rid).set({ img: rr.raw.img, x: rr.raw.x, y: rr.raw.y, w: rr.raw.w, h: rr.raw.h, approvedAt: Date.now() })
+        .then(function () { return online.db.doc('seareview/' + rid).update({ status: 'approved' }); }).then(function () { render(); }, function () {});
       return;
     }
     if (ds.japa) { var jd = ds.japa; run(function () { return L.japaFly(S, jd); }); return; }
@@ -2186,6 +2283,13 @@
     if (e.target && e.target.id === 'ad-file') {
       var f = e.target.files && e.target.files[0];
       preparePicture(f).then(function (d) { ui.picDraft = d; online.picStatus = ''; render(); }, function (err) { ui.picDraft = null; online.picStatus = err.message; render(); });
+    }
+    if (e.target && e.target.id === 'sea-file' && S && S.sea && online.db && online.me) {
+      var sf = e.target.files && e.target.files[0], m = S.sea;
+      online.seaStatus = 'Preparing your picture…'; render();
+      preparePicture(sf, m.w / m.h).then(function (d) {
+        return online.db.doc('seareview/' + online.me).set({ img: d, x: m.x, y: m.y, w: m.w, h: m.h, at: Date.now() });
+      }).then(function () { online.seaStatus = 'Sent for review. It goes live once an editor approves it.'; render(); }, function (err) { online.seaStatus = (err && err.message) || 'It could not be sent.'; render(); });
     }
     if (e.target && e.target.id === 'ad-renew') { ui.ad.renew = e.target.checked; }
     if (e.target && e.target.id === 'biz-site') { ui.bizSite = e.target.value; ui.bizOpen = true; render(); }

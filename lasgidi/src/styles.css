@@ -520,3 +520,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .dg-btn.brake { background: #d0453a; color: #fff; border-color: #7b2d26; font-size: 16px; }
 .haggle { margin: -4px 0 8px; padding: 10px 12px; border-radius: 12px; border: 1.5px dashed var(--danfo-ink); background: color-mix(in srgb, var(--danfo) 14%, var(--surface)); font-size: 13.5px; display: grid; gap: 6px; }
 .haggle p { margin: 0; }
+
+/* enlarged map */
+.pg.pg-full { position: fixed; inset: 0; z-index: 70; background: var(--water, #16312f); border-radius: 0; }
+.pg.pg-full .pg-canvas { height: 100%; }
+html.pg-full-open { overflow: hidden; }
+.pg-canvas:focus-visible { outline: 3px solid var(--lagoon); outline-offset: -3px; }
+.sea-prev { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }

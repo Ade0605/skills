@@ -189,6 +189,15 @@
       LAND_BOX.minY = Math.min(LAND_BOX.minY, p.y); LAND_BOX.maxY = Math.max(LAND_BOX.maxY, p.y);
     });
   });
+  // Lagos: fit the Sea Plots grid in the frame too.
+  if (city === 'lagos' && D.SEA) {
+    var S0 = D.SEA, sx1 = S0.x0 + S0.cols * S0.gap, sy1 = S0.y0 + S0.rows * S0.gap;
+    [[S0.x0, S0.y0], [sx1, S0.y0], [S0.x0, sy1], [sx1, sy1]].forEach(function (c) {
+      var p = iso(c[0], c[1]);
+      LAND_BOX.minX = Math.min(LAND_BOX.minX, p.x); LAND_BOX.maxX = Math.max(LAND_BOX.maxX, p.x);
+      LAND_BOX.minY = Math.min(LAND_BOX.minY, p.y); LAND_BOX.maxY = Math.max(LAND_BOX.maxY, p.y);
+    });
+  }
 
   }
   buildWorld('lagos');
@@ -218,7 +227,8 @@
     hud.className = 'pg-hud';
     var zoom = document.createElement('div');
     zoom.className = 'pg-zoom';
-    zoom.innerHTML = '<button type="button" class="pg-zbtn" data-z="1" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-z="-1" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-z="0" aria-label="Centre on me">◎</button>';
+    zoom.innerHTML = '<button type="button" class="pg-zbtn" data-z="full" aria-label="Enlarge map" aria-pressed="false">⛶</button><button type="button" class="pg-zbtn" data-z="1" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-z="-1" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-z="0" aria-label="Centre on me">◎</button>';
+    canvas.tabIndex = 0;
     wrap.appendChild(canvas); wrap.appendChild(hud); wrap.appendChild(zoom);
 
     var ctx = canvas.getContext('2d');
@@ -269,12 +279,13 @@
 
     function resize() {
       var r = wrap.getBoundingClientRect();
-      var w = Math.max(240, Math.round(r.width)), h = Math.max(200, Math.round(w * (w < 600 ? 0.82 : 0.66)));
+      var full = wrap.classList.contains('pg-full');
+      var w = Math.max(240, Math.round(r.width)), h = full ? Math.max(200, Math.round(r.height)) : Math.max(200, Math.round(w * (w < 600 ? 0.82 : 0.66)));
       dpr = Math.min(w < 600 ? 1.5 : 2, root.devicePixelRatio || 1); // cheap phones: fewer pixels to fill
       if (w === W && h === H && canvas.width === Math.round(w * dpr)) return false;
       W = w; H = h;
       canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-      canvas.style.height = H + 'px';
+      canvas.style.height = full ? '100%' : H + 'px';
       // Fit the land (not the empty sea corners), leaving room for the HUD.
       var minX = LAND_BOX.minX, maxX = LAND_BOX.maxX, minY = LAND_BOX.minY - 70, maxY = LAND_BOX.maxY + 6;
       base.s = Math.min(W / (maxX - minX), H / (maxY - minY)) * 0.97;
@@ -688,6 +699,9 @@
         if (sel || cam.z >= 1.9) labels.push({ place: pl, top: { x: p.x, y: cy + 4 }, pri: sel ? 1 : 4, sel: sel });
       });
 
+      // Sea Plots: the grid, everyone's blocks, and approved pictures laid flat on the water.
+      if (CITY === 'lagos') drawSea();
+
       // District pins.
       pins = []; faceBoxes = [];
       var pulse = reduce ? 0.5 : (clock % 2200) / 2200;
@@ -787,6 +801,56 @@
       ctx.restore();
     }
 
+    var seaImgs = {};
+    function seaImage(key, src) {
+      var im = seaImgs[key];
+      if (!im) { if (Object.keys(seaImgs).length > 80) seaImgs = {}; im = seaImgs[key] = new Image(); im.onload = function () { kick(); }; im.src = src; }
+      return im.complete && im.naturalWidth ? im : null;
+    }
+    function seaQuad(c, r, w, h) {
+      var S = D.SEA, x0 = S.x0 + c * S.gap, y0 = S.y0 + r * S.gap, x1 = x0 + w * S.gap, y1 = y0 + h * S.gap;
+      return [toScreen(x0, y0, 0), toScreen(x1, y0, 0), toScreen(x1, y1, 0), toScreen(x0, y1, 0)];
+    }
+    function pathQuad(q) { ctx.beginPath(); ctx.moveTo(q[0].x, q[0].y); for (var i = 1; i < 4; i++) ctx.lineTo(q[i].x, q[i].y); ctx.closePath(); }
+    function drawSea() {
+      var S = D.SEA, sea = scene.sea || {}, g = S.gap;
+      var all = seaQuad(0, 0, S.cols, S.rows);
+      pathQuad(all); ctx.fillStyle = theme.dark ? 'rgba(80,140,190,.16)' : 'rgba(255,255,255,.18)'; ctx.fill();
+      var cell = Math.hypot(all[1].x - all[0].x, all[1].y - all[0].y) / S.cols;
+      if (cell > 2.2) {
+        ctx.strokeStyle = theme.dark ? 'rgba(170,210,240,.22)' : 'rgba(255,255,255,.45)'; ctx.lineWidth = 0.6; ctx.beginPath();
+        var step = cell > 5 ? 1 : cell > 3 ? 2 : 4;
+        for (var c = 0; c <= S.cols; c += step) { var a = toScreen(S.x0 + c * g, S.y0, 0), b = toScreen(S.x0 + c * g, S.y0 + S.rows * g, 0); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
+        for (var r = 0; r <= S.rows; r += step) { var a2 = toScreen(S.x0, S.y0 + r * g, 0), b2 = toScreen(S.x0 + S.cols * g, S.y0 + r * g, 0); ctx.moveTo(a2.x, a2.y); ctx.lineTo(b2.x, b2.y); }
+        ctx.stroke();
+      }
+      pathQuad(all); ctx.strokeStyle = theme.dark ? 'rgba(170,210,240,.5)' : 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.2; ctx.stroke();
+      (sea.claims || []).forEach(function (k) {
+        var q = seaQuad(k.x, k.y, k.w, k.h), im = k.img ? seaImage(k.id + ':' + k.imgAt, k.img) : null;
+        if (im) {
+          ctx.save(); pathQuad(q); ctx.clip();
+          // Map picture pixels onto the iso parallelogram of the block.
+          ctx.transform((q[1].x - q[0].x) / im.naturalWidth, (q[1].y - q[0].y) / im.naturalWidth, (q[3].x - q[0].x) / im.naturalHeight, (q[3].y - q[0].y) / im.naturalHeight, q[0].x, q[0].y);
+          ctx.drawImage(im, 0, 0);
+          ctx.restore();
+        } else {
+          pathQuad(q); ctx.fillStyle = k.color || '#f2b600'; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
+          var cx = (q[0].x + q[2].x) / 2, cy = (q[0].y + q[2].y) / 2, sz = Math.min(14, Math.max(7, cell * Math.min(k.w, k.h) * 0.45));
+          if (cell * Math.min(k.w, k.h) > 8) { ctx.fillStyle = '#ffffff'; ctx.font = '800 ' + Math.round(sz) + 'px Atkinson Hyperlegible, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(k.label || '?', cx, cy); ctx.textBaseline = 'alphabetic'; }
+        }
+        pathQuad(q); ctx.lineWidth = k.id === sea.mine ? 2.5 : 1; ctx.strokeStyle = k.id === sea.mine ? theme.danfo : 'rgba(23,24,26,.55)'; ctx.stroke();
+      });
+      if (sea.sel) {
+        var qs = seaQuad(sea.sel.x, sea.sel.y, sea.sel.w, sea.sel.h);
+        pathQuad(qs); ctx.fillStyle = sea.sel.bad ? 'rgba(208,69,58,.35)' : 'rgba(242,182,0,.35)'; ctx.fill();
+        ctx.setLineDash([5, 4]); ctx.lineWidth = 2; ctx.strokeStyle = sea.sel.bad ? '#d0453a' : theme.danfo; ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+    function seaCellAt(w) {
+      var S = D.SEA, c = Math.floor((w.x - S.x0) / S.gap), r = Math.floor((w.y - S.y0) / S.gap);
+      return c >= 0 && r >= 0 && c < S.cols && r < S.rows ? { c: c, r: r } : null;
+    }
+
     // Name chips, most important first; each takes the first free spot
     // above, below, right or left of its pin, or is left off if crowded.
     function placeLabels(list) {
@@ -881,21 +945,67 @@
     }
     function schedule() { if (!raf) raf = root.requestAnimationFrame(frame); }
 
-    // Pointer: tap a pin to select; drag to pan when zoomed in.
-    var drag = null;
+    // Pointer: tap a pin to select; drag to pan; pinch, wheel or double-tap to zoom.
+    var drag = null, touches = {}, pinch = null, lastTap = 0, MAXZ = 6;
+    function zoomAt(z, fx, fy) {
+      z = Math.max(1, Math.min(MAXZ, z));
+      var wpt = fromScreen(fx, fy);
+      cam.z = z;
+      if (z === 1) { cam.px = 0; cam.py = 0; }
+      else { var q = toScreen(wpt.x, wpt.y, 0); cam.px += fx - q.x; cam.py += fy - q.y; }
+      clampCam(); staticKey = ''; kick();
+    }
+    function local(e) { var r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
     canvas.addEventListener('pointerdown', function (e) {
+      touches[e.pointerId] = local(e);
+      var ids = Object.keys(touches);
+      if (ids.length === 2) {
+        var a = touches[ids[0]], b = touches[ids[1]];
+        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: cam.z };
+        drag = null; return;
+      }
       drag = { x: e.clientX, y: e.clientY, px: cam.px, py: cam.py, moved: false };
       canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener('pointermove', function (e) {
+      if (touches[e.pointerId]) touches[e.pointerId] = local(e);
+      if (pinch) {
+        var ids = Object.keys(touches); if (ids.length < 2) return;
+        var a = touches[ids[0]], b = touches[ids[1]], d = Math.hypot(a.x - b.x, a.y - b.y);
+        zoomAt(pinch.z * d / pinch.d, (a.x + b.x) / 2, (a.y + b.y) / 2);
+        return;
+      }
       if (!drag) return;
       var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
       if (drag.moved && cam.z > 1) { cam.px = drag.px + dx; cam.py = drag.py + dy; clampCam(); staticKey = ''; kick(); }
     });
+    function lift(e) { delete touches[e.pointerId]; if (Object.keys(touches).length < 2 && pinch) { pinch = null; drag = { moved: true }; } }
+    canvas.addEventListener('pointercancel', function (e) { lift(e); drag = null; });
+    canvas.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      var p = local(e);
+      zoomAt(cam.z * (e.deltaY < 0 ? 1.2 : 1 / 1.2), p.x, p.y);
+    }, { passive: false });
+    canvas.addEventListener('dblclick', function (e) { var p = local(e); zoomAt(cam.z * 1.6, p.x, p.y); });
+    canvas.addEventListener('keydown', function (e) {
+      if (e.key === '+' || e.key === '=') { zoomAt(cam.z * 1.25, W / 2, H / 2); e.preventDefault(); }
+      else if (e.key === '-' || e.key === '_') { zoomAt(cam.z / 1.25, W / 2, H / 2); e.preventDefault(); }
+    });
+    function setFull(on) {
+      wrap.classList.toggle('pg-full', on);
+      document.documentElement.classList.toggle('pg-full-open', on);
+      var b = zoom.querySelector('[data-z="full"]'); if (b) { b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.setAttribute('aria-label', on ? 'Exit full screen' : 'Enlarge map'); b.textContent = on ? '✕' : '⛶'; }
+      W = 0; resize(); clampCam(); staticKey = ''; kick();
+    }
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && wrap.classList.contains('pg-full')) setFull(false); });
     canvas.addEventListener('pointerup', function (e) {
+      var wasPinch = !!pinch || Object.keys(touches).length > 1;
+      lift(e);
       var d = drag; drag = null;
-      if (!d || d.moved) return;
+      if (wasPinch || !d || d.moved) return;
+      // Double-tap on touch screens zooms in.
+      if (e.pointerType === 'touch') { var now = Date.now(); if (now - lastTap < 300) { lastTap = 0; var lp = local(e); zoomAt(cam.z * 1.6, lp.x, lp.y); return; } lastTap = now; }
       var r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, best = null, bd = 26;
       pins.forEach(function (p) {
         var dd = Math.min(Math.hypot(p.x - x, p.y - y), Math.hypot(p.gx - x, p.gy - y), Math.hypot(p.x - x, p.y - 19 - y));
@@ -910,6 +1020,8 @@
       var bestPlace = null, bp = Math.min(bd, 16);
       // Tap on the estate grid: work back from the screen to world km.
       var w = fromScreen(x, y);
+      var seaCell = CITY === 'lagos' && bd > 14 ? seaCellAt(w) : null;
+      if (seaCell && opts.onSelectSea && !placeHits.some(function (p) { return Math.hypot(p.x - x, p.y - y) < 12; })) { opts.onSelectSea(seaCell.c, seaCell.r); return; }
       if (!bestHome && bd > 14 && CITY === 'lagos' && w.x > E.x0 && w.x < EX1 && w.y > E.y0 && w.y < EY1 && opts.onSelectPlot) {
         var col = Math.floor((w.x - E.x0) / E.gap), row = Math.floor((w.y - E.y0) / E.gap);
         var hitPlace = placeHits.some(function (p) { return Math.hypot(p.x - x, p.y - y) < 14; });
@@ -921,10 +1033,10 @@
     });
     zoom.addEventListener('click', function (e) {
       var b = e.target.closest('[data-z]'); if (!b) return;
+      if (b.getAttribute('data-z') === 'full') { setFull(!wrap.classList.contains('pg-full')); return; }
       var z = +b.getAttribute('data-z');
-      if (z === 0) { cam.z = 1.8; centreOn(scene.loc); }
-      else { cam.z = Math.max(1, Math.min(3, cam.z + z * 0.5)); if (cam.z === 1) { cam.px = 0; cam.py = 0; } }
-      clampCam(); staticKey = ''; kick();
+      if (z === 0) { cam.z = Math.max(1.8, cam.z); centreOn(scene.loc); clampCam(); staticKey = ''; kick(); }
+      else zoomAt(z > 0 ? cam.z * 1.4 : cam.z / 1.4, W / 2, H / 2);
     });
     function centreOn(k) {
       cam.px = 0; cam.py = 0;
@@ -932,7 +1044,7 @@
       cam.px = W / 2 - p.x; cam.py = H / 2 - p.y;
     }
     function clampCam() {
-      var lim = (cam.z - 1) * Math.max(W, H) * 0.6;
+      var lim = (cam.z - 1) * Math.max(W, H) * 0.62;
       cam.px = Math.max(-lim, Math.min(lim, cam.px)); cam.py = Math.max(-lim, Math.min(lim, cam.py));
       if (cam.z === 1) { cam.px = 0; cam.py = 0; }
     }
@@ -945,6 +1057,10 @@
 
     return {
       el: wrap,
+      // Screen point of the centre of a sea plot (for tests and keyboard help).
+      // Fly the camera to the Sea Plots grid.
+      focusSea: function () { var S = D.SEA; cam.z = Math.max(cam.z, W < 600 ? 3 : 2.4); cam.px = 0; cam.py = 0; var p = toScreen(S.x0 + S.cols * S.gap / 2, S.y0 + S.rows * S.gap / 2, 0); cam.px = W / 2 - p.x; cam.py = H / 2 - p.y; clampCam(); staticKey = ''; kick(); },
+      seaPoint: function (c, r) { var S = D.SEA, p = toScreen(S.x0 + (c + 0.5) * S.gap, S.y0 + (r + 0.5) * S.gap, 0); return { x: p.x, y: p.y }; },
       update: function (next) {
         if ((next.city || 'lagos') !== CITY) { buildWorld(next.city || 'lagos'); rebuildTraffic(); W = 0; cam = { z: 1, px: 0, py: 0 }; staticKey = ''; }
         scene = next;

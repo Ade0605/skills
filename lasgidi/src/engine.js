@@ -74,6 +74,7 @@
     chief:       'Chieftaincy: took a title',
     danfo:       'Agbero approved: served 50 danfo passengers',
     japa:        'Japa: left Nigeria for a new life abroad',
+    seaplot:     'Sea Plots: own a block in the water',
     vendor:      'Online vendor: sold 100 items'
   };
 
@@ -182,7 +183,7 @@
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
-    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch|^Danfo (owner|fuel|repairs|returns)/.test(m)) return 'business';
+    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch|^Sea Plots|^Danfo (owner|fuel|repairs|returns)/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
@@ -293,7 +294,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {},
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -2168,6 +2169,7 @@
     if (!s.partyJoins) s.partyJoins = {};
     if (s.danfoDriver === undefined) s.danfoDriver = false;
     if (!s.haggles) s.haggles = {};
+    if (s.sea === undefined) s.sea = null;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2998,6 +3000,34 @@
     log(s, '🚐 Your danfo driver brought ' + naira(got) + ' for the week.', 'good');
   }
 
+  /* ---------- Sea Plots ---------- */
+  // One block per life. Buying a new block replaces the old one; you pay only
+  // for plots beyond the ones you already had. Other players' claims are
+  // checked against the shared store by the page before this is called.
+  function seaCost(s, w, h) {
+    var had = s.sea ? s.sea.w * s.sea.h : 0;
+    return price(s, D.SEA.price) * Math.max(0, w * h - had);
+  }
+  function buySeaPlots(s, x, y, w, h) {
+    var S = D.SEA, ok2 = function (v) { return Math.round(v) === v && v >= 0; };
+    if (!ok2(x) || !ok2(y) || !ok2(w) || !ok2(h) || w < 1 || h < 1) return fail('Pick a block of plots.');
+    if (w > S.maxSide || h > S.maxSide) return fail('A block is at most ' + S.maxSide + ' plots on a side.');
+    if (x + w > S.cols || y + h > S.rows) return fail('That block runs off the grid.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.challenge) return fail('No Sea Plots in Weekly Lagos.');
+    var cost = seaCost(s, w, h);
+    s.alerts = [];
+    if (cost && !pay(s, cost, 'Sea Plots: ' + w + '×' + h + ' block')) return fail('That block costs ' + naira(cost) + '.');
+    s.sea = { x: x, y: y, w: w, h: h };
+    unlock(s, 'seaplot');
+    return finish(s, ok('🌊 You own a ' + w + '×' + h + ' block of Sea Plots' + (cost ? ' for ' + naira(cost) : '') + '. Add a picture for all Lagos to see.'));
+  }
+  function releaseSeaPlots(s) {
+    if (!s.sea) return fail('You own no Sea Plots.');
+    s.sea = null;
+    return ok('You let your Sea Plots go. No refunds on the water.');
+  }
+
   /* ---------- japa: the international flight that ends a life ---------- */
   var JAPA_FUNDS = 15000000, JAPA_VISA = 1200000;
   function japaBlock(s, dest) {
@@ -3204,6 +3234,7 @@
     buyPhone: recorded('ph', buyPhone), brandDeal: brandDeal, followerGain: followerGain, phoneCam: phoneCam,
     openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
+    buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
     danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,

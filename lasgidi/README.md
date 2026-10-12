@@ -96,6 +96,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The app keeps 25% of the fares, and you pay for your own fuel.
   - Rush hour brings more trips, and night fares are higher.
   - Luxury cars earn premium fares but burn so much fuel that a supercar usually loses money.
+- **Interactive map:** zoom with the mouse wheel, by pinching, or by double-tapping, up to 6×. Drag to pan. The ⛶ button enlarges the map to full screen (Esc or ✕ to exit), and **+**/**-** zoom when the map has focus.
+- **🌊 Sea Plots:** a grid of 1,152 plots in the Atlantic below Victoria Island and Lekki, shared by every player, like a million-naira homepage.
+  - **Buying:** tap a spot (or the 🌊 Sea Plots chip) and pick a block size, up to 12×12. A block costs ₦5,000 a plot. Moving or enlarging charges only for the extra plots.
+  - **Pictures:** upload a picture for your block. An editor approves it first, then it shows on the water for everyone.
+  - **Claims:** the oldest claim wins any overlap.
 - **Japa:** the life's ending, at Murtala Muhammed Airport's international departures.
   - **Requirements:** pass IELTS, have ₦15m proof of funds plus the visa and ticket, and owe no debts.
   - **Destinations:** Toronto, London, Houston or Dubai.

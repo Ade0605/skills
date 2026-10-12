@@ -1253,3 +1253,22 @@ test('japa: IELTS, funds and no debts at Ikeja airport; then the life is frozen'
   assert.equal(s.replay.acts.length, n, 'nothing more is recorded');
   assert.ok(L.availableActions(s).every(a => a.disabled));
 });
+
+test('sea plots: one block per life, bounds and size, pay only for added plots, replays', () => {
+  const s = L.newGame({ seed: 69, origin: 'nepo', goal: 'freestyle', rules: 8 });
+  assert.match(L.buySeaPlots(s, 0, 0, 13, 2).msg, /at most 12/);
+  assert.match(L.buySeaPlots(s, D.SEA.cols - 1, 0, 2, 2).msg, /off the grid/);
+  const b0 = s.cash + s.bank;
+  assert.ok(L.buySeaPlots(s, 4, 3, 2, 2).ok);
+  assert.equal(b0 - (s.cash + s.bank), L.price(s, D.SEA.price) * 4);
+  assert.ok(s.sea && s.ach.seaplot);
+  const b1 = s.cash + s.bank;
+  assert.ok(L.buySeaPlots(s, 10, 3, 3, 2).ok, 'move and enlarge');
+  assert.equal(b1 - (s.cash + s.bank), L.price(s, D.SEA.price) * 2, 'only the 2 extra plots');
+  assert.equal(L.seaCost(s, 2, 2), 0);
+  assert.ok(L.releaseSeaPlots(s).ok && s.sea === null);
+  assert.equal(L.category('Sea Plots: 2×2 block', -1), 'business');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  const o = L.newGame({ seed: 70, origin: 'mid', goal: 'freestyle' }); delete o.sea;
+  assert.equal(L.deserialize(L.serialize(o)).state.sea, null);
+});
