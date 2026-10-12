@@ -1050,3 +1050,37 @@ test('pets and HMO: yards for dogs, weekly care, HMO pays the hospital, and repl
   assert.ok(L.rehomePet(m, 'cat').ok && m.pets.length === 0);
   assert.equal(L.category('HMO premium', -1), 'health');
 });
+
+test('online shop: setup, stock, weekly sales net of fees, spoilage, ads, close, replay', () => {
+  const s = L.newGame({ seed: 55, origin: 'nepo', goal: 'freestyle' });
+  assert.equal(L.restockShop(s, 10).ok, false, 'open first');
+  const b0 = s.cash + s.bank;
+  assert.ok(L.openShop(s, 'okrika').ok);
+  assert.equal(b0 - (s.cash + s.bank), L.price(s, 10000));
+  assert.ok(L.questDone(s, 'shop'));
+  assert.match(L.restockShop(s, 501).msg, /500 at most/);
+  assert.ok(L.restockShop(s, 20).ok && s.shop.stock === 20);
+  assert.ok(L.setShopAds(s, 'insta').ok);
+  const p = L.shopPreview(s);
+  assert.equal(p.orders, 20, 'capped by stock');
+  for (let i = 0; i < 9 && L.week(s) < 1; i++) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 24 * 60); }
+  assert.ok(s.shop.last && s.shop.last.orders <= 20 && s.shop.sold === s.shop.last.orders);
+  assert.equal(s.shop.stock, 20 - s.shop.last.orders);
+  assert.equal(L.category('Shop sales: Okrika thrift clothes', 1), 'business');
+  assert.equal(L.category('Dispatch riders', -1), 'business');
+  while (s.pending.length) L.resolveChoice(s, 0);
+  assert.match(L.openShop(s, 'chops').msg, s.shop.stock ? /clear your stock/ : /live/);
+  const before = s.cash + s.bank, left = s.shop.stock;
+  assert.ok(L.closeShop(s).ok && s.shop === null);
+  assert.equal(s.cash + s.bank - before, Math.floor(left * L.price(s, D.SHOP_NICHES.okrika.cost) * 0.4));
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  // Small chops: unsold trays spoil at the week's end.
+  const c = L.newGame({ seed: 56, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(L.openShop(c, 'chops').ok && L.restockShop(c, 60).ok);
+  for (let i = 0; i < 9 && L.week(c) < 1; i++) { if (c.pending.length) L.resolveChoice(c, 0); else L.wait(c, 24 * 60); }
+  assert.equal(c.shop.stock, 0);
+  assert.ok(c.shop.last.spoiled > 0);
+  // A save missing the field loads with no shop.
+  const o = L.newGame({ seed: 57, origin: 'mid', goal: 'freestyle' }); delete o.shop;
+  assert.equal(L.deserialize(L.serialize(o)).state.shop, null);
+});

@@ -1228,7 +1228,7 @@
         (claimed ? '' : '<button class="btn sm' + (done ? '' : ' ghost') + '" id="qa-' + q.id + '" data-quest="' + q.id + '">' + (done ? 'Claim' : 'Go') + '</button>') + '</div>';
     }).join('') + '</div></div>';
   }
-  var QUEST_APPS = { stocks: 1, jobs: 1, gems: 1, bank: 1, events: 1, dealers: 1, travel: 1 };
+  var QUEST_APPS = { shop: 1, stocks: 1, jobs: 1, gems: 1, bank: 1, events: 1, dealers: 1, travel: 1 };
   function goQuest(id) {
     var q = D.QUESTS.filter(function (x) { return x.id === id; })[0];
     if (!q) return;
@@ -1541,6 +1541,32 @@
     return html + '</div>';
   }
 
+  /* ---------- online shop ---------- */
+  function shopView() {
+    var sh = S.shop;
+    if (!sh) {
+      return '<div class="section" style="padding-top:0"><h3>🛍️ Start an online shop</h3><p class="note">Post on WhatsApp and Instagram, buy stock wholesale, and dispatch riders deliver. You pay ' + N(L.price(S, 10000)) + ' to set up. Sales land every week. The app takes 5%, riders cost ' + N(L.price(S, 500)) + ' an order, and some customers send things back.</p><div class="list">' +
+        Object.keys(D.SHOP_NICHES).map(function (k) {
+          var Nn = D.SHOP_NICHES[k];
+          return '<div class="item"><div><h3>' + Nn.icon + ' ' + esc(Nn.name) + '</h3><div class="meta"><span>Buy ' + N(L.price(S, Nn.cost)) + '</span><span>Sell ' + N(L.price(S, Nn.price)) + '</span><span>~' + Nn.demand + ' orders/wk without ads</span></div><div class="act-note">' + esc(Nn.text) + '</div></div><button class="btn" id="shop-open-' + k + '" data-shopopen="' + k + '">Open</button></div>';
+        }).join('') + '</div></div>';
+    }
+    var Nn = D.SHOP_NICHES[sh.niche], pv = L.shopPreview(S), last = sh.last;
+    var html = '<div class="section" style="padding-top:0"><div class="wallet-card"><div class="wc-l">' + Nn.icon + ' ' + esc(Nn.name) + '</div><div class="wc-big num">' + sh.stock + ' <span style="font-size:.5em">in stock</span></div>' +
+      '<div class="wc-s">' + sh.sold.toLocaleString('en') + ' sold so far · next week about ' + pv.orders + ' orders' + (pv.orders < pv.demand ? ' (demand ' + pv.demand + ': restock!)' : '') + ', taking ~' + N(Math.max(0, pv.net)) + ' after ads, fees and riders: ' + (pv.profit >= 0 ? '~' + N(pv.profit) + ' profit' : '~' + N(-pv.profit) + ' loss') + ' once the stock is paid for</div></div>';
+    if (last) html += '<p class="note">Week ' + (last.w) + ': ' + last.orders + ' sold' + (last.returned ? ', ' + last.returned + ' returned' : '') + (last.spoiled ? ', ' + last.spoiled + ' spoiled' : '') + '. Takings ' + N(Math.max(0, last.net)) + ' after fees and dispatch (before the cost of the stock).</p>';
+    html += '<div class="label">Restock · ' + N(pv.cost) + ' per ' + esc(Nn.unit) + (Nn.spoils ? ' · unsold trays spoil each week' : '') + '</div><div class="pg-chips" style="padding:0">' + [10, 20, 50, 100].map(function (u) {
+      var c = u * pv.cost, off = sh.stock + u > 500 || c > S.cash + S.bank;
+      return '<button type="button" class="pg-chip" id="shop-rs-' + u + '" data-shoprestock="' + u + '"' + (off ? ' disabled' : '') + '>+' + u + ' · ' + N(c) + '</button>';
+    }).join('') + '</div>';
+    html += '<div class="label" style="margin-top:10px">Ads, paid weekly</div><div class="pg-chips" style="padding:0">' + Object.keys(D.SHOP_ADS).map(function (k) {
+      var A = D.SHOP_ADS[k];
+      return '<button type="button" class="pg-chip' + (sh.ads === k ? ' sel' : '') + '" id="shop-ad-' + k + '" data-shopads="' + k + '">' + esc(A.name) + (A.cost ? ' · ' + N(L.price(S, A.cost)) + ' · ×' + A.mult : '') + '</button>';
+    }).join('') + '</div>';
+    html += '<div class="inline" style="margin-top:12px"><button class="btn sm ghost" id="shop-close" data-shopclose="1">Close shop' + (sh.stock ? ' · clear stock for ' + N(Math.floor(sh.stock * pv.cost * 0.4)) : '') + '</button></div>';
+    return html + '</div>';
+  }
+
   /* ---------- the stock exchange ---------- */
   function miniChart(vals, w, h, cls) {
     var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals); if (hi === lo) hi = lo + 1;
@@ -1579,7 +1605,7 @@
   function markRead() { try { localStorage.setItem(READ_KEY, JSON.stringify({ seed: S.seed, t: S.t })); } catch (e) {} }
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
-    ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['dealers', '🚗', 'Dealers'],
+    ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['travel', '✈️', 'Travel'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
@@ -1607,6 +1633,7 @@
     if (app) {
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
+      else if (app === 'shop') body = '<div class="panel-b">' + shopView() + '</div>';
       else if (app === 'stocks') body = '<div class="panel-b">' + stocksView() + '</div>';
       else if (app === 'quests') body = '<div class="panel-b">' + questsView() + '</div>';
       else if (app === 'bank') body = '<div class="panel-b">' + bankView() + '</div>';
@@ -1720,7 +1747,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1812,6 +1839,10 @@
     if (ds.rehome) { var rp = ds.rehome; run(function () { return L.rehomePet(S, rp); }); return; }
     if (ds.hmo) { var hp = ds.hmo; run(function () { return L.joinHmo(S, hp); }); return; }
     if (ds.hmooff) { run(function () { return L.leaveHmo(S); }); return; }
+    if (ds.shopopen) { var so = ds.shopopen; run(function () { return L.openShop(S, so); }); return; }
+    if (ds.shoprestock) { var sr = +ds.shoprestock; run(function () { return L.restockShop(S, sr); }); return; }
+    if (ds.shopads) { var sa = ds.shopads; run(function () { return L.setShopAds(S, sa); }); return; }
+    if (ds.shopclose) { run(function () { return L.closeShop(S); }); return; }
     if (ds.party) { var pk = ds.party; run(function () { return L.hostParty(S, pk); }); return; }
     if (ds.streak) { var sid = gemToday(); run(function () { return L.claimStreak(S, sid); }); return; }
     if (ds.stock) { ui.stock = ui.stock === ds.stock ? null : ds.stock; render(); return; }

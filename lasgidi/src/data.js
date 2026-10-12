@@ -37,6 +37,21 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // An online shop run from your phone: buy stock, pay for ads, ship by dispatch rider.
+  // demand: orders a week with no ads. spoils: unsold stock is lost at the week's end.
+  var SHOP_NICHES = {
+    okrika: { name: 'Okrika thrift clothes', icon: '👕', unit: 'piece', cost: 1800, price: 3400, demand: 30, text: 'Bales from Yaba and Katangua, washed, ironed and posted.' },
+    gadget: { name: 'Phone accessories', icon: '🔌', unit: 'item', cost: 2500, price: 4400, demand: 24, text: 'Chargers, cases and earpieces from Computer Village.' },
+    wigs:   { name: 'Hair and wigs', icon: '💇🏾‍♀️', unit: 'wig', cost: 25000, price: 38000, demand: 3, text: 'Bone straight and frontals. Few orders, big tickets.' },
+    chops:  { name: 'Small chops trays', icon: '🍢', unit: 'tray', cost: 6000, price: 10000, demand: 12, spoils: true, text: 'Puff-puff, samosa and spring rolls for parties. Unsold trays spoil.' }
+  };
+  var SHOP_ADS = {
+    none:   { name: 'No ads', cost: 0, mult: 1 },
+    status: { name: 'WhatsApp status', cost: 3000, mult: 1.6 },
+    insta:  { name: 'Instagram boost', cost: 12000, mult: 2.6 },
+    influ:  { name: 'Influencer shout-out', cost: 50000, mult: 4 }
+  };
+
   // Pets: a one-off price, then food and vet every week. Dogs need a compound.
   var PETS = {
     cat:      { name: 'Cat',                 icon: '🐈', price: 15000,  weekly: 2500,  daily: { fun: 4, stress: -2 } },
@@ -95,7 +110,8 @@
     { id: 'fly',         icon: '✈️', title: 'Visit another city',    hint: 'Phone → Travel',               reward: 10000, go: 'travel' },
     { id: 'business',    icon: '🏪', title: 'Build a business',      hint: 'Money tab → Businesses',       reward: 20000, go: 'business' },
     { id: 'shares',      icon: '📈', title: 'Buy your first shares', hint: 'Phone → Stocks',               reward: 3000,  go: 'stocks' },
-    { id: 'party',       icon: '🎉', title: 'Host an owambe',        hint: 'Home tab, on a Saturday',      reward: 5000,  go: 'home' }
+    { id: 'party',       icon: '🎉', title: 'Host an owambe',        hint: 'Home tab, on a Saturday',      reward: 5000,  go: 'home' },
+    { id: 'shop',        icon: '🛍️', title: 'Open an online shop',   hint: 'Phone → Shop',                 reward: 3000,  go: 'shop' }
   ];
 
   var CITIES = {
@@ -803,7 +819,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

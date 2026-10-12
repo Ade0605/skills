@@ -64,6 +64,12 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - You can trade 10:00–14:30 on weekdays. Every buy and sale costs a 1.5% broker fee, with a ₦500 minimum.
   - Some companies pay a dividend every 13 weeks.
   - Prices can fall, and a retail account is capped at ₦20m invested.
+- **Online shop:** a 🛍️ Shop app on the phone. Pick a niche: okrika thrift clothes, phone accessories, hair and wigs, or small chops trays.
+  - Buy stock wholesale, up to 500 at a time.
+  - Pick a weekly ad plan, from none through WhatsApp status and an Instagram boost to an influencer shout-out.
+  - Sales land every week. The app takes 5%, dispatch riders cost ₦500 an order, and about 6% of orders come back.
+  - Unsold small chops spoil each week.
+  - The shop shows next week's expected profit once the stock is paid for. Over-spending on ads loses money.
 - **Ride-hailing:** if you own a car, a keke or a bike, a "Drive ride-hail" action appears anywhere you are.
   - The app keeps 25% of the fares, and you pay for your own fuel.
   - Rush hour brings more trips, and night fares are higher.
@@ -83,7 +89,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Faces on the map:** your Lagosian's face sits over your district pin. Other players in the same city show as small faces beside their pins.
 - **City boards:** the Hall of Fame filters to All Nigeria, Lagos, Abuja or Port Harcourt by where each life lived. It also names the richest verified player in your district.
 - **First-run tour:** four short tips inline on the Do tab. It never blocks a tap, and you can skip it.
-- **Phone:** a 📱 Phone tab with apps for Messages (with an unread count), Quests, Jobs, Bank, Stocks, Dealers, the Gem hunt, Travel, the Hall of Fame and your Wardrobe.
+- **Phone:** a 📱 Phone tab with apps for Messages (with an unread count), Quests, Jobs, Bank, Stocks, Shop, Dealers, the Gem hunt, Travel, the Hall of Fame and your Wardrobe.
 - **Cities:** Lagos, Abuja and Port Harcourt, each with its own map, districts, landmarks, homes and jobs.
   - **Abuja:** Aso Rock, Millennium Park, Jabi Lake, Wuse Market and Eagle Square, plus the civil service and consulting careers.
   - **Port Harcourt:** Uniport, Pleasure Park, Mile 1 market, the waterfront and the Trans-Amadi yards, plus oil-services jobs.

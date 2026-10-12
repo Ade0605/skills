@@ -70,7 +70,8 @@
     host:        'Owambe host: threw a party at home',
     streak7:     'Seven-day streak',
     oga:         'Oga at the top: hired domestic staff',
-    pet:         'Best friend: adopted a pet'
+    pet:         'Best friend: adopted a pet',
+    vendor:      'Online vendor: sold 100 items'
   };
 
   /* ---------- small helpers ---------- */
@@ -178,7 +179,7 @@
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
-    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary/.test(m)) return 'business';
+    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
@@ -287,7 +288,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -420,6 +421,7 @@
 
     weeklyStaff(s);
     weeklyPets(s);
+    weeklyShop(s);
     weeklyBusinessCosts(s);
     weeklyAjo(s);
     weeklyLoans(s);
@@ -2113,6 +2115,7 @@
     if (!s.staff) s.staff = [];
     if (!s.pets) s.pets = [];
     if (s.hmo === undefined) s.hmo = null;
+    if (s.shop === undefined) s.shop = null;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2600,7 +2603,8 @@
     fly:         function (s) { return !!s.ach.traveller; },
     business:    function (s) { return (s.businesses || []).length > 0; },
     shares:      function (s) { return Object.keys(s.stocks || {}).length > 0; },
-    party:       function (s) { return !!s.ach.host; }
+    party:       function (s) { return !!s.ach.host; },
+    shop:        function (s) { return !!s.shop; }
   };
   function questDef(id) { return D.QUESTS.filter(function (q) { return q.id === id; })[0]; }
   function questDone(s, id) { var c = QUEST_CHECKS[id]; return !!(c && c(s)); }
@@ -2659,6 +2663,76 @@
       log(s, 'You could not pay your ' + D.STAFF[id].name.toLowerCase() + '. They packed their bags and left.', 'bad');
       return false;
     });
+  }
+
+  /* ---------- online shop ---------- */
+  var SHOP_SETUP = 10000, SHOP_DISPATCH = 500, SHOP_CUT = 0.05, SHOP_MAX = 500;
+  function openShop(s, niche) {
+    var N = D.SHOP_NICHES[niche];
+    if (!N) return fail('No such shop.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.shop && s.shop.niche === niche) return fail('You already sell ' + N.name.toLowerCase() + '.');
+    if (s.shop && s.shop.stock > 0) return fail('Sell or clear your stock before you switch.');
+    var fee = price(s, SHOP_SETUP);
+    s.alerts = [];
+    if (!pay(s, fee, 'Shop setup: ' + N.name)) return fail('Setting up the page, photos and a ring light costs ' + naira(fee) + '.');
+    s.shop = { niche: niche, stock: 0, ads: s.shop ? s.shop.ads : 'none', weeks: 0, sold: s.shop ? s.shop.sold : 0, last: null };
+    return finish(s, ok(N.icon + ' Your ' + N.name.toLowerCase() + ' page is live. Buy stock to start selling.'));
+  }
+  function restockShop(s, units) {
+    var sh = s.shop; if (!sh) return fail('Open a shop first.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    units = Math.floor(units);
+    if (!(units >= 1)) return fail('Buy at least one.');
+    if (sh.stock + units > SHOP_MAX) return fail('Your room holds ' + SHOP_MAX + ' at most.');
+    var N = D.SHOP_NICHES[sh.niche], cost = price(s, N.cost) * units;
+    s.alerts = [];
+    if (!pay(s, cost, 'Shop stock: ' + units + ' × ' + N.unit)) return fail(units + ' cost ' + naira(cost) + '.');
+    sh.stock += units;
+    return finish(s, ok('Bought ' + units + ' ' + N.unit + (units === 1 ? '' : 's') + ' for ' + naira(cost) + '. Stock: ' + sh.stock + '.'));
+  }
+  function setShopAds(s, tier) {
+    if (!s.shop) return fail('Open a shop first.');
+    if (!D.SHOP_ADS[tier]) return fail('No such ad plan.');
+    s.shop.ads = tier;
+    return ok(tier === 'none' ? 'No ads from next week.' : D.SHOP_ADS[tier].name + ' from next week: ' + naira(price(s, D.SHOP_ADS[tier].cost)) + ' a week.');
+  }
+  function closeShop(s) {
+    var sh = s.shop; if (!sh) return fail('You have no shop.');
+    var back = Math.floor(sh.stock * price(s, D.SHOP_NICHES[sh.niche].cost) * 0.4);
+    s.alerts = [];
+    if (back > 0) earn(s, back, 'Shop clearance sale');
+    s.shop = null;
+    return ok('Shop closed.' + (back ? ' The clearance sale brought in ' + naira(back) + '.' : ''));
+  }
+  function shopDemand(s, tier) {
+    var sh = s.shop, N = D.SHOP_NICHES[sh.niche], A = D.SHOP_ADS[tier || sh.ads];
+    return N.demand * A.mult * (1 + skillLevel(s, 'charisma') * 0.05) * (monthIndex(s) === 11 ? 1.3 : monthIndex(s) === 0 ? 0.7 : 1);
+  }
+  function shopPreview(s) {
+    var sh = s.shop; if (!sh) return null;
+    var N = D.SHOP_NICHES[sh.niche], orders = Math.min(sh.stock, Math.round(shopDemand(s))), unit = price(s, N.price);
+    var net = Math.round(orders * (0.94 * unit * (1 - SHOP_CUT) - price(s, SHOP_DISPATCH))) - price(s, D.SHOP_ADS[sh.ads].cost);
+    return { orders: orders, demand: Math.round(shopDemand(s)), net: net, profit: net - Math.round(orders * 0.94) * price(s, N.cost), unit: unit, cost: price(s, N.cost) };
+  }
+  function weeklyShop(s) {
+    var sh = s.shop; if (!sh) return;
+    var N = D.SHOP_NICHES[sh.niche];
+    sh.weeks++;
+    if (sh.ads !== 'none' && !pay(s, price(s, D.SHOP_ADS[sh.ads].cost), 'Shop ads: ' + D.SHOP_ADS[sh.ads].name)) { log(s, 'Your ad payment bounced, so the ads stopped.', 'bad'); sh.ads = 'none'; }
+    var orders = Math.min(sh.stock, Math.floor(shopDemand(s) * (0.6 + rand(s) * 0.8)));
+    // Some customers send it back: the item returns to stock, the rider is still paid.
+    var returned = 0; for (var r = 0; r < orders; r++) if (rand(s) < 0.06) returned++;
+    var paid = orders - returned;
+    var gross = paid * price(s, N.price), cut = Math.round(gross * SHOP_CUT), ship = orders * price(s, SHOP_DISPATCH);
+    if (gross) earn(s, gross - cut, 'Shop sales: ' + N.name);
+    if (orders) { pay(s, ship, 'Dispatch riders') || addDebt(s, ship, 'Dispatch riders'); }
+    sh.stock -= paid; sh.sold += paid;
+    var spoiled = N.spoils ? sh.stock : 0;
+    if (spoiled) sh.stock = 0;
+    sh.last = { w: week(s), orders: paid, returned: returned, gross: gross, net: gross - cut - ship, spoiled: spoiled };
+    if (sh.sold >= 100) unlock(s, 'vendor');
+    log(s, N.icon + ' Shop week: ' + paid + ' sold' + (returned ? ', ' + returned + ' returned' : '') + ', ' + naira(gross - cut - ship) + ' after fees and dispatch.' + (spoiled ? ' ' + spoiled + ' unsold ' + N.unit + 's spoiled.' : '') + (!sh.stock ? ' You are out of stock.' : ''), orders ? 'good' : 'info');
   }
 
   /* ---------- pets ---------- */
@@ -2877,6 +2951,7 @@
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     buyStock: recorded('sk', buyStock), sellStock: recorded('xs', sellStock), stockPrice: stockPrice, stockHistory: stockHistory, stocksValue: stocksValue, marketOpen: marketOpen, brokerFee: brokerFee,
     hireStaff: recorded('hs', hireStaff), fireStaff: recorded('fs', fireStaff), staffRoom: staffRoom, staffPay: staffPay,
+    openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
