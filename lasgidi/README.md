@@ -96,6 +96,8 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The app keeps 25% of the fares, and you pay for your own fuel.
   - Rush hour brings more trips, and night fares are higher.
   - Luxury cars earn premium fares but burn so much fuel that a supercar usually loses money.
+- **Airports:** Lagos, Abuja and Port Harcourt airports each have a **premium lounge** (shower, buffet and quiet: big boosts to hygiene, hunger and stress), **plane-spotting** at the apron window, and a **🛫 Check in** button that opens flights.
+- **Now passing:** after each trip, a note names the landmarks you passed on the way.
 - **House parties with real players:** when you host, you can add an **event decorator** for half the party's cost again. It turns the house festive, and guests spray 25% more.
   - For 30 real minutes, Lagosians online get a 💌 **party invite** on their Do tab.
   - **Guests:** they walk into your home and see the decorations and a live guest count. They can **🔔 Ring bell** (you get a toast), **💃 Dance** or **🥂 Socialise**.

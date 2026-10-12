@@ -319,10 +319,14 @@
       { id: 'abj_nyanya_gig', label: 'Load buses at Nyanya park', mins: 180, earn: 2600, fx: { energy: -20, hygiene: -12 }, xp: { hustle: 2 }, gig: true, when: { from: 5, to: 20 } }
     ],
     abj_airport: [
+      { id: 'abj_air_lounge', label: 'Premium lounge: shower, buffet, quiet', mins: 60, cost: 25000, fx: { hunger: 40, hygiene: 25, energy: 10, stress: -12, fun: 6 } },
+      { id: 'abj_air_spot', label: 'Plane-spotting at the apron window', mins: 30, fx: { fun: 6, stress: -3 } },
       { id: 'abj_air_eat', label: 'Eat at the airport', mins: 45, cost: 6000, fx: { hunger: 50 } },
       { id: 'abj_air_gig', label: 'Help travellers with bags', mins: 120, earn: 2500, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 6, to: 22 } }
     ],
     ph_airport: [
+      { id: 'ph_air_lounge', label: 'Premium lounge: shower, buffet, quiet', mins: 60, cost: 22000, fx: { hunger: 40, hygiene: 25, energy: 10, stress: -12, fun: 6 } },
+      { id: 'ph_air_spot', label: 'Plane-spotting at the apron window', mins: 30, fx: { fun: 6, stress: -3 } },
       { id: 'ph_air_eat', label: 'Eat at the airport', mins: 45, cost: 5500, fx: { hunger: 50 } },
       { id: 'ph_air_gig', label: 'Help travellers with bags', mins: 120, earn: 2400, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 6, to: 22 } }
     ],
@@ -387,6 +391,8 @@
       { id: 'suru_owambe', label: 'Attend an owambe', mins: 240, cost: 3000, fx: { fun: 40, social: 40, hunger: 60, energy: -20 }, xp: { charisma: 2 }, special: 'owambe', when: { days: [5], from: 12, to: 19 } }
     ],
     ikeja: [
+      { id: 'ikeja_air_lounge', label: 'Premium lounge: shower, buffet, quiet', mins: 60, cost: 30000, fx: { hunger: 40, hygiene: 25, energy: 10, stress: -12, fun: 6 } },
+      { id: 'ikeja_air_spot', label: 'Plane-spotting at the apron window', mins: 30, fx: { fun: 6, stress: -3 } },
       { id: 'ikeja_felabration', label: 'Felabration night at the Shrine', mins: 300, cost: 5000, fx: { fun: 70, social: 40, energy: -25, stress: -15 }, xp: { music: 3 }, special: 'club', event: true, when: { months: [9], from: 19, to: 24 } },
       { id: 'ikeja_cv_learn', label: 'Learn repairs at Computer Village', mins: 120, cost: 1000, fx: { energy: -10 }, xp: { craft: 5 }, when: { days: [0,1,2,3,4,5], from: 9, to: 18 } },
       { id: 'ikeja_cv_gig', label: 'Fix phones for walk-ins', mins: 120, earn: 2600, fx: { energy: -10 }, xp: { craft: 3 }, gig: true, req: { craft: 2 }, when: { from: 9, to: 19 } },
@@ -482,7 +488,7 @@
     { id: 'ielts', icon: '📝', name: 'IELTS test centre', type: 'learn', glyph: 'cap', district: 'ikeja', x: 9.3, y: 4.9, acts: ['ikeja_ielts'], text: 'Saturday morning sittings. The first step to Japa.' },
     { id: 'berger_cars', icon: '🚗', name: 'Berger car mart', type: 'services', glyph: 'car', district: 'ikeja', x: 9.6, y: 5.8, acts: [], dealer: true, text: 'Rows of tokunbo cars, bikes and kekes. Haggle, then drive it home.' },
     { id: 'allen', icon: '🍢', name: 'Allen Avenue suya spots', type: 'food', glyph: 'bowl', district: 'ikeja', x: 11.3, y: 4.0, acts: ['ikeja_suya'], text: 'Smoky suya after dark.' },
-    { id: 'airport', icon: '✈️', name: 'Murtala Muhammed Airport', type: 'transport', glyph: 'plane', district: 'ikeja', x: 6.6, y: 0.9, acts: [], text: 'International flights. Not in this game yet: you need IELTS and proof of funds first.' },
+    { id: 'airport', icon: '✈️', name: 'Murtala Muhammed Airport', type: 'transport', glyph: 'plane', district: 'ikeja', x: 6.6, y: 0.9, acts: ['ikeja_air_lounge', 'ikeja_air_spot'], text: 'Domestic flights to Abuja and Port Harcourt leave from here. International flights need IELTS and proof of funds first.' },
     { id: 'iko_jetty', icon: '⛴️', name: 'Ikorodu ferry terminal', type: 'transport', glyph: 'boat', district: 'ikorodu', x: 27.4, y: 3.9, acts: [], text: 'Ferries to Lagos Island, Ikoyi and Lekki. Beats the road at rush hour.' },
     { id: 'iko_market', icon: '🧺', name: 'Ikorodu farm market', type: 'food', glyph: 'basket', district: 'ikorodu', x: 28.6, y: 2.6, acts: ['iko_market', 'iko_eat'], text: 'The cheapest foodstuff in Lagos, fresh from the farms.' },
     { id: 'sawmill', icon: '🪚', name: 'Ikorodu sawmill', type: 'learn', glyph: 'tool', district: 'ikorodu', x: 29.2, y: 3.4, acts: ['iko_sawmill'], text: 'Hard work, steady cash.' },
@@ -542,8 +548,8 @@
     { id: 'abj_cbd', icon: '🏢', name: 'Central Business District', type: 'learn', glyph: 'laptop', district: 'abj_garki', x: 15.0, y: 16.0, acts: ['abj_garki_gig'], text: 'Ministries and business centres. The civil service hires here.' },
     { id: 'abj_kubwa_mkt', icon: '🛍️', name: 'Kubwa market', type: 'food', glyph: 'basket', district: 'abj_kubwa', x: 4.8, y: 3.0, acts: ['abj_kubwa_food', 'abj_kubwa_gig'], text: 'Cheap foodstuff for the satellite towns.' },
     { id: 'abj_nyanya_park', icon: '🚌', name: 'Nyanya motor park', type: 'transport', glyph: 'bus', district: 'abj_nyanya', x: 28.6, y: 15.2, acts: ['abj_nyanya_gig', 'abj_nyanya_buka'], text: 'Long-distance buses to Lagos and Port Harcourt.' },
-    { id: 'abj_airport_pl', icon: '✈️', name: 'Nnamdi Azikiwe Airport', type: 'transport', glyph: 'plane', district: 'abj_airport', x: 8.6, y: 23.0, acts: ['abj_air_eat', 'abj_air_gig'], text: 'Flights to Lagos and Port Harcourt.' },
-    { id: 'ph_airport_pl', icon: '✈️', name: 'Port Harcourt Airport', type: 'transport', glyph: 'plane', district: 'ph_airport', x: 6.6, y: 2.2, acts: ['ph_air_eat', 'ph_air_gig'], text: 'Omagwa. Flights to Lagos and Abuja.' },
+    { id: 'abj_airport_pl', icon: '✈️', name: 'Nnamdi Azikiwe Airport', type: 'transport', glyph: 'plane', district: 'abj_airport', x: 8.6, y: 23.0, acts: ['abj_air_lounge', 'abj_air_spot', 'abj_air_eat', 'abj_air_gig'], text: 'Flights to Lagos and Port Harcourt. Check-in desks, a premium lounge and a long apron window.' },
+    { id: 'ph_airport_pl', icon: '✈️', name: 'Port Harcourt Airport', type: 'transport', glyph: 'plane', district: 'ph_airport', x: 6.6, y: 2.2, acts: ['ph_air_lounge', 'ph_air_spot', 'ph_air_eat', 'ph_air_gig'], text: 'Omagwa. Flights to Lagos and Abuja. A premium lounge for the big men.' },
     { id: 'ph_uniport', icon: '🎓', name: 'University of Port Harcourt', type: 'learn', glyph: 'cap', district: 'ph_choba', x: 3.2, y: 7.2, acts: ['ph_uniport_lib', 'ph_choba_gig', 'ph_choba_eat'], text: 'Uniport campus, the library and student canteens.' },
     { id: 'ph_pleasure', icon: '🎡', name: 'Pleasure Park', type: 'outdoors', glyph: 'tree', district: 'ph_rumuokoro', x: 13.8, y: 7.4, acts: ['ph_carniriv', 'ph_pleasure'], text: 'Rides, lawns and a lake for weekend families.' },
     { id: 'ph_park', icon: '🚌', name: 'Rumuokoro motor park', type: 'transport', glyph: 'bus', district: 'ph_rumuokoro', x: 12.2, y: 5.4, acts: ['ph_rumu_gig'], text: 'Long-distance buses to Lagos and Abuja.' },

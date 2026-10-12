@@ -1179,8 +1179,21 @@
       '<p class="note"><span class="pl-type" style="color:' + t.color + '">' + esc(t.name) + '</span> · ' + esc(D.DISTRICTS[pl.district].name) + '</p><p>' + esc(pl.text) + '</p>' +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
+      (pl.glyph === 'plane' ? '<div class="inline"><button class="btn" id="checkin-' + pl.id + '" data-app="travel" data-tab="phone">🛫 Check in: flights</button></div>' : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : '<div class="inline"><button class="btn go" id="trip-' + pl.district + '" data-tripto="' + pl.district + '">Plan a trip to ' + esc(D.DISTRICTS[pl.district].name) + '</button></div>');
+  }
+  // Landmarks near the straight line between two districts, for the "now passing" note.
+  function passing(from, to) {
+    var a = D.DISTRICTS[from], b = D.DISTRICTS[to];
+    if (!a || !b) return [];
+    var dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy || 1;
+    return D.PLACES.filter(function (p) { return p.district !== from && p.district !== to && L.districtCity(p.district) === L.districtCity(from); }).map(function (p) {
+      var u = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+      if (u < 0.15 || u > 0.85) return null;
+      var px = a.x + u * dx - p.x, py = a.y + u * dy - p.y;
+      return { name: p.name, d: px * px + py * py, u: u };
+    }).filter(function (p) { return p && p.d < 9; }).sort(function (x, y) { return x.d - y.d; }).slice(0, 2).sort(function (x, y) { return x.u - y.u; }).map(function (p) { return p.name; });
   }
   function whenText(w) {
     var parts = [];
@@ -1889,7 +1902,7 @@
       ui.confirmRestart = false; ui.flash = ''; playWeekly(true); return;
     }
     if (ds.wpost) { t.disabled = true; postWeekly().then(function (m) { online.wStatus = m; render(); }); return; }
-    if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; render(); return; }
+    if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; if (t.hasAttribute('data-app')) ui.app = ds.app || null; render(); return; }
     if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
     if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
     if (ds.place) { ui.place = ds.place; ui.board = null; ui.sel = null; render(); return; }
@@ -2039,7 +2052,7 @@
       return;
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
-    if (ds.travel) { run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; if (ui.tab === 'map' && !ui.place) ui.tab = 'do'; } return r; }, 'travel'); return; }
+    if (ds.travel) { var from0 = S.loc; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; if (ui.tab === 'map' && !ui.place) ui.tab = 'do'; var ps = passing(from0, S.loc); if (ps.length) ui.toasts.push({ msg: '🚗 Now passing: ' + ps.join(' · '), ok: true }); } return r; }, 'travel'); return; }
     if (ds.act) { run(function () { return L.doAction(S, ds.act); }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { return L.applyJob(S, ds.apply); }); return; }
