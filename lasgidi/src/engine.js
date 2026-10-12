@@ -3114,6 +3114,7 @@
     if (outfitTags(s).owambe) spray = Math.min(price(s, DANCE_CAP), roundTo(spray * 1.2, 50));
     if (spray > 0) earn(s, spray, 'Dance-off: guests sprayed');
     if (acc >= 0.9) unlock(s, 'dancer');
+    if (Math.round(acc * 100) > (s.stats.danceBest || 0)) s.stats.danceBest = Math.round(acc * 100);
     return finish(s, ok('💃 ' + Math.round(acc * 100) + '% on the beat, best streak ' + best + '. ' + (spray ? 'The guests sprayed you ' + naira(spray) + '!' : 'Nobody sprayed. Practise and come back.') + dressBonus(s, 'owambe')));
   }
 
