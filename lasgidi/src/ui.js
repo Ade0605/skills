@@ -1277,7 +1277,14 @@
     var sel = seaSel(), mine = S.sea, S2 = D.SEA;
     var html = '<div class="inline" style="justify-content:space-between"><h3>🌊 Sea Plots</h3><button class="btn sm ghost" id="sea-close" data-seaclose="1">Close</button></div>' +
       '<p class="note">A grid of ' + (S2.cols * S2.rows).toLocaleString('en') + ' plots in the water off Lagos Island. Buy a block (up to ' + S2.maxSide + '×' + S2.maxSide + ') and put a picture on it for every Lagosian to see. Pictures are checked by an editor before they go live. ' + N(L.price(S, S2.price)) + ' a plot. Zoom in to see the small ones.</p>';
-    if (sel) {
+    var claims = seaClaims(), me = online.me || 'me';
+    var owner = sel ? claims.filter(function (k) { return k.id !== me && sel.x >= k.x && sel.x < k.x + k.w && sel.y >= k.y && sel.y < k.y + k.h; })[0] : null;
+    if (owner) {
+      html += '<div class="section sea-owner"><h3>' + (owner.img ? '' : '<span class="sea-dot" style="background:' + owner.color + '"></span> ') + esc(nameOf(owner.id)) + '\'s block · ' + owner.w + '×' + owner.h + '</h3>' +
+        (owner.img ? '<img class="sea-big" alt="' + esc(nameOf(owner.id)) + '\'s picture" src="' + owner.img + '">' : '<p class="note">No picture yet.</p>') +
+        '<div class="inline">' + (checkHome(online.homes[owner.id]) ? '<button class="btn sm ghost" id="sea-visit" data-visit2="' + esc(owner.id) + '">🏠 Visit their home</button>' : '') + '<button class="btn sm ghost" id="sea-pick" data-seapickfree="1">Pick a free spot</button></div></div>';
+    }
+    if (sel && !owner) {
       var cost = L.seaCost(S, sel.w, sel.h);
       html += '<div class="label">Block size from plot ' + (sel.x + 1) + '·' + (sel.y + 1) + '</div><div class="pg-chips" style="padding:0">' + [[1, 1], [2, 2], [3, 2], [4, 4], [6, 4], [8, 8], [12, 12]].map(function (z) {
         return '<button type="button" class="pg-chip' + (ui.seaSel.w === z[0] && ui.seaSel.h === z[1] ? ' sel' : '') + '" id="seasz-' + z[0] + 'x' + z[1] + '" data-seasize="' + z[0] + 'x' + z[1] + '">' + z[0] + '×' + z[1] + '</button>';
@@ -1292,6 +1299,10 @@
         (online.db && online.me ? '<label class="btn sm" for="sea-file">📷 Upload a picture</label><input type="file" id="sea-file" accept="image/jpeg,image/png,image/webp" hidden>' : '') +
         ' <button class="btn sm ghost" id="sea-release" data-searelease="1">Let it go</button>' + (online.seaStatus ? '<p class="note">' + esc(online.seaStatus) + '</p>' : '') + '</div>';
     } else if (!sel) html += '<p class="note">Tap a spot on the sea grid to pick a block.</p>';
+    var big = claims.filter(function (k) { return k.id !== me || S.sea; }).slice().sort(function (a, b) { return b.w * b.h - a.w * a.h; }).slice(0, 5);
+    if (big.length) html += '<div class="section"><h3>Biggest blocks</h3><ol class="sea-top">' + big.map(function (k) {
+      return '<li><button type="button" class="link-btn" id="sea-go-' + esc(k.id) + '" data-seago="' + k.x + ',' + k.y + '">' + esc(k.id === me ? 'You' : nameOf(k.id)) + '</button> <span class="muted">· ' + k.w + '×' + k.h + ' (' + k.w * k.h + ' plots)' + (k.img ? ' · 🖼️' : '') + '</span></li>';
+    }).join('') + '</ol></div>';
     if (online.canEdit) {
       var q = (online.seareview || []).filter(function (r) { return okImg(r.raw.img) && cleanRect(r.raw); });
       html += '<div class="section"><h3>Review sea pictures <span class="muted">· ' + q.length + ' waiting</span></h3>' + (q.length ? '<div class="list">' + q.map(function (r) {
@@ -1995,7 +2006,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2103,6 +2114,8 @@
       return;
     }
     if (ds.seaopen) { clearPicks(); ui.seaOpen = true; render(); if (playground && playground.focusSea) playground.focusSea(); return; }
+    if (ds.seago) { var sg = ds.seago.split(','); ui.seaSel = { x: +sg[0], y: +sg[1], w: 2, h: 2 }; ui.seaOpen = true; render(); return; }
+    if (ds.seapickfree) { ui.seaSel = null; render(); return; }
     if (ds.seaclose) { ui.seaOpen = false; ui.seaSel = null; render(); return; }
     if (ds.seasize) { var sz = ds.seasize.split('x'); if (ui.seaSel) { ui.seaSel.w = +sz[0]; ui.seaSel.h = +sz[1]; } render(); return; }
     if (ds.seabuy) {

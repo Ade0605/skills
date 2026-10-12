@@ -527,3 +527,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 html.pg-full-open { overflow: hidden; }
 .pg-canvas:focus-visible { outline: 3px solid var(--lagoon); outline-offset: -3px; }
 .sea-prev { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.sea-big { width: 100%; max-height: 220px; object-fit: contain; border-radius: 10px; background: var(--sunk); }
+.sea-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; }
+.sea-top { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }

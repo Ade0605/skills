@@ -100,7 +100,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **🌊 Sea Plots:** a grid of 1,152 plots in the Atlantic below Victoria Island and Lekki, shared by every player, like a million-naira homepage.
   - **Buying:** tap a spot (or the 🌊 Sea Plots chip) and pick a block size, up to 12×12. A block costs ₦5,000 a plot. Moving or enlarging charges only for the extra plots.
   - **Pictures:** upload a picture for your block. An editor approves it first, then it shows on the water for everyone.
-  - **Claims:** the oldest claim wins any overlap.
+  - **Claims:** the oldest claim wins any overlap. Tap someone's block to see who owns it, their picture, and a link to visit their home. A "Biggest blocks" list ranks the largest owners.
 - **Japa:** the life's ending, at Murtala Muhammed Airport's international departures.
   - **Requirements:** pass IELTS, have ₦15m proof of funds plus the visa and ticket, and owe no debts.
   - **Destinations:** Toronto, London, Houston or Dubai.
