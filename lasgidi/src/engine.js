@@ -304,7 +304,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null, nysc: null, sick: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null, nysc: null, sick: null, heir: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -321,12 +321,23 @@
       originId = r < 0.5 ? 'lapo' : r < 0.85 ? 'mid' : 'nepo';
     }
     var o = D.ORIGINS[originId];
+    var heir = originId === 'heir' ? cleanHeir(opts.heir) : null;
+    if (originId === 'heir' && !heir) { originId = 'mid'; o = D.ORIGINS.mid; }
     s.origin = originId;
-    s.home = o.home;
+    s.home = heir ? (heir.inherit >= 3000000 ? 'lekki_studio' : heir.inherit >= 300000 ? 'yaba_selfcon' : 'mushin_room') : o.home;
     s.rentRate = D.HOMES[o.home].rent;
     s.loc = D.HOMES[o.home].district;
     // Opening balance is the one deposit that is not an in-game action.
-    s.bank = o.cash; s.opening.bank = o.cash;
+    var startCash = heir ? heir.inherit : o.cash;
+    s.bank = startCash; s.opening.bank = startCash;
+    if (heir) {
+      s.heir = heir; s.name = opts.name || heir.name;
+      // What your parent gave you before money: schooling.
+      if (heir.school === 'intl') s.edu.degree = true;
+      if (heir.school === 'private' || heir.school === 'intl') addXp(s, { charisma: heir.school === 'intl' ? 25 : 12 });
+      if (heir.as > 0) addXp(s, { tech: Math.min(25, heir.as * 10) });
+      if (heir.bond >= 60) s.needs.stress = Math.max(0, s.needs.stress - 15);
+    }
     if (o.allowance) { s.allowance = o.allowance; s.allowanceWeeks = o.allowanceWeeks; }
     if (originId === 'nepo') s.friends.kunle.lvl = 60; // Daddy's banker friend
     rollPower(s);
@@ -335,7 +346,9 @@
     // starting choices, and every player call in order (see recorded()).
     if (opts.challenge) { s.challenge = { id: opts.challenge, weeks: CHALLENGE_WEEKS }; s.over = false; s.goal = 'freestyle'; }
     s.replay = { seed: seed, goal: s.goal, origin: opts.origin || null, rules: s.rules, challenge: opts.challenge || null, acts: [] };
+    if (heir) s.replay.heir = heir;
     log(s, o.text, 'story');
+    if (heir) log(s, 'You are ' + s.name + ', child of ' + heir.parent + '. Your share of the estate: ' + naira(heir.inherit) + '.' + (heir.school === 'intl' ? ' Your international school education counts as a degree.' : ''), 'story');
     log(s, 'Rent is due every Saturday at noon. Lagos no dey carry last.', 'info');
     return s;
   }
@@ -2501,6 +2514,24 @@
   }
 
   // A scored summary of this life, for the hall of lives.
+  /* ---------- the next generation ---------- */
+  var HEIR_CAP = 50000000, ESTATE_CUT = 0.1;
+  function cleanHeir(h) {
+    if (!h || typeof h !== 'object') return null;
+    var int = function (v, lo, hi) { return typeof v === 'number' && Math.round(v) === v && v >= lo && v <= hi; };
+    if (typeof h.name !== 'string' || !h.name || h.name.length > 24 || typeof h.parent !== 'string' || h.parent.length > 24) return null;
+    if (!int(h.inherit, 0, HEIR_CAP) || !int(h.as, 0, 50) || !int(h.bond, 0, 100) || (h.school != null && !SCHOOLS[h.school])) return null;
+    return { name: h.name, parent: h.parent, inherit: h.inherit, school: h.school || null, as: h.as, bond: h.bond };
+  }
+  // When a life with children ends: the eldest child's share of the estate.
+  function heirOffer(s) {
+    if (!s || s.challenge || !s.kids || !s.kids.length) return null;
+    var k = s.kids[0], estate = Math.max(0, netWorth(s)); // net worth is after debts
+    var share = Math.min(HEIR_CAP, roundTo(estate * (1 - ESTATE_CUT) / s.kids.length, 1000));
+    return cleanHeir({ name: kidName(s, 0), parent: String(s.name || 'Ade').slice(0, 24), inherit: share, school: k.school || null,
+      as: (k.reports || []).filter(function (r) { return r.grade === 'A'; }).length, bond: Math.round(k.bond || 0) });
+  }
+
   function lifeSummary(s) {
     var weeks = week(s) + 1, worth = netWorth(s), achievements = Object.keys(s.ach).length;
     var score = scoreOf({ worth: worth, weeks: weeks, achievements: achievements, won: !!s.won, level: s.job ? s.job.level : 0,
@@ -2533,7 +2564,8 @@
       married: !!(s.partner && s.partner.stage === 'married'), kids: (s.kids || []).length, status: statusPoints(s)
     };
     e.score = scoreOf(e);
-    if (s.replay) e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, rules: s.replay.rules, challenge: s.replay.challenge || null, acts: s.replay.acts };
+    if (s.heir) e.inherit = s.heir.inherit;
+    if (s.replay) { e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, rules: s.replay.rules, challenge: s.replay.challenge || null, acts: s.replay.acts }; if (s.replay.heir) e.replay.heir = s.replay.heir; }
     return e;
   }
 
@@ -2552,7 +2584,8 @@
     e.career = typeof raw.career === 'string' && D.CAREERS[raw.career] ? raw.career : null;
     e.home = typeof raw.home === 'string' && D.HOMES[raw.home] ? raw.home : null;
     // Ceiling on wealth: starting cash plus a generous ₦3m a week.
-    if (e.worth > D.ORIGINS[e.origin].cash * 2 + e.weeks * 3000000) return null;
+    if (e.origin === 'heir') { if (!int(raw.inherit, 0, HEIR_CAP)) return null; e.inherit = raw.inherit; }
+    if (e.worth > (e.origin === 'heir' ? e.inherit : D.ORIGINS[e.origin].cash) * 2 + e.weeks * 3000000) return null;
     if (e.level > 0 && !e.career) return null;
     e.score = scoreOf(e);
     return e;
@@ -2573,7 +2606,8 @@
     var rules = rp.rules == null ? 5 : rp.rules;
     if (!(rules >= 5 && rules <= RULES && Math.round(rules) === rules)) return null;
     if (rp.challenge != null && !CHALLENGE_ID.test(rp.challenge)) return null;
-    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined });
+    if (rp.origin === 'heir' && !cleanHeir(rp.heir)) return null;
+    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined, heir: rp.heir });
     for (var i = 0; i < rp.acts.length; i++) {
       var a = rp.acts[i];
       if (!Array.isArray(a) || !RECORDED[a[0]]) return null;
@@ -3634,7 +3668,7 @@
   // Wordle-style: one square per week by how net worth moved.
   function challengeSquares(s) {
     var prev = s.history.length ? null : null, out = '';
-    var start = D.ORIGINS[s.origin].cash;
+    var start = s.heir ? s.heir.inherit : D.ORIGINS[s.origin].cash;
     var last = start;
     s.history.forEach(function (h) {
       var ch = (h.worth - last) / Math.max(1, Math.abs(last));
@@ -3714,7 +3748,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, sleepAway: recorded('ht', sleepAway),
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

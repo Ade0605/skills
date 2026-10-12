@@ -1649,3 +1649,33 @@ test('review fixes: train arrives by 21:00, sibling names differ, sick floor, on
   assert.equal(L.week(s), wk);
   assert.ok(bills.reduce((a, l) => a + l.bal, 0) <= L.price(s, 8000) + L.price(s, 15000), 'one ward bill and one malaria bill: ' + bills.map(b => b.bal));
 });
+
+test('the next generation: an heir inherits a share, keeps their schooling, replays and ranks', () => {
+  const p = L.newGame({ seed: 98, origin: 'nepo', goal: 'freestyle', name: 'Bayo' });
+  assert.equal(L.heirOffer(p), null, 'no children, no heir');
+  p.kids.push({ born: 0, school: 'intl', nextFees: 99, bond: 70, reports: [{ day: 1, grade: 'A' }, { day: 2, grade: 'B' }] }, { born: 3, school: null, nextFees: 99 });
+  const h = L.heirOffer(p);
+  assert.equal(h.parent, 'Bayo');
+  assert.equal(h.name, L.kidName(p, 0));
+  assert.equal(h.inherit, Math.round(L.netWorth(p) * 0.9 / 2 / 1000) * 1000, 'a sibling share after 10% estate costs');
+  assert.equal(h.school, 'intl'); assert.equal(h.as, 1); assert.equal(h.bond, 70);
+  const s = L.newGame({ seed: 99, origin: 'heir', goal: 'freestyle', heir: h });
+  assert.equal(s.origin, 'heir'); assert.equal(s.name, h.name);
+  assert.equal(s.cash + s.bank, h.inherit);
+  assert.ok(s.edu.degree, 'international school counts as a degree');
+  assert.ok(L.skillLevel(s, 'tech') > 0 && L.skillLevel(s, 'charisma') > 0);
+  // A short heir life replays, and its fame entry passes the checks with its inheritance.
+  for (let i = 0; i < 20; i++) { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 180); }
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  const e = L.fameEntry(s);
+  assert.equal(e.inherit, h.inherit);
+  assert.ok(L.checkFame(e), 'a real heir entry is accepted');
+  assert.equal(L.checkFame(Object.assign({}, e, { inherit: undefined })), null, 'an heir entry must say what it inherited');
+  // Forged inheritances are refused.
+  assert.equal(L.replayLife(Object.assign({}, s.replay, { heir: Object.assign({}, h, { inherit: 9e12 }) })), null);
+  const bad = L.newGame({ seed: 99, origin: 'heir', goal: 'freestyle', heir: { name: 'X' } });
+  assert.equal(bad.origin, 'mid', 'a broken heir falls back to an ordinary start');
+  // Weekly Lagos lives never make heirs.
+  const w = L.newGame({ challenge: '2026-W42' }); w.kids.push({ born: 0, school: null, nextFees: 9 });
+  assert.equal(L.heirOffer(w), null);
+});

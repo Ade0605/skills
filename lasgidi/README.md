@@ -192,6 +192,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - Promotions take 30% more shifts.
 
   Lives started earlier keep their old rules.
+- **👪 The next generation:** when you end a life that has children, the start screen offers to continue the family as your eldest child.
+  - **Inheritance:** the heir gets their share of the estate, which is net worth after debts, minus 10% for estate costs, divided among the children. It is capped at ₦50m, and the size of the share decides where they start living.
+  - **Schooling:** an international school counts as a degree, private school gives Charisma, and straight-A report cards give Tech. A close bond means they start calm.
+  - **Fair ranking:** heir lives replay like any other. The Hall of Fame checks their wealth against what they inherited, and forged inheritances are refused.
 - **🦟 Malaria (rules 11, new lives only):**
   - **Catching it:** a night without light (so no fan or AC) and no mosquito net can give you malaria. It is likelier in the rainy season. A ₦6k mosquito net from the furniture shop, a running fan or AC, or a hotel with a generator keeps most mosquitoes off.
   - **Being sick:** the fever drains energy and enjoyment, raises stress and lowers your work performance. After three untreated days it gets worse.
@@ -232,7 +236,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (93 tests)
+  test/engine.test.js   node:test suite (94 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

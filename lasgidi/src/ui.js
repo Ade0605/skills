@@ -46,6 +46,8 @@
   function writeJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
   var prefs = readJSON(PREF_KEY, { sound: false });
   function lives() { return readJSON(LIVES_KEY, []); }
+  var HEIR_KEY = 'lasgidi.heir.v1';
+  function heirWaiting() { var h = readJSON(HEIR_KEY, null); return h && typeof h.name === 'string' && typeof h.inherit === 'number' ? h : null; }
   function archiveLife() {
     if (!S) return;
     var list = lives();
@@ -2211,9 +2213,14 @@
     var goals = Object.keys(D.GOALS).map(function (k, i) {
       return '<div class="goal"><input type="radio" name="goal" id="goal-' + k + '" value="' + k + '"' + (i === 0 ? ' checked' : '') + '><label for="goal-' + k + '"><b>' + esc(D.GOALS[k].name) + '</b><span>' + esc(D.GOALS[k].text) + '</span></label></div>';
     }).join('');
-    var o = ui.draftOrigin ? D.ORIGINS[ui.draftOrigin] : null;
+    var o = ui.draftOrigin ? D.ORIGINS[ui.draftOrigin] : null, h = heirWaiting();
+    var heirCard = h ? '<div class="lottery heir"><span class="label">The next generation</span><b>👪 Continue the family as ' + esc(h.name) + '</b>' +
+      '<p style="margin:0">' + esc(h.name) + ', child of ' + esc(h.parent) + ', inherits ' + N(h.inherit) + ' after the estate costs and the family share.' +
+      (h.school === 'intl' ? ' An international school education counts as a degree.' : h.school === 'private' ? ' Private school left them confident (Charisma).' : '') +
+      (h.as ? ' ' + h.as + ' straight-A report card' + (h.as === 1 ? '' : 's') + ' (Tech).' : '') + (h.bond >= 60 ? ' A close bond: they start calm.' : '') + '</p>' +
+      '<div class="inline"><button class="btn go" id="heir-start" data-heir="1">Play as ' + esc(h.name) + '</button><button class="btn ghost" id="heir-skip" data-heir="skip">Start someone new</button></div></div>' : '';
     return '<div class="intro">' +
-      '<h1>LASGIDI<span>Make it in Lagos. One week of rent at a time.</span></h1>' +
+      '<h1>LASGIDI<span>Make it in Lagos. One week of rent at a time.</span></h1>' + heirCard +
       '<p class="lede">Work, hustle, sleep through NEPA, take the danfo or the ferry, join an ajo, dodge the loan apps and the Ponzi schemes. Rent is due every Saturday at noon.</p>' +
       '<div class="field"><label class="label" for="pname">Your name</label><input id="pname" maxlength="24" value="Ade" autocomplete="off"></div>' +
       '<div class="field"><span class="label">Your goal</span><div class="goals">' + goals + '</div></div>' +
@@ -2250,7 +2257,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2259,6 +2266,16 @@
       ui.draftOrigin = L.newGame({ seed: ui.seed }).origin;
       render(); var st = document.getElementById('start'); if (st) st.focus();
       return;
+    }
+    if (ds.heir) {
+      var hw = heirWaiting();
+      try { localStorage.removeItem(HEIR_KEY); } catch (err) { /* ignore */ }
+      if (ds.heir === 'skip' || !hw) { render(); return; }
+      introState();
+      S = L.newGame({ name: hw.name, goal: ui.draftGoal, seed: (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0, origin: 'heir', heir: hw });
+      ui.tab = 'do'; ui.sel = null; ui.draftOrigin = null;
+      releaseOldSea();
+      save(); render(); return;
     }
     if (ds.start) {
       introState();
@@ -2547,6 +2564,9 @@
       ui.confirmNew = false; ui.flash = '';
       if (S.challenge) { backToLife(); return; }
       if (S && !S.tampered) postFame(L.fameEntry(S), true);
+      // A life with children can be continued by the eldest (see introView).
+      var offer = S && !S.tampered ? L.heirOffer(S) : null;
+      if (offer) writeJSON(HEIR_KEY, offer); else { try { localStorage.removeItem(HEIR_KEY); } catch (err) { /* ignore */ } }
       archiveLife();
       S = null;
       try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }

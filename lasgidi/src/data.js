@@ -913,6 +913,8 @@
   var ORIGINS = {
     lapo: { name: 'LAPO Baby', cash: 8000, home: 'mushin_room', text: 'You start with ₦8,000 and a room in Mushin. A microfinance officer has your number.' },
     mid:  { name: 'Ajepako', cash: 60000, home: 'yaba_selfcon', text: 'Your parents scraped together ₦60,000 and paid for a self-con in Yaba.' },
+    // Not in the birth lottery: chosen when a life with children ends (the next generation).
+    heir: { name: 'Heir', cash: 0, home: 'yaba_selfcon', text: 'The family meeting is over and the estate is shared. Your parent\'s story is done; yours starts now.' },
     nepo: { name: 'Nepo Baby', cash: 800000, home: 'lekki_studio', allowance: 25000, allowanceWeeks: 8, text: 'Daddy paid for a Lekki studio, put ₦800,000 in your account and sends ₦25,000 a week. For now.' }
   };
 
