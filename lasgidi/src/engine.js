@@ -181,7 +181,7 @@
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
-    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch|^Danfo (owner|fuel)/.test(m)) return 'business';
+    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch|^Danfo (owner|fuel|repairs|returns)/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
@@ -291,7 +291,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {},
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -426,6 +426,7 @@
     weeklyPets(s);
     weeklyShop(s);
     weeklyCreator(s);
+    weeklyDanfo(s);
     weeklyBusinessCosts(s);
     weeklyAjo(s);
     weeklyLoans(s);
@@ -2161,6 +2162,7 @@
     if (s.phone === undefined) s.phone = null;
     if (s.title === undefined) s.title = null;
     if (!s.partyJoins) s.partyJoins = {};
+    if (s.danfoDriver === undefined) s.danfoDriver = false;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2961,14 +2963,32 @@
     applyFx(s, a.fx); addXp(s, a.xp);
     var got = gigPay(s, fares, 1);
     if (got) earn(s, got, 'Danfo fares');
-    var owner = price(s, DANFO_RETURNS), fuel = price(s, DANFO_FUEL * s.econ.fuel);
-    pay(s, owner, 'Danfo owner returns') || addDebt(s, owner, 'Danfo owner returns');
+    var mine = ownsDanfo(s), owner = mine ? 0 : price(s, DANFO_RETURNS), fuel = price(s, DANFO_FUEL * s.econ.fuel);
+    if (owner) pay(s, owner, 'Danfo owner returns') || addDebt(s, owner, 'Danfo owner returns');
     pay(s, fuel, 'Danfo fuel') || addDebt(s, fuel, 'Danfo fuel');
     if (fines) payPartial(s, fines, 'Danfo fines and settlements');
     s.stats.danfoPax = (s.stats.danfoPax || 0) + served;
     if (s.stats.danfoPax >= 50) unlock(s, 'danfo');
     var net = got - owner - fuel - fines;
-    return finish(s, ok('🚐 ' + served + ' passengers. Fares ' + naira(got) + ', owner ' + naira(owner) + ', fuel ' + naira(fuel) + (fines ? ', fines ' + naira(fines) : '') + '. You ' + (net >= 0 ? 'made ' + naira(net) : 'lost ' + naira(-net)) + '.'));
+    return finish(s, ok('🚐 ' + served + ' passengers. Fares ' + naira(got) + (mine ? ' (your own bus: no returns)' : ', owner ' + naira(owner)) + ', fuel ' + naira(fuel) + (fines ? ', fines ' + naira(fines) : '') + '. You ' + (net >= 0 ? 'made ' + naira(net) : 'lost ' + naira(-net)) + '.'));
+  }
+
+  // Your own danfo: no owner's returns on your runs, or put a driver on it for weekly returns.
+  function ownsDanfo(s) { return (s.vehicles || []).some(function (v) { return v.id === 'danfo_bus'; }); }
+  function setDanfoDriver(s, on) {
+    if (!ownsDanfo(s)) return fail('Buy a danfo first (dealers, Commercial).');
+    s.danfoDriver = !!on;
+    return ok(on ? 'A driver takes your danfo out from Monday. Returns land every week.' : 'You took your danfo off the road.');
+  }
+  function weeklyDanfo(s) {
+    if (!s.danfoDriver) return;
+    if (!ownsDanfo(s)) { s.danfoDriver = false; return; }
+    var r = rand(s);
+    if (r < 0.05) { log(s, '🚐 Your driver "travelled to the village" with this week\'s returns.', 'bad'); return; }
+    if (r < 0.13) { var fix = price(s, 80000); pay(s, fix, 'Danfo repairs after a crash') || addDebt(s, fix, 'Danfo repairs'); log(s, '🚐 Your driver crashed the danfo. Repairs: ' + naira(fix) + '.', 'bad'); return; }
+    var got = gigPay(s, 30000, 0.6 + rand(s) * 0.8);
+    earn(s, got, 'Danfo returns from your driver');
+    log(s, '🚐 Your danfo driver brought ' + naira(got) + ' for the week.', 'good');
   }
 
   /* ---------- daily streak: come back on real consecutive days ---------- */
@@ -3107,7 +3127,7 @@
     buyPhone: recorded('ph', buyPhone), brandDeal: brandDeal, followerGain: followerGain, phoneCam: phoneCam,
     openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
-    danfoShift: recorded('dr', danfoShift),
+    danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,

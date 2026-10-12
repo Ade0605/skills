@@ -101,6 +101,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Hazards:** dodge potholes, okadas and cars, and never stop in a yellow LASTMA zone.
   - **Pay:** the result becomes a shift's pay, minus ₦4k owner's returns, fuel, and any fines or settlements. Takings are capped at ₦12k, so a skilled run nets a few thousand naira and a careless one loses money.
   - Serving 50 passengers unlocks "Agbero approved".
+  - **Own a danfo:** buy a ₦18m danfo bus from the dealers (Commercial tab). Your own runs then pay no owner's returns. Or hire a driver and it brings weekly returns, with an 8% chance of a crash repair bill and a 5% chance the driver "travels to the village" with the money.
 - **Airports:** Lagos, Abuja and Port Harcourt airports each have a **premium lounge** (shower, buffet and quiet: big boosts to hygiene, hunger and stress), **plane-spotting** at the apron window, and a **🛫 Check in** button that opens flights.
 - **Now passing:** after each trip, a note names the landmarks you passed on the way.
 - **House parties with real players:** when you host, you can add an **event decorator** for half the party's cost again. It turns the house festive, and guests spray 25% more.

@@ -648,6 +648,7 @@
   // Vehicles: road cars use the "Own car" travel mode with their own speed and
   // fuel; boats use the jetties; helicopters fly anywhere. Upkeep is weekly.
   var VEHICLES = {
+    danfo_bus: { name: 'Danfo bus', icon: '🚐', kind: 'bus', price: 18000000, speed: 28, fuel: 0, upkeep: 15000, status: 2, color: '#f2b600' },
     tokunbo:   { name: 'Tokunbo saloon', icon: '🚗', kind: 'car', price: 8000000, speed: 32, fuel: 120, upkeep: 6000, status: 2, color: '#c9ccd2' },
     keke_own:  { name: 'Your own keke', icon: '🛺', kind: 'car', price: 3500000, speed: 22, fuel: 60, upkeep: 3000, status: 1, color: '#f2b600' },
     muscle:    { name: '"Muscle" saloon', icon: '🚘', kind: 'car', price: 14000000, speed: 34, fuel: 140, upkeep: 12000, status: 4, color: '#1c1d20' },

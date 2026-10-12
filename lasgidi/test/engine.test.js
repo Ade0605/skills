@@ -1201,3 +1201,20 @@ test('danfo run: played at Ojuelegba, takings capped, owner and fuel paid, repla
   // The new park is not in the gem pool: today's gems are unchanged.
   assert.ok(L.gemsFor('2026-10-12').every(g => g.place !== 'ojuelegba_park'));
 });
+
+test('own danfo: runs skip the owner returns; a driver brings weekly returns', () => {
+  const s = L.newGame({ seed: 66, origin: 'mid', goal: 'freestyle', rules: 8 });
+  assert.equal(L.setDanfoDriver(s, true).ok, false);
+  s.vehicles.push({ id: 'danfo_bus', paid: 18000000 }); // mechanics only
+  assert.ok(L.setDanfoDriver(s, true).ok && s.danfoDriver);
+  for (let i = 0; i < 9 && L.week(s) < 1; i++) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 24 * 60); }
+  assert.ok(s.log.some(l => /danfo/i.test(l.text)), 'a weekly danfo line');
+  while (L.hour(s) < 7 || L.hour(s) >= 12) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 60); }
+  while (s.pending.length) L.resolveChoice(s, 0);
+  s.needs.energy = 90; s.needs.hunger = 90; // rested and fed, for the mechanics
+  if (s.loc !== 'surulere') { const o = L.travelOptions(s, 'surulere').find(o => !o.disabled); assert.ok(o, 'a way to Surulere'); assert.ok(L.travel(s, 'surulere', o.mode).ok); }
+  while (s.pending.length) L.resolveChoice(s, 0);
+  const r = L.danfoShift(s, 8000, 0, 20);
+  assert.ok(r.ok && /own bus/.test(r.msg), r.msg);
+  assert.ok(!s.alerts.some(a => a.memo === 'Danfo owner returns'));
+});

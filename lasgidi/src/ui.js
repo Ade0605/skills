@@ -1070,7 +1070,7 @@
       var driving = (function () { var V = L.bestCar(S); return V; })();
       html += '<div class="dl-sum"><span>' + S.vehicles.length + ' vehicle' + (S.vehicles.length === 1 ? '' : 's') + ' · ' + S.vehicles.length + '/12 spaces</span><span>Worth <b class="num">' + N(worth) + '</b> to the dealer</span></div>';
       if (!S.vehicles.length) html += '<p class="note">' + (S.car ? 'You drive the ' + esc(D.CAR.name) + '. ' : '') + 'Nothing parked yet. Pick something in the showroom.</p>';
-      var groups = [['Garage', '🅿️', ['car']], ['Marina', '⚓', ['boat']], ['Hangar', '🛫', ['heli', 'jet']]];
+      var groups = [['Garage', '🅿️', ['car']], ['Danfo park', '🚐', ['bus']], ['Marina', '⚓', ['boat']], ['Hangar', '🛫', ['heli', 'jet']]];
       groups.forEach(function (g) {
         var rows = S.vehicles.map(function (v, i) { return { v: v, i: i, V: D.VEHICLES[v.id] }; }).filter(function (o) { return g[2].indexOf(o.V.kind) >= 0; });
         if (!rows.length) return;
@@ -1079,19 +1079,20 @@
           var v = o.v, i = o.i, V = o.V, isCar = V.kind === 'car';
           var on = isCar && (S.driving === i || (S.driving < 0 && driving === V && S.vehicles.findIndex(function (x) { return D.VEHICLES[x.id] === V; }) === i));
           return '<div class="item dl-car' + (on ? ' on' : '') + '">' + vehPic(v.id) + '<div><h3>' + esc(V.name) + '</h3><div class="meta"><span>Worth ' + N(Math.round(v.paid * 0.5 / 1000) * 1000) + ' to the dealer</span><span>Upkeep ' + N(L.vehicleUpkeep(S, v.id)) + '/wk</span></div></div>' +
-            '<div class="dl-act">' + (isCar ? (on ? '<span class="gain dl-on">Driving</span>' : '<button class="btn sm ghost" id="drive-' + i + '" data-drive="' + i + '">Drive</button>') : '<span class="muted">' + (V.kind === 'boat' ? 'At the jetty' : V.kind === 'heli' ? 'On the helipad' : 'In the hangar') + '</span>') +
+            '<div class="dl-act">' + (isCar ? (on ? '<span class="gain dl-on">Driving</span>' : '<button class="btn sm ghost" id="drive-' + i + '" data-drive="' + i + '">Drive</button>') : '<span class="muted">' + (V.kind === 'boat' ? 'At the jetty' : V.kind === 'heli' ? 'On the helipad' : V.kind === 'bus' ? (S.danfoDriver ? 'On the road with a driver' : 'At the Ojuelegba park') : 'In the hangar') + '</span>') +
+              (V.kind === 'bus' ? '<button class="btn sm' + (S.danfoDriver ? ' ghost' : '') + '" id="danfo-driver" data-danfodriver="' + (S.danfoDriver ? '0' : '1') + '">' + (S.danfoDriver ? 'Take off the road' : 'Hire a driver') + '</button>' : '') +
             '<button class="link-btn cost" id="sellv-' + i + '" data-sellveh="' + i + '">Sell</button></div></div>';
         }).join('') + '</div>';
       });
       if (cars > 1 && S.driving >= 0) html += '<div class="inline"><button class="btn sm ghost" id="drive-auto" data-drive="-1">Always take the fastest car</button></div>';
       return html;
     }
-    var kinds = [['car', '🚗 Cars'], ['boat', '🚤 Boats'], ['heli', '🚁 Helicopters'], ['jet', '🛩️ Jets']];
+    var kinds = [['car', '🚗 Cars'], ['bus', '🚐 Commercial'], ['boat', '🚤 Boats'], ['heli', '🚁 Helicopters'], ['jet', '🛩️ Jets']];
     var kind = ui.vehKind || 'car';
     html += (note ? '<p class="note">' + esc(note) + '</p>' : '') + '<div class="pg-chips" style="padding:0">' + kinds.map(function (k) { return '<button type="button" class="pg-chip' + (k[0] === kind ? ' sel' : '') + '" id="vk-' + k[0] + '" data-vehkind="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div><div class="list">' +
       Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind; }).map(function (k) {
         var V = D.VEHICLES[k], p = L.price(S, V.price), own = S.vehicles.filter(function (v) { return v.id === k; }).length;
-        var what = V.kind === 'car' ? 'Top speed ' + V.speed + ' km/h on clear roads' : V.kind === 'boat' ? 'Use the jetties without waiting' : V.kind === 'heli' ? 'Anywhere in Lagos in about 30 minutes, ' + N(L.price(S, V.trip)) + ' a trip' : 'Weekends abroad from the airport';
+        var what = V.kind === 'car' ? 'Top speed ' + V.speed + ' km/h on clear roads' : V.kind === 'boat' ? 'Use the jetties without waiting' : V.kind === 'heli' ? 'Anywhere in Lagos in about 30 minutes, ' + N(L.price(S, V.trip)) + ' a trip' : V.kind === 'bus' ? 'Danfo Runs with no owner\'s returns, or a driver for weekly returns (and risks)' : 'Weekends abroad from the airport';
         return '<div class="item dl-car">' + vehPic(k) + '<div><h3>' + esc(V.name) + (own ? ' <span class="muted">· own ' + own + '</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(what) + '</span><span>Upkeep ' + N(L.vehicleUpkeep(S, k)) + '/wk</span><span>+' + V.status + ' status</span></div></div>' +
           '<button class="btn sm" id="buyv-' + k + '" data-buyveh="' + k + '"' + (wallet >= p && S.vehicles.length < 12 ? '' : ' disabled') + '>Buy</button></div>';
       }).join('') + '</div>';
@@ -1894,7 +1895,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2001,6 +2002,7 @@
       });
       return;
     }
+    if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
     if (ds.minigame === 'danfo') { openDanfo(); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.partyact) {
