@@ -24,7 +24,7 @@
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 9;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 10;         // state shape; migrate() upgrades older saves
   // Game RULES version. A life plays by the rules it started under, so a
   // recorded life replays identically after later updates add new systems.
   // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race,
@@ -174,7 +174,7 @@
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^Car maintenance/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
     if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary/.test(m)) return 'business';
-    if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill/i.test(m)) return 'savings';
+    if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up/.test(m)) return 'health';
     return amt < 0 ? 'lifestyle' : 'other';
@@ -282,7 +282,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {},
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {},
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -415,6 +415,7 @@
     weeklyAjo(s);
     weeklyLoans(s);
     weeklyProperty(s);
+    payDividends(s, w);
     if (s.rules >= 6) weeklyFamily(s);
     resolvePonzi(s);
 
@@ -1963,7 +1964,7 @@
     s.properties.forEach(function (p) { assets += p.value; });
     if (s.car) assets += roundTo(D.CAR.price * 0.5 * s.econ.infl, 1000);
     (s.vehicles || []).forEach(function (v) { assets += roundTo(v.paid * 0.5, 1000); });
-    assets += bondsHeld(s);
+    assets += bondsHeld(s) + stocksValue(s);
     (s.items || []).forEach(function (it) { assets += roundTo(it.paid * 0.4, 50); });
     return assets - debts(s);
   }
@@ -2433,6 +2434,98 @@
     return finish(s, ok('💎 You found a gem! +' + naira(prize) + '.'));
   }
 
+  /* ---------- the stock exchange ---------- */
+  // Prices are a random walk seeded by the life's seed and the ticker, one
+  // step per game day. They never touch s.rng, so older lives replay unchanged.
+  var STOCK_FEE = 0.015, STOCK_MIN_FEE = 500, STOCK_CAP = 20000000, priceMemo = {};
+  function stockSeries(seed, id, d) {
+    var key = seed + ':' + id, arr = priceMemo[key];
+    if (!arr) { if (Object.keys(priceMemo).length > 64) priceMemo = {}; arr = priceMemo[key] = [Math.log(D.STOCKS[id].base)]; }
+    var S = D.STOCKS[id];
+    while (arr.length <= d) {
+      var i = arr.length;
+      // Half of each day's move is the whole market's, half the company's own.
+      var z = 0.5 * gauss(seed + ':mkt:' + i) + 0.866 * gauss(key + ':' + i);
+      if (z > 4) z = 4; if (z < -4) z = -4;
+      arr.push(arr[i - 1] + S.drift - S.vol * S.vol / 2 + S.vol * z);
+    }
+    return arr;
+  }
+  function gauss(k) {
+    var u1 = parseInt(fnv(k), 16) / 4294967296, u2 = parseInt(fnv(k + ':b'), 16) / 4294967296;
+    return Math.sqrt(-2 * Math.log(u1 || 1e-9)) * Math.cos(2 * Math.PI * u2);
+  }
+  function stockPrice(s, id, d) {
+    if (!D.STOCKS[id]) return 0;
+    d = d == null ? day(s) : Math.max(0, d);
+    var p = Math.exp(stockSeries(s.seed, id, d)[d]);
+    return p < 10 ? Math.round(p * 100) / 100 : Math.round(p * 10) / 10;
+  }
+  function stockHistory(s, id, n) {
+    var d = day(s), out = [];
+    for (var i = Math.max(0, d - (n || 30) + 1); i <= d; i++) out.push(stockPrice(s, id, i));
+    return out;
+  }
+  function stocksValue(s) {
+    var h = s.stocks || {}, v = 0;
+    Object.keys(h).forEach(function (id) { v += Math.floor(h[id].u * stockPrice(s, id)); });
+    return v;
+  }
+  function brokerFee(amt) { return Math.max(STOCK_MIN_FEE, Math.round(amt * STOCK_FEE)); }
+  function marketOpen(s) {
+    var m = minuteOfDay(s);
+    if (dow(s) > 4) return 'The exchange is closed at weekends.';
+    if (m < 600 || m >= 870) return 'The exchange trades 10:00 to 14:30 on weekdays.';
+    return null;
+  }
+  function buyStock(s, id, amt) {
+    var S = D.STOCKS[id];
+    if (!S) return fail('No such stock.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var shut = marketOpen(s); if (shut) return fail(shut);
+    amt = Math.floor(amt);
+    if (!(amt >= 5000)) return fail('The smallest order is ' + naira(5000) + '.');
+    var px = stockPrice(s, id), units = Math.floor(amt / px);
+    if (units < 1) return fail('Not enough for one share.');
+    var cost = Math.round(units * px), fee = brokerFee(cost);
+    if (cost + fee > s.bank) return fail('Shares are paid from savings. You need ' + naira(cost + fee) + ' including the broker\'s fee.');
+    s.alerts = [];
+    post(s, 'bank', -cost, 'Shares bought: ' + S.ticker);
+    post(s, 'bank', -fee, 'Broker fee');
+    var invested = Object.keys(s.stocks).reduce(function (a, k) { return a + s.stocks[k].cost; }, 0), cap = price(s, STOCK_CAP);
+    if (invested + cost + fee > cap) return fail('Your broker caps a retail account at ' + naira(cap) + ' invested. You have ' + naira(invested) + ' in.');
+    var h = s.stocks[id] || (s.stocks[id] = { u: 0, cost: 0 });
+    h.u += units; h.cost += cost + fee;
+    return finish(s, ok('Bought ' + units.toLocaleString('en') + ' ' + S.ticker + ' at ' + (px < 100 ? '₦' + px.toFixed(2) : naira(px)) + '. Broker fee ' + naira(fee) + '.'));
+  }
+  function sellStock(s, id, units) {
+    var S = D.STOCKS[id], h = s.stocks && s.stocks[id];
+    if (!S || !h) return fail('You hold no ' + (S ? S.ticker : 'such stock') + '.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var shut = marketOpen(s); if (shut) return fail(shut);
+    units = Math.floor(units);
+    if (!(units >= 1) || units > h.u) return fail('You hold ' + h.u + ' shares.');
+    var px = stockPrice(s, id), gross = Math.floor(units * px), fee = Math.min(gross, brokerFee(gross));
+    s.alerts = [];
+    post(s, 'bank', gross, 'Shares sold: ' + S.ticker);
+    post(s, 'bank', -fee, 'Broker fee');
+    var basis = Math.round(h.cost * units / h.u);
+    h.cost -= basis; h.u -= units;
+    if (!h.u) delete s.stocks[id];
+    var pl = gross - fee - basis;
+    return finish(s, ok('Sold ' + units.toLocaleString('en') + ' ' + S.ticker + ' for ' + naira(gross - fee) + ' after fees (' + (pl >= 0 ? 'profit ' : 'loss ') + naira(Math.abs(pl)) + ').'));
+  }
+  // Every 13 weeks, dividend payers pay a quarter of their yearly yield.
+  function payDividends(s, w) {
+    if (!s.stocks || w <= 0 || w % 13 !== 0) return;
+    Object.keys(s.stocks).forEach(function (id) {
+      var S = D.STOCKS[id], h = s.stocks[id];
+      if (!S.div) return;
+      var amt = Math.floor(h.u * stockPrice(s, id) * S.div / 4);
+      if (amt > 0) { post(s, 'bank', amt, 'Dividend: ' + S.ticker); log(s, S.name + ' paid a dividend: ' + naira(amt) + '.', 'good'); }
+    });
+  }
+
   /* ---------- starter quests ---------- */
   var QUEST_CHECKS = {
     get_job:     function (s) { return !!s.job; },
@@ -2445,7 +2538,8 @@
     promoted:    function (s) { return !!s.ach.promoted; },
     car:         function (s) { return !!s.car || (s.vehicles || []).length > 0; },
     fly:         function (s) { return !!s.ach.traveller; },
-    business:    function (s) { return (s.businesses || []).length > 0; }
+    business:    function (s) { return (s.businesses || []).length > 0; },
+    shares:      function (s) { return Object.keys(s.stocks || {}).length > 0; }
   };
   function questDef(id) { return D.QUESTS.filter(function (q) { return q.id === id; })[0]; }
   function questDone(s, id) { var c = QUEST_CHECKS[id]; return !!(c && c(s)); }
@@ -2577,6 +2671,7 @@
     rentBoard: recorded('rb', rentBoard), boardRent: boardRent, boardQuote: boardQuote, adSlogans: adSlogans, sloganText: sloganText, checkAd: checkAd, checkPictureAd: checkPictureAd, PIC_MAX: PIC_MAX,
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
+    buyStock: recorded('sk', buyStock), sellStock: recorded('xs', sellStock), stockPrice: stockPrice, stockHistory: stockHistory, stocksValue: stocksValue, marketOpen: marketOpen, brokerFee: brokerFee,
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity),

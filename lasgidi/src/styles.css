@@ -459,3 +459,22 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   .quest:first-child { padding-right: 10px; }
   .quest:first-child .q-t { display: grid; max-width: 170px; }
 }
+
+/* stock exchange */
+.stocks { gap: 0; }
+.stk {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) 64px auto; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 4px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); text-align: left; cursor: pointer; font: inherit;
+}
+.stk.sel { background: var(--sunk); }
+.stk-ic { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--sunk); font-size: 16px; }
+.stk-n, .stk-p { display: grid; min-width: 0; line-height: 1.25; }
+.stk-n small { color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stk-p { text-align: right; }
+.stk-p small { font-size: 11.5px; }
+.spark.up polyline, .chart.up polyline { stroke: #2fa36b; }
+.spark.down polyline, .chart.down polyline { stroke: #d0453a; }
+.stk-detail { padding: 8px 4px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.stk-detail .chart { width: 100%; height: 90px; }
+.pg-chip[disabled], .btn[disabled] { opacity: .45; cursor: not-allowed; }
+.stk-detail .meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }

@@ -37,6 +37,19 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // The Lagos stock exchange. Fictional companies; prices follow a seeded random walk.
+  // base: opening price in naira; drift/vol: daily; div: yearly dividend yield, paid quarterly.
+  var STOCKS = {
+    ekocem:  { ticker: 'EKOCEM',  name: 'Eko Cement',          icon: '🏗️', sector: 'Industrial', base: 420,  drift: 0.0009, vol: 0.012, div: 0.06 },
+    naijatel:{ ticker: 'NAIJATEL',name: 'Naija Telecom',       icon: '📶', sector: 'Telecoms',   base: 210,  drift: 0.0008, vol: 0.014, div: 0.05 },
+    lagoonbk:{ ticker: 'LAGOONBK',name: 'Lagoon Bank',         icon: '🏦', sector: 'Banking',    base: 38,   drift: 0.0011, vol: 0.017, div: 0.08 },
+    deltaoil:{ ticker: 'DELTAOIL',name: 'Delta Oil & Gas',     icon: '🛢️', sector: 'Oil and gas',base: 1150, drift: 0.0007, vol: 0.022, div: 0.04 },
+    ofada:   { ticker: 'OFADA',   name: 'Ofada Foods',         icon: '🍚', sector: 'Consumer',   base: 64,   drift: 0.0007, vol: 0.011, div: 0.05 },
+    tmbrew:  { ticker: 'TMBREW',  name: 'Third Mainland Breweries', icon: '🍺', sector: 'Consumer', base: 52, drift: 0.0003, vol: 0.013, div: 0.03 },
+    jollof:  { ticker: 'JOLLOFT', name: 'Jollof Tech',         icon: '💻', sector: 'Technology', base: 18,   drift: 0.0016, vol: 0.03, div: 0 },
+    afrobeat:{ ticker: 'AFROMED', name: 'Afrobeat Media',      icon: '🎧', sector: 'Media',      base: 9,    drift: 0.0012, vol: 0.034, div: 0 }
+  };
+
   // Starter quests, shown as chips on the map. check names a rule in engine questDone().
   var QUESTS = [
     { id: 'get_job',     icon: '💼', title: 'Get a job',             hint: 'Open Phone → Jobs',           reward: 3000,  go: 'jobs' },
@@ -49,7 +62,8 @@
     { id: 'promoted',    icon: '📈', title: 'Get promoted',          hint: 'Keep working shifts',          reward: 10000, go: 'jobs' },
     { id: 'car',         icon: '🚗', title: 'Buy your first car',    hint: 'Phone → Dealers',              reward: 15000, go: 'dealers' },
     { id: 'fly',         icon: '✈️', title: 'Visit another city',    hint: 'Phone → Travel',               reward: 10000, go: 'travel' },
-    { id: 'business',    icon: '🏪', title: 'Build a business',      hint: 'Money tab → Businesses',       reward: 20000, go: 'business' }
+    { id: 'business',    icon: '🏪', title: 'Build a business',      hint: 'Money tab → Businesses',       reward: 20000, go: 'business' },
+    { id: 'shares',      icon: '📈', title: 'Buy your first shares', hint: 'Phone → Stocks',               reward: 3000,  go: 'stocks' }
   ];
 
   var CITIES = {
@@ -757,7 +771,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

@@ -1204,7 +1204,7 @@
         (claimed ? '' : '<button class="btn sm' + (done ? '' : ' ghost') + '" id="qa-' + q.id + '" data-quest="' + q.id + '">' + (done ? 'Claim' : 'Go') + '</button>') + '</div>';
     }).join('') + '</div></div>';
   }
-  var QUEST_APPS = { jobs: 1, gems: 1, bank: 1, events: 1, dealers: 1, travel: 1 };
+  var QUEST_APPS = { stocks: 1, jobs: 1, gems: 1, bank: 1, events: 1, dealers: 1, travel: 1 };
   function goQuest(id) {
     var q = D.QUESTS.filter(function (x) { return x.id === id; })[0];
     if (!q) return;
@@ -1510,13 +1510,45 @@
     return html + '</div>';
   }
 
+  /* ---------- the stock exchange ---------- */
+  function miniChart(vals, w, h, cls) {
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals); if (hi === lo) hi = lo + 1;
+    var pts = vals.map(function (v, i) { return (i / Math.max(1, vals.length - 1) * (w - 2) + 1).toFixed(1) + ',' + (1 + (1 - (v - lo) / (hi - lo)) * (h - 2)).toFixed(1); }).join(' ');
+    var up = vals[vals.length - 1] >= vals[0];
+    return '<svg class="' + cls + ' ' + (up ? 'up' : 'down') + '" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '"' + (cls === 'chart' ? ' preserveAspectRatio="none"' : '') + ' aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+  }
+  function pxLabel(v) { return '₦' + (v < 10 ? v.toFixed(2) : v.toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })); }
+  function stocksView() {
+    var held = S.stocks || {}, value = L.stocksValue(S), cost = 0, shut = L.marketOpen(S), d = L.day(S);
+    Object.keys(held).forEach(function (id) { cost += held[id].cost; });
+    var pl = value - cost;
+    var html = '<div class="section" style="padding-top:0"><div class="wallet-card"><div class="wc-l">Your portfolio</div><div class="wc-big num">' + N(value) + '</div>' +
+      '<div class="wc-s">' + (cost ? (pl >= 0 ? '▲ ' : '▼ ') + N(Math.abs(pl)) + ' ' + (pl >= 0 ? 'up' : 'down') + ' on what you paid, after fees · ' : '') + 'Savings ' + N(S.bank) + '</div></div>' +
+      '<p class="note">' + (shut ? '🔒 ' + esc(shut) : '🟢 The exchange is open until 14:30.') + ' Broker fee ' + (L.brokerFee(1e9) / 1e9 * 100).toFixed(1) + '% each way (min ' + N(L.brokerFee(0)) + '). Shares are paid from savings. Some pay dividends every 13 weeks. Prices can fall. Retail accounts are capped at ' + N(L.price(S, 20000000)) + ' invested.</p><div class="list stocks">';
+    html += Object.keys(D.STOCKS).map(function (id) {
+      var St = D.STOCKS[id], hist = L.stockHistory(S, id, 30), px = hist[hist.length - 1], prev = d > 0 ? L.stockPrice(S, id, d - 1) : px, ch = (px / prev - 1) * 100, h = held[id], sel = ui.stock === id;
+      var row = '<button type="button" class="stk' + (sel ? ' sel' : '') + '" id="stk-' + id + '" data-stock="' + id + '"><span class="stk-ic">' + St.icon + '</span><span class="stk-n"><b>' + esc(St.ticker) + '</b><small>' + esc(St.name) + (h ? ' · ' + h.u.toLocaleString('en') + ' held' : '') + '</small></span>' + miniChart(hist, 64, 24, 'spark') +
+        '<span class="stk-p num"><b>' + pxLabel(px) + '</b><small class="' + (ch >= 0 ? 'gain' : 'cost') + '">' + (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%</small></span></button>';
+      if (!sel) return row;
+      var hist90 = L.stockHistory(S, id, 90), hv = h ? Math.floor(h.u * px) : 0;
+      row += '<div class="stk-detail">' + miniChart(hist90, 320, 90, 'chart') + '<div class="meta"><span>' + esc(St.sector) + '</span><span>' + (St.div ? 'Dividend ' + (St.div * 100).toFixed(0) + '% a year' : 'No dividend') + '</span><span>90 days: ' + pxLabel(Math.min.apply(null, hist90)) + ' – ' + pxLabel(Math.max.apply(null, hist90)) + '</span></div>' +
+        (h ? '<p class="note">You hold ' + h.u.toLocaleString('en') + ' shares worth ' + N(hv) + ' (paid ' + N(h.cost) + ').</p>' : '') +
+        '<div class="label">Buy</div><div class="pg-chips" style="padding:0">' + [10000, 50000, 250000, 1000000].map(function (v) {
+          return '<button type="button" class="pg-chip" id="sb-' + id + '-' + v + '" data-stockbuy="' + id + ':' + v + '"' + (shut || v + L.brokerFee(v) > S.bank ? ' disabled' : '') + '>' + N(v) + '</button>';
+        }).join('') + '</div>' +
+        (h ? '<div class="inline">' + (h.u > 1 ? '<button class="btn sm ghost" id="ss-half-' + id + '" data-stocksell="' + id + ':' + Math.floor(h.u / 2) + '"' + (shut ? ' disabled' : '') + '>Sell half</button>' : '') + '<button class="btn sm ghost" id="ss-all-' + id + '" data-stocksell="' + id + ':' + h.u + '"' + (shut ? ' disabled' : '') + '>Sell all · ' + N(Math.max(0, hv - L.brokerFee(hv))) + '</button></div>' : '') + '</div>';
+      return row;
+    }).join('');
+    return html + '</div></div>';
+  }
+
   /* ---------- the phone: apps over the existing screens ---------- */
   var READ_KEY = 'lasgidi.read.v1';
   function lastRead() { try { var v = JSON.parse(localStorage.getItem(READ_KEY) || '{}'); return v.seed === S.seed ? v.t : -1; } catch (e) { return -1; } }
   function markRead() { try { localStorage.setItem(READ_KEY, JSON.stringify({ seed: S.seed, t: S.t })); } catch (e) {} }
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
-    ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['dealers', '🚗', 'Dealers'],
+    ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['travel', '✈️', 'Travel'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
@@ -1544,6 +1576,7 @@
     if (app) {
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
+      else if (app === 'stocks') body = '<div class="panel-b">' + stocksView() + '</div>';
       else if (app === 'quests') body = '<div class="panel-b">' + questsView() + '</div>';
       else if (app === 'bank') body = '<div class="panel-b">' + bankView() + '</div>';
       else if (app === 'dealers') body = '<div class="panel-b"><div class="section"><h3>Car dealers</h3>' + dealerView('Buy from the phone, or visit the Berger and Lekki dealers on the map.') + '</div></div>';
@@ -1656,7 +1689,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1742,6 +1775,9 @@
     if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
     if (ds.tour) { setTour(+ds.tour); render(); return; }
     if (ds.quest) { goQuest(ds.quest); return; }
+    if (ds.stock) { ui.stock = ui.stock === ds.stock ? null : ds.stock; render(); return; }
+    if (ds.stockbuy) { var sb = ds.stockbuy.split(':'); run(function () { return L.buyStock(S, sb[0], +sb[1]); }); return; }
+    if (ds.stocksell) { var sl = ds.stocksell.split(':'); run(function () { return L.sellStock(S, sl[0], +sl[1]); }); return; }
     if (ds.famecity != null && t.hasAttribute('data-famecity')) { ui.fameCity = ds.famecity || null; render(); return; }
     if (ds.wave) {
       var wid = ds.wave; if (!online.room) return;

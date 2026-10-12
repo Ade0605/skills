@@ -932,3 +932,25 @@ test('quests: checks flip, claims pay once, and the life still replays', () => {
   assert.equal(r.ledgerHash, s.ledgerHash);
   assert.deepEqual(Object.keys(r.quests).sort(), ['pantry', 'save_100k']);
 });
+
+test('stocks: market hours, broker fees, net worth, dividends, and replay', () => {
+  const s = L.newGame({ seed: 46, origin: 'nepo', goal: 'freestyle' });
+  assert.match(L.buyStock(s, 'ekocem', 50000).msg, /10:00 to 14:30/, 'closed at 06:00');
+  assert.equal(L.stockPrice(s, 'ekocem', 0), D.STOCKS.ekocem.base);
+  assert.equal(L.stockPrice(s, 'ekocem', 40), L.stockPrice(L.newGame({ seed: 46, origin: 'mid', goal: 'freestyle' }), 'ekocem', 40), 'same seed, same prices');
+  L.wait(s, 4 * 60 + 30); // 10:30 on a Monday
+  const bank = s.bank, worth = L.netWorth(s);
+  const r = L.buyStock(s, 'lagoonbk', 100000);
+  assert.ok(r.ok, r.msg);
+  const h = s.stocks.lagoonbk, px = L.stockPrice(s, 'lagoonbk');
+  assert.equal(h.u, Math.floor(100000 / px));
+  assert.equal(bank - s.bank, Math.round(h.u * px) + L.brokerFee(Math.round(h.u * px)));
+  assert.ok(worth - L.netWorth(s) <= L.brokerFee(100000) + 1, 'only the fee leaves net worth');
+  assert.ok(L.questDone(s, 'shares'));
+  assert.equal(L.sellStock(s, 'lagoonbk', h.u + 1).ok, false);
+  assert.ok(L.sellStock(s, 'lagoonbk', Math.floor(h.u / 2)).ok);
+  // Hold to week 13 for a quarterly dividend.
+  for (let i = 0; i < 13 * 7 && L.week(s) < 13; i++) { L.wait(s, 24 * 60); if (s.pending.length) L.resolveChoice(s, 0); }
+  assert.ok(s.log.some(l => /Lagoon Bank paid a dividend/.test(l.text)), 'dividend paid');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});
