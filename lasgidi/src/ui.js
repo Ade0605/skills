@@ -1483,6 +1483,25 @@
     });
   }
 
+  function openHawk() {
+    if (!window.LasgidiHawker || document.getElementById('danfo-overlay')) return;
+    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Go-slow hawker');
+    ov.innerHTML = '<div class="sheet danfo-sheet"><div class="inline" style="justify-content:space-between"><b>🛒 Hawk in the Oshodi go-slow</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
+      '<p class="note">When a driver raises a hand, pick what they want from your tray (or press 1–4) and tap their car before the light turns green. Hold 🙈 HIDE (or space) when the task force van comes. Your tray costs ' + N(L.price(S, 4000)) + ' and sales are capped at ' + N(L.price(S, 10000)) + '.</p><div class="danfo-end"></div></div>';
+    document.body.appendChild(ov);
+    var result = null;
+    danfoGame = window.LasgidiHawker.create({ seed: (S.seed ^ S.t ^ 313) | 0, onDone: function (r) {
+      result = r;
+      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">Count the money and go home</button></div>';
+    } });
+    ov.querySelector('.danfo-slot').appendChild(danfoGame.el); window.__danfo = danfoGame;
+    danfoGame.start();
+    ov.addEventListener('click', function (e) {
+      if (e.target.id === 'danfo-quit') { closeDanfo(); return; }
+      if (e.target.id === 'danfo-collect' && result) { var r = result; closeDanfo(); run(function () { return L.hawkShift(S, r.sales, r.served, r.wrong, r.seized); }); }
+    });
+  }
+
   /* ---------- Do tab ---------- */
   function actionRow(a) {
     var meta = ['<span>' + dur(a.mins) + '</span>'];
@@ -1881,6 +1900,7 @@
   function gamesView() {
     var rows = [
       { icon: '🚐', name: 'Danfo Run', where: 'Ojuelegba danfo park, Surulere', when: 'Every day, 06:00–21:00', best: S.stats.danfoBest ? 'Best fares ' + N(S.stats.danfoBest) + ' · ' + (S.stats.danfoPax || 0) + ' passengers in all' : 'Not played yet', act: 'suru_danfo', kind: 'danfo', place: 'ojuelegba_park', district: 'surulere' },
+      { icon: '🛒', name: 'Go-slow hawker', where: 'Oshodi market, Oshodi', when: 'Every day, 06:00–21:00', best: S.stats.hawkBest ? 'Best shift ' + N(S.stats.hawkBest) : 'Not played yet', act: 'oshodi_hawkgame', kind: 'hawk', place: 'oshodi_market', district: 'oshodi' },
       { icon: '💃', name: 'Owambe dance-off', where: 'Event hall, Surulere', when: 'Saturdays, 12:00–20:00', best: S.stats.danceBest ? 'Best ' + S.stats.danceBest + '% on the beat' : 'Not played yet', act: 'suru_danceoff', kind: 'dance', place: 'owambe_hall', district: 'surulere' }
     ];
     var acts = L.availableActions(S);
@@ -2181,6 +2201,7 @@
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
     if (ds.minigame === 'danfo') { openDanfo(); return; }
     if (ds.minigame === 'dance') { openDance(); return; }
+    if (ds.minigame === 'hawk') { openHawk(); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.partyact) {
       var host = ui.visit, pt2 = host && partyOf(host), act = ds.partyact;

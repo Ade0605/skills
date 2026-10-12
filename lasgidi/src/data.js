@@ -416,6 +416,7 @@
       { id: 'ikeja_suya', label: 'Suya by the roadside', mins: 30, cost: 1500, fx: { hunger: 35, fun: 5 }, when: { from: 17, to: 24 } }
     ],
     oshodi: [
+      { id: 'oshodi_hawkgame', label: 'Hawk in the go-slow (mini-game)', mins: 180, fx: { energy: -20, hygiene: -15, stress: 6 }, xp: { hustle: 4 }, gig: true, minigame: 'hawk', when: { from: 6, to: 21 } },
       { id: 'oshodi_hawk', label: 'Hawk in traffic', mins: 180, earn: 2800, fx: { energy: -20, hygiene: -15, stress: 6 }, xp: { hustle: 4 }, gig: true, when: { from: 6, to: 21 } },
       { id: 'oshodi_market', label: 'Buy foodstuff (7 meals)', mins: 60, cost: 4500, special: 'pantry7' },
       { id: 'oshodi_bukka', label: 'Eat at a bukka', mins: 30, cost: 1000, fx: { hunger: 40 } }
@@ -504,7 +505,7 @@
     { id: 'iko_market', icon: '🧺', name: 'Ikorodu farm market', type: 'food', glyph: 'basket', district: 'ikorodu', x: 28.6, y: 2.6, acts: ['iko_market', 'iko_eat'], text: 'The cheapest foodstuff in Lagos, fresh from the farms.' },
     { id: 'sawmill', icon: '🪚', name: 'Ikorodu sawmill', type: 'learn', glyph: 'tool', district: 'ikorodu', x: 29.2, y: 3.4, acts: ['iko_sawmill'], text: 'Hard work, steady cash.' },
     { id: 'oshodi_hub', icon: '🚌', name: 'Oshodi transport interchange', type: 'transport', glyph: 'bus', district: 'oshodi', x: 10.7, y: 9.4, acts: [], text: 'Every danfo, BRT and keke route meets here.' },
-    { id: 'oshodi_market', icon: '🛒', name: 'Oshodi market', type: 'food', glyph: 'basket', district: 'oshodi', x: 9.3, y: 8.6, acts: ['oshodi_market', 'oshodi_bukka', 'oshodi_hawk'], text: 'Buy foodstuff in bulk, eat cheap, hawk in the go-slow.' },
+    { id: 'oshodi_market', icon: '🛒', name: 'Oshodi market', type: 'food', glyph: 'basket', district: 'oshodi', x: 9.3, y: 8.6, acts: ['oshodi_market', 'oshodi_bukka', 'oshodi_hawk', 'oshodi_hawkgame'], text: 'Buy foodstuff in bulk, eat cheap, hawk in the go-slow.' },
     { id: 'mushin_market', icon: '🧺', name: 'Mushin market', type: 'food', glyph: 'basket', district: 'mushin', x: 10.5, y: 12.4, acts: ['mushin_market', 'mushin_water'], text: 'Local market. Pure water sells fast in the traffic outside.' },
     { id: 'mamaput', icon: '🍲', name: 'Mama Put row', type: 'food', glyph: 'bowl', district: 'mushin', x: 11.7, y: 12.6, acts: ['mushin_mamaput'], text: 'Rice, beans and stew at the price of a danfo ride.' },
     { id: 'barber', icon: '💈', name: 'Barbershop', type: 'services', glyph: 'scissors', district: 'mushin', x: 10.4, y: 13.5, acts: ['mushin_barber'], text: 'Where all the gist happens.' },

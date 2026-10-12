@@ -1287,3 +1287,19 @@ test('dance-off: Saturdays at the event hall, spray capped and scaled by accurac
   assert.ok(spray > 0 && spray <= L.price(s, 4000), 'capped spray');
   assert.ok(s.ach.dancer); // (needs were set by hand above, so no replay check here)
 });
+
+test('go-slow hawker: tray stock paid, sales capped, goods add up', () => {
+  const s = L.newGame({ seed: 72, origin: 'mid', goal: 'freestyle', rules: 8 });
+  assert.match(L.hawkShift(s, 5000, 15, 0, 0).msg, /Oshodi/);
+  s.needs.energy = 90; s.needs.hunger = 90;
+  L.travel(s, 'oshodi', L.travelOptions(s, 'oshodi').find(o => !o.disabled).mode);
+  while (L.hour(s) < 7) L.wait(s, 60);
+  while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(L.hawkShift(s, 5000, 25, 0, 10).ok, false, 'more than the tray holds');
+  const r = L.hawkShift(s, 999999, 28, 2, 0);
+  assert.ok(r.ok, r.msg);
+  const got = s.alerts.find(a => a.memo === 'Hawking sales').amt;
+  assert.ok(got <= L.price(s, 10000));
+  assert.ok(s.alerts.some(a => a.memo === 'Hawking stock'));
+  assert.equal(L.category('Hawking sales', 1), 'gigs');
+});

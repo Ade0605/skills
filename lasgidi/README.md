@@ -109,6 +109,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The trader opens at 130% of the shop price and has a secret last price, 70–95% of it, that changes daily and drops a little for a good hustler.
   - Offer low and they counter ("Customer, add small!").
   - You get three offers per item a day. Accept the right one and you pay less than the shop price.
+- **Go-slow hawker (mini-game):** at Oshodi market, 06:00–21:00. A 45-second shift in the go-slow under the bridge.
+  - **Selling:** when a driver raises a hand for 💧 water, 🌭 gala, 📱 airtime or 🍌 plantain chips, pick the item (or press 1–4) and tap the car before the light turns green.
+  - **Task force:** hold 🙈 HIDE when the task force van comes, or they seize your goods.
+  - **Pay:** the tray of 30 items costs ₦4k, and sales are capped at ₦10k, so a perfect shift nets about ₦3k.
 - **Owambe dance-off (mini-game):** on Saturdays at the Surulere event hall. A 40-second rhythm game: notes fall in four lanes to a 112-bpm beat, and you tap the lane (or press ←↓↑→ / D F J K) as each one hits the line.
   - **Spraying:** every 10 in a row brings guests out to spray money across the screen.
   - **Pay:** the ₦3k entry buys a spray scaled by your accuracy, capped at ₦4k, with a bonus for an owambe outfit.

@@ -535,3 +535,10 @@ html.pg-full-open { overflow: hidden; }
 .df-pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; }
 .df-btn { height: 56px; border-radius: 14px; border: 0; background: var(--c); color: #fff; font: 800 20px sans-serif; cursor: pointer; touch-action: none; box-shadow: 0 3px 0 rgb(0 0 0 / .25); }
 .df-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgb(0 0 0 / .25); }
+.hawk-game { width: 100%; display: grid; justify-items: center; gap: 8px; touch-action: none; user-select: none; }
+.hawk-game canvas { border-radius: 12px; max-width: 100%; }
+.hk-pad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
+.hk-btn { height: 58px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); font-size: 22px; cursor: pointer; display: grid; place-items: center; line-height: 1; touch-action: none; }
+.hk-btn small { font-size: 10.5px; font-weight: 700; }
+.hk-btn.sel { border-color: var(--danfo-ink); background: var(--danfo); color: var(--danfo-ink); }
+.hk-btn.hide { background: #2b2b2f; color: #fff; border-color: #17181a; }

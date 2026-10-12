@@ -179,12 +179,12 @@
     var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
     if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
-    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Danfo fares|Daily streak|Quest:|Party: guests|Dance-off: guests)/.test(m)) return 'gigs';
+    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Danfo fares|Daily streak|Quest:|Party: guests|Dance-off: guests|Hawking sales)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in|Staff:)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
-    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch|^Sea Plots|^Danfo (owner|fuel|repairs|returns)/.test(m)) return 'business';
+    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch|^Sea Plots|^Danfo (owner|fuel|repairs|returns)|^Hawking stock/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
@@ -3118,6 +3118,25 @@
     return finish(s, ok('💃 ' + Math.round(acc * 100) + '% on the beat, best streak ' + best + '. ' + (spray ? 'The guests sprayed you ' + naira(spray) + '!' : 'Nobody sprayed. Practise and come back.') + dressBonus(s, 'owambe')));
   }
 
+  /* ---------- go-slow hawker: a capped shift from the mini-game ---------- */
+  var HAWK_STOCK = 4000, HAWK_CAP = 10000;
+  function hawkShift(s, sales, served, wrong, seized) {
+    var a = availableActions(s).filter(function (x) { return x.minigame === 'hawk'; })[0];
+    if (!a) return fail('Hawk in the Oshodi go-slow.');
+    if (a.disabled) return fail(a.disabled);
+    sales = Math.floor(sales); served = Math.floor(served); wrong = Math.floor(wrong); seized = Math.floor(seized);
+    if (!(sales >= 0 && served >= 0 && served <= 30 && wrong >= 0 && seized >= 0 && seized <= 30 && served + seized <= 30)) return fail('That shift does not add up.');
+    var stock = price(s, HAWK_STOCK);
+    s.alerts = [];
+    if (!pay(s, stock, 'Hawking stock')) return fail('Stock for the tray costs ' + naira(stock) + '.');
+    advance(s, a.mins);
+    applyFx(s, a.fx); addXp(s, a.xp);
+    var got = Math.min(price(s, HAWK_CAP), served * price(s, 500), gigPay(s, sales, 1));
+    if (got) earn(s, got, 'Hawking sales');
+    s.stats.hawkBest = Math.max(s.stats.hawkBest || 0, got);
+    return finish(s, ok('🛒 ' + served + ' sales: ' + naira(got) + (seized ? ', ' + seized + ' items seized' : '') + '. Stock cost ' + naira(stock) + ', so you ' + (got - stock >= 0 ? 'made ' + naira(got - stock) : 'lost ' + naira(stock - got)) + '.'));
+  }
+
   /* ---------- daily streak: come back on real consecutive days ---------- */
   var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
   function nextDayId(id) { var d = new Date(id + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
@@ -3258,7 +3277,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
+    hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
