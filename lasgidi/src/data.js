@@ -364,6 +364,7 @@
     ],
     ph_oldgra: [
       { id: 'ph_bole', label: 'Eat bole and fish', mins: 45, cost: 2500, fx: { hunger: 50, fun: 10 } },
+      { id: 'ph_bolegame', label: 'Work the bole grill (mini-game)', mins: 180, fx: { energy: -18, hygiene: -12, stress: 5, hunger: 20 }, xp: { cooking: 3, hustle: 1 }, gig: true, minigame: 'bole', when: { from: 11, to: 22 } },
       { id: 'ph_isaac', label: 'Walk in Isaac Boro Park', mins: 60, fx: { fun: 12, stress: -8 }, when: { from: 7, to: 19 } },
       { id: 'ph_oldgra_gig', label: 'Run errands in Old GRA', mins: 150, earn: 2700, fx: { energy: -12 }, xp: { hustle: 2 }, gig: true, when: { from: 8, to: 19 } }
     ],
@@ -569,7 +570,7 @@
     { id: 'ph_mall', icon: '🎬', name: 'Port Harcourt mall', type: 'culture', glyph: 'film', district: 'ph_gra', x: 11.0, y: 10.6, acts: ['ph_gra_film'], text: 'Cinema, food court and air-conditioning.' },
     { id: 'ph_yards', icon: '🛢️', name: 'Trans-Amadi yards', type: 'learn', glyph: 'tool', district: 'ph_transamadi', x: 21.6, y: 12.0, acts: ['ph_yard_gig', 'ph_canteen'], text: 'Oil-service companies. Day labour and real careers.' },
     { id: 'ph_mile1', icon: '🧺', name: 'Mile 1 market', type: 'food', glyph: 'basket', district: 'ph_dline', x: 9.6, y: 14.0, acts: ['ph_mile1_food', 'ph_mile1_gig'], text: 'The busiest market in Port Harcourt.' },
-    { id: 'ph_bole', icon: '🐟', name: 'Bole and fish spot', type: 'food', glyph: 'bowl', district: 'ph_oldgra', x: 13.4, y: 15.8, acts: ['ph_bole'], text: 'Roasted plantain and fish with pepper sauce. A PH classic.' },
+    { id: 'ph_bole', icon: '🐟', name: 'Bole and fish spot', type: 'food', glyph: 'bowl', district: 'ph_oldgra', x: 13.4, y: 15.8, acts: ['ph_bole', 'ph_bolegame'], text: 'Roasted plantain and fish with pepper sauce. A PH classic. Mama lets you work the grill for a share of sales.' },
     { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
     { id: 'ojuelegba_park', icon: '🚐', name: 'Ojuelegba danfo park', type: 'transport', glyph: 'bus', district: 'surulere', x: 12.2, y: 16.8, acts: ['suru_danfo'], nogem: true, text: 'Under the bridge, conductors shout routes and danfos fill up. Rent one from the owner for a run to Yaba and back.' }

@@ -1303,3 +1303,15 @@ test('go-slow hawker: tray stock paid, sales capped, goods add up', () => {
   assert.ok(s.alerts.some(a => a.memo === 'Hawking stock'));
   assert.equal(L.category('Hawking sales', 1), 'gigs');
 });
+
+test('bole grill (PH): only in Old GRA, half the takings, burnt items deducted', () => {
+  const s = L.newGame({ seed: 73, origin: 'nepo', goal: 'freestyle', rules: 8 });
+  assert.match(L.boleShift(s, 9000, 20, 0).msg, /Old GRA/);
+  s.loc = 'ph_oldgra'; s.t = Math.floor(s.t / 1440) * 1440 + 12 * 60; s.needs.energy = 90; s.needs.hunger = 60; // mechanics only
+  assert.equal(L.boleShift(s, 99999, 10, 0).ok, false, 'sales cannot beat the plates');
+  const r = L.boleShift(s, 8000, 14, 2);
+  assert.ok(r.ok, r.msg);
+  const share = s.alerts.find(a => a.memo === 'Bole grill share').amt;
+  assert.ok(share > 0 && share <= 4000 * s.econ.infl + 50, 'about half the takings, after the gig cut');
+  assert.ok(s.alerts.some(a => a.memo === 'Burnt bole (deducted)'));
+});

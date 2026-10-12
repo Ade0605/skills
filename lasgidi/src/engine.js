@@ -179,7 +179,7 @@
     var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
     if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
-    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Danfo fares|Daily streak|Quest:|Party: guests|Dance-off: guests|Hawking sales)/.test(m)) return 'gigs';
+    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Danfo fares|Daily streak|Quest:|Party: guests|Dance-off: guests|Hawking sales|Bole grill share)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in|Staff:)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
@@ -3137,6 +3137,25 @@
     return finish(s, ok('🛒 ' + served + ' sales: ' + naira(got) + (seized ? ', ' + seized + ' items seized' : '') + '. Stock cost ' + naira(stock) + ', so you ' + (got - stock >= 0 ? 'made ' + naira(got - stock) : 'lost ' + naira(stock - got)) + '.'));
   }
 
+  /* ---------- bole grill (Port Harcourt): a capped shift from the mini-game ---------- */
+  var BOLE_CUT = 0.5, BOLE_CAP = 9000;
+  function boleShift(s, sales, served, burnt) {
+    var a = availableActions(s).filter(function (x) { return x.minigame === 'bole'; })[0];
+    if (!a) return fail('The bole grill is in Old GRA, Port Harcourt.');
+    if (a.disabled) return fail(a.disabled);
+    sales = Math.floor(sales); served = Math.floor(served); burnt = Math.floor(burnt);
+    if (!(sales >= 0 && served >= 0 && served <= 60 && burnt >= 0 && burnt <= 60 && sales <= served * 900)) return fail('That shift does not add up.');
+    s.alerts = [];
+    advance(s, a.mins);
+    applyFx(s, a.fx); addXp(s, a.xp);
+    // Mama keeps half of the takings and charges for what you burnt.
+    var share = Math.min(price(s, BOLE_CAP), gigPay(s, sales * BOLE_CUT, 1)), burn = price(s, 150) * burnt;
+    if (share) earn(s, share, 'Bole grill share');
+    if (burn) payPartial(s, Math.min(burn, share || burn), 'Burnt bole (deducted)');
+    s.stats.boleBest = Math.max(s.stats.boleBest || 0, share - burn);
+    return finish(s, ok('🍌 ' + served + ' plates served. Your half: ' + naira(share) + (burnt ? ', minus ' + naira(burn) + ' for ' + burnt + ' burnt' : '') + '.'));
+  }
+
   /* ---------- daily streak: come back on real consecutive days ---------- */
   var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
   function nextDayId(id) { var d = new Date(id + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
@@ -3277,7 +3296,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
+    boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,

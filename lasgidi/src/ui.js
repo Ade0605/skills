@@ -1502,6 +1502,25 @@
     });
   }
 
+  function openBole() {
+    if (!window.LasgidiBole || document.getElementById('danfo-overlay')) return;
+    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Bole grill');
+    ov.innerHTML = '<div class="sheet danfo-sheet"><div class="inline" style="justify-content:space-between"><b>🍌 Bole grill · Old GRA</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
+      '<p class="note">Pick plantain, fish or yam (or press 1–3) and tap an empty spot on the grill. When it turns golden, tap it to serve whoever ordered it. Leave it too long and it burns. Mama keeps half the takings and charges for anything burnt, and your share is capped at ' + N(L.price(S, 9000)) + '.</p><div class="danfo-end"></div></div>';
+    document.body.appendChild(ov);
+    var result = null;
+    danfoGame = window.LasgidiBole.create({ seed: (S.seed ^ S.t ^ 919) | 0, onDone: function (r) {
+      result = r;
+      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">Collect your share</button></div>';
+    } });
+    ov.querySelector('.danfo-slot').appendChild(danfoGame.el); window.__danfo = danfoGame;
+    danfoGame.start();
+    ov.addEventListener('click', function (e) {
+      if (e.target.id === 'danfo-quit') { closeDanfo(); return; }
+      if (e.target.id === 'danfo-collect' && result) { var r = result; closeDanfo(); run(function () { return L.boleShift(S, r.sales, r.served, r.burnt); }); }
+    });
+  }
+
   /* ---------- Do tab ---------- */
   function actionRow(a) {
     var meta = ['<span>' + dur(a.mins) + '</span>'];
@@ -1918,13 +1937,14 @@
     var rows = [
       { icon: '🚐', name: 'Danfo Run', where: 'Ojuelegba danfo park, Surulere', when: 'Every day, 06:00–21:00', best: S.stats.danfoBest ? 'Best fares ' + N(S.stats.danfoBest) + ' · ' + (S.stats.danfoPax || 0) + ' passengers in all' : 'Not played yet', act: 'suru_danfo', kind: 'danfo', place: 'ojuelegba_park', district: 'surulere' },
       { icon: '🛒', name: 'Go-slow hawker', where: 'Oshodi market, Oshodi', when: 'Every day, 06:00–21:00', best: S.stats.hawkBest ? 'Best shift ' + N(S.stats.hawkBest) : 'Not played yet', act: 'oshodi_hawkgame', kind: 'hawk', place: 'oshodi_market', district: 'oshodi' },
+      { icon: '🍌', name: 'Bole grill', where: 'Bole and fish spot, Old GRA, Port Harcourt', when: 'Every day, 11:00–22:00', best: S.stats.boleBest ? 'Best shift ' + N(S.stats.boleBest) : 'Not played yet', act: 'ph_bolegame', kind: 'bole', place: 'ph_bole', district: 'ph_oldgra' },
       { icon: '💃', name: 'Owambe dance-off', where: 'Event hall, Surulere', when: 'Saturdays, 12:00–20:00', best: S.stats.danceBest ? 'Best ' + S.stats.danceBest + '% on the beat' : 'Not played yet', act: 'suru_danceoff', kind: 'dance', place: 'owambe_hall', district: 'surulere' }
     ];
     var acts = L.availableActions(S);
     return '<div class="section" style="padding-top:0"><h3>🎮 Mini-games</h3><p class="note">Arcade games that pay as part of your life, with capped takings, so skill helps but never prints money.</p><div class="list">' + rows.map(function (g) {
       var a = acts.filter(function (x) { return x.id === g.act; })[0], can = a && !a.disabled;
       return '<div class="item"><div><h3>' + g.icon + ' ' + esc(g.name) + '</h3><div class="meta"><span>' + esc(g.where) + '</span><span>' + esc(g.when) + '</span></div><div class="act-note">' + esc(g.best) + '</div>' + (a && a.disabled ? '<div class="why">' + esc(a.disabled) + '</div>' : '') + '</div>' +
-        (can ? '<button class="btn go" id="game-' + g.kind + '" data-minigame="' + g.kind + '">▶ Play</button>' : '<button class="btn ghost" id="game-go-' + g.kind + '" data-tripto="' + g.district + '" data-tab="map">Go there</button>') + '</div>';
+        (can ? '<button class="btn go" id="game-' + g.kind + '" data-minigame="' + g.kind + '">▶ Play</button>' : L.districtCity(g.district) !== L.cityOf(S) ? '<button class="btn ghost" id="game-go-' + g.kind + '" data-app="travel">✈️ Fly there</button>' : '<button class="btn ghost" id="game-go-' + g.kind + '" data-tripto="' + g.district + '" data-tab="map">Go there</button>') + '</div>';
     }).join('') + '</div></div>';
   }
   function eventsView() {
@@ -2220,6 +2240,7 @@
     if (ds.minigame === 'danfo') { openDanfo(); return; }
     if (ds.minigame === 'dance') { openDance(); return; }
     if (ds.minigame === 'hawk') { openHawk(); return; }
+    if (ds.minigame === 'bole') { openBole(); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.partyact) {
       var host = ui.visit, pt2 = host && partyOf(host), act = ds.partyact;
