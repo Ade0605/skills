@@ -1337,6 +1337,28 @@
       }).join('') + '</div></div>';
   }
 
+  /* ---------- Danfo Run mini-game: an overlay outside the render tree ---------- */
+  var danfoGame = null;
+  function openDanfo() {
+    if (!window.LasgidiDanfo || document.getElementById('danfo-overlay')) return;
+    var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Danfo Run');
+    ov.innerHTML = '<div class="sheet danfo-sheet"><div class="inline" style="justify-content:space-between"><b>🚐 Danfo Run · Ojuelegba to Yaba</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
+      '<p class="note">◀ ▶ (or swipe) to change lanes. Hold BRAKE (or ↓/space) at a 🚏 in the left lane to drop and load. Never stop in a yellow LASTMA zone. Dodge potholes, okadas and cars. Takings are capped at ' + N(L.price(S, 12000)) + '. The owner takes ' + N(L.price(S, 4000)) + ' and fuel is on you.</p><div class="danfo-end"></div></div>';
+    document.body.appendChild(ov);
+    var result = null;
+    danfoGame = window.LasgidiDanfo.create({ seed: (S.seed ^ S.t) | 0, onDone: function (r) {
+      result = r;
+      ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">Collect and end the shift</button></div>';
+    } });
+    ov.querySelector('.danfo-slot').appendChild(danfoGame.el); window.__danfo = danfoGame; // handle for tests
+    danfoGame.start();
+    ov.addEventListener('click', function (e) {
+      if (e.target.id === 'danfo-quit') { closeDanfo(); return; }
+      if (e.target.id === 'danfo-collect' && result) { var r = result; closeDanfo(); run(function () { return L.danfoShift(S, r.fares, r.fines, r.served); }); }
+    });
+  }
+  function closeDanfo() { if (danfoGame) danfoGame.stop(); danfoGame = null; var ov = document.getElementById('danfo-overlay'); if (ov) ov.remove(); }
+
   /* ---------- Do tab ---------- */
   function actionRow(a) {
     var meta = ['<span>' + dur(a.mins) + '</span>'];
@@ -1348,7 +1370,8 @@
     if (a.collapseRisk && !a.disabled) meta.push('<span class="cost">' + esc(a.collapseRisk) + '</span>');
     return '<div class="item' + (a.isWork ? ' work' : '') + '"><div><h3>' + esc(a.label) + '</h3><div class="meta">' + meta.join('') + '</div>' +
       (a.note ? '<div class="act-note">' + esc(a.note) + '</div>' : '') + (a.disabled ? '<div class="why">' + esc(a.disabled) + '</div>' : '') + '</div>' +
-      '<button class="btn' + (a.isWork ? ' go' : '') + '" id="act-' + a.id + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled' : '') + '>' + (a.isWork ? 'Clock in' : 'Do') + '</button></div>';
+      (a.minigame ? '<button class="btn go" id="act-' + a.id + '" data-minigame="' + a.minigame + '"' + (a.disabled ? ' disabled' : '') + '>▶ Play</button></div>'
+        : '<button class="btn' + (a.isWork ? ' go' : '') + '" id="act-' + a.id + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled' : '') + '>' + (a.isWork ? 'Clock in' : 'Do') + '</button></div>');
   }
 
   function adviceView() {
@@ -1871,7 +1894,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1978,6 +2001,7 @@
       });
       return;
     }
+    if (ds.minigame === 'danfo') { openDanfo(); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.partyact) {
       var host = ui.visit, pt2 = host && partyOf(host), act = ds.partyact;

@@ -1181,3 +1181,23 @@ test('party extras: a decorator costs more and pays more spray; guests join for 
   assert.equal(L.replayLife(g.replay).ledgerHash, g.ledgerHash);
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('danfo run: played at Ojuelegba, takings capped, owner and fuel paid, replays', () => {
+  const s = L.newGame({ seed: 65, origin: 'mid', goal: 'freestyle', rules: 8 });
+  assert.match(L.danfoShift(s, 10000, 0, 20).msg, /Ojuelegba/);
+  L.travel(s, 'surulere', L.travelOptions(s, 'surulere').find(o => !o.disabled).mode);
+  while (L.hour(s) < 6) L.wait(s, 60);
+  while (s.pending.length) L.resolveChoice(s, 0);
+  assert.match(L.doAction(s, 'suru_danfo').msg, /Play the run/);
+  const b0 = s.cash + s.bank;
+  const r = L.danfoShift(s, 999999, 0, 30);
+  assert.ok(r.ok, r.msg);
+  const fares = s.alerts.find(a => a.memo === 'Danfo fares').amt;
+  assert.ok(fares <= L.price(s, 12000), 'capped');
+  assert.ok(s.alerts.some(a => a.memo === 'Danfo owner returns') && s.alerts.some(a => a.memo === 'Danfo fuel'));
+  assert.equal(L.danfoShift(s, -5, 0, 3).ok, false);
+  assert.equal(L.category('Danfo fares', 1), 'gigs');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  // The new park is not in the gem pool: today's gems are unchanged.
+  assert.ok(L.gemsFor('2026-10-12').every(g => g.place !== 'ojuelegba_park'));
+});

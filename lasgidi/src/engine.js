@@ -72,6 +72,7 @@
     oga:         'Oga at the top: hired domestic staff',
     pet:         'Best friend: adopted a pet',
     chief:       'Chieftaincy: took a title',
+    danfo:       'Agbero approved: served 50 danfo passengers',
     vendor:      'Online vendor: sold 100 items'
   };
 
@@ -175,12 +176,12 @@
     var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
     if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
-    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Daily streak|Quest:|Party: guests)/.test(m)) return 'gigs';
+    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Danfo fares|Daily streak|Quest:|Party: guests)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in|Staff:)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
-    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch/.test(m)) return 'business';
+    if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch|^Danfo (owner|fuel)/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
@@ -730,6 +731,7 @@
     if (!a) return fail('You cannot do that here.');
     if (a.disabled) return fail(a.disabled);
     if (a.special === 'shift') return workShift(s, a);
+    if (a.minigame) return fail('Play the run first.');
     if (a.alarm) a.label = 'Sleep';
     if (a.price && !pay(s, a.price, a.label + (a.gen ? ' (incl. gen fuel)' : ''))) return fail('Not enough money.');
 
@@ -2508,7 +2510,7 @@
     if (!GEM_ID.test(dayId)) return [];
     var h = 2166136261;
     for (var i = 0; i < dayId.length; i++) { h ^= dayId.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
-    var pool = D.PLACES.filter(function (p) { return (D.DISTRICTS[p.district].city || 'lagos') === 'lagos'; }).map(function (p) { return p.id; }), out = [];
+    var pool = D.PLACES.filter(function (p) { return !p.nogem && (D.DISTRICTS[p.district].city || 'lagos') === 'lagos'; }).map(function (p) { return p.id; }), out = [];
     while (out.length < GEM_COUNT && pool.length) {
       h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h ^ (h >>> 13)) >>> 0;
       out.push(pool.splice(h % pool.length, 1)[0]);
@@ -2943,6 +2945,32 @@
     return finish(s, ok(A.icon + ' ' + (act === 'dance' ? 'You danced till your legs shook.' : 'You met three new people and swapped numbers.')));
   }
 
+  /* ---------- Danfo Run: a shift paid from the mini-game's result ---------- */
+  var DANFO_CAP = 12000, DANFO_RETURNS = 4000, DANFO_FUEL = 2000;
+  function danfoShift(s, fares, fines, served) {
+    var a = availableActions(s).filter(function (x) { return x.minigame === 'danfo'; })[0];
+    if (!a) return fail('Rent a danfo at the Ojuelegba park.');
+    if (a.disabled) return fail(a.disabled);
+    fares = Math.floor(fares); fines = Math.floor(fines); served = Math.floor(served);
+    if (!(fares >= 0 && fines >= 0 && served >= 0 && served <= 120)) return fail('That run does not add up.');
+    // A run's takings are capped: no 90 seconds of driving pays more than a real day.
+    fares = Math.min(fares, price(s, DANFO_CAP), served * price(s, 400));
+    fines = Math.min(fines, price(s, 30000));
+    s.alerts = [];
+    advance(s, a.mins);
+    applyFx(s, a.fx); addXp(s, a.xp);
+    var got = gigPay(s, fares, 1);
+    if (got) earn(s, got, 'Danfo fares');
+    var owner = price(s, DANFO_RETURNS), fuel = price(s, DANFO_FUEL * s.econ.fuel);
+    pay(s, owner, 'Danfo owner returns') || addDebt(s, owner, 'Danfo owner returns');
+    pay(s, fuel, 'Danfo fuel') || addDebt(s, fuel, 'Danfo fuel');
+    if (fines) payPartial(s, fines, 'Danfo fines and settlements');
+    s.stats.danfoPax = (s.stats.danfoPax || 0) + served;
+    if (s.stats.danfoPax >= 50) unlock(s, 'danfo');
+    var net = got - owner - fuel - fines;
+    return finish(s, ok('🚐 ' + served + ' passengers. Fares ' + naira(got) + ', owner ' + naira(owner) + ', fuel ' + naira(fuel) + (fines ? ', fines ' + naira(fines) : '') + '. You ' + (net >= 0 ? 'made ' + naira(net) : 'lost ' + naira(-net)) + '.'));
+  }
+
   /* ---------- daily streak: come back on real consecutive days ---------- */
   var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
   function nextDayId(id) { var d = new Date(id + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
@@ -3079,6 +3107,7 @@
     buyPhone: recorded('ph', buyPhone), brandDeal: brandDeal, followerGain: followerGain, phoneCam: phoneCam,
     openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
+    danfoShift: recorded('dr', danfoShift),
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,

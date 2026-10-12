@@ -508,3 +508,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .gfaces { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .gface { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); border: 2px solid var(--muted); object-fit: cover; }
 .gface.me { border-color: var(--danfo); }
+
+/* Danfo Run */
+.danfo-scrim { z-index: 60; }
+.danfo-sheet { max-width: 470px; width: calc(100% - 16px); max-height: calc(100dvh - 16px); overflow: auto; padding: 12px; }
+.danfo-slot { display: grid; justify-items: center; margin: 8px 0; }
+.danfo-game { width: 100%; display: grid; justify-items: center; gap: 8px; touch-action: none; user-select: none; }
+.danfo-game canvas { border-radius: 12px; max-width: 100%; }
+.dg-pad { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; width: 100%; }
+.dg-btn { height: 52px; border-radius: 12px; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); font: 800 18px var(--font-body, sans-serif); cursor: pointer; touch-action: none; }
+.dg-btn.brake { background: #d0453a; color: #fff; border-color: #7b2d26; font-size: 16px; }

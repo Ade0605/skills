@@ -96,6 +96,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The app keeps 25% of the fares, and you pay for your own fuel.
   - Rush hour brings more trips, and night fares are higher.
   - Luxury cars earn premium fares but burn so much fuel that a supercar usually loses money.
+- **Danfo Run (mini-game):** rent a danfo at the new Ojuelegba danfo park (Surulere) and drive a 90-second arcade run in the spirit of the viral *Lagos Run*.
+  - **Driving:** change lanes with ◀ ▶ or a swipe, and hold BRAKE at a 🚏 in the left lane to drop passengers and load new ones while the conductor shouts the route.
+  - **Hazards:** dodge potholes, okadas and cars, and never stop in a yellow LASTMA zone.
+  - **Pay:** the result becomes a shift's pay, minus ₦4k owner's returns, fuel, and any fines or settlements. Takings are capped at ₦12k, so a skilled run nets a few thousand naira and a careless one loses money.
+  - Serving 50 passengers unlocks "Agbero approved".
 - **Airports:** Lagos, Abuja and Port Harcourt airports each have a **premium lounge** (shower, buffet and quiet: big boosts to hygiene, hunger and stress), **plane-spotting** at the apron window, and a **🛫 Check in** button that opens flights.
 - **Now passing:** after each trip, a note names the landmarks you passed on the way.
 - **House parties with real players:** when you host, you can add an **event decorator** for half the party's cost again. It turns the house festive, and guests spray 25% more.
