@@ -319,12 +319,14 @@
   }
   // Your own party stays open to online friends for 30 real minutes.
   var PARTY_KEY = 'lasgidi.party.v1', PARTY_OPEN = 30 * 60 * 1000;
+  var PARTY_KINDS = Object.assign({ wedding: { name: 'Wedding reception', icon: '💍' } }, D.PARTIES);
+  function openParty(kind, planner) { try { localStorage.setItem(PARTY_KEY, JSON.stringify({ seed: S.seed, kind: kind, planner: !!planner, at: Date.now() })); } catch (e) {} syncPresence(); publishHome(); }
   function myParty() {
-    try { var v = JSON.parse(localStorage.getItem(PARTY_KEY) || 'null'); if (v && S && v.seed === S.seed && D.PARTIES[v.kind] && Date.now() - v.at < PARTY_OPEN) return { kind: v.kind, planner: !!v.planner, at: v.at }; } catch (e) {}
+    try { var v = JSON.parse(localStorage.getItem(PARTY_KEY) || 'null'); if (v && S && v.seed === S.seed && PARTY_KINDS[v.kind] && Date.now() - v.at < PARTY_OPEN) return { kind: v.kind, planner: !!v.planner, at: v.at }; } catch (e) {}
     return null;
   }
   function cleanParty(p) {
-    if (!p || typeof p !== 'object' || !D.PARTIES[p.kind] || typeof p.at !== 'number' || !(Date.now() - p.at < PARTY_OPEN && p.at <= Date.now() + 60000)) return null;
+    if (!p || typeof p !== 'object' || !PARTY_KINDS[p.kind] || typeof p.at !== 'number' || !(Date.now() - p.at < PARTY_OPEN && p.at <= Date.now() + 60000)) return null;
     return { kind: p.kind, planner: !!p.planner, at: Math.floor(p.at) };
   }
   function guestsAt(host) { return (online.peerList || []).filter(function (p) { return p.at === host; }).length; }
@@ -335,11 +337,11 @@
   function partyInvites() {
     if (!S || S.challenge) return '';
     var mine = myParty(), html = '';
-    if (mine) html += '<div class="party-banner">🎉 <b>Your party is on</b> (' + esc(D.PARTIES[mine.kind].name.toLowerCase()) + (mine.planner ? ', decorated' : '') + '). ' + guestsAt(online.me) + ' guest' + (guestsAt(online.me) === 1 ? '' : 's') + ' here now · open ' + Math.max(1, Math.round((PARTY_OPEN - (Date.now() - mine.at)) / 60000)) + ' more min</div>';
+    if (mine) html += '<div class="party-banner">' + PARTY_KINDS[mine.kind].icon + ' <b>Your ' + (mine.kind === 'wedding' ? 'wedding reception' : 'party') + ' is on</b> (' + esc(PARTY_KINDS[mine.kind].name.toLowerCase()) + (mine.planner ? ', decorated' : '') + '). ' + guestsAt(online.me) + ' guest' + (guestsAt(online.me) === 1 ? '' : 's') + ' here now · open ' + Math.max(1, Math.round((PARTY_OPEN - (Date.now() - mine.at)) / 60000)) + ' more min</div>';
     var hosts = (online.peerList || []).filter(function (p) { return p.party && p.by !== ui.visit; });
     if (hosts.length) html += '<div class="section"><h3>💌 Party invites</h3><div class="list">' + hosts.slice(0, 4).map(function (p) {
-      var P = D.PARTIES[p.party.kind];
-      return '<div class="item"><div><h3>' + P.icon + ' ' + esc(nameOf(p.by)) + ' is throwing a party</h3><div class="meta"><span>' + esc(P.name) + (p.party.planner ? ' · decorated' : '') + '</span><span>' + guestsAt(p.by) + ' here</span></div></div><button class="btn sm go" id="join-' + esc(p.by) + '" data-joinparty="' + esc(p.by) + '">Go now</button></div>';
+      var P = PARTY_KINDS[p.party.kind];
+      return '<div class="item"><div><h3>' + P.icon + ' ' + esc(nameOf(p.by)) + (p.party.kind === 'wedding' ? ' just got married' : ' is throwing a party') + '</h3><div class="meta"><span>' + esc(P.name) + (p.party.planner ? ' · decorated' : '') + '</span><span>' + guestsAt(p.by) + ' here</span></div></div><button class="btn sm go" id="join-' + esc(p.by) + '" data-joinparty="' + esc(p.by) + '">Go now</button></div>';
     }).join('') + '</div></div>';
     return html;
   }
@@ -736,7 +738,7 @@
     var v = checkHome(online.homes[ui.visit]);
     if (!v) { ui.visit = null; return ''; }
     var pt = partyOf(ui.visit), key = pt ? ui.visit + ':' + pt.at : '';
-    var acts = pt ? '<div class="party-bar"><span>🎉 You are at ' + esc(nameOf(ui.visit)) + '\'s ' + esc(D.PARTIES[pt.kind].name.toLowerCase()) + ' · ' + (guestsAt(ui.visit) + 1) + ' here</span><div class="inline">' +
+    var acts = pt ? '<div class="party-bar"><span>' + PARTY_KINDS[pt.kind].icon + ' You are at ' + esc(nameOf(ui.visit)) + '\'s ' + esc(PARTY_KINDS[pt.kind].name.toLowerCase()) + ' · ' + (guestsAt(ui.visit) + 1) + ' here</span><div class="inline">' +
       '<button class="btn sm ghost" id="pbell" data-bell="' + esc(ui.visit) + '">🔔 Ring bell</button>' +
       Object.keys(D.PARTY_ACTS).map(function (k) { var A = D.PARTY_ACTS[k], done = Object.prototype.hasOwnProperty.call(S.partyJoins || {}, key + ':' + k);
         return '<button class="btn sm' + (done ? ' ghost' : ' go') + '" id="pact-' + k + '" data-partyact="' + k + '"' + (done ? ' disabled' : '') + '>' + A.icon + ' ' + esc(A.name) + '</button>'; }).join('') + '</div></div>' : '';
@@ -1964,7 +1966,7 @@
       var pk = ds.party || ds.partyplan, plan = !!ds.partyplan;
       run(function () {
         var r = L.hostParty(S, pk, plan);
-        if (r.ok) { try { localStorage.setItem(PARTY_KEY, JSON.stringify({ seed: S.seed, kind: pk, planner: plan, at: Date.now() })); } catch (e) {} syncPresence(); publishHome(); }
+        if (r.ok) openParty(pk, plan);
         return r;
       });
       return;
@@ -2079,7 +2081,7 @@
     if (ds.car) { run(function () { return L.buyCar(S); }); return; }
     if (ds.choice) { run(function () { return L.resolveChoice(S, +ds.choice); }); return; }
     if (ds.wonok) { S.wonSeen = true; save(); render(); return; }
-    if (ds.wed) { run(function () { return L.marry(S, ds.wed); }); return; }
+    if (ds.wed) { run(function () { var r = L.marry(S, ds.wed); if (r.ok && S.partner && S.partner.stage === 'married') openParty('wedding', ds.wed !== 'registry'); return r; }); return; }
     if (ds.postfame) {
       t.disabled = true;
       postFame(L.fameEntry(S)).then(function (msg) { online.status = msg || ''; render(); });

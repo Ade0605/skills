@@ -103,6 +103,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Guests:** they walk into your home and see the decorations and a live guest count. They can **🔔 Ring bell** (you get a toast), **💃 Dance** or **🥂 Socialise**.
   - **Mood only:** guest actions only lift mood. No money moves between lives.
   - **Host:** a banner on your Do tab shows how many guests are in.
+  - **Weddings:** getting married opens a 💍 wedding reception the same way. An owambe or big wedding comes decorated.
 - **Domestic staff:** hire a house help, a cook, a driver (you need a car) or a gateman from the Home tab.
   - Each helps every day: fresh hygiene, a ready breakfast, rest instead of driving yourself, or easier sleep.
   - Each costs a weekly salary, from ₦30k to ₦60k. Staff you can't pay pack up and leave.
