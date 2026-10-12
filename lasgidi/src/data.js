@@ -158,6 +158,33 @@
     { id: 'oil',      name: 'Oil services firm',          icon: '🛢️', district: 'ph_transamadi', pay: 2000, text: 'The posting everyone prays for. Safety boots and a canteen.' },
     { id: 'tech',     name: 'Tech hub, Yaba',             icon: '💻', district: 'yaba',          pay: 1000, text: 'Help run a startup bootcamp. Free Wi-Fi, free jollof on Fridays.' }
   ];
+  // Job interviews (rules 13) for the degree careers: [question, options, right answer].
+  var INTERVIEWS = {
+    bank: [
+      ['A customer wants to open an account. What do you ask for first?', ['A valid ID and BVN', 'Their salary slip', 'A reference letter from their pastor'], 0],
+      ['A customer is shouting about a failed transfer. You…', ['Calm them, check the transaction and log a complaint', 'Tell them to go home and come back tomorrow', 'Call security at once'], 0],
+      ['What does KYC stand for?', ['Know Your Customer', 'Keep Your Cash', 'Kindly Yield Collateral'], 0],
+      ['Your target is 20 new accounts this month. Where do you start?', ['Markets and offices near the branch', 'Your family WhatsApp group only', 'Wait for walk-ins'], 0],
+      ['A friend asks you to "flag" a big cash deposit as normal. You…', ['Refuse and follow the anti-money-laundering rules', 'Do it this once', 'Ask for a cut'], 0],
+      ['Why do banks pay interest on savings?', ['They lend the money out at a higher rate', 'The government pays it', 'It is a gift'], 0]
+    ],
+    civil: [
+      ['A file has sat on your desk for a week. You…', ['Process it or move it on with a note', 'Wait for the owner to "see" you', 'Put it under the pile'], 0],
+      ['What is the Federal Capital Territory\'s seat of government?', ['Abuja', 'Lagos', 'Kaduna'], 0],
+      ['A memo should be…', ['Short, clear and addressed to the right office', 'As long as possible', 'Written in Pidgin'], 0],
+      ['A contractor offers you "something for the weekend". You…', ['Decline and report it', 'Accept, it is normal', 'Ask for more'], 0],
+      ['Who signs off a new federal law?', ['The President, after the National Assembly passes it', 'The Chief Justice', 'The Inspector-General of Police'], 0],
+      ['Your Oga is at a meeting and a minister calls. You…', ['Take a clear message and pass it on at once', 'Say nobody is in', 'Hang up'], 0]
+    ],
+    consult: [
+      ['A client\'s sales fell 20%. Where do you start?', ['Ask questions and look at the data', 'Recommend a new logo', 'Blame the economy'], 0],
+      ['What goes first in a client presentation?', ['The answer, then the evidence', 'Your team\'s photos', 'A long history of the company'], 0],
+      ['Revenue is ₦10m and costs are ₦7m. The profit margin is…', ['30%', '70%', '3%'], 0],
+      ['The deadline is tomorrow and the analysis is not done. You…', ['Tell the manager early and agree what to cut', 'Say nothing and hope', 'Copy last year\'s report'], 0],
+      ['A good recommendation is…', ['Specific, costed and doable', 'Vague, so nobody can disagree', 'As many ideas as possible'], 0],
+      ['Market size: Lagos has about 20m people and 1 in 10 buys your product monthly. Monthly buyers?', ['About 2 million', 'About 200,000', 'About 20 million'], 0]
+    ]
+  };
   // A PPA that pays a stipend can retain a corper who showed up: the career it offers.
   // Children's names come from the life's seed (display only).
   var KID_NAMES = ['Tobi', 'Ada', 'Emeka', 'Zainab', 'Tolu', 'Chioma', 'Ibrahim', 'Funmi', 'Kelechi', 'Amina', 'Seun', 'Ngozi', 'Femi', 'Hauwa', 'Obinna', 'Yetunde'];
@@ -928,7 +955,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

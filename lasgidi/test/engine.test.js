@@ -1741,3 +1741,35 @@ test('dynasties: choose any child, the family line grows, generation 3 is a dyna
   assert.equal(l2.origin, 'heir'); assert.equal(l2.heir.gen, 2); assert.deepEqual(l2.heir.line, ['Ade']);
   assert.ok(L.replayLife(Object.assign({}, l2.replay, { heir: legacy })));
 });
+
+test('job interviews (rules 13): degree jobs ask three seeded questions; the engine marks them', () => {
+  const s = L.newGame({ seed: 105, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(s.rules >= 13);
+  s.edu.degree = true; s.loc = 'vi'; s.t = s.t - (s.t % 1440) + 1440 + 10 * 60; s.skills.charisma = 15; s.friends.kunle.lvl = 0; // no banker connect
+  while (s.pending.length) L.resolveChoice(s, 0);
+  const r = L.applyJob(s, 'bank');
+  assert.equal(r.ok, false); assert.equal(r.interview, 'bank');
+  const qs = L.interviewQuestions(s, 'bank');
+  assert.equal(qs.length, 3); assert.equal(new Set(qs.map(q => q.q)).size, 3);
+  assert.deepEqual(L.interviewQuestions(s, 'bank'), qs, 'same questions all day');
+  // The right answers come from the data, wherever they land after rotation.
+  const right = qs.map(q => { const row = L.DATA.INTERVIEWS.bank.find(x => x[0] === q.q); return q.opts.indexOf(row[1][row[2]]); });
+  const wrong = right.map(k => (k + 1) % 3);
+  const f = L.interviewJob(s, 'bank', wrong[0], wrong[1], wrong[2]);
+  assert.ok(f.ok); assert.equal(s.job, null, 'failed the interview');
+  assert.match(L.interviewBlock(s, 'bank'), /Try again in 3 days/);
+  s.t += 3 * 1440; s.t = s.t - (s.t % 1440) + 10 * 60;
+  while (s.pending.length) L.resolveChoice(s, 0);
+  const qs2 = L.interviewQuestions(s, 'bank');
+  const right2 = qs2.map(q => { const row = L.DATA.INTERVIEWS.bank.find(x => x[0] === q.q); return q.opts.indexOf(row[1][row[2]]); });
+  const p = L.interviewJob(s, 'bank', right2[0], right2[1], (right2[2] + 1) % 3);
+  assert.ok(p.ok, p.msg); assert.equal(s.job.id, 'bank', 'two of three gets the job');
+  // Older lives, and players with a connect, skip the interview.
+  const old = L.newGame({ seed: 105, origin: 'nepo', goal: 'freestyle', rules: 12 });
+  assert.equal(L.needsInterview(old, 'bank'), false);
+  assert.equal(L.needsInterview(s, 'tech'), false, 'only the degree careers interview');
+  const k = Object.keys(L.DATA.NPCS).find(n => L.DATA.NPCS[n].career === 'bank');
+  if (k) { const c = L.newGame({ seed: 106, origin: 'nepo', goal: 'freestyle' }); c.friends[k].lvl = 80; assert.equal(L.needsInterview(c, 'bank'), false, 'a connect gets you in'); }
+  const rp = L.replayLife(s.replay);
+  assert.ok(rp, 'the interview replays');
+});

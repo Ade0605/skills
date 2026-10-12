@@ -113,7 +113,12 @@
   // Naija Pidgin for the interface chrome (tabs, app names, headings, buttons).
   // Whole text nodes are swapped after each render; story text stays in English.
   var PCM = {
-    'NYSC': 'NYSC', 'Attend CDS': 'Go CDS', 'Certificate of National Service': 'NYSC certificate',
+    'Attend CDS': 'Go CDS', 'Certificate of National Service': 'NYSC certificate',
+    // Newer features.
+    '🎤 Interview': '🎤 Interview', 'Submit answers': 'Submit am', 'Not now': 'No be now', 'Sleep here': 'Sleep here', 'Book': 'Book am', 'Buy drugs': 'Buy medicine',
+    '📚 Homework': '📚 Homework', 'Family tree': 'Family tree', 'Start someone new': 'Start new person', 'Accept': 'Accept am',
+    'Do it': 'Do am', 'Go': 'Go', 'Apply': 'Apply', 'Resign': 'Comot for work', 'Collect your prize': 'Collect your prize', 'Careers': 'Work dem',
+    '🛏️ Somewhere to sleep': '🛏️ Where to sleep', 'Children': 'Pikin dem', 'Do a camp day': 'Do camp day', 'Work at your PPA': 'Go your PPA', 'Register': 'Register', 'Service': 'Service am',
     'Do': 'Wetin dey', 'Map': 'Map', '📱 Phone': '📱 Phone', 'Home': 'House', 'Work': 'Work', 'Money': 'Owo', 'Me': 'Me', 'Gist': 'Gist',
     'Messages': 'Messages', 'Quests': 'Mission', 'Jobs': 'Work wey dey', 'Bank': 'Bank', 'Stocks': 'Shares', 'Shop': 'Market', 'Creator': 'Content', 'Games': 'Games',
     'Dealers': 'Motor dealers', 'Gem hunt': 'Gem hunt', 'What\'s on': 'Wetin dey happen', 'Weather': 'Weather', 'Town Hall': 'Town Hall', 'Travel': 'Travel', 'My story': 'My story', 'Hall of Fame': 'Hall of Fame', 'Wardrobe': 'Cloth', 'Guide': 'How to play',
@@ -1726,8 +1731,20 @@
   }
 
   /* ---------- Work tab ---------- */
+  // The interview panel: three questions from the engine, answered with radio buttons.
+  function interviewView() {
+    var cid = ui.interview; if (!cid) return '';
+    var c = D.CAREERS[cid], qs = L.interviewQuestions(S, cid), why = L.interviewBlock(S, cid);
+    return '<div class="section interview"><h3>🎤 Interview · ' + esc(c.titles[0]) + ', ' + esc(c.name) + '</h3><p class="note">Answer three questions. Two right gets you the job' + (L.skillLevel(S, 'charisma') >= 4 ? ' (your Charisma means one will do)' : '') + '. Fail and they will "get back to you" in 3 days.</p>' +
+      qs.map(function (q, i) {
+        return '<fieldset class="iv-q"><legend>' + (i + 1) + '. ' + esc(q.q) + '</legend>' + q.opts.map(function (o, k) {
+          return '<label class="iv-opt"><input type="radio" name="iv-' + i + '" value="' + k + '" id="iv-' + i + '-' + k + '"> ' + esc(o) + '</label>';
+        }).join('') + '</fieldset>';
+      }).join('') +
+      '<div class="inline"><button class="btn go" id="iv-submit" data-ivsubmit="' + cid + '"' + (why ? ' disabled' : '') + '>Submit answers</button><button class="btn ghost" id="iv-cancel" data-interview="">Not now</button></div>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '') + '</div>';
+  }
   function workView() {
-    var html = '<div class="panel-h"><h2>Work</h2><span class="muted">Shifts pay daily. Three no-shows and you are sacked.</span></div><div class="panel-b">';
+    var html = '<div class="panel-h"><h2>Work</h2><span class="muted">Shifts pay daily. Three no-shows and you are sacked.</span></div><div class="panel-b">' + interviewView();
     if (S.job) {
       var c = D.CAREERS[S.job.id], need = L.promotionNeeds(S);
       var skillLvl = L.skillLevel(S, c.skill);
@@ -1749,7 +1766,8 @@
       var c = D.CAREERS[cid], e = L.jobEligibility(S, cid), mine = S.job && S.job.id === cid;
       return '<div class="item"><div><h3>' + esc(c.titles[0]) + ' → ' + esc(c.titles[4]) + '</h3><div class="meta"><span>' + esc(c.name) + '</span><span>' + esc(D.DISTRICTS[c.district].name) + '</span><span class="num">' + pad(c.start) + '–' + pad(c.end) + '</span><span class="gain">' + N(c.pay[0]) + '–' + N(c.pay[4]) + '/shift</span><span>' + esc(D.SKILLS[c.skill]) + '</span></div>' +
         (!e.ok && !mine ? '<div class="why">' + esc(e.reason) + '</div>' : '') + (e.connect ? '<div class="meta gain">' + esc(D.NPCS[e.connect].name) + ' is your connect here</div>' : '') + '</div>' +
-        '<button class="btn sm" id="apply-' + cid + '" data-apply="' + cid + '"' + (e.ok ? '' : ' disabled') + '>' + (mine ? 'Current' : 'Apply') + '</button></div>';
+        (e.ok && !mine && L.needsInterview(S, cid) ? '<button class="btn sm" id="apply-' + cid + '" data-interview="' + cid + '">🎤 Interview</button></div>'
+          : '<button class="btn sm" id="apply-' + cid + '" data-apply="' + cid + '"' + (e.ok ? '' : ' disabled') + '>' + (mine ? 'Current' : 'Apply') + '</button></div>');
     }).join('') + '</div></div>';
     return html + '</div>';
   }
@@ -2279,7 +2297,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2522,7 +2540,13 @@
     if (ds.travel) { var from0 = S.loc, mode0 = ds.mode; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; if (ui.tab === 'map' && !ui.place) ui.tab = 'do'; var ps = passing(from0, S.loc); if (ps.length) ui.toasts.push({ msg: '🚗 Now passing: ' + ps.join(' · '), ok: true }); } return r; }, 'travel'); return; }
     if (ds.act) { run(function () { return L.doAction(S, ds.act); }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
-    if (ds.apply) { run(function () { return L.applyJob(S, ds.apply); }); return; }
+    if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
+    if (ds.interview !== undefined) { ui.interview = ds.interview || null; render(); return; }
+    if (ds.ivsubmit) {
+      var ivc = ds.ivsubmit, picks = [0, 1, 2].map(function (i) { var el = document.querySelector('input[name="iv-' + i + '"]:checked'); return el ? +el.value : -1; });
+      run(function () { var r = L.interviewJob(S, ivc, picks[0], picks[1], picks[2]); if (r.ok) ui.interview = null; return r; });
+      return;
+    }
     if (ds.quit) { run(function () { return L.quitJob(S); }); return; }
     if (ds.upb) { run(function () { return L.upgradeBusiness(S, +ds.upb); }); return; }
     if (ds.hmb) { run(function () { return L.hireManager(S, +ds.hmb); }); return; }

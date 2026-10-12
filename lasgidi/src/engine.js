@@ -32,8 +32,9 @@
   // upkeep and insurance, slower promotions).
   // 9 adds weather; 10 charges mini-games when they start, so quitting forfeits;
   // 11 adds malaria (nights without light or a net can give you a fever);
-  // 12 adds car wear and breakdowns (service at Ladipo).
-  var RULES = 12;
+  // 12 adds car wear and breakdowns (service at Ladipo);
+  // 13 adds job interviews for the degree careers (a connect still gets you in).
+  var RULES = 13;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -307,7 +308,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null, nysc: null, sick: null, heir: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null, nysc: null, sick: null, heir: null, interviews: {},
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -892,6 +893,44 @@
     return { ok: true, connect: connect };
   }
 
+  /* ---------- job interviews (rules 13) ---------- */
+  // Questions come from the seed and the day (no random draw); the engine marks the answers.
+  function needsInterview(s, cid) { return s.rules >= 13 && !!D.INTERVIEWS[cid] && !connectFor(s, cid); }
+  function interviewPicks(s, cid) {
+    var bank = D.INTERVIEWS[cid], out = [], h = parseInt(fnv(s.seed + ':iv:' + cid + ':' + day(s)), 16);
+    for (var k = 0; out.length < 3 && k < 12; k++) { var j = (h + k * 5) % bank.length; if (out.indexOf(j) < 0) out.push(j); h = Math.floor(h / 7); }
+    for (var x = 0; out.length < 3; x++) if (out.indexOf(x) < 0) out.push(x);
+    return out;
+  }
+  // Options are rotated per question and day, so the right answer is not always first.
+  function ivRot(s, cid, j) { return parseInt(fnv(s.seed + ':ivo:' + cid + ':' + day(s) + ':' + j), 16) % 3; }
+  function interviewQuestions(s, cid) {
+    if (!D.INTERVIEWS[cid]) return [];
+    return interviewPicks(s, cid).map(function (j) { var q = D.INTERVIEWS[cid][j], r = ivRot(s, cid, j); return { q: q[0], opts: [0, 1, 2].map(function (k) { return q[1][(k + r) % 3]; }) }; });
+  }
+  function interviewBlock(s, cid) {
+    if (!needsInterview(s, cid)) return 'No interview needed for this job';
+    var e = jobEligibility(s, cid); if (!e.ok) return e.reason;
+    if ((s.interviews[cid] || -1) > day(s)) return 'They said they will call you. Try again in ' + (s.interviews[cid] - day(s)) + ' day' + (s.interviews[cid] - day(s) === 1 ? '' : 's');
+    var c = D.CAREERS[cid], h = hour(s); if (h < c.start || h >= Math.min(c.end, 17)) return 'Interviews are held during office hours';
+    return busyBlock(s);
+  }
+  function interviewJob(s, cid, a0, a1, a2) {
+    var why = interviewBlock(s, cid); if (why) return fail(why + '.');
+    var ans = [a0, a1, a2].map(function (v) { return Math.floor(v); });
+    if (ans.some(function (v) { return !(v >= 0 && v <= 2); })) return fail('Answer all three questions.');
+    var picks = interviewPicks(s, cid), right = 0;
+    picks.forEach(function (j, i) { if (D.INTERVIEWS[cid][j][2] === (ans[i] + ivRot(s, cid, j)) % 3) right++; });
+    var need = skillLevel(s, 'charisma') >= 4 ? 1 : 2; // confidence carries a weak answer
+    s.alerts = [];
+    advance(s, 60); applyFx(s, { stress: 8, energy: -5 });
+    s.stats.interviews = (s.stats.interviews || 0) + 1;
+    if (right >= need) { log(s, '🎤 Interview at ' + D.CAREERS[cid].name + ': ' + right + ' of 3. You got the job!', 'good'); return applyJob(s, cid, true); }
+    s.interviews[cid] = day(s) + 3;
+    log(s, '🎤 Interview at ' + D.CAREERS[cid].name + ': ' + right + ' of 3. "We will get back to you."', 'bad');
+    return finish(s, ok('🎤 ' + right + ' of 3. "Thank you for coming. We will get back to you." Try again in 3 days.'));
+  }
+
   function connectFor(s, cid) {
     var keys = Object.keys(D.NPCS);
     for (var i = 0; i < keys.length; i++) {
@@ -903,6 +942,7 @@
   function applyJob(s, cid, force) {
     var e = jobEligibility(s, cid);
     if (!e.ok && !force) return fail(e.reason);
+    if (!force && needsInterview(s, cid)) { var nf = fail('This job needs an interview: three questions in the panel above.'); nf.interview = cid; return nf; }
     var c = D.CAREERS[cid];
     if (s.job) log(s, 'You resigned as ' + D.CAREERS[s.job.id].titles[s.job.level] + '.', 'info');
     s.job = { id: cid, level: 0, shifts: 0, perfSum: 0, missed: 0, lastShift: -1, since: s.t };
@@ -2338,6 +2378,7 @@
     if (s.mini === undefined) s.mini = null;
     if (s.nysc === undefined) s.nysc = null;
     if (s.sick === undefined) s.sick = null;
+    if (!s.interviews) s.interviews = {};
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -3812,7 +3853,8 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
+    lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

@@ -597,3 +597,10 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .ftree .ft-anc { color: var(--muted); }
 .ftree .ft-kids { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .gen-chip { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: #2fa36b; color: #fff; margin-left: 4px; }
+
+/* Job interviews */
+.interview { border-left: 4px solid #2f6fa0; padding-left: 12px; }
+.iv-q { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 8px 10px; }
+.iv-q legend { font-weight: 700; padding: 0 4px; }
+.iv-opt { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; cursor: pointer; }
+.iv-opt input { margin-top: 3px; }

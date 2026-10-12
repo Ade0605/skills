@@ -185,14 +185,18 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Events:** grid collapse, fuel scarcity, floods, black tax, BVN scam texts, Ponzi schemes, landlord hikes, owambe aso-ebi, checkpoints and area boys. Detty December arrives in week 9.
 - **Policy vote:** every 4 weeks you vote on a governorship policy that changes the rules for a month.
 - **CBN governor race:** two weeks after each policy vote, three candidates compete for the Central Bank, and you can vote for one. The Hawk raises savings and bill rates, makes new loans dearer and slows inflation. The Dove does the opposite. The Builder boosts businesses and cooperative loans. The winner's stance lasts 4 weeks, and its rates show on the bank card.
-- **Making money is hard.** New lives start on rules 11: everything in rules 8, plus weather (rules 9), mini-games paid for at the start (rules 10), malaria (rules 11) and car wear (rules 12).
-  New lives start on rules 12. Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
+- **Making money is hard.** New lives start on rules 11: everything in rules 8, plus weather (rules 9), mini-games paid for at the start (rules 10), malaria (rules 11) car wear (rules 12) and job interviews (rules 13).
+  New lives start on rules 13. Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
   - PAYE starts at ₦3,000 and goes up to 25% on big pay.
   - Every 4 weeks the landlord reviews your rent in line with prices.
   - Vehicle upkeep is 1.5×, and vehicles costing over ₦100m pay 0.2% insurance a week.
   - Promotions take 30% more shifts.
 
   Lives started earlier keep their old rules.
+- **🎤 Job interviews (rules 13, new lives only):** Banking, the Civil Service and Consulting interview before they hire.
+  - **The questions:** three a day per career, taken from the life's seed with the answer order shuffled. The engine marks your answers, so a result can't be faked.
+  - **Passing:** two right gets the job, or one if your Charisma is 4 or more. Fail and they "get back to you" in 3 days.
+  - **Who skips it:** a connect (a friend at 60+ who works there) gets you in without an interview, and so does an NYSC retention offer.
 - **🔧 Car wear and Ladipo (rules 12, new lives only):**
   - **Wear:** every kilometre you drive wears your car. Each trip in a worn car risks a breakdown, which costs 90 minutes, a roadside mechanic and stress.
   - **Which cars:** cheap cars break down more often than luxury SUVs.
@@ -245,7 +249,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (96 tests)
+  test/engine.test.js   node:test suite (97 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 
