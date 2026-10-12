@@ -107,6 +107,7 @@
   // Naija Pidgin for the interface chrome (tabs, app names, headings, buttons).
   // Whole text nodes are swapped after each render; story text stays in English.
   var PCM = {
+    'NYSC': 'NYSC', 'Attend CDS': 'Go CDS', 'Certificate of National Service': 'NYSC certificate',
     'Do': 'Wetin dey', 'Map': 'Map', '📱 Phone': '📱 Phone', 'Home': 'House', 'Work': 'Work', 'Money': 'Owo', 'Me': 'Me', 'Gist': 'Gist',
     'Messages': 'Messages', 'Quests': 'Mission', 'Jobs': 'Work wey dey', 'Bank': 'Bank', 'Stocks': 'Shares', 'Shop': 'Market', 'Creator': 'Content', 'Games': 'Games',
     'Dealers': 'Motor dealers', 'Gem hunt': 'Gem hunt', 'What\'s on': 'Wetin dey happen', 'Weather': 'Weather', 'Town Hall': 'Town Hall', 'Travel': 'Travel', 'My story': 'My story', 'Hall of Fame': 'Hall of Fame', 'Wardrobe': 'Cloth', 'Guide': 'How to play',
@@ -546,7 +547,7 @@
     }
     var slot = ui.clothSlot || 'top', canHaggle = !L.haggleOpen(S);
     html += '<h3>Clothes shop</h3>' + (canHaggle ? '<p class="note">🛍️ You are at Balogun: haggle! The trader opens high and has a secret last price. You get three offers per item a day.</p>' : '<p class="note">Go to Balogun market (Lagos Island, Monday to Saturday) to haggle prices down.</p>') + '<div class="pg-chips" style="padding:0">' + Object.keys(SLOT_NAMES).map(function (k) { return '<button type="button" class="pg-chip' + (k === slot ? ' sel' : '') + '" id="cs-' + k + '" data-clothslot="' + k + '">' + SLOT_NAMES[k] + '</button>'; }).join('') + '</div><div class="list">' +
-      Object.keys(D.CLOTHES).filter(function (k) { return D.CLOTHES[k].slot === slot; }).map(function (k) {
+      Object.keys(D.CLOTHES).filter(function (k) { return D.CLOTHES[k].slot === slot && !D.CLOTHES[k].gift; }).map(function (k) {
         var c = D.CLOTHES[k], p = L.price(S, c.price), own = S.wardrobe.some(function (w) { return w.id === k; });
         return '<div class="item"><div><h3><i class="swatch" style="background:' + c.color + (c.alt ? ';box-shadow:inset -6px 0 0 ' + c.alt : '') + '"></i>' + esc(c.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(c.fabric) + '</span>' + (c.tags.length ? '<span>for ' + esc(c.tags.map(function (t) { return TAG_NAMES[t]; }).join(', ')) + '</span>' : '') + (c.status ? '<span>+' + c.status + ' status</span>' : '') + '</div></div>' +
           (own ? '<span class="muted">Owned</span>' : '<span class="inline">' + (canHaggle ? '<button class="btn sm ghost" id="hag-' + k + '" data-haggle="' + k + '">Haggle</button>' : '') + '<button class="btn sm" id="buyc-' + k + '" data-buycloth="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button></span>') + '</div>' +
@@ -1442,7 +1443,7 @@
         (claimed ? '' : '<button class="btn sm' + (done ? '' : ' ghost') + '" id="qa-' + q.id + '" data-quest="' + q.id + '">' + (done ? 'Claim' : 'Go') + '</button>') + '</div>';
     }).join('') + '</div></div>';
   }
-  var QUEST_APPS = { creator: 1, shop: 1, stocks: 1, jobs: 1, gems: 1, bank: 1, events: 1, dealers: 1, travel: 1 };
+  var QUEST_APPS = { nysc: 1, creator: 1, shop: 1, stocks: 1, jobs: 1, gems: 1, bank: 1, events: 1, dealers: 1, travel: 1 };
   function goQuest(id) {
     var q = D.QUESTS.filter(function (x) { return x.id === id; })[0];
     if (!q) return;
@@ -1981,7 +1982,7 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['nysc', '🎖️', 'NYSC'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
   var GUIDE = [
@@ -1993,6 +1994,7 @@
     ['🌊', 'Sea Plots', 'Buy a block of plots in the Atlantic and put your picture on it for every player to see, after an editor checks it.', 'sea', ''],
     ['🏠', 'Home life', 'Furnish your home, hire staff, adopt pets, take a health plan, and host parties (with a decorator) that online friends can join.', 'tab', 'home'],
     ['📸', 'Fame', 'Grow followers for brand deals, post your life to the Hall of Fame, and take chieftaincy titles.', 'app', 'creator'],
+    ['🎖️', 'NYSC', 'After your UNILAG degree, register for the service year: three camp days in Kubwa, Abuja, then 12 weeks at your posting with CDS every Thursday and a monthly allawee.', 'app', 'nysc'],
     ['✈️', 'The end', 'Pass IELTS, save ₦15m proof of funds and japa from Ikeja airport to complete a life. Or play forever.', 'app', 'travel']
   ];
   function guideView() {
@@ -2001,6 +2003,38 @@
       return '<div class="item"><div><h3>' + g[0] + ' ' + esc(g[1]) + '</h3><div class="act-note">' + esc(g[2]) + '</div></div>' + btn + '</div>';
     }).join('') + '</div><p class="note">Number keys switch tabs; A does the top suggestion. Your game saves in this browser. Copy the save code on the Me tab to move devices.</p></div>';
   }
+  /* ---------- NYSC: the service year ---------- */
+  // A button that takes you to a district: a trip in this city, or the Travel app for another city.
+  function goBtn(id, d) {
+    if (S.loc === d) return '';
+    return L.districtCity(d) !== L.cityOf(S) ? '<button class="btn sm ghost" id="' + id + '" data-app="travel">✈️ Travel to ' + esc(D.CITIES[L.districtCity(d)].name) + '</button>'
+      : '<button class="btn sm ghost" id="' + id + '" data-tripto="' + d + '" data-tab="map">Go to ' + esc(D.DISTRICTS[d].name) + '</button>';
+  }
+  function nyscView() {
+    var n = L.nyscInfo(S), html = '<div class="section"><h3>🎖️ National Youth Service Corps</h3>';
+    if (n.stage === 'locked') return html + '<p class="note">NYSC is for graduates. Enrol at UNILAG (Yaba), attend 30 lectures and graduate, then come back here to register for your service year.</p><div class="inline"><button class="btn sm ghost" id="nysc-yaba" data-tripto="yaba" data-tab="map">Go to Yaba</button></div></div>';
+    if (n.stage === 'eligible') return html + '<p class="note">You have a degree, so the service year is next. Registration gets you a call-up letter and a posting to a PPA (place of primary assignment). You do three camp days at Kubwa, Abuja, then 12 weeks of service. The allawee is ' + N(n.allowance) + ' every 4 weeks, as long as you attend 3 of the 4 Thursday CDS meetings.</p>' +
+      '<div class="inline"><button class="btn go" id="nysc-register" data-nysc="register"' + (S.cash + S.bank < n.fee ? ' disabled' : '') + '>Register · ' + N(n.fee) + '</button></div></div>';
+    var p = n.ppa, ppaCard = '<div class="item"><div><h3>' + p.icon + ' ' + esc(p.name) + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[p.district].name) + ', ' + esc(D.CITIES[L.districtCity(p.district)].name) + '</span><span class="' + (p.pay ? 'gain' : 'muted') + '">' + (p.pay ? N(L.price(S, p.pay)) + ' a day' : 'No stipend') + '</span></div><div class="act-note">' + esc(p.text) + '</div></div></div>';
+    if (n.stage === 'callup' || n.stage === 'camp') {
+      var dots = ''; for (var i = 0; i < D.NYSC.campDays; i++) dots += '<span class="nysc-dot' + (i < n.campDays ? ' on' : '') + '" aria-hidden="true"></span>';
+      return html + '<p class="note">Your call-up letter says: report to the <b>orientation camp in Kubwa, Abuja</b>. The gate is open 05:00 to 20:00. Each camp day ends with a night in the camp hostel.</p>' +
+        '<div class="nysc-camp" aria-label="Camp day ' + n.campDays + ' of ' + D.NYSC.campDays + '">' + dots + '<span>Camp day ' + n.campDays + ' of ' + D.NYSC.campDays + '</span></div>' +
+        '<div class="inline"><button class="btn go" id="nysc-camp" data-nysc="camp"' + (n.camp ? ' disabled' : '') + '>🎖️ Do a camp day</button>' + goBtn('nysc-go-camp', 'abj_kubwa') + '</div>' + (n.camp ? '<p class="why">' + esc(n.camp) + '.</p>' : '') +
+        '<div class="label">Your posting after camp</div><div class="list">' + ppaCard + '</div></div>';
+    }
+    if (n.stage === 'service') {
+      var marks = n.cds.map(function (c, i) { return '<span class="nysc-cds' + (c === true ? ' on' : c === false ? ' miss' : '') + '" title="Week ' + (i + 1) + '">' + (c === true ? '✓' : c === false ? '✗' : '·') + '</span>'; }).join('');
+      return html + '<p class="note">Corper wee! You have ' + n.weeksLeft + ' week' + (n.weeksLeft === 1 ? '' : 's') + ' of service left. The next allawee (' + N(n.allowance) + ') comes in ' + n.nextPayIn + ' week' + (n.nextPayIn === 1 ? '' : 's') + ' if your CDS register is signed at least 3 times this month.</p>' +
+        '<div class="label">CDS this month (Thursdays, 10:00–14:00)</div><div class="nysc-cdsrow">' + marks + '</div>' +
+        '<div class="inline"><button class="btn go" id="nysc-cds" data-nysc="cds"' + (n.cdsWhy ? ' disabled' : '') + '>🤝 Attend CDS</button></div>' + (n.cdsWhy ? '<p class="why">' + esc(n.cdsWhy) + '.</p>' : '') +
+        '<div class="label">Your PPA (weekdays, report 08:00–09:59)</div><div class="list">' + ppaCard + '</div>' +
+        '<div class="inline"><button class="btn go" id="nysc-work" data-nysc="work"' + (n.work ? ' disabled' : '') + '>' + p.icon + ' Work at your PPA</button>' + goBtn('nysc-go-ppa', p.district) + '</div>' + (n.work ? '<p class="why">' + esc(n.work) + '.</p>' : '') +
+        '<p class="note">Allawee paid ' + n.paid + ' time' + (n.paid === 1 ? '' : 's') + (n.withheld ? ', withheld ' + n.withheld : '') + '.</p></div>';
+    }
+    return html + '<div class="nysc-done"><p class="nysc-big">🎖️</p><h3>Certificate of National Service</h3><p class="note">You served at ' + esc(p.name) + '. Allawee paid ' + n.paid + ' time' + (n.paid === 1 ? '' : 's') + (n.withheld ? ', withheld ' + n.withheld : '') + '. Corper wee! 🫡</p></div></div>';
+  }
+
   /* ---------- Town Hall: a weekly vote shared by every player ---------- */
   function townWeek() { return L.challengeId(new Date()); }
   function townQuestion() { var id = townWeek(), n = parseInt(id.slice(-2), 10) + parseInt(id.slice(0, 4), 10) * 53; return D.TOWNHALL[n % D.TOWNHALL.length]; }
@@ -2064,6 +2098,7 @@
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
       else if (app === 'town') body = '<div class="panel-b">' + townView() + '</div>';
+      else if (app === 'nysc') body = '<div class="panel-b">' + nyscView() + '</div>';
       else if (app === 'guide') body = '<div class="panel-b">' + guideView() + '</div>';
       else if (app === 'games') body = '<div class="panel-b">' + gamesView() + '</div>';
       else if (app === 'creator') body = '<div class="panel-b">' + creatorView() + '</div>';
@@ -2190,7 +2225,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2332,6 +2367,7 @@
     }
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
     if (ds.minigame) { openMinigame(ds.minigame); return; }
+    if (ds.nysc) { var nk = ds.nysc; run(function () { return nk === 'register' ? L.nyscRegister(S) : nk === 'camp' ? L.nyscCamp(S) : nk === 'cds' ? L.nyscCDS(S) : L.nyscWork(S); }); return; }
     if (ds.joinparty) { ui.visit = ds.joinparty; ui.tab = 'do'; render(); syncPresence(); return; }
     if (ds.partyact) {
       var host = ui.visit, pt2 = host && partyOf(host), act = ds.partyact;

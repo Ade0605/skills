@@ -1378,3 +1378,96 @@ test('advisor: gig tips never quote a gig without a set pay', () => {
   assert.ok(tips.some(t => /short/.test(t.text)), 'the rent warning shows');
   tips.forEach(t => { assert.doesNotMatch(t.text, /NaN|undefined|₦0\b/); assert.ok(!(t.act && games.includes(t.act.id)), 'no tip points at a mini-game'); });
 });
+
+test('NYSC: register after a degree, three camp days at Kubwa, then a posting', () => {
+  const s = L.newGame({ seed: 81, origin: 'nepo', goal: 'freestyle' });
+  assert.equal(s.nysc, null);
+  assert.match(L.nyscRegister(s).msg, /graduates/);
+  s.edu.degree = true;
+  const before = s.cash + s.bank;
+  const r = L.nyscRegister(s);
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.cash + s.bank, before - L.price(s, L.DATA.NYSC.callup));
+  assert.equal(s.nysc.ppa, L.nyscPosting(L.newGame({ seed: 81, origin: 'lapo', goal: 'freestyle' })).id, 'the posting follows the seed');
+  assert.equal(L.nyscRegister(s).ok, false, 'once');
+  assert.match(L.nyscCamp(s).msg, /Kubwa/);
+  s.loc = 'abj_kubwa'; s.t = s.t - (s.t % 1440) + 1440 + 6 * 60;
+  for (let d = 1; d <= 3; d++) {
+    while (s.pending.length) L.resolveChoice(s, 0);
+    s.needs.energy = 90; s.needs.hunger = 70;
+    const c = L.nyscCamp(s);
+    assert.ok(c.ok, c.msg);
+    assert.equal(L.hour(s), 5, 'the night is in the camp hostel, up at the bugle');
+  }
+  assert.equal(s.nysc.stage, 'service');
+  assert.ok(s.wardrobe.some(w => w.id === 'nysc_khaki'), 'the khaki is issued');
+  assert.equal(L.nyscCamp(s).ok, false, 'camp is over');
+  assert.ok(!L.DATA.PLACES.find(p => p.id === 'nysc_camp').acts.length && L.DATA.PLACES.find(p => p.id === 'nysc_camp').nogem);
+});
+
+test('NYSC: PPA days pay a stipend, CDS on Thursdays, allawee every 4 weeks only with CDS, pass out after 12', () => {
+  const s = L.newGame({ seed: 81, origin: 'nepo', goal: 'freestyle' });
+  s.edu.degree = true; L.nyscRegister(s);
+  const n = s.nysc; n.stage = 'service'; n.start = L.week(s); n.campDays = 3;
+  const ppa = L.DATA.NYSC_PPAS.find(p => p.id === n.ppa), city = L.districtCity(ppa.district);
+  const at = (d, h) => { s.t = d * 1440 + h * 60; while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 70; };
+  const monday = (L.week(s) + 1) * 7;
+  // A weekday at the PPA.
+  s.loc = ppa.district; at(monday, 8);
+  const w = L.nyscWork(s);
+  assert.ok(w.ok, w.msg);
+  assert.equal(L.nyscWork(s).ok, false, 'once a day');
+  assert.equal(s.ledger.filter(l => l.memo === 'NYSC PPA stipend').length, ppa.pay ? 1 : 0);
+  at(monday + 5, 8); assert.match(L.nyscWork(s).msg, /Monday to Friday/);
+  s.loc = Object.keys(L.DATA.DISTRICTS).find(d => L.districtCity(d) !== city); at(monday + 1, 8);
+  assert.match(L.nyscWork(s).msg, /Your PPA is in/);
+  // CDS on Thursdays in the posting city: attend 3 of the first 4 weeks, none after.
+  s.loc = ppa.district;
+  at(monday + 2, 11); assert.match(L.nyscCDS(s).msg, /Thursdays/);
+  for (let k = 0; k < 3; k++) { at(monday + 7 * k + 3, 11); const c = L.nyscCDS(s); assert.ok(c.ok, c.msg); assert.equal(L.nyscCDS(s).ok, false, 'once a week'); }
+  // Let the weeks pass (the weekly tick pays or withholds).
+  for (let i = 0; L.week(s) < n.start + 13 && !s.over && i < 2000; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 70; s.needs.hygiene = 80; L.wait(s, 240); }
+  const paid = s.ledger.filter(l => l.memo === 'NYSC allawee');
+  assert.equal(paid.length, 1, 'one allowance: the later months had no CDS');
+  assert.equal(paid[0].amt > 0, true);
+  assert.equal(n.withheld, 2);
+  assert.equal(n.stage, 'done');
+  assert.ok(s.ach.corper);
+  assert.equal(L.category('NYSC allawee', 1), 'wages');
+  assert.equal(L.category('NYSC PPA stipend', 1), 'wages');
+  assert.ok(L.questDone(s, 'nysc'));
+});
+
+test('NYSC: a real graduate registers and goes to camp, and the life replays', () => {
+  const D = L.DATA, s = L.newGame({ seed: 81, origin: 'nepo', goal: 'freestyle' });
+  const act = id => L.availableActions(s).find(a => a.id === id);
+  const go = d => { if (s.loc === d) return true; const o = L.travelOptions(s, d).filter(o => !o.disabled).sort((a, b) => a.mins - b.mins)[0]; return !!o && L.travel(s, d, o.mode).ok; };
+  const eat = () => { const f = L.availableActions(s).filter(a => !a.disabled && a.fx && a.fx.hunger >= 30 && !a.minigame).sort((a, b) => (a.price || 0) - (b.price || 0))[0]; return f && L.doAction(s, f.id).ok; };
+  const survive = () => {
+    while (s.pending.length) L.resolveChoice(s, 0);
+    if (s.needs.hunger < 40 && eat()) return true;
+    if (s.needs.energy < 30 || L.hour(s) >= 22 || L.hour(s) < 6) { const home = L.homeDef(s).district; if (s.loc !== home) { go(home) || L.wait(s, 60); return true; } const sl = act('home_sleep'); if (sl && !sl.disabled) L.doAction(s, 'home_sleep'); else L.wait(s, 60); return true; }
+    return false;
+  };
+  for (let g = 0; !s.edu.degree && g < 3000; g++) {
+    if (survive()) continue;
+    if (!go('yaba')) { L.wait(s, 60); continue; }
+    const e = act('yaba_enrol'); if (!s.edu.enrolled && e && !e.disabled) { L.doAction(s, 'yaba_enrol'); continue; }
+    const l = act('yaba_lecture'); if (l && !l.disabled) { L.doAction(s, 'yaba_lecture'); continue; }
+    L.wait(s, 60);
+  }
+  assert.ok(s.edu.degree, 'graduated');
+  assert.ok(L.nyscRegister(s).ok);
+  const trip = c => { const o = L.intercityOptions(s, c).filter(o => o.cost <= s.cash + s.bank).sort((a, b) => a.cost - b.cost)[0]; if (!o) return false; if (s.loc !== o.from) return go(o.from); return !o.disabled && L.intercity(s, c, o.mode).ok; };
+  for (let g = 0; s.nysc.stage !== 'service' && g < 500; g++) {
+    while (s.pending.length) L.resolveChoice(s, 0);
+    if (L.cityOf(s) !== 'abuja') { trip('abuja') || L.wait(s, 60); continue; }
+    if (!go('abj_kubwa')) { L.wait(s, 30); continue; }
+    if (!L.nyscInfo(s).camp) { assert.ok(L.nyscCamp(s).ok); continue; }
+    if (s.needs.hunger < 40 && eat()) continue;
+    L.wait(s, 30);
+  }
+  assert.equal(s.nysc.stage, 'service');
+  assert.ok(s.replay, 'still recording');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

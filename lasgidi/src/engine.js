@@ -78,7 +78,8 @@
     seaplot:     'Sea Plots: own a block in the water',
     dancer:      'Dance-off champion: 90% on the beat',
     quiz:        'Quiz champion: 10 out of 10',
-    vendor:      'Online vendor: sold 100 items'
+    vendor:      'Online vendor: sold 100 items',
+    corper:      'Corper wee! Finished your NYSC service year'
   };
 
   /* ---------- small helpers ---------- */
@@ -188,6 +189,7 @@
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
     if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary|^Shop |^Dispatch|^Sea Plots|^Danfo (owner|fuel|repairs|returns)|^Hawking stock/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
+    if (/^NYSC (allawee|PPA)/.test(m)) return 'wages';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
@@ -297,7 +299,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null, nysc: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -433,6 +435,7 @@
     weeklyShop(s);
     weeklyCreator(s);
     weeklyDanfo(s);
+    weeklyNysc(s);
     weeklyBusinessCosts(s);
     weeklyAjo(s);
     weeklyLoans(s);
@@ -1881,7 +1884,7 @@
   }
   function buyClothes(s, id) {
     var c = D.CLOTHES[id];
-    if (!c) return fail('No such item.');
+    if (!c || c.gift) return fail('No such item.');
     if (s.pending.length) return fail('Decide on the open event first.');
     if (s.wardrobe.some(function (w) { return w.id === id; })) return fail('You already own this.');
     var cost = price(s, c.price);
@@ -2175,6 +2178,7 @@
     if (!s.haggles) s.haggles = {};
     if (s.sea === undefined) s.sea = null;
     if (s.mini === undefined) s.mini = null;
+    if (s.nysc === undefined) s.nysc = null;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2665,7 +2669,8 @@
     party:       function (s) { return !!s.ach.host; },
     shop:        function (s) { return !!s.shop; },
     creator:     function (s) { return !!(s.creator && s.creator.followers >= 1000); },
-    danforun:    function (s) { return (s.stats.danfoPax || 0) > 0; }
+    danforun:    function (s) { return (s.stats.danfoPax || 0) > 0; },
+    nysc:        function (s) { return !!(s.nysc && (s.nysc.stage === 'service' || s.nysc.stage === 'done')); }
   };
   function questDef(id) { return D.QUESTS.filter(function (q) { return q.id === id; })[0]; }
   function questDone(s, id) { var c = QUEST_CHECKS[id]; return !!(c && c(s)); }
@@ -3083,7 +3088,7 @@
   }
   function haggleBuy(s, id, offer) {
     var c = D.CLOTHES[id];
-    if (!c) return fail('No such item.');
+    if (!c || c.gift) return fail('No such item.');
     var shut = haggleOpen(s); if (shut) return fail(shut + '.');
     if (s.pending.length) return fail('Decide on the open event first.');
     if (s.wardrobe.some(function (w) { return w.id === id; })) return fail('You already own this.');
@@ -3251,6 +3256,131 @@
     return finish(s, ok('🎤 ' + correct + '/10. ' + (prize ? 'You won ' + naira(prize) + '!' : 'No prize under 5. The crowd still clapped.')));
   }
 
+
+  /* ---------- NYSC: the service year after a degree ---------- */
+  // Register (call-up letter), three camp days at Kubwa, then 12 weeks of service:
+  // days at your PPA pay its small stipend, CDS is on Thursdays, and the federal
+  // allowance comes every 4 weeks if 3 of those 4 CDS days were attended.
+  // The posting comes from the seed (no rng draw), so other randomness is untouched.
+  function nyscPosting(s) { return D.NYSC_PPAS[parseInt(fnv(s.seed + ':nysc'), 16) % D.NYSC_PPAS.length]; }
+  function nyscPPA(s) { return s.nysc ? D.NYSC_PPAS.filter(function (p) { return p.id === s.nysc.ppa; })[0] : null; }
+  function nyscBusy(s) { return s.over ? 'This Weekly Lagos is over' : s.pending.length ? 'Decide on the open event first' : null; }
+  function nyscRegister(s) {
+    if (s.nysc) return fail('You have already registered for NYSC.');
+    if (!s.edu.degree) return fail('NYSC is for graduates. Finish your degree at UNILAG first.');
+    var b = nyscBusy(s); if (b) return fail(b + '.');
+    var fee = price(s, D.NYSC.callup);
+    s.alerts = [];
+    if (!pay(s, fee, 'NYSC call-up letter and registration')) return fail('Registration costs ' + naira(fee) + '.');
+    var ppa = nyscPosting(s);
+    s.nysc = { stage: 'callup', ppa: ppa.id, campDays: 0, start: -1, cds: {}, ppaDay: -1, paid: 0, withheld: 0 };
+    log(s, '🎖️ Call-up letter: report to the orientation camp at Kubwa, Abuja. Your PPA: ' + ppa.name + '.', 'info');
+    return finish(s, ok('Registered! Report to camp in Kubwa, Abuja. You are posted to ' + ppa.name + ' (' + D.DISTRICTS[ppa.district].name + ').'));
+  }
+  function nyscCampBlock(s) {
+    var n = s.nysc;
+    if (!n) return 'Register for NYSC first';
+    if (n.stage !== 'callup' && n.stage !== 'camp') return 'Camp is over';
+    if (s.loc !== 'abj_kubwa') return 'The camp is in Kubwa, Abuja';
+    var h = hour(s); if (h < 5 || h >= 20) return 'The camp gate is open from 05:00 to 20:00';
+    if (s.needs.energy < 35) return 'Too tired for drills';
+    return nyscBusy(s);
+  }
+  var CAMP_DAYS = [
+    'Drills on the parade ground, then lectures on the history of NYSC. Man O\'War made everyone crawl in the mud.',
+    'Skills acquisition (SAED) in the morning, Mammy market suya in the evening. Your platoon is practising for the parade.',
+    'Passing-out parade and swearing-in. Your platoon came second in the drill competition.'
+  ];
+  function nyscCamp(s) {
+    var why = nyscCampBlock(s); if (why) return fail(why + '.');
+    var n = s.nysc;
+    s.alerts = [];
+    var msg = CAMP_DAYS[n.campDays] || CAMP_DAYS[2];
+    n.stage = 'camp'; n.campDays++; n.campDay = day(s);
+    // The day's drills and lectures, camp food, then the night in the camp hostel till the 05:00 bugle.
+    // A late arrival still does registration and kit (at least 2 hours).
+    advance(s, Math.max(120, 21 * 60 - minuteOfDay(s)));
+    applyFx(s, { energy: -30, hunger: 45, social: 20, fun: 10, hygiene: -10 });
+    addXp(s, { fitness: 2, charisma: 1 });
+    if (!s.over) advance(s, (29 * 60 - minuteOfDay(s)) % (24 * 60), { sleep: 0.85 });
+    if (n.campDays >= D.NYSC.campDays) {
+      n.stage = 'service'; n.start = week(s);
+      if (!s.wardrobe.some(function (w) { return w.id === 'nysc_khaki'; })) s.wardrobe.push({ id: 'nysc_khaki' });
+      var ppa = nyscPPA(s);
+      log(s, '🎖️ Sworn in as a corps member. Report to ' + ppa.name + ' and attend CDS every Thursday.', 'good');
+      return finish(s, ok('🎖️ ' + msg + ' You are now a corper! The khaki is in your wardrobe. Report to ' + ppa.name + ', ' + D.DISTRICTS[ppa.district].name + '.'));
+    }
+    return finish(s, ok('🎖️ Camp day ' + n.campDays + ' of ' + D.NYSC.campDays + ': ' + msg));
+  }
+  function nyscWorkBlock(s) {
+    var n = s.nysc, ppa = nyscPPA(s);
+    if (!n || n.stage !== 'service') return 'Only corps members in service go to a PPA';
+    if (s.loc !== ppa.district) return 'Your PPA is in ' + D.DISTRICTS[ppa.district].name;
+    if (dow(s) > 4) return 'Your PPA is open Monday to Friday';
+    var h = hour(s); if (h < 8 || h >= 10) return 'Report to your PPA between 08:00 and 09:59';
+    if (n.ppaDay === day(s)) return 'You already worked at your PPA today';
+    if (s.needs.energy < 25) return 'Too tired for work';
+    return nyscBusy(s);
+  }
+  function nyscWork(s) {
+    var why = nyscWorkBlock(s); if (why) return fail(why + '.');
+    var n = s.nysc, ppa = nyscPPA(s);
+    s.alerts = [];
+    n.ppaDay = day(s);
+    advance(s, 6 * 60);
+    applyFx(s, { energy: -20, hunger: -15, stress: 6 });
+    addXp(s, ppa.id === 'tech' ? { tech: 2 } : ppa.id === 'bank' ? { hustle: 1, charisma: 1 } : ppa.id === 'school' ? { charisma: 2 } : { hustle: 1 });
+    var got = ppa.pay ? price(s, ppa.pay) : 0;
+    if (got) earn(s, got, 'NYSC PPA stipend');
+    return finish(s, ok(ppa.icon + ' A day at ' + ppa.name + '. ' + (got ? 'Stipend: ' + naira(got) + '.' : 'No stipend here, but the students said "Thank you, Corper!"')));
+  }
+  function nyscCdsBlock(s) {
+    var n = s.nysc, ppa = nyscPPA(s);
+    if (!n || n.stage !== 'service') return 'CDS is for corps members in service';
+    if (cityOf(s) !== districtCity(ppa.district)) return 'CDS is in your posting city, ' + D.CITIES[districtCity(ppa.district)].name;
+    if (dow(s) !== D.NYSC.cdsDay) return 'CDS is on Thursdays';
+    var h = hour(s); if (h < 10 || h >= 14) return 'CDS meets from 10:00 to 14:00';
+    if (n.cds[week(s)]) return 'You already signed the CDS register this week';
+    return nyscBusy(s);
+  }
+  function nyscCDS(s) {
+    var why = nyscCdsBlock(s); if (why) return fail(why + '.');
+    s.alerts = [];
+    s.nysc.cds[week(s)] = 1;
+    advance(s, 3 * 60);
+    applyFx(s, { social: 15, energy: -8, stress: -4 });
+    addXp(s, { charisma: 1 });
+    return finish(s, ok('🤝 CDS done: your group cleaned the market and painted a clinic. The register is signed.'));
+  }
+  // Weekly: the allowance every 4 weeks of service, then passing out.
+  function weeklyNysc(s) {
+    var n = s.nysc; if (!n || n.stage !== 'service') return;
+    var served = week(s) - n.start;
+    if (served <= 0 || served % 4) return;
+    var att = 0; for (var w = week(s) - 4; w < week(s); w++) if (n.cds[w]) att++;
+    if (att >= 3) { earn(s, price(s, D.NYSC.allowance), 'NYSC allawee'); n.paid++; log(s, '🎖️ Allawee don land! Your NYSC allowance is in.', 'good'); }
+    else { n.withheld++; log(s, '🎖️ Your clearance was not signed: you attended ' + att + ' of 4 CDS days. No allowance this month.', 'bad'); }
+    if (served >= D.NYSC.weeks) {
+      n.stage = 'done'; unlock(s, 'corper');
+      var ppa = nyscPPA(s);
+      log(s, '🎖️ Passing out! You have your Certificate of National Service.' + (ppa.pay >= 1000 ? ' ' + ppa.name + ' says they may retain you: watch the Jobs app.' : ''), 'ach');
+    }
+  }
+  function nyscInfo(s) {
+    var n = s.nysc, ppa = n ? nyscPPA(s) : null;
+    var out = { stage: n ? n.stage : s.edu.degree ? 'eligible' : 'locked', fee: price(s, D.NYSC.callup), allowance: price(s, D.NYSC.allowance), ppa: ppa };
+    if (!n) return out;
+    out.campDays = n.campDays; out.paid = n.paid; out.withheld = n.withheld;
+    out.camp = nyscCampBlock(s); out.work = nyscWorkBlock(s); out.cdsWhy = nyscCdsBlock(s);
+    if (n.stage === 'service') {
+      var served = week(s) - n.start, blockStart = week(s) - (served % 4);
+      out.weeksLeft = Math.max(0, D.NYSC.weeks - served);
+      out.nextPayIn = 4 - (served % 4);
+      out.cds = []; for (var w = blockStart; w < blockStart + 4; w++) out.cds.push(w < week(s) ? !!n.cds[w] : w === week(s) ? (n.cds[w] ? true : null) : null);
+    }
+    return out;
+  }
+
   /* ---------- daily streak: come back on real consecutive days ---------- */
   var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
   function nextDayId(id) { var d = new Date(id + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
@@ -3391,6 +3521,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting,
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

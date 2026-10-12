@@ -106,6 +106,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Buying:** tap a spot (or the 🌊 Sea Plots chip) and pick a block size, up to 12×12. A block costs ₦5,000 a plot. Moving or enlarging charges only for the extra plots.
   - **Pictures:** upload a picture for your block. An editor approves it first, then it shows on the water for everyone.
   - **Claims:** the oldest claim wins any overlap. Tap someone's block to see who owns it, their picture, and a link to visit their home. A "Biggest blocks" list ranks the largest owners.
+- **🎖️ NYSC:** the service year after your UNILAG degree, run from a Phone app.
+  - **Register:** a ₦5k call-up letter gives you a posting, fixed by your life's seed, to one of six PPAs. They range from a secondary school in Ikorodu (no stipend) to an oil services firm in Port Harcourt.
+  - **Camp:** three camp days at the orientation camp in Kubwa, Abuja (the gate is open 05:00–20:00). Each day has drills, lectures and Mammy market, then a night in the camp hostel. The swearing-in gives you the NYSC khaki, which is free and never sold.
+  - **Service:** 12 weeks. Weekdays at your PPA pay its small daily stipend, and CDS meets on Thursdays (10:00–14:00) in your posting city.
+  - **Allawee:** ₦77k every 4 weeks, but only if you signed the CDS register at least 3 times that month. Passing out unlocks "Corper wee!".
 - **Japa:** the life's ending, at Murtala Muhammed Airport's international departures.
   - **Requirements:** pass IELTS, have ₦15m proof of funds plus the visa and ticket, and owe no debts.
   - **Destinations:** Toronto, London, Houston or Dubai.
@@ -213,7 +218,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (82 tests)
+  test/engine.test.js   node:test suite (85 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

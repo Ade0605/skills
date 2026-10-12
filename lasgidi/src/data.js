@@ -148,6 +148,18 @@
   };
 
   // Starter quests, shown as chips on the map. check names a rule in engine questDone().
+  // NYSC: places of primary assignment (PPA). pay is the PPA's own stipend per day
+  // worked; the federal allowance (allawee) is paid every 4 weeks of service.
+  var NYSC_PPAS = [
+    { id: 'school',   name: 'Community Secondary School', icon: '🏫', district: 'ikorodu',       pay: 0,    text: 'Teach Basic Science to 60 students in one class.' },
+    { id: 'hospital', name: 'General Hospital, Garki',    icon: '🏥', district: 'abj_garki',     pay: 600,  text: 'Records and outpatients. Long queues, kind nurses.' },
+    { id: 'ministry', name: 'Federal Ministry, Maitama',  icon: '🏛️', district: 'abj_maitama',   pay: 400,  text: 'File movement and tea. Oga is always at a meeting.' },
+    { id: 'bank',     name: 'Bank branch, VI',            icon: '🏦', district: 'vi',            pay: 1200, text: 'Sell accounts and count cash. Targets, targets.' },
+    { id: 'oil',      name: 'Oil services firm',          icon: '🛢️', district: 'ph_transamadi', pay: 2000, text: 'The posting everyone prays for. Safety boots and a canteen.' },
+    { id: 'tech',     name: 'Tech hub, Yaba',             icon: '💻', district: 'yaba',          pay: 1000, text: 'Help run a startup bootcamp. Free Wi-Fi, free jollof on Fridays.' }
+  ];
+  var NYSC = { callup: 5000, allowance: 77000, campDays: 3, weeks: 12, cdsDay: 3 };
+
   var QUESTS = [
     { id: 'get_job',     icon: '💼', title: 'Get a job',             hint: 'Open Phone → Jobs',           reward: 3000,  go: 'jobs' },
     { id: 'first_shift', icon: '⏰', title: 'Work your first shift', hint: 'Go to work in hours',          reward: 2000,  go: 'jobs' },
@@ -164,7 +176,8 @@
     { id: 'party',       icon: '🎉', title: 'Host an owambe',        hint: 'Home tab, on a Saturday',      reward: 5000,  go: 'home' },
     { id: 'shop',        icon: '🛍️', title: 'Open an online shop',   hint: 'Phone → Shop',                 reward: 3000,  go: 'shop' },
     { id: 'creator',     icon: '📸', title: 'Reach 1,000 followers', hint: 'Shoot content, or film skits at home', reward: 5000, go: 'creator' },
-    { id: 'danforun',    icon: '🚐', title: 'Drive a Danfo Run',     hint: 'Ojuelegba danfo park, Surulere', reward: 2000, go: 'map' }
+    { id: 'danforun',    icon: '🚐', title: 'Drive a Danfo Run',     hint: 'Ojuelegba danfo park, Surulere', reward: 2000, go: 'map' },
+    { id: 'nysc',        icon: '🎖️', title: 'Serve your fatherland', hint: 'Graduate, then Phone → NYSC', reward: 3000, go: 'nysc' }
   ];
 
   var CITIES = {
@@ -588,7 +601,8 @@
     { id: 'ph_bole', icon: '🐟', name: 'Bole and fish spot', type: 'food', glyph: 'bowl', district: 'ph_oldgra', x: 13.4, y: 15.8, acts: ['ph_bole', 'ph_bolegame'], text: 'Roasted plantain and fish with pepper sauce. A PH classic. Mama lets you work the grill for a share of sales.' },
     { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
-    { id: 'ojuelegba_park', icon: '🚐', name: 'Ojuelegba danfo park', type: 'transport', glyph: 'bus', district: 'surulere', x: 12.2, y: 16.8, acts: ['suru_danfo'], nogem: true, text: 'Under the bridge, conductors shout routes and danfos fill up. Rent one from the owner for a run to Yaba and back.' }
+    { id: 'ojuelegba_park', icon: '🚐', name: 'Ojuelegba danfo park', type: 'transport', glyph: 'bus', district: 'surulere', x: 12.2, y: 16.8, acts: ['suru_danfo'], nogem: true, text: 'Under the bridge, conductors shout routes and danfos fill up. Rent one from the owner for a run to Yaba and back.' },
+    { id: 'nysc_camp', icon: '🎖️', name: 'NYSC Orientation Camp, Kubwa', type: 'learn', glyph: 'hall', district: 'abj_kubwa', x: 3.4, y: 1.6, acts: [], nogem: true, text: 'The FCT orientation camp. Three weeks of 5 am drills, Man O\'War, lectures and Mammy market, squeezed into three camp days. Register in Phone → NYSC.' }
   ];
 
   // Interiors: floor size (in furniture tiles) for each kind of home.
@@ -669,7 +683,9 @@
     beads:      { name: 'Coral beads', slot: 'acc', fabric: 'plain', color: '#e2463f', price: 150000, tags: ['owambe'], status: 3 },
     watch:      { name: 'Luxury watch', slot: 'acc', fabric: 'plain', color: '#c9a77a', price: 4000000, tags: ['office', 'club'], status: 20 },
     chain:      { name: 'Iced-out chain', slot: 'acc', fabric: 'plain', color: '#d8dce2', price: 6500000, tags: ['club'], status: 25 },
-    umbrella:   { name: 'Umbrella', slot: 'acc', fabric: 'plain', color: '#2f6fa0', price: 4500, tags: ['rain'] }
+    umbrella:   { name: 'Umbrella', slot: 'acc', fabric: 'plain', color: '#2f6fa0', price: 4500, tags: ['rain'] },
+    // Issued free at NYSC camp, never sold.
+    nysc_khaki: { name: 'NYSC khaki', slot: 'top', fabric: 'plain', color: '#a8976b', price: 0, tags: ['office'], gift: true }
   };
 
   // Vehicles: road cars use the "Own car" travel mode with their own speed and
@@ -890,7 +906,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

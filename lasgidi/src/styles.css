@@ -192,7 +192,7 @@ select { border: 1.5px solid var(--line); background: var(--paper); border-radiu
 .item:first-child { border-top: 0; }
 .item h3 { font-size: 15px; font-weight: 700; }
 .item .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-.item .why { color: var(--debit); font-size: 12.5px; margin-top: 2px; }
+.item .why, .section > .why { color: var(--debit); font-size: 12.5px; margin-top: 2px; }
 .item.work { background: color-mix(in srgb, var(--danfo) 18%, transparent); margin-inline: -16px; padding-inline: 16px; border-top: 0; }
 .cost { color: var(--debit); }
 .gain { color: var(--credit); }
@@ -568,3 +568,14 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 /* Read by screen readers, hidden on screen. */
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .danfo-sheet:focus { outline: none; }
+
+/* NYSC app */
+.nysc-camp { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-weight: 600; }
+.nysc-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line, #c9c2b4); }
+.nysc-dot.on { background: #2fa36b; border-color: #2fa36b; }
+.nysc-cdsrow { display: flex; gap: 8px; margin: 6px 0 10px; }
+.nysc-cds { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; border: 1px solid var(--line, #c9c2b4); color: var(--muted, #6b6b6b); }
+.nysc-cds.on { background: #2fa36b; border-color: #2fa36b; color: #fff; }
+.nysc-cds.miss { background: #d0453a; border-color: #d0453a; color: #fff; }
+.nysc-done { text-align: center; padding: 12px 0; }
+.nysc-big { font-size: 48px; margin: 0; }
