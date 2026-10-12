@@ -505,3 +505,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .visit-slot.decorated::before, .visit-slot.decorated::after { position: absolute; left: 0; right: 0; z-index: 1; pointer-events: none; text-align: center; font-size: 18px; letter-spacing: 6px; overflow: hidden; white-space: nowrap; }
 .visit-slot.decorated::before { content: '🎈✨🎊💡🎈✨🎊💡🎈✨🎊💡🎈✨🎊💡'; top: 4px; }
 .visit-slot.decorated::after { content: '💐🕯️💐🕯️💐🕯️💐🕯️💐🕯️💐🕯️'; bottom: 4px; }
+.gfaces { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.gface { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); border: 2px solid var(--muted); object-fit: cover; }
+.gface.me { border-color: var(--danfo); }

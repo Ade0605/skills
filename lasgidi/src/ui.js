@@ -334,10 +334,17 @@
     var pr = (online.peerList || []).filter(function (p) { return p.by === host; })[0];
     return (pr && pr.party) || (online.homes[host] && cleanParty(online.homes[host].party)) || null;
   }
+  // Faces of everyone at a host's party, as small round images.
+  function guestFaces(host, withMe) {
+    var list = (online.peerList || []).filter(function (p) { return p.at === host && p.look; }).slice(0, 8), out = '';
+    if (withMe && S) { var me = faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit); if (me) out += '<img class="gface me" alt="You" src="' + me.toDataURL() + '">'; }
+    list.forEach(function (p) { var f = faceCanvas(p.look, null); if (f) out += '<img class="gface" alt="' + esc(nameOf(p.by)) + '" title="' + esc(nameOf(p.by)) + '" src="' + f.toDataURL() + '">'; });
+    return out ? '<div class="gfaces">' + out + '</div>' : '';
+  }
   function partyInvites() {
     if (!S || S.challenge) return '';
     var mine = myParty(), html = '';
-    if (mine) html += '<div class="party-banner">' + PARTY_KINDS[mine.kind].icon + ' <b>Your ' + (mine.kind === 'wedding' ? 'wedding reception' : 'party') + ' is on</b> (' + esc(PARTY_KINDS[mine.kind].name.toLowerCase()) + (mine.planner ? ', decorated' : '') + '). ' + guestsAt(online.me) + ' guest' + (guestsAt(online.me) === 1 ? '' : 's') + ' here now · open ' + Math.max(1, Math.round((PARTY_OPEN - (Date.now() - mine.at)) / 60000)) + ' more min</div>';
+    if (mine) html += '<div class="party-banner">' + PARTY_KINDS[mine.kind].icon + ' <b>Your ' + (mine.kind === 'wedding' ? 'wedding reception' : 'party') + ' is on</b> (' + esc(PARTY_KINDS[mine.kind].name.toLowerCase()) + (mine.planner ? ', decorated' : '') + '). ' + guestsAt(online.me) + ' guest' + (guestsAt(online.me) === 1 ? '' : 's') + ' here now · open ' + Math.max(1, Math.round((PARTY_OPEN - (Date.now() - mine.at)) / 60000)) + ' more min' + guestFaces(online.me, false) + '</div>';
     var hosts = (online.peerList || []).filter(function (p) { return p.party && p.by !== ui.visit; });
     if (hosts.length) html += '<div class="section"><h3>💌 Party invites</h3><div class="list">' + hosts.slice(0, 4).map(function (p) {
       var P = PARTY_KINDS[p.party.kind];
@@ -738,7 +745,7 @@
     var v = checkHome(online.homes[ui.visit]);
     if (!v) { ui.visit = null; return ''; }
     var pt = partyOf(ui.visit), key = pt ? ui.visit + ':' + pt.at : '';
-    var acts = pt ? '<div class="party-bar"><span>' + PARTY_KINDS[pt.kind].icon + ' You are at ' + esc(nameOf(ui.visit)) + '\'s ' + esc(PARTY_KINDS[pt.kind].name.toLowerCase()) + ' · ' + (guestsAt(ui.visit) + 1) + ' here</span><div class="inline">' +
+    var acts = pt ? '<div class="party-bar"><span>' + PARTY_KINDS[pt.kind].icon + ' You are at ' + esc(nameOf(ui.visit)) + '\'s ' + esc(PARTY_KINDS[pt.kind].name.toLowerCase()) + ' · ' + (guestsAt(ui.visit) + 1) + ' here</span>' + guestFaces(ui.visit, true) + '<div class="inline">' +
       '<button class="btn sm ghost" id="pbell" data-bell="' + esc(ui.visit) + '">🔔 Ring bell</button>' +
       Object.keys(D.PARTY_ACTS).map(function (k) { var A = D.PARTY_ACTS[k], done = Object.prototype.hasOwnProperty.call(S.partyJoins || {}, key + ':' + k);
         return '<button class="btn sm' + (done ? ' ghost' : ' go') + '" id="pact-' + k + '" data-partyact="' + k + '"' + (done ? ' disabled' : '') + '>' + A.icon + ' ' + esc(A.name) + '</button>'; }).join('') + '</div></div>' : '';

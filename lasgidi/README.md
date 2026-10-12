@@ -100,7 +100,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Now passing:** after each trip, a note names the landmarks you passed on the way.
 - **House parties with real players:** when you host, you can add an **event decorator** for half the party's cost again. It turns the house festive, and guests spray 25% more.
   - For 30 real minutes, Lagosians online get a 💌 **party invite** on their Do tab.
-  - **Guests:** they walk into your home and see the decorations and a live guest count. They can **🔔 Ring bell** (you get a toast), **💃 Dance** or **🥂 Socialise**.
+  - **Guests:** they walk into your home and see the decorations and a live guest count. Guest faces line the party bar. They can **🔔 Ring bell** (you get a toast), **💃 Dance** or **🥂 Socialise**.
   - **Mood only:** guest actions only lift mood. No money moves between lives.
   - **Host:** a banner on your Do tab shows how many guests are in.
   - **Weddings:** getting married opens a 💍 wedding reception the same way. An owambe or big wedding comes decorated.
