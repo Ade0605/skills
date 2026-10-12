@@ -1144,3 +1144,20 @@ test('creators: followers grow per post (faster with a better phone), brand deal
   assert.ok(!r8.log.some(l => /sponsored posts/.test(l.text)), 'no weekly deals before rules 9');
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('chieftaincy: titles in order, gated by net worth, add status and a name prefix', () => {
+  const s = L.newGame({ seed: 62, origin: 'nepo', goal: 'freestyle' });
+  assert.match(L.takeTitle(s, 'chief').msg, /in order/);
+  assert.match(L.takeTitle(s, 'baale').msg, /net worth of/);
+  assert.equal(L.nextTitle(s).id, 'baale');
+  const rich = L.newGame({ seed: 63, origin: 'nepo', goal: 'freestyle' });
+  rich.bank += 30000000; rich.opening.bank += 30000000; // mechanics only
+  const st = L.statusPoints(rich);
+  const r = L.takeTitle(rich, 'baale');
+  assert.ok(r.ok, r.msg);
+  assert.equal(L.titledName(rich), 'Baale ' + rich.name);
+  assert.ok(L.statusPoints(rich) > st && rich.ach.chief);
+  assert.match(L.shareText(rich), /Baale/);
+  assert.equal(L.nextTitle(rich).id, 'chief');
+  assert.equal(L.category('Chieftaincy: Baale of your street', -1), 'lifestyle');
+});

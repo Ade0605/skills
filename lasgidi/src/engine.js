@@ -71,6 +71,7 @@
     streak7:     'Seven-day streak',
     oga:         'Oga at the top: hired domestic staff',
     pet:         'Best friend: adopted a pet',
+    chief:       'Chieftaincy: took a title',
     vendor:      'Online vendor: sold 100 items'
   };
 
@@ -183,6 +184,7 @@
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
+    if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
     return amt < 0 ? 'lifestyle' : 'other';
   }
 
@@ -288,7 +290,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -1807,6 +1809,7 @@
     (s.items || []).forEach(function (it) { t += D.FURNITURE[it.id].status || 0; });
     (s.vehicles || []).forEach(function (v) { t += D.VEHICLES[v.id].status || 0; });
     if (s.phone) t += D.PHONES[s.phone].status;
+    var ti = titleDef(s); if (ti) t += ti.status;
     return t;
   }
 
@@ -2154,6 +2157,7 @@
     if (s.shop === undefined) s.shop = null;
     if (!s.creator) s.creator = { followers: 0, posts: 0, lastPost: -1 };
     if (s.phone === undefined) s.phone = null;
+    if (s.title === undefined) s.title = null;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2704,6 +2708,30 @@
     });
   }
 
+  /* ---------- chieftaincy titles ---------- */
+  function titleDef(s) { return s.title ? D.TITLES.filter(function (x) { return x.id === s.title; })[0] : null; }
+  function nextTitle(s) {
+    var i = s.title ? D.TITLES.map(function (x) { return x.id; }).indexOf(s.title) + 1 : 0;
+    return D.TITLES[i] || null;
+  }
+  function titledName(s) { var ti = titleDef(s); return (ti ? ti.prefix + ' ' : '') + s.name; }
+  function takeTitle(s, id) {
+    var T = nextTitle(s);
+    if (!T || T.id !== id) return fail(T ? 'Titles come in order. Next is ' + T.name + '.' : 'You hold the highest title already.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var need = price(s, T.worth);
+    if (netWorth(s) < need) return fail('The palace wants to see a net worth of ' + naira(need) + ' first.');
+    var cost = price(s, T.cost);
+    s.alerts = [];
+    if (!pay(s, cost, 'Chieftaincy: ' + T.name)) return fail('The installation costs ' + naira(cost) + '.');
+    advance(s, 360);
+    applyFx(s, { social: 40, fun: 30, stress: -10, energy: -20 });
+    s.title = T.id;
+    unlock(s, 'chief');
+    log(s, T.icon + ' You were installed as ' + T.name + '. From today you are ' + titledName(s) + '.', 'ach');
+    return finish(s, ok(T.icon + ' Kabiyesi! You are now ' + titledName(s) + '.'));
+  }
+
   /* ---------- creators: phones, followers and weekly brand deals ---------- */
   function phoneCam(s) { return s.phone ? D.PHONES[s.phone].cam : 0.6; }
   function followerGain(s, viral) {
@@ -2972,7 +3000,7 @@
     if (s.challenge) return challengeShareText(s);
     var title = s.job ? D.CAREERS[s.job.id].titles[s.job.level] : 'job hunting';
     var got = Object.keys(s.ach).length, total = Object.keys(ACHIEVEMENTS).length;
-    return 'Week ' + (week(s) + 1) + ' in #Lasgidi: ' + s.name + ', ' + D.ORIGINS[s.origin].name + ', now ' + title + ' living in ' + D.DISTRICTS[homeDistrict(s)].name +
+    return 'Week ' + (week(s) + 1) + ' in #Lasgidi: ' + titledName(s) + ', ' + D.ORIGINS[s.origin].name + ', now ' + title + ' living in ' + D.DISTRICTS[homeDistrict(s)].name +
       '. Net worth ' + naira(netWorth(s)) + '. ' + got + '/' + total + ' achievements.' + (s.won ? ' ' + D.GOALS[s.won.goal].name + ' goal: done.' : '') + ' Lagos no dey carry last.';
   }
 
@@ -3025,6 +3053,7 @@
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     buyStock: recorded('sk', buyStock), sellStock: recorded('xs', sellStock), stockPrice: stockPrice, stockHistory: stockHistory, stocksValue: stocksValue, marketOpen: marketOpen, brokerFee: brokerFee,
     hireStaff: recorded('hs', hireStaff), fireStaff: recorded('fs', fireStaff), staffRoom: staffRoom, staffPay: staffPay,
+    takeTitle: recorded('ct', takeTitle), nextTitle: nextTitle, titleDef: titleDef, titledName: titledName,
     buyPhone: recorded('ph', buyPhone), brandDeal: brandDeal, followerGain: followerGain, phoneCam: phoneCam,
     openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,

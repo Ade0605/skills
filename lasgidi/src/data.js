@@ -37,6 +37,15 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // Chieftaincy titles: an installation ceremony and a cheque for the palace.
+  // Taken in order; each needs a minimum net worth. Pure status: a title earns nothing.
+  var TITLES = [
+    { id: 'baale',  prefix: 'Baale',  name: 'Baale of your street', icon: '🪶', cost: 2000000,   worth: 20000000,   status: 8,  text: 'The landlords\' association asks you to settle quarrels on your street.' },
+    { id: 'chief',  prefix: 'Chief',  name: 'Chief',                icon: '🎖️', cost: 15000000,  worth: 150000000,  status: 18, text: 'A community title, a cap with a feather, and a seat at every owambe high table.' },
+    { id: 'otunba', prefix: 'Otunba', name: 'Otunba',               icon: '👑', cost: 80000000,  worth: 800000000,  status: 40, text: 'A title from the palace. MCs announce you when you walk in.' },
+    { id: 'aare',   prefix: 'Aare',   name: 'Aare',                 icon: '🦁', cost: 400000000, worth: 4000000000, status: 80, text: 'The highest title the palace gives. Everybody knows your name.' }
+  ];
+
   // Phones: a better camera grows your following faster. status adds to your flex.
   var PHONES = {
     budget:   { name: 'Budget Android',   icon: '📱', price: 90000,   cam: 1,   status: 0 },
@@ -835,7 +844,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

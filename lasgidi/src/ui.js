@@ -1524,13 +1524,25 @@
   }
 
   /* ---------- Me tab ---------- */
+  function titlesView() {
+    var nx = L.nextTitle(S), have = L.titleDef(S), worth = L.netWorth(S);
+    var html = '<div class="section"><h3>🪶 Chieftaincy</h3><p class="note">' + (have ? 'You are ' + esc(L.titledName(S)) + '. ' : '') + 'Titles come in order. Each needs a minimum net worth and a cheque for the installation. A title earns nothing, but it adds status and goes in front of your name.</p><div class="list">';
+    html += D.TITLES.map(function (T) {
+      var held = have && D.TITLES.indexOf(T) <= D.TITLES.indexOf(have), isNext = nx && nx.id === T.id, need = L.price(S, T.worth);
+      var why = isNext && worth < need ? 'Net worth ' + N(worth) + ' of ' + N(need) + ' needed' : '';
+      return '<div class="item"><div><h3>' + T.icon + ' ' + esc(T.name) + (held ? ' <span class="gain">· yours</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(L.price(S, T.cost)) + '</span><span>Net worth ' + N(need) + '+</span><span>+' + T.status + ' status</span></div><div class="act-note">' + esc(T.text) + '</div>' + (why ? '<div class="why">' + esc(why) + '</div>' : '') + '</div>' +
+        (isNext ? '<button class="btn" id="title-' + T.id + '" data-title="' + T.id + '"' + (why ? ' disabled' : '') + '>Take it</button>' : '') + '</div>';
+    }).join('');
+    return html + '</div></div>';
+  }
   function meView() {
     var gp = L.goalProgress(S), g = D.GOALS[S.goal];
-    var html = '<div class="panel-h"><h2>' + esc(S.name) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">';
+    var html = '<div class="panel-h"><h2>' + esc(L.titledName(S)) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">';
     html += '<div class="section" style="padding-top:0"><h3>Goal: ' + esc(g.name) + (S.won ? ' · done' : '') + '</h3><p class="note">' + esc(g.text) + '</p>' +
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
       (S.history.length ? '<details><summary>Show as table</summary><div class="stmt-wrap"><table class="stmt"><tbody>' + S.history.slice().reverse().map(function (h) { return '<tr><td>Week ' + h.w + '</td><td class="n num">' + N(h.worth) + '</td></tr>'; }).join('') + '</tbody></table></div></details>' : '') + '</div>';
+    html += titlesView();
     html += lagosianView();
     html += S.challenge ? weeklyMeView() : weeklyInviteView() + familyView();
     if (!S.challenge) html += fameView();
@@ -1805,7 +1817,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1897,6 +1909,7 @@
     if (ds.rehome) { var rp = ds.rehome; run(function () { return L.rehomePet(S, rp); }); return; }
     if (ds.hmo) { var hp = ds.hmo; run(function () { return L.joinHmo(S, hp); }); return; }
     if (ds.hmooff) { run(function () { return L.leaveHmo(S); }); return; }
+    if (ds.title) { var tt = ds.title; run(function () { return L.takeTitle(S, tt); }); return; }
     if (ds.buyphone) { var bph = ds.buyphone; run(function () { return L.buyPhone(S, bph); }); return; }
     if (ds.shopopen) { var so = ds.shopopen; run(function () { return L.openShop(S, so); }); return; }
     if (ds.shoprestock) { var sr = +ds.shoprestock; run(function () { return L.restockShop(S, sr); }); return; }

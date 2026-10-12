@@ -64,6 +64,16 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - You can trade 10:00–14:30 on weekdays. Every buy and sale costs a 1.5% broker fee, with a ₦500 minimum.
   - Some companies pay a dividend every 13 weeks.
   - Prices can fall, and a retail account is capped at ₦20m invested.
+- **Chieftaincy:** an endgame status ladder on the Me tab, taken in order:
+
+  | Title | Cost | Net worth needed |
+  |---|---|---|
+  | Baale | ₦2m | ₦20m |
+  | Chief | ₦15m | ₦150m |
+  | Otunba | ₦80m | ₦800m |
+  | Aare | ₦400m | ₦4bn |
+
+  A title earns nothing, but it adds status and goes in front of your name, on the Me tab, in My story and in your share text.
 - **Creator:** a 📸 Creator phone app.
   - **Followers:** every post adds followers, from shooting content at Lekki beach or a new "Film a skit at home" action. Charisma, your phone's camera, a club or owambe outfit and your existing reach all help, and a viral post brings thousands at once.
   - **Phones:** budget, mid-range, flagship or "Pro Max", with a 30% trade-in on upgrades and no downgrades for cash.
