@@ -37,6 +37,16 @@
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
+  // Live-in and daily staff. Paid every week; unpaid staff leave.
+  var STAFF = {
+    help:   { name: 'House help', icon: '🧹', pay: 35000, daily: { hygiene: 12, stress: -3 }, text: 'Cleans, washes and runs errands. Your home stays fresh.' },
+    cook:   { name: 'Cook',       icon: '🍲', pay: 50000, daily: { hunger: 30, fun: 3 },     text: 'Breakfast is ready every morning, from the cook\'s own market run.' },
+    driver: { name: 'Driver',     icon: '🧢', pay: 60000, daily: { stress: -6, energy: 4 },  needsCar: true, text: 'Drives you, so you rest in traffic instead of fighting it.' },
+    guard:  { name: 'Gateman',    icon: '💂', pay: 30000, daily: { stress: -3 },             text: 'Watches the gate at night. You sleep easier.' }
+  };
+  // How many staff each home type has room for.
+  var STAFF_ROOM = { room: 0, share: 0, selfcon: 1, miniflat: 1, flat2: 2, flat3: 2, duplex: 4, luxury: 3, mansion: 4 };
+
   // Parties you host at home (Saturdays). Guests spray money, but a party never pays for itself.
   var PARTIES = {
     small:  { name: 'Small chops and drinks', icon: '🥤', guests: 25,  cost: 120000,   mins: 240, fx: { social: 30, fun: 25, stress: -8 },  types: null },
@@ -779,7 +789,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES,
+    PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

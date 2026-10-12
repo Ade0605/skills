@@ -24,7 +24,7 @@
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 11;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 12;         // state shape; migrate() upgrades older saves
   // Game RULES version. A life plays by the rules it started under, so a
   // recorded life replays identically after later updates add new systems.
   // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race,
@@ -68,7 +68,8 @@
     billboard:   'On the billboard: rented an ad board',
     investor:    'Investor: bought shares on the exchange',
     host:        'Owambe host: threw a party at home',
-    streak7:     'Seven-day streak'
+    streak7:     'Seven-day streak',
+    oga:         'Oga at the top: hired domestic staff'
   };
 
   /* ---------- small helpers ---------- */
@@ -172,7 +173,7 @@
     if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
     if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Daily streak|Quest:|Party: guests)/.test(m)) return 'gigs';
-    if (/^(Rent|Move-in)/.test(m)) return 'housing';
+    if (/^(Rent|Move-in|Staff:)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
@@ -285,7 +286,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [],
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -364,6 +365,7 @@
     if (hd.daily) applyFx(s, hd.daily); // perks of homes added after v0.6
     var fd = furnitureDaily(s);
     if (fd) applyFx(s, fd);
+    (s.staff || []).forEach(function (id) { var St = D.STAFF[id]; if (!St.needsCar || rideCar(s)) applyFx(s, St.daily); });
     matureBonds(s);
     var d = day(s), yesterday = d - 1, yDow = yesterday % 7;
     // Missed shift check.
@@ -414,6 +416,7 @@
     });
     if (s.rules >= 8 && w > 0 && w % 4 === 0) rentReview(s);
 
+    weeklyStaff(s);
     weeklyBusinessCosts(s);
     weeklyAjo(s);
     weeklyLoans(s);
@@ -2093,7 +2096,16 @@
 
   // Cash and bank must equal opening balance plus every ledger line ever posted.
   // Upgrade saves made by older versions in place.
+  // Fields added after v0.9 (quests, stocks, streak, staff): filled on every
+  // load, because builds 23-25 stamped newer schema numbers without them.
+  function ensureFields(s) {
+    if (!s.quests) s.quests = {};
+    if (!s.stocks) s.stocks = {};
+    if (s.streak === undefined) s.streak = null;
+    if (!s.staff) s.staff = [];
+  }
   function migrate(s) {
+    if (s) ensureFields(s);
     if (!s || s.sv >= SCHEMA) return s;
     if (s.welfareDay == null) s.welfareDay = -1;
     if (s.viralWeek == null) s.viralWeek = -1;
@@ -2604,6 +2616,41 @@
     return finish(s, ok(q.icon + ' ' + q.title + ' done. +' + naira(got) + '.'));
   }
 
+  /* ---------- domestic staff ---------- */
+  function staffRoom(s) { return D.STAFF_ROOM[homeDef(s).type || 'room'] || 0; }
+  function staffPay(s, id) { return price(s, D.STAFF[id].pay); }
+  function hireStaff(s, id) {
+    var St = D.STAFF[id];
+    if (!St) return fail('No such job.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.staff.indexOf(id) >= 0) return fail('You already have a ' + St.name.toLowerCase() + '.');
+    if (s.staff.length >= staffRoom(s)) return fail(staffRoom(s) ? 'Your home has room for ' + staffRoom(s) + ' staff.' : 'Your home has no room for staff. A self-con or bigger has.');
+    if (St.needsCar && !rideCar(s)) return fail('A driver needs a car to drive.');
+    var first = staffPay(s, id);
+    s.alerts = [];
+    if (!pay(s, first, 'Staff: ' + St.name + ' (first week)')) return fail('You need ' + naira(first) + ' for the first week.');
+    s.staff.push(id);
+    unlock(s, 'oga');
+    return finish(s, ok(St.icon + ' Your ' + St.name.toLowerCase() + ' starts tomorrow. ' + naira(first) + ' a week.'));
+  }
+  function fireStaff(s, id) {
+    var i = s.staff.indexOf(id);
+    if (i < 0) return fail('You have no ' + (D.STAFF[id] ? D.STAFF[id].name.toLowerCase() : 'such staff') + '.');
+    s.staff.splice(i, 1);
+    return ok('You let your ' + D.STAFF[id].name.toLowerCase() + ' go.');
+  }
+  function weeklyStaff(s) {
+    if (!s.staff || !s.staff.length) return;
+    var room = staffRoom(s);
+    while (s.staff.length > room) { var gone = s.staff.pop(); log(s, 'Your ' + D.STAFF[gone].name.toLowerCase() + ' left: there is no room for them in this home.', 'bad'); }
+    s.staff = s.staff.filter(function (id) {
+      var fee = staffPay(s, id);
+      if (pay(s, fee, 'Staff: ' + D.STAFF[id].name)) return true;
+      log(s, 'You could not pay your ' + D.STAFF[id].name.toLowerCase() + '. They packed their bags and left.', 'bad');
+      return false;
+    });
+  }
+
   /* ---------- hosting a party at home ---------- */
   var PARTY_GAP = 28;
   function partyBlock(s, kind) {
@@ -2767,6 +2814,7 @@
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     buyStock: recorded('sk', buyStock), sellStock: recorded('xs', sellStock), stockPrice: stockPrice, stockHistory: stockHistory, stocksValue: stocksValue, marketOpen: marketOpen, brokerFee: brokerFee,
+    hireStaff: recorded('hs', hireStaff), fireStaff: recorded('fs', fireStaff), staffRoom: staffRoom, staffPay: staffPay,
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,

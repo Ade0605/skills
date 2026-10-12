@@ -939,7 +939,7 @@
     interior.update({ size: L.roomSize(S), type: h.type || 'room', name: h.name, items: S.items, vehicles: S.vehicles, sel: ui.itemSel, power: S.power, hour: L.hour(S),
       dark: document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) });
   }
-  var FX_NAMES = { sleep: 'sleep', power: 'light', gen: 'gen cost', fun: 'enjoyment', stress: 'stress', social: 'social', hunger: 'belle', energy: 'energy' };
+  var FX_NAMES = { sleep: 'sleep', power: 'light', gen: 'gen cost', fun: 'enjoyment', stress: 'stress', social: 'social', hunger: 'belle', energy: 'energy', hygiene: 'hygiene' };
   function fxText(f) {
     var parts = [];
     Object.keys(f.fx || {}).forEach(function (k) {
@@ -973,6 +973,13 @@
       '<dt>Gen fuel</dt><dd class="num">' + N(Math.round(1500 * S.econ.fuel * S.econ.infl * (1 - L.furnitureGen(S)) / 50) * 50) + ' per use</dd>' +
       '<dt>Every day</dt><dd>' + (daily ? esc(Object.keys(daily).map(function (k) { return (daily[k] > 0 ? '+' : '') + daily[k] + ' ' + FX_NAMES[k]; }).join(', ')) : 'Nothing yet') + '</dd>' +
       '<dt>Status</dt><dd class="num">' + L.statusPoints(S) + '</dd></dl></div>';
+    var room = L.staffRoom(S);
+    html += '<div class="section"><h3>🧑‍🍳 Domestic staff</h3><p class="note">' + (room ? 'Your home has room for ' + room + ' staff (' + S.staff.length + ' hired). Paid every week from cash, then savings. Unpaid staff leave.' : 'There is no room for staff in a single room or flat share. A self-con or bigger has.') + '</p><div class="list">' + Object.keys(D.STAFF).map(function (k) {
+      var St = D.STAFF[k], have = S.staff.indexOf(k) >= 0, fx = Object.keys(St.daily).map(function (n) { return (St.daily[n] > 0 ? '+' : '') + St.daily[n] + ' ' + FX_NAMES[n]; }).join(', ');
+      var why = have ? '' : !room ? 'No room' : S.staff.length >= room ? 'No more room' : St.needsCar && !(S.vehicles.some(function (v) { return D.VEHICLES[v.id].kind === 'car'; }) || S.car) ? 'Needs a car' : '';
+      return '<div class="item"><div><h3>' + St.icon + ' ' + esc(St.name) + (have ? ' <span class="gain">· hired</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(L.staffPay(S, k)) + '/wk</span><span>' + esc(fx) + ' a day</span></div><div class="act-note">' + esc(St.text) + '</div>' + (why ? '<div class="why">' + esc(why) + '</div>' : '') + '</div>' +
+        (have ? '<button class="btn ghost" id="fire-' + k + '" data-firestaff="' + k + '">Let go</button>' : '<button class="btn" id="hire-' + k + '" data-hirestaff="' + k + '"' + (why ? ' disabled' : '') + '>Hire</button>') + '</div>';
+    }).join('') + '</div></div>';
     html += '<div class="section"><h3>🎉 Host a party</h3><p class="note">Saturdays at home, 11:00 to 18:00, once every 4 weeks. Guests spray money, more for a well-dressed, well-connected host, but a party never pays for itself. Your friends will remember it.</p><div class="list">' + Object.keys(D.PARTIES).map(function (k) {
       var P = D.PARTIES[k], why = L.partyBlock(S, k);
       return '<div class="item"><div><h3>' + P.icon + ' ' + esc(P.name) + '</h3><div class="meta"><span>' + P.guests + ' guests</span><span>' + dur(P.mins) + '</span><span class="cost num">' + N(L.price(S, P.cost)) + '</span>' + (P.types ? '<span>Needs a ' + esc(D.HOME_TYPES[P.types[0]].name.toLowerCase()) + ' or bigger</span>' : '') + '</div>' +
@@ -1701,7 +1708,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1787,6 +1794,8 @@
     if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
     if (ds.tour) { setTour(+ds.tour); render(); return; }
     if (ds.quest) { goQuest(ds.quest); return; }
+    if (ds.hirestaff) { var hk = ds.hirestaff; run(function () { return L.hireStaff(S, hk); }); return; }
+    if (ds.firestaff) { var fk = ds.firestaff; run(function () { return L.fireStaff(S, fk); }); return; }
     if (ds.party) { var pk = ds.party; run(function () { return L.hostParty(S, pk); }); return; }
     if (ds.streak) { var sid = gemToday(); run(function () { return L.claimStreak(S, sid); }); return; }
     if (ds.stock) { ui.stock = ui.stock === ds.stock ? null : ds.stock; render(); return; }

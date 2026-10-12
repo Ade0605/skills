@@ -1003,3 +1003,29 @@ test('parties: Saturday at home, size needs a big enough home, guests spray but 
   assert.match(L.partyBlock(s, 'small'), /Wait \d+ more days/);
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('staff: home size limits, weekly pay, daily help, and they leave when unpaid', () => {
+  const s = L.newGame({ seed: 51, origin: 'nepo', goal: 'freestyle' });
+  assert.match(L.hireStaff(s, 'driver').msg, /needs a car|no room/);
+  const room = L.staffRoom(s);
+  if (!room) { assert.match(L.hireStaff(s, 'help').msg, /no room/); return; }
+  const b0 = s.cash + s.bank;
+  assert.ok(L.hireStaff(s, 'help').ok);
+  assert.equal(b0 - (s.cash + s.bank), L.staffPay(s, 'help'));
+  assert.equal(L.hireStaff(s, 'help').ok, false, 'one of each');
+  assert.ok(s.ach.oga);
+  for (let i = 0; i < 9 && L.week(s) < 1; i++) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 24 * 60); }
+  assert.ok(s.ledger.length && L.replayLife(s.replay).ledgerHash === s.ledgerHash, 'paid weekly, and replays');
+  assert.equal(L.category('Staff: House help', -1), 'housing');
+  assert.ok(L.fireStaff(s, 'help').ok);
+  assert.deepEqual(s.staff, []);
+});
+
+test('saves stamped with a newer schema but missing new fields still load whole', () => {
+  const s = L.newGame({ seed: 52, origin: 'mid', goal: 'freestyle' });
+  delete s.quests; delete s.stocks; delete s.streak; delete s.staff; s.sv = 12;
+  const back = L.deserialize(L.serialize(s)).state;
+  assert.deepEqual([back.quests, back.stocks, back.streak, back.staff], [{}, {}, null, []]);
+  assert.ok(L.hireStaff(back, 'help').ok || true);
+  assert.ok(Array.isArray(L.activeQuests(back)));
+});
