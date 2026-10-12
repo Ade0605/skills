@@ -1218,3 +1218,22 @@ test('own danfo: runs skip the owner returns; a driver brings weekly returns', (
   assert.ok(r.ok && /own bus/.test(r.msg), r.msg);
   assert.ok(!s.alerts.some(a => a.memo === 'Danfo owner returns'));
 });
+
+test('haggling at Balogun: counter-offers, a hidden last price, three tries a day', () => {
+  const s = L.newGame({ seed: 67, origin: 'mid', goal: 'freestyle', rules: 8 });
+  assert.match(L.haggleBuy(s, 'agbada', 100000).msg, /Balogun/);
+  s.needs.energy = 90; s.needs.hunger = 90;
+  L.travel(s, 'island', L.travelOptions(s, 'island').find(o => !o.disabled).mode);
+  while (L.dow(s) > 5 || L.hour(s) < 9 || L.hour(s) >= 17) { if (s.pending.length) L.resolveChoice(s, 0); else L.wait(s, 60); }
+  while (s.pending.length) L.resolveChoice(s, 0);
+  const list = L.price(s, D.CLOTHES.ankara_sh.price), ask = L.haggleAsk(s, 'ankara_sh');
+  assert.ok(ask > list);
+  const low = L.haggleBuy(s, 'ankara_sh', Math.round(list * 0.3));
+  assert.equal(low.ok, false); assert.ok(low.counter > list * 0.3, 'the trader counters');
+  const r = L.haggleBuy(s, 'ankara_sh', low.counter);
+  assert.ok(r.ok, r.msg);
+  assert.ok(s.wardrobe.some(w => w.id === 'ankara_sh'));
+  assert.ok(L.haggleBuy(s, 'lace_top', 1).ok === false && L.haggleBuy(s, 'lace_top', 2).ok === false && L.haggleBuy(s, 'lace_top', 3).ok === false);
+  assert.match(L.haggleBuy(s, 'lace_top', 10).msg, /tomorrow/);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

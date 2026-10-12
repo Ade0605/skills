@@ -291,7 +291,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false,
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {},
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -2163,6 +2163,7 @@
     if (s.title === undefined) s.title = null;
     if (!s.partyJoins) s.partyJoins = {};
     if (s.danfoDriver === undefined) s.danfoDriver = false;
+    if (!s.haggles) s.haggles = {};
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -2991,6 +2992,47 @@
     log(s, '🚐 Your danfo driver brought ' + naira(got) + ' for the week.', 'good');
   }
 
+  /* ---------- haggling at Balogun ---------- */
+  // The trader opens at 130% and has a secret last price between 75% and 95%
+  // (a little lower for a good haggler), fixed for the day. Three offers per item a day.
+  function haggleAsk(s, id) { return roundTo(price(s, D.CLOTHES[id].price) * 1.3, 50); }
+  function haggleFloor(s, id) {
+    var u = parseInt(fnv(s.seed + ':hag:' + day(s) + ':' + id), 16) / 4294967296;
+    var f = 0.75 + u * 0.2 - Math.min(0.05, skillLevel(s, 'hustle') * 0.01);
+    return roundTo(price(s, D.CLOTHES[id].price) * Math.max(0.7, f), 50);
+  }
+  function haggleOpen(s) {
+    if (s.loc !== 'island') return 'Haggling is at Balogun market, Lagos Island';
+    var h = hour(s); if (dow(s) > 5 || h < 8 || h >= 18) return 'Balogun traders are open 08:00 to 18:00, Monday to Saturday';
+    return null;
+  }
+  function haggleBuy(s, id, offer) {
+    var c = D.CLOTHES[id];
+    if (!c) return fail('No such item.');
+    var shut = haggleOpen(s); if (shut) return fail(shut + '.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.wardrobe.some(function (w) { return w.id === id; })) return fail('You already own this.');
+    if (!s.haggles) s.haggles = {};
+    var key = day(s) + ':' + id, tries = s.haggles[key] || 0;
+    if (tries >= 3) return fail('"Oya, go and come back tomorrow. I no fit sell at that price."');
+    offer = Math.floor(offer);
+    var ask = haggleAsk(s, id), floor = haggleFloor(s, id);
+    if (!(offer > 0) || offer > ask) return fail('Make an offer between ' + naira(1) + ' and ' + naira(ask) + '.');
+    s.haggles[key] = tries + 1;
+    advance(s, 10);
+    if (offer < floor) {
+      var counter = roundTo(Math.max(floor, (offer + ask) / 2 - (tries * (ask - floor) / 4)), 50);
+      return Object.assign(fail(tries + 1 >= 3 ? '"Abeg, I no fit. Last price was ' + naira(counter) + '. Come back tomorrow."' : '"Customer, add small! ' + naira(counter) + ' last price."'), { counter: counter, tries: tries + 1 });
+    }
+    s.alerts = [];
+    if (!pay(s, offer, 'Bought ' + c.name + ' (haggled)')) return fail('You do not have ' + naira(offer) + '.');
+    s.wardrobe.push({ id: id });
+    wear(s, id);
+    addXp(s, { hustle: 1 });
+    var saved = price(s, c.price) - offer;
+    return finish(s, ok('"Oya, bring am!" You got the ' + c.name + ' for ' + naira(offer) + (saved > 0 ? ', ' + naira(saved) + ' under the shop price.' : '.')));
+  }
+
   /* ---------- daily streak: come back on real consecutive days ---------- */
   var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
   function nextDayId(id) { var d = new Date(id + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
@@ -3127,6 +3169,7 @@
     buyPhone: recorded('ph', buyPhone), brandDeal: brandDeal, followerGain: followerGain, phoneCam: phoneCam,
     openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
+    haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
     danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

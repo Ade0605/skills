@@ -470,7 +470,7 @@
   }
 
   var SLOT_NAMES = { top: 'Tops', bottom: 'Bottoms', dress: 'Dresses and agbada', shoes: 'Shoes', head: 'Headwear', acc: 'Accessories' };
-  var TAG_NAMES = { owambe: 'owambe', club: 'the club', office: 'the office', gym: 'the gym' };
+  var TAG_NAMES = { owambe: 'owambe', club: 'the club', office: 'the office', gym: 'the gym', rain: 'the rain' };
   var TAG_EFFECT = { owambe: 'better owambes', club: 'better club nights', office: 'better form at banking and tech jobs', gym: 'faster fitness' };
   function lagosianView() {
     var lk = S.look, tags = Object.keys(L.outfitTags(S));
@@ -487,14 +487,21 @@
           (on ? '<button class="btn sm ghost" id="off-' + w.id + '" data-takeoff="' + c.slot + '">Take off</button>' : '<button class="btn sm" id="wear-' + w.id + '" data-wear="' + w.id + '">Wear</button>') + '</div>';
       }).join('') + '</div>';
     }
-    var slot = ui.clothSlot || 'top';
-    html += '<h3>Clothes shop</h3><div class="pg-chips" style="padding:0">' + Object.keys(SLOT_NAMES).map(function (k) { return '<button type="button" class="pg-chip' + (k === slot ? ' sel' : '') + '" id="cs-' + k + '" data-clothslot="' + k + '">' + SLOT_NAMES[k] + '</button>'; }).join('') + '</div><div class="list">' +
+    var slot = ui.clothSlot || 'top', canHaggle = !L.haggleOpen(S);
+    html += '<h3>Clothes shop</h3>' + (canHaggle ? '<p class="note">🛍️ You are at Balogun: haggle! The trader opens high and has a secret last price. You get three offers per item a day.</p>' : '<p class="note">Go to Balogun market (Lagos Island, Monday to Saturday) to haggle prices down.</p>') + '<div class="pg-chips" style="padding:0">' + Object.keys(SLOT_NAMES).map(function (k) { return '<button type="button" class="pg-chip' + (k === slot ? ' sel' : '') + '" id="cs-' + k + '" data-clothslot="' + k + '">' + SLOT_NAMES[k] + '</button>'; }).join('') + '</div><div class="list">' +
       Object.keys(D.CLOTHES).filter(function (k) { return D.CLOTHES[k].slot === slot; }).map(function (k) {
         var c = D.CLOTHES[k], p = L.price(S, c.price), own = S.wardrobe.some(function (w) { return w.id === k; });
         return '<div class="item"><div><h3><i class="swatch" style="background:' + c.color + (c.alt ? ';box-shadow:inset -6px 0 0 ' + c.alt : '') + '"></i>' + esc(c.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(c.fabric) + '</span>' + (c.tags.length ? '<span>for ' + esc(c.tags.map(function (t) { return TAG_NAMES[t]; }).join(', ')) + '</span>' : '') + (c.status ? '<span>+' + c.status + ' status</span>' : '') + '</div></div>' +
-          (own ? '<span class="muted">Owned</span>' : '<button class="btn sm" id="buyc-' + k + '" data-buycloth="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button>') + '</div>';
+          (own ? '<span class="muted">Owned</span>' : '<span class="inline">' + (canHaggle ? '<button class="btn sm ghost" id="hag-' + k + '" data-haggle="' + k + '">Haggle</button>' : '') + '<button class="btn sm" id="buyc-' + k + '" data-buycloth="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button></span>') + '</div>' +
+          (ui.haggle && ui.haggle.id === k && !own ? haggleBox(k, p) : '');
       }).join('') + '</div></div>';
     return html;
+  }
+  function haggleBox(k, list) {
+    var h = ui.haggle, ask = L.haggleAsk(S, k);
+    return '<div class="haggle"><p><b>Trader:</b> "' + esc(D.CLOTHES[k].name) + '? Na ' + N(ask) + ', my sister/brother."</p>' + (h.msg ? '<p class="note">' + esc(h.msg) + '</p>' : '') +
+      '<div class="pg-chips" style="padding:0">' + [0.6, 0.7, 0.8, 0.9].map(function (f) { var v = Math.round(list * f / 50) * 50; return '<button type="button" class="pg-chip" id="hago-' + Math.round(f * 100) + '" data-hagoffer="' + v + '">' + N(v) + '</button>'; }).join('') +
+      (h.counter ? '<button type="button" class="pg-chip sel" id="hago-counter" data-hagoffer="' + h.counter + '">Take ' + N(h.counter) + '</button>' : '') + '</div></div>';
   }
   function drawAvatar() {
     var cv = document.getElementById('avatar-canvas');
@@ -1895,7 +1902,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2000,6 +2007,12 @@
         if (r.ok) openParty(pk, plan);
         return r;
       });
+      return;
+    }
+    if (ds.haggle) { ui.haggle = ui.haggle && ui.haggle.id === ds.haggle ? null : { id: ds.haggle }; render(); return; }
+    if (ds.hagoffer && ui.haggle) {
+      var hid = ui.haggle.id, off = +ds.hagoffer;
+      run(function () { var r = L.haggleBuy(S, hid, off); if (r.ok) ui.haggle = null; else ui.haggle = { id: hid, msg: r.msg, counter: r.counter }; return r; });
       return;
     }
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }

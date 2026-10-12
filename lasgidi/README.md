@@ -96,6 +96,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - The app keeps 25% of the fares, and you pay for your own fuel.
   - Rush hour brings more trips, and night fares are higher.
   - Luxury cars earn premium fares but burn so much fuel that a supercar usually loses money.
+- **Haggling at Balogun:** at Balogun market (Lagos Island, Monday to Saturday, 08:00–18:00), every item in the clothes shop has a **Haggle** button.
+  - The trader opens at 130% of the shop price and has a secret last price, 70–95% of it, that changes daily and drops a little for a good hustler.
+  - Offer low and they counter ("Customer, add small!").
+  - You get three offers per item a day. Accept the right one and you pay less than the shop price.
 - **Danfo Run (mini-game):** rent a danfo at the new Ojuelegba danfo park (Surulere) and drive a 90-second arcade run in the spirit of the viral *Lagos Run*.
   - **Driving:** change lanes with ◀ ▶ or a swipe, and hold BRAKE at a 🚏 in the left lane to drop passengers and load new ones while the conductor shouts the route.
   - **Hazards:** dodge potholes, okadas and cars, and never stop in a yellow LASTMA zone.

@@ -518,3 +518,5 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .dg-pad { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; width: 100%; }
 .dg-btn { height: 52px; border-radius: 12px; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); font: 800 18px var(--font-body, sans-serif); cursor: pointer; touch-action: none; }
 .dg-btn.brake { background: #d0453a; color: #fff; border-color: #7b2d26; font-size: 16px; }
+.haggle { margin: -4px 0 8px; padding: 10px 12px; border-radius: 12px; border: 1.5px dashed var(--danfo-ink); background: color-mix(in srgb, var(--danfo) 14%, var(--surface)); font-size: 13.5px; display: grid; gap: 6px; }
+.haggle p { margin: 0; }
