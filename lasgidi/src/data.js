@@ -149,7 +149,8 @@
     { id: 'shares',      icon: '📈', title: 'Buy your first shares', hint: 'Phone → Stocks',               reward: 3000,  go: 'stocks' },
     { id: 'party',       icon: '🎉', title: 'Host an owambe',        hint: 'Home tab, on a Saturday',      reward: 5000,  go: 'home' },
     { id: 'shop',        icon: '🛍️', title: 'Open an online shop',   hint: 'Phone → Shop',                 reward: 3000,  go: 'shop' },
-    { id: 'creator',     icon: '📸', title: 'Reach 1,000 followers', hint: 'Shoot content, or film skits at home', reward: 5000, go: 'creator' }
+    { id: 'creator',     icon: '📸', title: 'Reach 1,000 followers', hint: 'Shoot content, or film skits at home', reward: 5000, go: 'creator' },
+    { id: 'danforun',    icon: '🚐', title: 'Drive a Danfo Run',     hint: 'Ojuelegba danfo park, Surulere', reward: 2000, go: 'map' }
   ];
 
   var CITIES = {

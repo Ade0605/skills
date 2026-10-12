@@ -1305,6 +1305,7 @@
     if (!q) return;
     if (L.questDone(S, id)) { run(function () { return L.claimQuest(S, id); }); return; }
     if (QUEST_APPS[q.go]) { ui.tab = 'phone'; ui.app = q.go; }
+    else if (q.go === 'map') { ui.place = 'ojuelegba_park'; ui.placeCat = null; ui.board = null; ui.sel = null; ui.tab = 'map'; }
     else ui.tab = q.go === 'business' ? 'money' : q.go;
     render();
   }
@@ -1676,7 +1677,8 @@
       ['💎', 'Gems found', gems], ['🎉', 'Festivals and matches', S.stats.events || 0],
       ['🛍️', 'Sold online', S.shop ? S.shop.sold : 0], ['📈', 'Shares held', N(L.stocksValue(S))],
       ['🚗', 'Vehicles', (S.vehicles || []).length + (S.car ? 1 : 0)], ['🛋️', 'Furniture', (S.items || []).length],
-      ['🐾', 'Pets', (S.pets || []).length], ['🧑‍🍳', 'Staff', (S.staff || []).length]
+      ['🐾', 'Pets', (S.pets || []).length], ['🧑‍🍳', 'Staff', (S.staff || []).length],
+      ['🚐', 'Danfo passengers', S.stats.danfoPax || 0], ['🏁', 'Best Danfo Run', N(S.stats.danfoBest || 0)]
     ];
     html += '<h3>Lifetime</h3><div class="story-grid">' + rows.map(function (r) { return '<div><span>' + r[0] + '</span><b class="num">' + r[2] + '</b><small>' + esc(r[1]) + '</small></div>'; }).join('') + '</div>';
     var ms = Object.keys(S.ach).map(function (k) { return { t: S.ach[k], text: L.ACHIEVEMENTS[k] }; });

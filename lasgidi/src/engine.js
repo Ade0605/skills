@@ -2657,7 +2657,8 @@
     shares:      function (s) { return Object.keys(s.stocks || {}).length > 0; },
     party:       function (s) { return !!s.ach.host; },
     shop:        function (s) { return !!s.shop; },
-    creator:     function (s) { return !!(s.creator && s.creator.followers >= 1000); }
+    creator:     function (s) { return !!(s.creator && s.creator.followers >= 1000); },
+    danforun:    function (s) { return (s.stats.danfoPax || 0) > 0; }
   };
   function questDef(id) { return D.QUESTS.filter(function (q) { return q.id === id; })[0]; }
   function questDone(s, id) { var c = QUEST_CHECKS[id]; return !!(c && c(s)); }
@@ -2973,6 +2974,7 @@
     pay(s, fuel, 'Danfo fuel') || addDebt(s, fuel, 'Danfo fuel');
     if (fines) payPartial(s, fines, 'Danfo fines and settlements');
     s.stats.danfoPax = (s.stats.danfoPax || 0) + served;
+    if (got > (s.stats.danfoBest || 0)) s.stats.danfoBest = got;
     if (s.stats.danfoPax >= 50) unlock(s, 'danfo');
     var net = got - owner - fuel - fines;
     return finish(s, ok('🚐 ' + served + ' passengers. Fares ' + naira(got) + (mine ? ' (your own bus: no returns)' : ', owner ' + naira(owner)) + ', fuel ' + naira(fuel) + (fines ? ', fines ' + naira(fines) : '') + '. You ' + (net >= 0 ? 'made ' + naira(net) : 'lost ' + naira(-net)) + '.'));
