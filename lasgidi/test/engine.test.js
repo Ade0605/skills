@@ -954,3 +954,38 @@ test('stocks: market hours, broker fees, net worth, dividends, and replay', () =
   assert.ok(s.log.some(l => /Lagoon Bank paid a dividend/.test(l.text)), 'dividend paid');
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('ride-hailing: only with a car; pays fares minus the cut and fuel', () => {
+  const s = L.newGame({ seed: 47, origin: 'nepo', goal: 'freestyle' });
+  assert.ok(!L.availableActions(s).some(a => a.id === 'ride_hail'), 'no car, no ride-hail');
+  s.vehicles.push({ id: 'keke_own', paid: D.VEHICLES.keke_own.price }); // a gift, for the mechanics only
+  const a = L.availableActions(s).find(x => x.id === 'ride_hail');
+  assert.ok(a && /keke/i.test(a.label) && /25% cut/.test(a.note), a && a.label);
+  const res = L.doAction(s, 'ride_hail');
+  assert.ok(res.ok, res.msg);
+  assert.match(res.msg, /the app kept/);
+  const memos = s.alerts.map(x => x.memo);
+  assert.ok(memos.includes('Ride-hail fares') && memos.includes('Ride-hail fuel'), memos.join());
+  assert.equal(L.category('Ride-hail fares', 1), 'gigs');
+  assert.equal(L.category('Ride-hail fuel', -1), 'transport');
+  // A luxury SUV earns premium fares but burns more fuel.
+  s.vehicles = [{ id: 'suv', paid: D.VEHICLES.suv.price }];
+  assert.match(L.availableActions(s).find(x => x.id === 'ride_hail').label, /SUV/);
+});
+
+test('daily streak: grows on consecutive real days, once per game day, resets after a gap', () => {
+  const s = L.newGame({ seed: 49, origin: 'mid', goal: 'freestyle' });
+  const b0 = s.cash + s.bank;
+  assert.ok(L.claimStreak(s, '2026-10-10').ok);
+  assert.equal(s.cash + s.bank - b0, L.price(s, 1000));
+  assert.equal(L.claimStreak(s, '2026-10-10').ok, false, 'once a day');
+  assert.match(L.claimStreak(s, '2026-10-11').msg, /game day/);
+  L.wait(s, 24 * 60);
+  assert.equal(L.streakInfo(s, '2026-10-11').n, 2);
+  assert.ok(L.claimStreak(s, '2026-10-11').ok);
+  L.wait(s, 24 * 60);
+  assert.equal(L.streakInfo(s, '2026-10-14').n, 1, 'a missed day resets');
+  assert.equal(L.claimStreak(s, '2026-10-09').ok, false, 'no going back');
+  assert.equal(L.claimStreak(s, 'tomorrow').ok, false);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

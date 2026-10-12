@@ -24,7 +24,7 @@
   var LEDGER_KEEP = 300;
   var LOG_KEEP = 80;
   var VERSION = 1;        // save-code format
-  var SCHEMA = 10;         // state shape; migrate() upgrades older saves
+  var SCHEMA = 11;         // state shape; migrate() upgrades older saves
   // Game RULES version. A life plays by the rules it started under, so a
   // recorded life replays identically after later updates add new systems.
   // 5 = v0.5 rules; 6 adds love and family; 7 adds the CBN governor race,
@@ -168,10 +168,10 @@
     var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
     if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
-    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt)/.test(m)) return 'gigs';
+    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Daily streak|Quest:)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
-    if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^Car maintenance/.test(m)) return 'transport';
+    if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
     if (/snatched|Unauthorised|Taken by|CryptoDoubla|Owo ijoko|fine|settlement|Power levy/i.test(m)) return 'losses';
     if (/Business|^Bought|^Sold|Tenant rent|^Shop rent|^Manager salary/.test(m)) return 'business';
     if (/Ajo|loan|Repay|Overdue|Cooperative|interest|Microfinance|QuickCash|Treasury bill|^Shares|^Dividend|Broker/i.test(m)) return 'savings';
@@ -282,7 +282,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {},
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -596,8 +596,32 @@
       list.push(a);
     });
     list = list.concat(npcActions(s)).concat(loveActions(s));
+    var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
     return list.map(function (a) { return describe(s, a); });
+  }
+
+  /* ---------- ride-hailing with your own car ---------- */
+  var RIDE_KM = 60, RIDE_FARE = 3500, RIDE_CUT = 0.25;
+  function rideCar(s) {
+    var V = bestCar(s);
+    if (V) return V;
+    return s.car ? { name: D.CAR.name, icon: '🚗', fuel: 120, status: 2 } : null;
+  }
+  function rideTerms(s) {
+    var V = rideCar(s); if (!V) return null;
+    var h = hour(s), rush = (h >= 6 && h < 10) || (h >= 16 && h < 21), night = h >= 22 || h < 5;
+    var premium = V.status >= 8, keke = V.name === D.VEHICLES.keke_own.name;
+    var trips = (rush ? 7 : night ? 3 : 5) * (premium ? 0.6 : 1);
+    var fare = RIDE_FARE * (premium ? 2.2 : keke ? 0.5 : 1) * (night ? 1.3 : 1);
+    var fuel = price(s, V.fuel * RIDE_KM * s.econ.fuel * (keke ? 0.6 : 1));
+    return { V: V, trips: trips, fare: fare, fuel: fuel, gross: gigPay(s, trips * fare, 1) };
+  }
+  function rideAction(s) {
+    var T = rideTerms(s); if (!T) return null;
+    var net = roundTo(T.gross * (1 - RIDE_CUT) - T.fuel, 50);
+    return { id: 'ride_hail', label: 'Drive ride-hail in your ' + T.V.name.replace(/^Your own /, '') + ' (3 hrs)', mins: 180, fx: { energy: -14, stress: 6 }, xp: { charisma: 1 }, gig: true, special: 'ridehail',
+      note: 'About ' + naira(net) + ' after the app\'s 25% cut and ' + naira(T.fuel) + ' of fuel. Busier at rush hour; night fares are higher.' };
   }
 
   // Needs at the end of an action if nothing else happens on the way.
@@ -719,6 +743,16 @@
   }
 
   var specials = {
+    ridehail: function (s) {
+      var T = rideTerms(s);
+      var gross = gigPay(s, T.trips * T.fare, 0.75 + rand(s) * 0.5), cut = Math.round(gross * RIDE_CUT);
+      earn(s, gross - cut, 'Ride-hail fares');
+      pay(s, T.fuel, 'Ride-hail fuel') || addDebt(s, T.fuel, 'Ride-hail fuel');
+      var extra = '';
+      if (rand(s) < 0.06) { var fine = price(s, 3000); payPartial(s, fine, 'Checkpoint "settlement"'); extra = ' A checkpoint collected ' + naira(fine) + ' "for the boys".'; }
+      var net = gross - cut - T.fuel;
+      return 'Fares ' + naira(gross) + ', the app kept ' + naira(cut) + ', fuel ' + naira(T.fuel) + '. You ' + (net >= 0 ? 'made ' + naira(net) : 'lost ' + naira(-net)) + '.' + extra;
+    },
     welfare: function (s) { s.welfareDay = day(s); return 'Somebody fed you. Lagos is hard, but people still look out for each other.'; },
     cook: function (s) { s.pantry--; return 'Home-cooked. ' + s.pantry + ' meals of foodstuff left.'; },
     pantry7: function (s) { s.pantry += 7; return 'Foodstuff for 7 meals is in the kitchen.'; },
@@ -2565,6 +2599,29 @@
     return finish(s, ok(q.icon + ' ' + q.title + ' done. +' + naira(got) + '.'));
   }
 
+  /* ---------- daily streak: come back on real consecutive days ---------- */
+  var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
+  function nextDayId(id) { var d = new Date(id + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
+  function streakInfo(s, dayId) {
+    var st = s.streak, claimed = !!(st && st.last === dayId);
+    var n = claimed ? st.n : st && nextDayId(st.last) === dayId ? st.n + 1 : 1;
+    return { n: n, claimed: claimed, prize: price(s, STREAK_PRIZES[(n - 1) % 7]), slot: (n - 1) % 7 };
+  }
+  function claimStreak(s, dayId) {
+    if (!GEM_ID.test(dayId)) return fail('No streak for that day.');
+    if (s.challenge) return fail('No daily streak in Weekly Lagos.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var st = s.streak;
+    if (st && st.last === dayId) return fail('You already collected today\'s streak.');
+    if (st && dayId < st.last) return fail('That day has passed.');
+    if (st && st.gday === day(s)) return fail('One streak reward per game day. Sleep first.');
+    var info = streakInfo(s, dayId);
+    s.alerts = [];
+    s.streak = { last: dayId, n: info.n, gday: day(s) };
+    earn(s, info.prize, 'Daily streak');
+    return finish(s, ok('🔥 Day ' + info.n + ' streak: +' + naira(info.prize) + '.' + (info.slot === 6 ? ' Full week! The bonus resets tomorrow.' : '')));
+  }
+
   /* ---------- Weekly Lagos challenge ---------- */
 
   var CHALLENGE_ID = /^\d{4}-W\d{2}$/;
@@ -2672,6 +2729,7 @@
     marry: recorded('mw', marry), weddingOptions: weddingOptions, rentShare: rentShare, SCHOOLS: SCHOOLS, RULES: RULES,
     wait: recorded('z', wait), replayLife: replayLife, verifyFame: verifyFame,
     buyStock: recorded('sk', buyStock), sellStock: recorded('xs', sellStock), stockPrice: stockPrice, stockHistory: stockHistory, stocksValue: stocksValue, marketOpen: marketOpen, brokerFee: brokerFee,
+    claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity),

@@ -1,5 +1,5 @@
 /* Offline cache: the whole game is ~100 KB, so cache it all on install. */
-const CACHE = 'lasgidi-v8';
+const CACHE = 'lasgidi-v9';
 const FILES = ['./', 'index.html', 'src/styles.css', 'src/data.js', 'src/engine.js', 'src/playground.js', 'src/interior.js', 'src/avatar.js', 'src/images.js', 'src/ui.js', 'manifest.webmanifest', 'icon.svg'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(

@@ -64,6 +64,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - You can trade 10:00–14:30 on weekdays. Every buy and sale costs a 1.5% broker fee, with a ₦500 minimum.
   - Some companies pay a dividend every 13 weeks.
   - Prices can fall, and a retail account is capped at ₦20m invested.
+- **Ride-hailing:** if you own a car, a keke or a bike, a "Drive ride-hail" action appears anywhere you are.
+  - The app keeps 25% of the fares, and you pay for your own fuel.
+  - Rush hour brings more trips, and night fares are higher.
+  - Luxury cars earn premium fares but burn so much fuel that a supercar usually loses money.
+- **Daily streak:** claim a reward each real day you come back, from ₦1,000 on day 1 up to ₦10,000 on day 7. Miss a day and it starts again. You can claim once per game day, and there is no streak in Weekly Lagos.
 - **Quests:** starter goals as chips over the map, such as "Get a job", "Daily gem hunt", "Sleep like Oba" and "Visit another city". Each pays once (₦1,500 to ₦20,000). A quest that's ready to claim shows first; tap an unfinished one to jump to the right screen. All of them are listed in the Quests phone app.
 - **Faces on the map:** your Lagosian's face sits over your district pin. Other players in the same city show as small faces beside their pins.
 - **City boards:** the Hall of Fame filters to All Nigeria, Lagos, Abuja or Port Harcourt by where each life lived. It also names the richest verified player in your district.

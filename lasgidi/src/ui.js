@@ -1253,7 +1253,7 @@
     if (a.late) meta.push('<span class="cost">Late: 30% docked</span>');
     if (a.collapseRisk && !a.disabled) meta.push('<span class="cost">' + esc(a.collapseRisk) + '</span>');
     return '<div class="item' + (a.isWork ? ' work' : '') + '"><div><h3>' + esc(a.label) + '</h3><div class="meta">' + meta.join('') + '</div>' +
-      (a.disabled ? '<div class="why">' + esc(a.disabled) + '</div>' : '') + '</div>' +
+      (a.note ? '<div class="act-note">' + esc(a.note) + '</div>' : '') + (a.disabled ? '<div class="why">' + esc(a.disabled) + '</div>' : '') + '</div>' +
       '<button class="btn' + (a.isWork ? ' go' : '') + '" id="act-' + a.id + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled' : '') + '>' + (a.isWork ? 'Clock in' : 'Do') + '</button></div>';
   }
 
@@ -1321,12 +1321,19 @@
     var pl = D.PLACES.filter(function (x) { return x.id === g.place; })[0];
     return '<div class="gem-here"><span>💎 A gem is hidden at <b>' + esc(pl.name) + '</b>.</span><button class="btn sm" id="gemh-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button></div>';
   }
+  function streakCard() {
+    if (!S || S.challenge) return '';
+    var id = gemToday(), info = L.streakInfo(S, id);
+    if (info.claimed) return '';
+    var dots = ''; for (var i = 0; i < 7; i++) dots += '<i class="' + (i < info.slot ? 'on' : i === info.slot ? 'now' : '') + '"></i>';
+    return '<div class="streak"><span class="st-ic">🔥</span><div class="st-t"><b>Day ' + info.n + ' streak</b><span class="st-dots" aria-label="Day ' + (info.slot + 1) + ' of 7">' + dots + '</span></div><button class="btn sm go" id="streak" data-streak="1">Claim ' + N(info.prize) + '</button></div>';
+  }
   function doView() {
     var acts = L.availableActions(S);
     var home = acts.filter(function (a) { return a.atHome; });
     var place = acts.filter(function (a) { return !a.atHome; });
     var d = D.DISTRICTS[S.loc];
-    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + tourCard() + visitView() + adviceView() + gemHere() + giftInbox();
+    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + tourCard() + streakCard() + visitView() + adviceView() + gemHere() + giftInbox();
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
     html += peopleHere() + gemCard();
@@ -1689,7 +1696,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -1775,6 +1782,7 @@
     if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
     if (ds.tour) { setTour(+ds.tour); render(); return; }
     if (ds.quest) { goQuest(ds.quest); return; }
+    if (ds.streak) { var sid = gemToday(); run(function () { return L.claimStreak(S, sid); }); return; }
     if (ds.stock) { ui.stock = ui.stock === ds.stock ? null : ds.stock; render(); return; }
     if (ds.stockbuy) { var sb = ds.stockbuy.split(':'); run(function () { return L.buyStock(S, sb[0], +sb[1]); }); return; }
     if (ds.stocksell) { var sl = ds.stocksell.split(':'); run(function () { return L.sellStock(S, sl[0], +sl[1]); }); return; }
