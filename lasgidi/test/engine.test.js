@@ -1315,3 +1315,16 @@ test('bole grill (PH): only in Old GRA, half the takings, burnt items deducted',
   assert.ok(share > 0 && share <= 4000 * s.econ.infl + 50, 'about half the takings, after the gig cut');
   assert.ok(s.alerts.some(a => a.memo === 'Burnt bole (deducted)'));
 });
+
+test('Naija Quiz (Abuja): weekend show, once a day, prize from 5 right', () => {
+  const s = L.newGame({ seed: 74, origin: 'nepo', goal: 'freestyle', rules: 8 });
+  assert.match(L.quizShow(s, 8, 10).msg, /Millennium Park/);
+  s.loc = 'abj_maitama'; s.t = (Math.floor(s.t / 1440) + ((4 - L.dow(s) + 7) % 7)) * 1440 + 16 * 60; s.needs.energy = 90; s.needs.hunger = 80;
+  assert.equal(L.quizShow(s, 11, 10).ok, false);
+  const r = L.quizShow(s, 10, 10);
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.alerts.find(a => a.memo === 'Quiz show prize').amt, L.price(s, 8000));
+  assert.ok(s.ach.quiz);
+  assert.match(L.quizShow(s, 9, 10).msg, /already played today/);
+  assert.equal(L.category('Quiz show prize', 1), 'gigs');
+});

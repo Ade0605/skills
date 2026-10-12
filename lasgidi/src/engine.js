@@ -76,6 +76,7 @@
     japa:        'Japa: left Nigeria for a new life abroad',
     seaplot:     'Sea Plots: own a block in the water',
     dancer:      'Dance-off champion: 90% on the beat',
+    quiz:        'Quiz champion: 10 out of 10',
     vendor:      'Online vendor: sold 100 items'
   };
 
@@ -179,7 +180,7 @@
     var m = memo.replace(/ \(incl\. gen fuel\)$/, '');
     if (/^(PAYE income tax|Business levies)/.test(m)) return 'tax';
     if (/^Shift pay/.test(m)) return 'wages';
-    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Danfo fares|Daily streak|Quest:|Party: guests|Dance-off: guests|Hawking sales|Bole grill share)/.test(m)) return 'gigs';
+    if (GIG_LABELS[m] || /^(Brand deal|Hackathon prize|Gem hunt|Ride-hail fares|Danfo fares|Daily streak|Quest:|Party: guests|Dance-off: guests|Hawking sales|Bole grill share|Quiz show prize)/.test(m)) return 'gigs';
     if (/^(Rent|Move-in|Staff:)/.test(m)) return 'housing';
     if (FOOD_LABELS[m] || m === 'Aso-ebi') return 'food';
     if (/ to [A-Z]/.test(m) && /^(Trek|Keke|Okada|Danfo|BRT|Ferry|Cab|Own car|Flight|Long-distance bus)/.test(m) || /^(Car maintenance|Ride-hail fuel)/.test(m)) return 'transport';
@@ -3156,6 +3157,24 @@
     return finish(s, ok('🍌 ' + served + ' plates served. Your half: ' + naira(share) + (burnt ? ', minus ' + naira(burn) + ' for ' + burnt + ' burnt' : '') + '.'));
   }
 
+  /* ---------- Naija Quiz (Abuja): a capped prize, once a game day ---------- */
+  function quizShow(s, correct, total) {
+    var a = availableActions(s).filter(function (x) { return x.minigame === 'quiz'; })[0];
+    if (!a) return fail('The quiz show is at Millennium Park, Abuja, Friday to Sunday from 15:00.');
+    if (a.disabled) return fail(a.disabled);
+    correct = Math.floor(correct); total = Math.floor(total);
+    if (!(total === 10 && correct >= 0 && correct <= total)) return fail('That score does not add up.');
+    if (s.quizDay === day(s)) return fail('You already played today. Come back tomorrow.');
+    s.alerts = [];
+    advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp);
+    s.quizDay = day(s);
+    var prize = correct >= 5 ? price(s, [0, 0, 0, 0, 0, 1000, 1500, 2500, 4000, 6000, 8000][correct]) : 0;
+    if (prize) earn(s, prize, 'Quiz show prize');
+    s.stats.quizBest = Math.max(s.stats.quizBest || 0, correct);
+    if (correct === 10) unlock(s, 'quiz');
+    return finish(s, ok('🎤 ' + correct + '/10. ' + (prize ? 'You won ' + naira(prize) + '!' : 'No prize under 5. The crowd still clapped.')));
+  }
+
   /* ---------- daily streak: come back on real consecutive days ---------- */
   var STREAK_PRIZES = [1000, 1500, 2000, 3000, 4000, 5000, 10000];
   function nextDayId(id) { var d = new Date(id + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
@@ -3296,7 +3315,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
+    quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,

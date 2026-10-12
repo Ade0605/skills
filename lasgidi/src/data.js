@@ -302,6 +302,7 @@
     ],
     abj_maitama: [
       { id: 'abj_millennium', label: 'Walk in Millennium Park', mins: 90, fx: { fun: 18, stress: -12 }, when: { from: 7, to: 19 } },
+      { id: 'abj_quiz', label: 'Naija Quiz show at the park stage (mini-game)', mins: 60, fx: { fun: 15, social: 10, stress: -4 }, xp: { charisma: 1, tech: 1 }, minigame: 'quiz', when: { days: [4, 5, 6], from: 15, to: 20 } },
       { id: 'abj_maitama_gig', label: 'Run errands for Maitama households', mins: 150, earn: 3500, fx: { energy: -12 }, xp: { hustle: 2, charisma: 1 }, gig: true, when: { from: 8, to: 19 } }
     ],
     abj_wuse: [
@@ -552,7 +553,7 @@
     { id: 'lekki_cafe', icon: '☕', name: 'Lekki cafés', type: 'food', glyph: 'bowl', district: 'lekki', x: 27.6, y: 23.7, acts: ['lekki_cafe', 'lekki_super', 'lekki_errands'], text: 'Brunch, a supermarket and errands for estate residents.' },
     { id: 'ajah_market', icon: '🧺', name: 'Ajah market', type: 'food', glyph: 'basket', district: 'ajah', x: 38.6, y: 24.6, acts: ['ajah_market', 'ajah_spot', 'ajah_shop'], text: 'Foodstuff, a local spot and your cousin\'s shop.' },
     { id: 'abj_aso', icon: '⛰️', name: 'Aso Rock', type: 'outdoors', glyph: 'tree', district: 'abj_asokoro', x: 21.4, y: 9.4, acts: ['abj_aso'], text: 'The granite rock behind the seat of government. Best at sunset.' },
-    { id: 'abj_millennium', icon: '🌳', name: 'Millennium Park', type: 'outdoors', glyph: 'tree', district: 'abj_maitama', x: 15.4, y: 8.2, acts: ['abj_millennium'], text: 'Abuja\'s biggest park, with lawns, a river and picnics.' },
+    { id: 'abj_millennium', icon: '🌳', name: 'Millennium Park', type: 'outdoors', glyph: 'tree', district: 'abj_maitama', x: 15.4, y: 8.2, acts: ['abj_millennium', 'abj_quiz'], text: 'Abuja\'s biggest park, with lawns, a river and picnics. A quiz show runs on the park stage Friday to Sunday.' },
     { id: 'abj_jabi_mall', icon: '🎬', name: 'Jabi Lake Mall', type: 'culture', glyph: 'film', district: 'abj_jabi', x: 7.2, y: 10.0, acts: ['abj_jabi_film'], text: 'Shops, a cinema and a terrace over the lake.' },
     { id: 'abj_jabi_lake', icon: '🚣', name: 'Jabi Lake', type: 'outdoors', glyph: 'wave', district: 'abj_jabi', x: 5.0, y: 12.2, acts: ['abj_jabi_boat', 'abj_jabi_gig'], text: 'Boat rides, joggers and car washes by the water.' },
     { id: 'abj_wuse_market', icon: '🧺', name: 'Wuse Market', type: 'food', glyph: 'basket', district: 'abj_wuse', x: 11.8, y: 12.2, acts: ['abj_wuse_gig'], text: 'The big market of the capital. Everything, all day.' },

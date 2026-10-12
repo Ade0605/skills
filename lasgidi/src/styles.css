@@ -543,3 +543,14 @@ html.pg-full-open { overflow: hidden; }
 .hk-btn.sel { border-color: var(--danfo-ink); background: var(--danfo); color: var(--danfo-ink); }
 .hk-btn.hide { background: #2b2b2f; color: #fff; border-color: #17181a; }
 .bole-game { width: 100%; display: grid; justify-items: center; gap: 8px; touch-action: none; user-select: none; } .bole-game canvas { border-radius: 12px; max-width: 100%; } .bl-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+.quiz-game { width: 100%; }
+.qz-card { background: linear-gradient(160deg, #13294b, #2f6fa0); color: #fff; border-radius: 14px; padding: 16px; display: grid; gap: 12px; min-height: 340px; align-content: start; }
+.qz-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; opacity: .9; }
+.qz-time.low { color: #ffb3a8; }
+.qz-q { margin: 0; font-size: 18px; line-height: 1.3; }
+.qz-opts { display: grid; gap: 8px; }
+.qz-opt { text-align: left; padding: 12px; border-radius: 10px; border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.1); color: #fff; font: 600 15px var(--font-body, sans-serif); cursor: pointer; }
+.qz-opt b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #f2b600; color: #1a1500; margin-right: 6px; }
+.qz-opt.right { background: #2fa36b; border-color: #2fa36b; }
+.qz-opt.wrong { background: #d0453a; border-color: #d0453a; }
+.qz-big { font-size: 44px; font-weight: 800; margin: 0; text-align: center; }

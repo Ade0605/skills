@@ -113,6 +113,9 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Selling:** when a driver raises a hand for 💧 water, 🌭 gala, 📱 airtime or 🍌 plantain chips, pick the item (or press 1–4) and tap the car before the light turns green.
   - **Task force:** hold 🙈 HIDE when the task force van comes, or they seize your goods.
   - **Pay:** the tray of 30 items costs ₦4k, and sales are capped at ₦10k, so a perfect shift nets about ₦3k.
+- **Naija Quiz (mini-game, Abuja):** on the Millennium Park stage, Friday to Sunday from 15:00, once a game day.
+  - **Questions:** ten, 12 seconds each, drawn from 24 on Nigeria (Zuma Rock, Eyo, Felabration, Garden City…) and on how life in Lasgidi works.
+  - **Prizes:** these start at 5 right and rise to ₦8k for a perfect 10, which also unlocks "Quiz champion".
 - **Bole grill (mini-game, Port Harcourt):** at the Old GRA bole and fish spot, 11:00–22:00.
   - **Grilling:** pick plantain, fish or yam and lay it on the grill, then serve it to whoever ordered it while it's golden. Leave it too long and it burns.
   - **Pay:** Mama keeps half the takings and charges for anything burnt. Your share is capped at ₦9k.
