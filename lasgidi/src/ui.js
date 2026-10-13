@@ -1730,6 +1730,23 @@
     return html + '</div>';
   }
 
+  // Building on your Ikorodu plot: stage by stage, with the omo-onile first.
+  function buildView() {
+    var b = L.buildInfo(S);
+    if (!b.hasPlot && !b.built && !b.done) return '<p class="note">Buy the plot of land in Ikorodu and you can build your own house on it, stage by stage.</p>';
+    var steps = b.stages.map(function (st, i) {
+      var state = i < b.done || b.built ? 'done' : i === b.done && b.working ? 'now' : '';
+      return '<li class="bd-' + (state || 'todo') + '"><span>' + st.icon + '</span> ' + esc(st.name) + (state === 'now' ? ' · ' + b.readyIn + ' day' + (b.readyIn === 1 ? '' : 's') + ' to go' : state === 'done' ? ' ✓' : ' · ' + N(L.price(S, st.cost))) + '</li>';
+    }).join('');
+    var html = '<div class="build"><h4>🏗️ ' + (b.built ? 'Your house in Ikorodu is finished' : 'Build on your Ikorodu plot') + '</h4><ol class="bd-steps">' + steps + '</ol>';
+    if (b.built) html += S.home === 'built_own' ? '<p class="note">You live here: no rent, ever.</p>' : '<p class="note">Tenants pay you ' + N(L.price(S, D.PROPERTIES.built_house.weekly)) + ' a week while you live elsewhere. Move in from the homes list.</p>';
+    else if (b.working) html += '<p class="note">Work is going on at the site. The next stage can start when this one is done.</p>';
+    else html += '<div class="inline"><button class="btn sm' + (b.why ? '' : ' go') + '" id="build-next" data-build="1"' + (b.why ? ' disabled' : '') + '>Start ' + esc(b.next.name.toLowerCase()) + ' · ' + N(b.cost) + '</button>' +
+      (b.why && /Visit the site/.test(b.why) ? '<button class="btn sm ghost" id="build-go" data-tripto="ikorodu" data-tab="map">Go to Ikorodu</button>' : '') + '</div>' +
+      (b.levy ? '<p class="note">Includes the omo-onile "development levy" (' + N(b.levy) + ') before the foundation.</p>' : '') + (b.why ? '<p class="why">' + esc(b.why) + '.</p>' : '');
+    return html + '</div>';
+  }
+
   /* ---------- Work tab ---------- */
   // The interview panel: three questions from the engine, answered with radio buttons.
   function interviewView() {
@@ -1869,7 +1886,7 @@
     html += businessesView();
 
     html += '<div class="section"><h3>Property and car</h3>' + (S.properties.length ? '<ul class="note">' + S.properties.map(function (p) { return '<li>' + esc(D.PROPERTIES[p.id].name) + ' · worth ' + N(p.value) + '</li>'; }).join('') + '</ul>' : '') +
-      '<div class="list">' + Object.keys(D.PROPERTIES).map(function (k) {
+      buildView() + '<div class="list">' + Object.keys(D.PROPERTIES).filter(function (k) { return !D.PROPERTIES[k].hidden; }).map(function (k) {
         var p = D.PROPERTIES[k], pr = L.price(S, p.price);
         return '<div class="item"><div><h3>' + esc(p.name) + '</h3><div class="meta"><span class="cost num">' + N(pr) + '</span>' + (p.weekly ? '<span class="gain num">' + N(p.weekly) + '/week from tenants</span>' : '<span>Appreciates ~1.2%/week</span>') + '</div></div>' +
           '<button class="btn sm" id="buyp-' + k + '" data-buyp="' + k + '"' + (S.cash + S.bank >= pr ? '' : ' disabled') + '>Buy</button></div>';
@@ -2297,7 +2314,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2450,6 +2467,7 @@
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
     if (ds.minigame) { openMinigame(ds.minigame); return; }
     if (ds.nysc) { var nk = ds.nysc; run(function () { return nk === 'register' ? L.nyscRegister(S) : nk === 'camp' ? L.nyscCamp(S) : nk === 'cds' ? L.nyscCDS(S) : nk === 'retain' ? L.nyscRetain(S) : L.nyscWork(S); }); return; }
+    if (ds.build) { run(function () { return L.buildStage(S); }); return; }
     if (ds.service) { run(function () { return L.serviceCars(S); }); return; }
     if (ds.treat) { run(function () { return L.treatMalaria(S); }); return; }
     if (ds.kid) { var kp = ds.kid.split(':'), ki = +kp[1]; run(function () { return kp[0] === 'hw' ? L.helpHomework(S, ki) : L.kidOuting(S, ki); }); return; }

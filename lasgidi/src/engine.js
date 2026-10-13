@@ -84,7 +84,8 @@
     vendor:      'Online vendor: sold 100 items',
     corper:      'Corper wee! Finished your NYSC service year',
     scholar:     'Straight A: a child brought home an A',
-    dynasty:     'Dynasty: the third generation of your family in Lagos'
+    dynasty:     'Dynasty: the third generation of your family in Lagos',
+    builder:     'Builder: built your own house, block by block'
   };
 
   /* ---------- small helpers ---------- */
@@ -199,6 +200,7 @@
     if (m === 'Family outing') return 'family';
     if (/^Chemist/.test(m)) return 'health';
     if (/^(Ladipo|Roadside mechanic)/.test(m)) return 'transport';
+    if (/^(Building: |Omo-onile)/.test(m)) return 'housing';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
@@ -308,7 +310,7 @@
       ajo: null, businesses: [], properties: [], car: false, power: true,
       allowanceWeeks: 0, allowance: 0, asoebi: false, ponzi: null,
       welfareDay: -1, viralWeek: -1, hospitalWeek: -1,
-      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null, nysc: null, sick: null, heir: null, interviews: {},
+      rules: opts.rules || RULES, partner: null, kids: [], babyPause: -1, items: [], vehicles: [], driving: -1, bonds: [], gems: {}, giftsOpened: {}, wardrobe: [], outfit: {}, look: { skin: 2, hair: 0, shape: 1 }, quests: {}, stocks: {}, streak: null, staff: [], pets: [], hmo: null, shop: null, creator: { followers: 0, posts: 0, lastPost: -1 }, phone: null, title: null, partyJoins: {}, danfoDriver: false, haggles: {}, sea: null, mini: null, nysc: null, sick: null, heir: null, interviews: {}, build: null,
       econ: { infl: 1, wage: 1, fuel: 1, fuelDays: 0, flood: 0, gridDown: 0, policy: null, policyWeeks: 0, cbn: null, cbnWeeks: 0 },
       pending: [], log: [], alerts: [], ledger: [], ledgerHash: '0', ledgerCount: 0,
       ledgerSum: { cash: 0, bank: 0 }, opening: { cash: 0, bank: 0 },
@@ -398,6 +400,7 @@
   }
 
   function onNewDay(s) {
+    if (s.build) buildTick(s);
     var hd = homeDef(s);
     if (hd.daily) applyFx(s, hd.daily); // perks of homes added after v0.6
     var fd = furnitureDaily(s);
@@ -532,7 +535,8 @@
 
   function ownsHome(s, homeId) {
     var h = D.HOMES[homeId];
-    return !!(h && h.owned && s.properties.some(function (p) { return p.id === D.ESTATE.property; }));
+    var need = h && (h.ownedBy || D.ESTATE.property);
+    return !!(h && h.owned && s.properties.some(function (p) { return p.id === need; }));
   }
 
   // Rules 8: every 4 weeks the landlord moves rent up with inflation.
@@ -556,7 +560,7 @@
     var h = D.HOMES[homeId];
     if (!h || h.hidden) return fail('That place is not on the market.');
     if (homeId === s.home) return fail('You already live here.');
-    if (h.owned && !ownsHome(s, homeId)) return fail('Buy a plot in ' + D.ESTATE.name + ' first.');
+    if (h.owned && !ownsHome(s, homeId)) return fail(h.ownedBy ? 'Build your house first.' : 'Buy a plot in ' + D.ESTATE.name + ' first.');
     if (s.arrears) return fail('Clear your rent arrears first. No landlord will take you with debt.');
     var c = moveInCost(s, homeId);
     if (c.total && !pay(s, c.total, 'Move-in: 4 weeks rent + agent fee')) return fail('Move-in needs ' + naira(c.total) + ' (4 weeks upfront plus agent fee).');
@@ -1677,7 +1681,7 @@
 
   function buyProperty(s, id) {
     var p = D.PROPERTIES[id];
-    if (!p) return fail('Unknown property.');
+    if (!p || p.hidden) return fail('Unknown property.');
     var cost = price(s, p.price);
     s.alerts = [];
     if (!pay(s, cost, 'Bought ' + p.name)) return fail('You need ' + naira(cost) + '.');
@@ -1687,11 +1691,58 @@
     return finish(s, ok('Property bought.'));
   }
 
+  /* ---------- building your own house on the Ikorodu plot ---------- */
+  function buildInfo(s) {
+    var B = D.BUILD, hasPlot = s.properties.some(function (p) { return p.id === 'iko_plot'; }), b = s.build;
+    var built = s.properties.some(function (p) { return p.id === 'built_house'; });
+    var next = built ? null : B.stages[b ? b.done : 0];
+    return { hasPlot: hasPlot, built: built, done: b ? b.done : 0, stages: B.stages, working: !!(b && b.working), readyIn: b && b.working ? Math.max(0, b.ready - day(s)) : 0,
+      next: next, cost: next ? price(s, next.cost) + (!b ? price(s, B.levy) : 0) : 0, levy: !b ? price(s, B.levy) : 0, why: buildBlock(s) };
+  }
+  function buildBlock(s) {
+    var b = s.build, B = D.BUILD;
+    if (s.properties.some(function (p) { return p.id === 'built_house'; })) return 'Your house is finished';
+    if (!s.properties.some(function (p) { return p.id === 'iko_plot'; })) return 'Buy the plot of land in Ikorodu first';
+    if (b && b.working) return 'The ' + B.stages[b.done].name.toLowerCase() + ' is still going on';
+    if (s.loc !== 'ikorodu') return 'Visit the site in Ikorodu to start the next stage';
+    var cost = price(s, B.stages[b ? b.done : 0].cost) + (!b ? price(s, B.levy) : 0);
+    if (!canAfford(s, cost)) return 'This stage needs ' + naira(cost);
+    return busyBlock(s);
+  }
+  function buildStage(s) {
+    var why = buildBlock(s); if (why) return fail(why + '.');
+    var B = D.BUILD, first = !s.build;
+    s.alerts = [];
+    if (first) {
+      pay(s, price(s, B.levy), 'Omo-onile development levy');
+      log(s, '🏗️ The omo-onile came to "greet" the land. You paid their development levy (' + naira(price(s, B.levy)) + ') so work can start in peace.', 'info');
+      s.build = { done: 0, working: false, ready: -1, spent: 0 };
+    }
+    var st = B.stages[s.build.done], cost = price(s, st.cost);
+    pay(s, cost, 'Building: ' + st.name);
+    s.build.spent += cost; s.build.working = true; s.build.ready = day(s) + st.days;
+    advance(s, 60);
+    return finish(s, ok(st.icon + ' ' + st.name + ' has started. The site manager says ' + st.days + ' days, "by God\'s grace".'));
+  }
+  // Each new day: a stage that is due is finished; the last one turns the plot into a house.
+  function buildTick(s) {
+    var b = s.build, B = D.BUILD;
+    if (!b || !b.working || day(s) < b.ready) return;
+    var st = B.stages[b.done];
+    b.working = false; b.done++;
+    if (b.done < B.stages.length) { log(s, '🏗️ ' + st.name + ' is done. Visit the site in Ikorodu to start the ' + B.stages[b.done].name.toLowerCase() + '.', 'good'); return; }
+    var plot = s.properties.filter(function (p) { return p.id === 'iko_plot'; })[0];
+    s.properties = s.properties.filter(function (p) { return p !== plot; });
+    s.properties.push({ id: 'built_house', value: roundTo((plot ? plot.value : 0) + b.spent * 0.9, 1000) });
+    unlock(s, 'builder'); unlock(s, 'landlord');
+    log(s, '🏠 Your house in Ikorodu is finished! Move in from the Money tab (no rent, ever), or let tenants pay you ' + naira(price(s, D.PROPERTIES.built_house.weekly)) + ' a week.', 'ach');
+  }
+
   function weeklyProperty(s) {
     s.properties.forEach(function (p) {
       var def = D.PROPERTIES[p.id];
       p.value = roundTo(p.value * (def.house ? 1.006 : 1.012), 1000);
-      if (def.weekly) earn(s, roundTo(def.weekly * s.econ.infl, 50), 'Tenant rent: ' + def.name);
+      if (def.weekly && !(def.home && s.home === def.home)) earn(s, roundTo(def.weekly * s.econ.infl, 50), 'Tenant rent: ' + def.name);
     });
   }
 
@@ -2379,6 +2430,7 @@
     if (s.nysc === undefined) s.nysc = null;
     if (s.sick === undefined) s.sick = null;
     if (!s.interviews) s.interviews = {};
+    if (s.build === undefined) s.build = null;
   }
   function migrate(s) {
     if (s) ensureFields(s);
@@ -3853,7 +3905,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
     lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),

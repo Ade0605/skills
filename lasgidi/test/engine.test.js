@@ -1773,3 +1773,37 @@ test('job interviews (rules 13): degree jobs ask three seeded questions; the eng
   const rp = L.replayLife(s.replay);
   assert.ok(rp, 'the interview replays');
 });
+
+test('build your own house: the plot, the omo-onile, five stages over weeks, then live there or rent it out', () => {
+  const s = L.newGame({ seed: 107, origin: 'nepo', goal: 'freestyle' });
+  assert.match(L.buildStage(s).msg, /plot of land in Ikorodu/);
+  s.bank += 40000000; s.opening.bank += 40000000; // a rich test life (kept balanced)
+  s.loc = 'ikorodu'; s.t = s.t - (s.t % 1440) + 1440 + 10 * 60;
+  assert.ok(L.buyProperty(s, 'iko_plot').ok);
+  assert.equal(L.buyProperty(s, 'built_house').ok, false, 'a built house is never for sale');
+  let b = L.buildInfo(s);
+  assert.equal(b.cost, L.price(s, 1500000) + L.price(s, 250000), 'the levy comes with the foundation');
+  for (let stage = 0; stage < 5; stage++) {
+    while (s.pending.length) L.resolveChoice(s, 0);
+    s.loc = 'ikorodu'; s.needs.energy = 90; s.needs.hunger = 80;
+    const r = L.buildStage(s);
+    assert.ok(r.ok, r.msg);
+    assert.match(L.buildStage(s).msg, /still going on/);
+    for (let i = 0; i < 400 && L.buildInfo(s).working; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; s.needs.hygiene = 80; L.wait(s, 240); }
+  }
+  b = L.buildInfo(s);
+  assert.ok(b.built, 'the house is finished');
+  assert.ok(s.ach.builder);
+  assert.ok(!s.properties.some(p => p.id === 'iko_plot') && s.properties.some(p => p.id === 'built_house'));
+  assert.equal(s.ledger.filter(l => l.memo === 'Omo-onile development levy').length, 1);
+  assert.equal(L.category('Building: Roofing', -1), 'housing');
+  // Tenants pay while you live elsewhere; moving in is free and stops the rent.
+  const rent = () => s.ledger.filter(l => l.memo === 'Tenant rent: Your own house, Ikorodu').length;
+  const r0 = rent(); for (let i = 0; i < 60; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; L.wait(s, 240); }
+  assert.ok(rent() > r0, 'tenants pay');
+  while (s.pending.length) L.resolveChoice(s, 0);
+  const m = L.moveHouse(s, 'built_own');
+  assert.ok(m.ok, m.msg); assert.equal(s.rentRate, 0);
+  const r1 = rent(); for (let i = 0; i < 60; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; L.wait(s, 240); }
+  assert.equal(rent(), r1, 'no tenants while you live there');
+});

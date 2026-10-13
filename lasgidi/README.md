@@ -193,6 +193,10 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - Promotions take 30% more shifts.
 
   Lives started earlier keep their old rules.
+- **🏗️ Build your own house:** own the plot of land in Ikorodu and you can build on it from the Money tab, one stage at a time.
+  - **The omo-onile:** before the foundation, they come to "greet" the land and you pay their ₦250k development levy.
+  - **Five stages:** foundation, blocks to lintel level, roofing, plastering with windows and doors, then finishing. They cost ₦12.5m in all and take about five and a half weeks, and you must visit the site in Ikorodu to start each one.
+  - **When it's finished:** the plot becomes your house and unlocks "Builder". Move in for no rent ever, or let tenants pay you ₦70k a week while you live elsewhere.
 - **🎤 Job interviews (rules 13, new lives only):** Banking, the Civil Service and Consulting interview before they hire.
   - **The questions:** three a day per career, taken from the life's seed with the answer order shuffled. The engine marks your answers, so a result can't be faked.
   - **Passing:** two right gets the job, or one if your Charisma is 4 or more. Fail and they "get back to you" in 3 days.
@@ -249,7 +253,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (97 tests)
+  test/engine.test.js   node:test suite (98 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

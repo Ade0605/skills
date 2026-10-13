@@ -604,3 +604,11 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .iv-q legend { font-weight: 700; padding: 0 4px; }
 .iv-opt { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; cursor: pointer; }
 .iv-opt input { margin-top: 3px; }
+
+/* Building your own house */
+.build { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 8px 0 12px; }
+.build h4 { margin: 0 0 6px; }
+.bd-steps { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; font-size: 13.5px; }
+.bd-steps li { padding: 4px 8px; border-radius: 8px; background: color-mix(in srgb, var(--line) 35%, transparent); }
+.bd-steps .bd-done { background: color-mix(in srgb, #2fa36b 18%, transparent); }
+.bd-steps .bd-now { background: color-mix(in srgb, #f2b600 30%, transparent); font-weight: 700; }
