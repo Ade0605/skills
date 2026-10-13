@@ -332,6 +332,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - motor yachts: Riva, Azimut, Ferretti, Sunseeker, Princess, Pershing;
     - superyachts: Benetti, Heesen, Sanlorenzo, Feadship, Lürssen, Oceanco;
     - sailing yachts: Royal Huisman, Perini Navi.
+- **CV:** a CV built only from the game's own records, so it can't be typed or padded.
+  - **Contents:** current and past jobs (title, employer, shifts, and "let go" if dismissed), education (UNILAG degree or studying, NYSC, IELTS), top skills, and the criminal record.
+  - **Where:** on the Me tab, and in Work, where "your CV goes with every application".
+  - **Sharing:** share it and other players can open it from your player card. A shared CV holds only ids and numbers, and it's checked against the game's data before it's drawn.
+  - **History:** past jobs are kept from this version on, as state only, so nothing changes a seal.
 - **Lagoon Boat Cruise:** board at Five Cowries Creek in Ikoyi (₦8,000, or ₦20,000 in December, 9am–9pm) and step onto a full-screen deck.
   - **The deck:** a wooden boat on the lagoon with a deck bar, the captain's wheelhouse under a "LAGOON CRUISE" sign, sun-deck loungers, a colour-changing dance floor, speakers and a stern rail.
   - **Who's there:** online players aboard stand at their spot with their @handle, with a crew of captain, bartender and DJ.

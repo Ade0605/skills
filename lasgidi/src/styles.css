@@ -936,3 +936,17 @@ body:has(#cruise-view) .toasts { top: 12px; bottom: auto; }
 .rep-link { font-size: 12px; justify-self: end; }
 .safety ul { padding-left: 18px; display: grid; gap: 4px; }
 .ad-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; background: var(--sunk); font: 800 10px var(--font-body); letter-spacing: .08em; text-transform: uppercase; }
+
+/* CV */
+.cv { display: grid; gap: 10px; padding: 12px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.cv-head { display: flex; gap: 10px; align-items: center; }
+.cv-head h3 { margin: 0; } .cv-head small { color: var(--muted); }
+.cv-doc { font-size: 28px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: var(--sunk); }
+.cv-sec { display: grid; gap: 6px; padding: 12px; border-radius: 16px; background: var(--sunk); }
+.cv-sec > b { font: 800 12px var(--font-body); letter-spacing: .1em; }
+.cv-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px; border-radius: 12px; background: var(--surface); }
+.cv-row small { display: block; color: var(--muted); font-size: 12px; }
+.cv-ic { font-size: 20px; }
+.cv-tag { font: 700 11px var(--font-body); color: var(--muted); }
+.cv-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+.cv-wrap > summary { cursor: pointer; font-weight: 800; padding: 6px 0; }

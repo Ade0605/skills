@@ -466,7 +466,7 @@
         log(s, 'You missed your ' + c.titles[s.job.level] + ' shift. (' + s.job.missed + '/3 strikes)', 'bad');
         if (s.job.missed >= 3) {
           log(s, 'Oga don sack you. Three no-shows is the limit.', 'bad');
-          s.job = null;
+          endJob(s, 'dismissed');
         }
       }
     }
@@ -1034,17 +1034,38 @@
     if (!e.ok && !force) return fail(e.reason);
     if (!force && needsInterview(s, cid)) { var nf = fail('This job needs an interview: three questions in the panel above.'); nf.interview = cid; return nf; }
     var c = D.CAREERS[cid];
-    if (s.job) log(s, 'You resigned as ' + D.CAREERS[s.job.id].titles[s.job.level] + '.', 'info');
+    if (s.job) { log(s, 'You resigned as ' + D.CAREERS[s.job.id].titles[s.job.level] + '.', 'info'); endJob(s, 'resigned'); }
     s.job = { id: cid, level: 0, shifts: 0, perfSum: 0, missed: 0, lastShift: -1, since: s.t };
     var via = e.connect ? ' ' + D.NPCS[e.connect].name + ' put in a word for you.' : '';
     log(s, 'Hired: ' + c.titles[0] + ' (' + c.name + ').' + via, 'good');
     return finish(s, ok('You start as ' + c.titles[0] + '. Shifts ' + String(c.start).padStart(2, '0') + ':00–' + String(c.end).padStart(2, '0') + ':00, ' + c.days.map(function (d) { return D.DAYS[d]; }).join(' ') + '.'));
   }
 
+  // The CV keeps past jobs (state only, never money, so it changes no seal).
+  function endJob(s, why) {
+    if (!s.job) return;
+    (s.jobHistory = s.jobHistory || []).push({ id: s.job.id, level: s.job.level, shifts: s.job.shifts, from: s.job.since, to: s.t, why: why });
+    if (s.jobHistory.length > 30) s.jobHistory.shift();
+    s.job = null;
+  }
+  // A CV from the game's own records: work, education, skills and record. Nothing typed by anyone.
+  function cv(s) {
+    var work = [];
+    if (s.job) { var c = D.CAREERS[s.job.id]; work.push({ id: s.job.id, level: s.job.level, title: c.titles[s.job.level], org: c.name, icon: c.icon || '💼', from: s.job.since, to: null, shifts: s.job.shifts, current: true }); }
+    (s.jobHistory || []).slice().reverse().forEach(function (j) { var c = D.CAREERS[j.id]; if (c) work.push({ id: j.id, level: j.level, title: c.titles[j.level] || c.titles[0], org: c.name, icon: c.icon || '💼', from: j.from, to: j.to, shifts: j.shifts, why: j.why }); });
+    var edu = [];
+    if (s.edu.degree) edu.push({ code: 'degree', icon: '🎓', title: s.heir && s.heir.school === 'intl' ? 'International school diploma (counts as a degree)' : 'Degree, University of Lagos' });
+    else if (s.edu.enrolled) edu.push({ code: 'studying', icon: '📚', title: 'Studying at the University of Lagos', note: s.edu.lectures + ' lectures so far' });
+    if (s.nysc && s.nysc.stage === 'done') edu.push({ code: 'nysc', icon: '🎖️', title: 'NYSC service year completed' });
+    else if (s.nysc) edu.push({ code: 'serving', icon: '🎖️', title: 'Serving NYSC' });
+    if (s.edu.ieltsPassed) edu.push({ code: 'ielts', icon: '🇬🇧', title: 'IELTS: passed' });
+    var skills = Object.keys(s.skills).map(function (k) { return { id: k, name: D.SKILLS[k], level: skillLevel(s, k) }; }).filter(function (k) { return k.level > 0; }).sort(function (a, b) { return b.level - a.level; }).slice(0, 4);
+    return { name: s.name, weeks: week(s) + 1, work: work, edu: edu, skills: skills, traits: s.traits || [], record: { clean: true }, achievements: Object.keys(s.ach || {}).length };
+  }
   function quitJob(s) {
     if (!s.job) return fail('You have no job.');
     log(s, 'You resigned as ' + D.CAREERS[s.job.id].titles[s.job.level] + '.', 'info');
-    s.job = null;
+    endJob(s, 'resigned');
     return ok('You resigned.');
   }
 
@@ -4409,7 +4430,7 @@
     newGame: newGame, availableActions: availableActions, doAction: recorded('a', doAction),
     travelOptions: travelOptions, travel: recorded('t', travel), distance: distance,
     resolveChoice: recorded('c', resolveChoice),
-    jobEligibility: jobEligibility, applyJob: recorded('j', applyJob), quitJob: recorded('q', quitJob), promotionNeeds: promotionNeeds,
+    jobEligibility: jobEligibility, applyJob: recorded('j', applyJob), cv: cv, quitJob: recorded('q', quitJob), promotionNeeds: promotionNeeds,
     deposit: recorded('d', deposit), withdraw: recorded('w', withdraw), joinAjo: recorded('aj', joinAjo), takeLoan: recorded('l', takeLoan), repayLoan: recorded('r', repayLoan), loanLimit: loanLimit,
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),

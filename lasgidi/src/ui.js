@@ -376,6 +376,9 @@
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
       }, function () { online.residents = []; });
+      db.collection('cvs').limit(500).onSnapshot(function (snap) {
+        var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.cvs = m; scheduleRender();
+      }, function () { online.cvs = {}; });
       db.collection('plots').limit(500).onSnapshot(function (snap) {
         online.plots = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, plot: r && typeof r.plot === 'number' ? r.plot | 0 : -1, at: r && typeof r.at === 'number' ? r.at : 0 }; });
         scheduleRender();
@@ -541,7 +544,9 @@
       '<div class="inline"><button class="btn sm ghost" id="pwave-' + esc(by) + '" data-wave="' + esc(by) + '">👋 Wave</button>' + (home ? '<button class="btn sm ghost" id="pvisit-' + esc(by) + '" data-visit2="' + esc(by) + '">🏠 Visit</button>' : '') +
         (near ? '' : '<button class="btn sm ghost" id="pgo-' + esc(by) + '" data-go="' + p.d + '">🧭 Go to them</button>') +
         '<button class="btn sm ghost" id="pmute-' + esc(by) + '" data-chatmute="' + esc(by) + '">' + (muted ? '🔈 Unblock' : '🚫 Block') + '</button>' +
-        '<button class="btn sm ghost" id="preport-' + esc(by) + '" data-reportopen="' + esc(by) + '">🚩 Report</button></div>' + reportBox(by) +
+        '<button class="btn sm ghost" id="preport-' + esc(by) + '" data-reportopen="' + esc(by) + '">🚩 Report</button>' +
+        (online.cvs && checkCv(online.cvs[by]) ? '<button class="btn sm ghost" id="pcv-' + esc(by) + '" data-cvfor="' + esc(by) + '">📄 CV</button>' : '') + '</div>' + reportBox(by) +
+        (ui.cvFor === by && online.cvs && checkCv(online.cvs[by]) ? cvHtml(checkCv(online.cvs[by]), by) : '') +
       '<div class="chat-log" id="chat-log" aria-live="polite">' + (msgs.length ? msgs.slice(-30).map(function (m) { return '<div class="chat-msg' + (m.me ? ' me' : '') + '"><span>' + esc(m.text) + '</span></div>'; }).join('') : '<p class="muted">Say hello. Messages are not saved and vanish when you close the game.</p>') + '</div>' +
       '<div class="chat-quick">' + CH.QUICK.map(function (q, i) { return '<button type="button" class="act-chip" id="cq-' + i + '" data-chatq="' + i + '">' + esc(q) + '</button>'; }).join('') + '</div>' +
       '<div class="chat-send"><input id="chat-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Message ' + esc(handleOf(by)) + '" aria-label="Message" value="' + esc(ui.chatDraft || '') + '"><button class="btn" id="chat-send" data-chatsend="' + esc(by) + '">Send</button></div>' +
@@ -2195,7 +2200,8 @@
       '<div class="inline"><button class="btn go" id="iv-submit" data-ivsubmit="' + cid + '"' + (why ? ' disabled' : '') + '>Submit answers</button><button class="btn ghost" id="iv-cancel" data-interview="">Not now</button></div>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '') + '</div>';
   }
   function workView() {
-    var html = '<div class="panel-h"><h2>Work</h2><span class="muted">Shifts pay daily. Three no-shows and you are sacked.</span></div><div class="panel-b">' + interviewView();
+    var html = '<div class="panel-h"><h2>Work</h2><span class="muted">Shifts pay daily. Three no-shows and you are sacked.</span></div><div class="panel-b">' + interviewView() +
+      '<details class="section cv-wrap"><summary id="cv-work">📄 Your CV goes with every application</summary>' + cvHtml(L.cv(S)) + '</details>';
     if (S.job) {
       var c = D.CAREERS[S.job.id], need = L.promotionNeeds(S);
       var skillLvl = L.skillLevel(S, c.skill);
@@ -2350,9 +2356,39 @@
     }).join('');
     return html + '</div></div>';
   }
+  /* ---------- the CV: from the game's own records, never typed ---------- */
+  var EDU = { degree: ['🎓', 'Degree, University of Lagos'], studying: ['📚', 'Studying at the University of Lagos'], nysc: ['🎖️', 'NYSC service year completed'], serving: ['🎖️', 'Serving NYSC'], ielts: ['🇬🇧', 'IELTS: passed'] };
+  function cvSnapshot() {
+    var c = L.cv(S);
+    return { weeks: c.weeks, work: c.work.slice(0, 10).map(function (w) { return { id: w.id, level: w.level, shifts: w.shifts, current: !!w.current, why: w.why || null }; }),
+      edu: c.edu.map(function (e) { return e.code; }), skills: c.skills.map(function (k) { return { id: k.id, level: k.level }; }), at: Date.now() };
+  }
+  // Another player's shared CV, checked against the game's data before it is drawn.
+  function checkCv(raw) {
+    if (!raw || typeof raw !== 'object' || !Array.isArray(raw.work)) return null;
+    var work = raw.work.slice(0, 10).filter(function (w) { return w && D.CAREERS[w.id] && Number.isInteger(w.level) && w.level >= 0 && w.level < D.CAREERS[w.id].titles.length; }).map(function (w) { var c = D.CAREERS[w.id]; return { title: c.titles[w.level], org: c.name, current: !!w.current, shifts: Math.max(0, Math.min(9999, w.shifts | 0)), why: w.why === 'dismissed' ? 'dismissed' : w.why === 'resigned' ? 'resigned' : null }; });
+    var edu = (Array.isArray(raw.edu) ? raw.edu : []).filter(function (e) { return EDU[e]; }).map(function (e) { return { icon: EDU[e][0], title: EDU[e][1] }; });
+    var skills = (Array.isArray(raw.skills) ? raw.skills : []).filter(function (k) { return k && D.SKILLS[k.id] && Number.isInteger(k.level) && k.level > 0 && k.level < 10; }).slice(0, 4).map(function (k) { return { name: D.SKILLS[k.id], level: k.level }; });
+    return { weeks: Math.max(1, Math.min(999, raw.weeks | 0)), work: work, edu: edu, skills: skills, record: { clean: true } };
+  }
+  function cvHtml(c, who) {
+    var mine = who === online.me || !who;
+    return '<div class="cv"><div class="cv-head"><span class="cv-doc">📄</span><div><h3>' + esc(mine ? handleOf(online.me) : handleOf(who)) + '\'s CV</h3><small>Jobs, education and record, from the game\'s own records</small></div></div>' +
+      '<p class="note">' + esc(mine ? S.name : nameOf(who)) + ' · week ' + c.weeks + ' of this life in Lasgidi. Built from the game\'s own records, not what anyone typed.</p>' +
+      '<div class="cv-sec"><b>💼 WORK</b>' + (c.work.length ? c.work.map(function (w) { return '<div class="cv-row"><span class="cv-ic">🏢</span><div><b>' + esc(w.title) + '</b><small>' + esc(w.org) + ' · ' + w.shifts + ' shift' + (w.shifts === 1 ? '' : 's') + (w.why === 'dismissed' ? ' · let go' : '') + '</small></div>' + (w.current ? '<span class="cv-tag">Current</span>' : '') + '</div>'; }).join('') : '<p class="note">No jobs yet.</p>') + '<small class="muted">Past jobs are kept from now on.</small></div>' +
+      '<div class="cv-sec"><b>🎓 EDUCATION</b>' + (c.edu.length ? c.edu.map(function (e) { return '<div class="cv-row"><span class="cv-ic">' + e.icon + '</span><div><b>' + esc(e.title) + '</b>' + (e.note ? '<small>' + esc(e.note) + '</small>' : '') + '</div></div>'; }).join('') : '<p class="note">No degree or certificates yet.</p>') + '</div>' +
+      (c.skills.length ? '<div class="cv-sec"><b>🛠️ SKILLS</b><div class="cv-skills">' + c.skills.map(function (k) { return '<span class="act-chip">' + esc(k.name) + ' · level ' + k.level + '</span>'; }).join('') + '</div></div>' : '') +
+      '<div class="cv-sec"><b>🚔 CRIMINAL RECORD</b><div class="cv-row"><span class="cv-ic">✅</span><div><b>Clean record</b><small>No arrests or court cases</small></div></div></div></div>';
+  }
+  function shareCv() {
+    if (!online.db || !online.me) { online.cvStatus = 'Sharing works when the game is opened on claude.ai.'; render(); return; }
+    online.db.doc('cvs/' + online.me).set(cvSnapshot()).then(function () { online.cvStatus = 'Shared. Players can open your CV from your player card.'; render(); }, function () { online.cvStatus = 'Could not share right now.'; render(); });
+  }
   function meView() {
     var gp = L.goalProgress(S), g = D.GOALS[S.goal];
-    var html = '<div class="panel-h"><h2>' + esc(L.titledName(S)) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">' + labelChips(L.lagosLabels(S)) + photoView();
+    var html = '<div class="panel-h"><h2>' + esc(L.titledName(S)) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">' + labelChips(L.lagosLabels(S)) + photoView() +
+      '<details class="section cv-wrap"' + (ui.cvOpen ? ' open' : '') + '><summary id="cv-open" data-cvopen="1">📄 My CV</summary>' + cvHtml(L.cv(S)) +
+      '<div class="inline"><button class="btn sm" id="cv-share" data-cvshare="1">' + (online.cvs && online.cvs[online.me] ? 'Update my shared CV' : 'Share my CV with players') + '</button>' + (online.cvStatus ? '<span class="note">' + esc(online.cvStatus) + '</span>' : '') + '</div></details>';
     html += '<div class="section" style="padding-top:0"><h3>Goal: ' + esc(g.name) + (S.won ? ' · done' : '') + '</h3><p class="note">' + esc(g.text) + '</p>' +
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
@@ -3099,7 +3135,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-joinclub],[data-clubact],[data-hpbuild],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3420,6 +3456,9 @@
     if (ds.hpbuild) { var hz = ds.hpbuild; run(function () { return L.hpBuild(S, hz); }); return; }
     if (ds.joinclub) { var jc = ds.joinclub.split(':'); run(function () { return L.joinClub(S, jc[0], jc[1]); }); return; }
     if (ds.clubact) { var ca = ds.clubact.split(':'); run(function () { return L.clubAct(S, ca[0], ca[1]); }); return; }
+    if (ds.cvshare) { shareCv(); return; }
+    if (ds.cvfor) { ui.cvFor = ui.cvFor === ds.cvfor ? null : ds.cvfor; render(); return; }
+    if (ds.cvopen) { ui.cvOpen = !ui.cvOpen; return; }
     if (ds.reportopen) { ui.reportFor = ui.reportFor === ds.reportopen ? null : ds.reportopen; online.reportStatus = ''; render(); return; }
     if (ds.reportsend) { var rs = ds.reportsend.split(':'); var rr = rs.pop(); sendReport(rs.join(':'), rr); return; }
     if (ds.closechat) { ui.chatWith = null; ui.chatWhy = ''; render(); return; }

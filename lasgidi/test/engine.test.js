@@ -2160,3 +2160,19 @@ test('lagoon cruise: board in Ikoyi, spots only while aboard, the deck tires, De
   assert.ok(L.cruiseLeave(s).ok); assert.equal(L.cruiseAboard(s), false);
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('CV: built from the game records, keeps past jobs, never touches money', () => {
+  const s = L.newGame({ seed: 95, origin: 'mid', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  const open = Object.keys(D.CAREERS)[0];
+  assert.ok(L.applyJob(s, open, true).ok);
+  let c = L.cv(s);
+  assert.equal(c.work.length, 1); assert.ok(c.work[0].current);
+  const h = s.ledgerHash;
+  assert.ok(L.quitJob(s).ok);
+  c = L.cv(s);
+  assert.equal(c.work.length, 1); assert.equal(c.work[0].why, 'resigned'); assert.ok(!c.work[0].current);
+  assert.ok(c.record.clean);
+  assert.equal(s.ledgerHash, h, 'the CV is state, not money');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});
