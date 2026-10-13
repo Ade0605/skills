@@ -2092,3 +2092,29 @@ test('new-player setup: exactly two traits, a start home the origin allows, and 
   assert.equal(r.ledgerHash, s.ledgerHash); assert.equal(r.home, s.home); assert.deepEqual(r.traits, s.traits);
   assert.equal(L.replayLife(Object.assign({}, s.replay, { traits: ['nope', 'cool'] })), null);
 });
+
+test('white wedding: 30% deposit books a Saturday four weeks out; the balance is paid on the day at the venue', () => {
+  const s = L.newGame({ seed: 83, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  const plan = { venue: 'ikeja_centre', planner: 'standard', asoebi: 'family', vendors: 'classic', theme: 'emerald', decor: 'elegant', extras: ['arch', 'sparks', 'nope'], after: 'lounge' };
+  assert.match(L.wwQuote(s, plan).disabled, /relationship/);
+  s.partner = { name: 'Kemi', stage: 'introduced', aff: 80, since: 0, contact: 0 };
+  s.cash += 80000000;
+  const q = L.wwQuote(s, plan);
+  assert.ok(!q.disabled, q.disabled);
+  assert.deepEqual(q.plan.extras, ['arch', 'sparks'], 'unknown extras are dropped');
+  assert.equal(q.date % 7, 5, 'a Saturday'); assert.ok(q.date - Math.floor(s.t / 1440) >= 28);
+  assert.equal(q.deposit, Math.round(q.total * 0.3 / 1000) * 1000);
+  const before = s.cash + s.bank;
+  assert.ok(L.planWhiteWedding(s, plan).ok);
+  assert.equal(before - (s.cash + s.bank), q.deposit);
+  assert.match(L.wwQuote(s, plan).disabled, /already booked/);
+  assert.match(L.wwDayBlock(s), /in \d+ days/);
+  // Jump to 10am on the day, at the venue.
+  s.t = q.date * 1440 + 10 * 60; s.loc = 'ikeja'; s.pending = [];
+  assert.equal(L.wwDayBlock(s), '');
+  const b2 = s.cash + s.bank, r = L.holdWhiteWedding(s);
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.partner.stage, 'married'); assert.ok(s.ach.white_wedding);
+  assert.ok(b2 - (s.cash + s.bank) > 0, 'gifts never cover the balance');
+});

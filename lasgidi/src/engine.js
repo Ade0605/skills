@@ -69,6 +69,7 @@
     chopper:     'Straight to the door: took a VIP chopper',
     members_club: 'Members only: joined a waterfront club',
     hyde_park:   'Lagoon living: a home in Lekki Hyde Park',
+    white_wedding: 'White wedding: church, reception and after-party',
     gifted:      'Received a gift from another Lagosian',
     gems:        'Found all five of a day\'s gems',
     debt_free:   'Debt free: cleared every loan',
@@ -2240,6 +2241,76 @@
     return finish(s, ok('Congratulations! You married ' + p.name + '.'));
   }
 
+  /* ---------- white wedding: plan (ww), then hold it on the day (wh) ---------- */
+  function cleanWWPlan(p) {
+    var W = D.WHITE_WEDDING; if (!p || typeof p !== 'object') return null;
+    var ex = Array.isArray(p.extras) ? p.extras.filter(function (x, i, a) { return W.extras[x] && a.indexOf(x) === i; }).slice(0, 6) : [];
+    if (!W.venues[p.venue] || !W.planners[p.planner] || !W.asoebi[p.asoebi] || !W.vendors[p.vendors] || !W.themes[p.theme] || !W.decor[p.decor] || !W.afterparty[p.after]) return null;
+    return { venue: p.venue, planner: p.planner, asoebi: p.asoebi, vendors: p.vendors, theme: p.theme, decor: p.decor, extras: ex, after: p.after };
+  }
+  function wwQuote(s, plan) {
+    var W = D.WHITE_WEDDING, p = cleanWWPlan(plan), partner = s.partner;
+    if (!p) return { disabled: 'Finish choosing every part of the plan' };
+    var V = W.venues[p.venue], lines = [
+      [V.name, price(s, V.cost)], [W.planners[p.planner].name, price(s, W.planners[p.planner].cost)], [W.asoebi[p.asoebi].name, price(s, W.asoebi[p.asoebi].cost)],
+      [W.vendors[p.vendors].name + ' for ' + V.guests + ' guests', price(s, W.vendors[p.vendors].perGuest * V.guests)], [W.decor[p.decor].name + ' hall decoration', price(s, W.decor[p.decor].cost)]
+    ];
+    p.extras.forEach(function (x) { lines.push([W.extras[x].name, price(s, W.extras[x].cost)]); });
+    if (p.after !== 'none') lines.push([W.afterparty[p.after].name, price(s, W.afterparty[p.after].cost)]);
+    var total = lines.reduce(function (a, l) { return a + l[1]; }, 0), deposit = Math.round(total * W.deposit / 1000) * 1000;
+    var q = { plan: p, lines: lines.filter(function (l) { return l[1] > 0; }), total: total, deposit: deposit, balance: total - deposit, guests: V.guests, quality: W.planners[p.planner].q + W.asoebi[p.asoebi].q + W.vendors[p.vendors].q + W.decor[p.decor].q + Math.min(2, p.extras.length / 2) };
+    var d = day(s) + W.leadDays; while (d % 7 !== 5) d++;
+    q.date = d;
+    if (s.rules < 6 || !partner) q.disabled = 'You are not in a relationship';
+    else if (partner.stage === 'married') q.disabled = 'Already married';
+    else if (partner.stage !== 'introduced') q.disabled = 'Do the family introduction first';
+    else if (partner.aff < 75) q.disabled = partner.name + ' is not ready yet (' + partner.aff + '/75)';
+    else if (s.wwPlan && day(s) <= s.wwPlan.date) q.disabled = 'Your wedding is already booked';
+    else if (busyBlock(s)) q.disabled = busyBlock(s);
+    else if (!canAfford(s, deposit)) q.disabled = 'The 30% deposit is ' + naira(deposit);
+    return q;
+  }
+  function planWhiteWedding(s, plan) {
+    var q = wwQuote(s, plan);
+    if (q.disabled) return fail(q.disabled);
+    s.alerts = [];
+    if (!pay(s, q.deposit, 'White wedding deposit (30%)')) return fail('Not enough for the deposit.');
+    s.wwPlan = { plan: q.plan, total: q.total, paid: q.deposit, date: q.date, quality: q.quality, guests: q.guests };
+    advance(s, 120); applyFx(s, { stress: D.WHITE_WEDDING.planners[q.plan.planner].stress });
+    log(s, '💍 The white wedding is booked for ' + D.DAYS[q.date % 7] + ', week ' + (Math.floor(q.date / 7) + 1) + ' at ' + D.WHITE_WEDDING.venues[q.plan.venue].name + '. Deposit paid; the balance is due on the day.', 'good');
+    return finish(s, ok('Booked! Save the date: ' + D.DAYS[q.date % 7] + ', week ' + (Math.floor(q.date / 7) + 1) + '.'));
+  }
+  function wwDayBlock(s) {
+    var w = s.wwPlan; if (!w) return 'Plan the wedding first';
+    var V = D.WHITE_WEDDING.venues[w.plan.venue], left = w.total - w.paid;
+    if (s.partner && s.partner.stage === 'married') return 'Already married';
+    if (day(s) < w.date) return 'The wedding is in ' + (w.date - day(s)) + ' days';
+    if (day(s) > w.date) return 'The date has passed: the venue kept your deposit';
+    if (hour(s) < 9 || hour(s) >= 13) return 'The church service starts between 9am and 1pm';
+    if (s.loc !== V.district) return 'Go to ' + D.DISTRICTS[V.district].name + ' for the venue';
+    if (!canAfford(s, left)) return 'The balance of ' + naira(left) + ' is due today';
+    return busyBlock(s) || '';
+  }
+  function holdWhiteWedding(s) {
+    var why = wwDayBlock(s); if (why) return fail(why + '.');
+    s.alerts = [];
+    var w = s.wwPlan, W = D.WHITE_WEDDING, p = s.partner, left = w.total - w.paid;
+    pay(s, left, 'White wedding balance');
+    advance(s, 240); // the church service and the reception
+    var A = W.afterparty[w.plan.after];
+    if (w.plan.after !== 'none') advance(s, 180);
+    p.stage = 'married'; p.since = week(s); p.contact = day(s);
+    p.aff = Math.min(100, p.aff + 20 + Math.round(w.quality * 3));
+    applyFx(s, { social: 50 + w.quality * 5, fun: 40 + A.fun, stress: Math.max(0, 15 - w.quality * 3), energy: -30 });
+    // Guests spray and give gifts, but they never cover the cost.
+    var gifts = roundTo(Math.min(w.total * 0.25, w.guests * 2500 * (1 + w.quality / 4) * s.econ.infl), 1000);
+    if (gifts > 0) earn(s, gifts, 'Wedding gifts and spraying');
+    unlock(s, 'wedding'); unlock(s, 'white_wedding');
+    log(s, '💒 You married ' + p.name + ' in a white wedding at ' + W.venues[w.plan.venue].name + ': ' + W.themes[w.plan.theme].name.toLowerCase() + ' everywhere, the first dance, the cake and ' + (w.plan.after !== 'none' ? 'a ' + A.name.toLowerCase() + ' till late' : 'a send-off') + '. ' + p.name + ' now pays half the rent.', 'good');
+    s.wwPlan.done = true;
+    return finish(s, ok('Congratulations! You married ' + p.name + '.'));
+  }
+
   /* ---------- your home: furniture ----------
    * Items are owned, kept when you move, and only work while placed in your
    * current home. Power-hungry items only work while there is light. */
@@ -4318,7 +4389,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,

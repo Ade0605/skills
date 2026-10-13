@@ -892,3 +892,21 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .bn span { font-size: 20px; }
 .bn.on { color: var(--ink); background: var(--sunk); }
 @media (max-width: 899px) { body { padding-bottom: 72px; } .toasts { bottom: 80px; } }
+
+/* White wedding */
+.ww { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border-radius: 18px; background: var(--sunk); }
+.ww > summary { cursor: pointer; font: 800 16px var(--font-body); list-style: none; }
+.ww > summary::-webkit-details-marker { display: none; }
+.ww[open] > summary { margin-bottom: 4px; }
+.ww h3 { margin: 0; }
+.ww-row { display: grid; gap: 4px; margin: 6px 0; }
+.ww-row .pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ww-sw { width: 34px; height: 34px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+.ww-sw.on { border-color: var(--ink); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.ww-hall { width: 100%; height: auto; aspect-ratio: 640 / 300; border-radius: 14px; display: block; }
+.ww-bill { display: grid; gap: 3px; padding: 10px 12px; border-radius: 14px; background: var(--surface); font-size: 13px; }
+.ww-bill > div { display: flex; justify-content: space-between; gap: 10px; }
+.ww-tot { font-weight: 800; border-top: 1px solid var(--line); padding-top: 4px; }
+.ww-count { display: grid; gap: 2px; padding: 12px; border-radius: 14px; background: linear-gradient(135deg, #fff7e6, #fde7f0); color: #3a2a1a; }
+.ww-count b { font: 800 26px var(--font-body); }

@@ -1343,6 +1343,29 @@
     freestyle:{ name: 'Freestyle', text: 'No goal. Just survive Lagos.' }
   };
 
+  // A Lagos white wedding: plan it (book a Saturday at least four weeks out, pay 30%), then hold it on the day.
+  var WHITE_WEDDING = {
+    leadDays: 28, deposit: 0.3,
+    venues: {
+      yaba_hall: { name: 'Community hall, Yaba', district: 'yaba', cost: 1200000, guests: 200 },
+      ikeja_centre: { name: 'Events centre, Ikeja', district: 'ikeja', cost: 3500000, guests: 400 },
+      lekki_marquee: { name: 'Lagoon marquee, Lekki', district: 'lekki', cost: 8000000, guests: 500 },
+      vi_ballroom: { name: 'Hotel ballroom, Victoria Island', district: 'vi', cost: 18000000, guests: 800 },
+      eko_hall: { name: 'Grand hall, Eko Atlantic', district: 'vi', cost: 40000000, guests: 1500 }
+    },
+    planners: { none: { name: 'Plan it yourselves', cost: 0, q: 0, stress: 25 }, standard: { name: 'Wedding planner', cost: 800000, q: 1, stress: 8 }, premium: { name: 'Celebrity-grade planner', cost: 3000000, q: 2, stress: 0 } },
+    asoebi: { none: { name: 'No aso-ebi', cost: 0, q: 0 }, family: { name: 'Aso-ebi for both families', cost: 400000, q: 1 }, full: { name: 'Aso-ebi for family and friends', cost: 1500000, q: 2 } },
+    // Vendors are priced per guest: catering (jollof, small chops, cake), photo and video, DJ or band, MC, makeup and gele.
+    vendors: { basic: { name: 'Basic vendors', perGuest: 6000, q: 0 }, classic: { name: 'Classic vendors', perGuest: 12000, q: 1 }, luxury: { name: 'Luxury vendors', perGuest: 25000, q: 2 } },
+    themes: {
+      gold_white: { name: 'Gold and white', a: '#d4af37', b: '#ffffff' }, blush: { name: 'Blush and champagne', a: '#f4c2c2', b: '#f7e7ce' },
+      emerald: { name: 'Emerald and gold', a: '#1f6f4a', b: '#d4af37' }, royal: { name: 'Royal blue and silver', a: '#1f3a8a', b: '#c0c6cc' },
+      burgundy: { name: 'Burgundy and gold', a: '#7a1f2b', b: '#d4af37' }, lilac: { name: 'Lilac and silver', a: '#b49ad8', b: '#dfe3e8' }
+    },
+    decor: { simple: { name: 'Simple', cost: 600000, q: 0, text: 'Chair covers, table flowers and a ribbon entrance.' }, elegant: { name: 'Elegant', cost: 2500000, q: 1, text: 'Ceiling drapes with fairy lights, a flower-wall stage and tall centrepieces.' }, grand: { name: 'Grand', cost: 8000000, q: 2, text: 'Crystal chandeliers, a mirrored aisle, a floral arch entrance and a raised stage.' } },
+    extras: { arch: { name: 'Floral entrance arch', cost: 400000 }, sparks: { name: 'Cold sparks for the first dance', cost: 300000 }, booth: { name: 'Photo booth', cost: 250000 }, drone: { name: 'Drone video', cost: 350000 }, band: { name: 'Live highlife band', cost: 900000 }, fireworks: { name: 'Fireworks at the send-off', cost: 600000 } },
+    afterparty: { none: { name: 'No after-party', cost: 0, fun: 0 }, lounge: { name: 'Lounge after-party', cost: 1000000, fun: 15 }, beach: { name: 'Beach after-party', cost: 2500000, fun: 25 }, yacht: { name: 'Yacht after-party', cost: 6000000, fun: 35 } }
+  };
   // New-player setup: pick exactly two traits (a small head start), and a first home your origin can afford.
   var TRAITS = {
     streetwise: { name: 'Street-smart', icon: '🧠', text: 'You know which bus stop has wahala and which one has deals.', xp: { hustle: 12 } },
@@ -1374,7 +1397,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

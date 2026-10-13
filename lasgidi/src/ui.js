@@ -176,6 +176,7 @@
     });
     mountPlayground();
     mountVisit();
+    Array.prototype.forEach.call(document.querySelectorAll('canvas.ww-hall'), drawHall);
     drawHudAvatar();
     mountInterior();
     drawAvatar();
@@ -680,7 +681,7 @@
         html += '<div class="list">' + L.weddingOptions(S).map(function (w) {
           return '<div class="item"><div><h3>' + esc(w.name) + '</h3><div class="meta"><span class="cost num">' + N(w.cost) + '</span></div>' + (w.disabled ? '<div class="why">' + esc(w.disabled) + '</div>' : '') + '</div>' +
             '<button class="btn sm' + (w.disabled ? '' : ' go') + '" id="wed-' + w.id + '" data-wed="' + w.id + '"' + (w.disabled ? ' disabled' : '') + '>Marry</button></div>';
-        }).join('') + '</div>';
+        }).join('') + '</div>' + whiteWeddingView();
       }
     }
     if (S.kids.length) {
@@ -1369,6 +1370,55 @@
       (pl.id === 'airport' && !S.challenge ? japaView() : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : rideRow(pl.district));
+  }
+  /* ---------- white wedding planner: venue, planner, aso-ebi, vendors, theme, decor, extras, after-party ---------- */
+  function wwDraft() { return ui.ww || (ui.ww = { venue: 'ikeja_centre', planner: 'standard', asoebi: 'family', vendors: 'classic', theme: 'gold_white', decor: 'elegant', extras: ['arch'], after: 'lounge' }); }
+  function whiteWeddingView() {
+    var W = D.WHITE_WEDDING, b = S.wwPlan;
+    if (b && !b.done && Math.floor(S.t / 1440) <= b.date) {
+      var V = W.venues[b.plan.venue], why = L.wwDayBlock(S), days = b.date - Math.floor(S.t / 1440);
+      return '<div class="ww"><h3>💒 Your white wedding</h3><div class="ww-count"><b>' + (days > 0 ? days + ' day' + (days === 1 ? '' : 's') : 'Today') + '</b><span>' + D.DAYS[b.date % 7] + ', week ' + (Math.floor(b.date / 7) + 1) + ' · ' + esc(V.name) + ' · ' + b.guests + ' guests</span></div>' +
+        '<canvas class="ww-hall" id="ww-hall" width="640" height="300" data-wwplan="' + esc(JSON.stringify(b.plan)) + '" aria-label="Your decorated hall"></canvas>' +
+        '<p class="note">' + esc(W.themes[b.plan.theme].name) + ' · ' + esc(W.decor[b.plan.decor].text) + '</p><dl class="kv"><dt>Paid</dt><dd class="num">' + N(b.paid) + '</dd><dt>Balance on the day</dt><dd class="num">' + N(b.total - b.paid) + '</dd></dl>' +
+        '<div class="inline"><button class="btn go" id="ww-hold" data-wwhold="1"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>💍 Walk down the aisle</button>' + (S.loc !== V.district ? '<button class="btn ghost" id="ww-go" data-tripto="' + V.district + '" data-tab="map">Go to ' + esc(D.DISTRICTS[V.district].name) + '</button>' : '') + '</div>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '') + '</div>';
+    }
+    var d = wwDraft(), q = L.wwQuote(S, d);
+    var row = function (key, label, opts, fmt) {
+      return '<div class="ww-row"><span class="label">' + label + '</span><div class="pick">' + Object.keys(opts).map(function (k) { var on = d[key] === k; return '<button type="button" class="pg-chip' + (on ? ' sel' : '') + '" id="ww-' + key + '-' + k + '" data-wwset="' + key + ':' + k + '" aria-pressed="' + on + '">' + esc(opts[k].name) + (fmt ? ' · ' + fmt(opts[k]) : '') + '</button>'; }).join('') + '</div></div>';
+    };
+    var cost = function (o) { return o.cost ? N(L.price(S, o.cost)) : 'free'; };
+    return '<details class="ww"' + (ui.wwOpen ? ' open' : '') + '><summary id="ww-open" data-wwopen="1">💒 Plan a white wedding</summary>' +
+      '<p class="note">Church, then the reception and an after-party. Real planners take 6 to 12 months; in Lagos time you book a Saturday at least four weeks away, pay 30% now and the rest on the day.</p>' +
+      row('venue', 'Venue', W.venues, function (o) { return N(L.price(S, o.cost)) + ', ' + o.guests + ' guests'; }) + row('planner', 'Planner', W.planners, cost) + row('asoebi', 'Aso-ebi', W.asoebi, cost) +
+      row('vendors', 'Vendors (catering, photo, DJ, MC, makeup and gele)', W.vendors, function (o) { return N(L.price(S, o.perGuest)) + '/guest'; }) +
+      '<div class="ww-row"><span class="label">Colour theme</span><div class="pick">' + Object.keys(W.themes).map(function (k) { var T = W.themes[k], on = d.theme === k; return '<button type="button" class="ww-sw' + (on ? ' on' : '') + '" id="ww-theme-' + k + '" data-wwset="theme:' + k + '" aria-pressed="' + on + '" title="' + esc(T.name) + '" style="background:linear-gradient(135deg,' + T.a + ' 50%,' + T.b + ' 50%)"><span class="sr">' + esc(T.name) + '</span></button>'; }).join('') + '<span class="muted">' + esc(W.themes[d.theme].name) + '</span></div></div>' +
+      row('decor', 'Hall decoration', W.decor, cost) + '<p class="note">' + esc(W.decor[d.decor].text) + '</p>' +
+      '<div class="ww-row"><span class="label">Extras</span><div class="pick">' + Object.keys(W.extras).map(function (k) { var on = d.extras.indexOf(k) >= 0; return '<button type="button" class="pg-chip' + (on ? ' sel' : '') + '" id="ww-x-' + k + '" data-wwextra="' + k + '" aria-pressed="' + on + '">' + esc(W.extras[k].name) + ' · ' + N(L.price(S, W.extras[k].cost)) + '</button>'; }).join('') + '</div></div>' +
+      row('after', 'After-party', W.afterparty, cost) +
+      '<canvas class="ww-hall" id="ww-hall" width="640" height="300" data-wwplan="' + esc(JSON.stringify(d)) + '" aria-label="Preview of your decorated hall"></canvas>' +
+      (q.lines ? '<div class="ww-bill">' + q.lines.map(function (l) { return '<div><span>' + esc(l[0]) + '</span><span class="num">' + N(l[1]) + '</span></div>'; }).join('') + '<div class="ww-tot"><span>Total</span><span class="num">' + N(q.total) + '</span></div><div><span>Deposit now (30%)</span><span class="num">' + N(q.deposit) + '</span></div></div>' : '') +
+      (q.disabled ? '<p class="why">' + esc(q.disabled) + '.</p>' : '') +
+      '<button class="btn go" id="ww-book" data-wwbook="1"' + (q.disabled ? ' disabled' : '') + '>Book ' + (q.date != null ? D.DAYS[q.date % 7] + ', week ' + (Math.floor(q.date / 7) + 1) : 'the date') + ' · ' + N(q.deposit || 0) + '</button></details>';
+  }
+  // The hall, drawn from the plan: theme colours, drapes and lights, chandeliers, the stage, tables, the arch and sparks.
+  function drawHall(cv) {
+    var W = D.WHITE_WEDDING, p; try { p = JSON.parse(cv.getAttribute('data-wwplan')); } catch (e) { return; }
+    var T = W.themes[p.theme] || W.themes.gold_white, g = cv.getContext('2d'), w = cv.width, h = cv.height, lvl = { simple: 0, elegant: 1, grand: 2 }[p.decor] || 0;
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#2a2233'); bg.addColorStop(1, '#4a3b4f'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#d9cbb8'; g.fillRect(0, h * 0.72, w, h * 0.28); // floor
+    if (lvl >= 1) { for (var i = 0; i < 9; i++) { g.beginPath(); g.moveTo(i * w / 8, 0); g.quadraticCurveTo(i * w / 8 + w / 16, 60, (i + 1) * w / 8, 0); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 14; g.stroke(); }
+      for (var f = 0; f < 70; f++) { var fx = (f * 97) % w, fy = 8 + (f * 37) % 70; g.fillStyle = 'rgba(255,236,170,' + (0.5 + (f % 3) * 0.15) + ')'; g.beginPath(); g.arc(fx, fy, 1.6, 0, Math.PI * 2); g.fill(); } }
+    if (lvl >= 2) [w * 0.25, w * 0.5, w * 0.75].forEach(function (cx) { g.strokeStyle = '#c9b88a'; g.lineWidth = 1; g.beginPath(); g.moveTo(cx, 0); g.lineTo(cx, 40); g.stroke(); for (var k = 0; k < 7; k++) { g.fillStyle = 'rgba(230,240,255,.9)'; g.beginPath(); g.arc(cx - 18 + k * 6, 46 + Math.abs(3 - k) * -2, 3, 0, Math.PI * 2); g.fill(); } g.fillStyle = 'rgba(255,240,200,.18)'; g.beginPath(); g.arc(cx, 48, 30, 0, Math.PI * 2); g.fill(); });
+    // Stage and flower-wall backdrop in the theme colours.
+    g.fillStyle = '#efe6d8'; g.fillRect(w * 0.3, h * 0.62, w * 0.4, h * 0.1);
+    for (var r = 0; r < 6; r++) for (var c = 0; c < 18; c++) { g.fillStyle = (r + c) % 3 ? T.a : T.b; g.beginPath(); g.arc(w * 0.31 + c * (w * 0.38 / 17), h * 0.28 + r * 14, lvl ? 7 : 5, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#ffffff'; g.fillRect(w * 0.46, h * 0.5, w * 0.08, h * 0.12); g.fillStyle = T.a; g.fillRect(w * 0.46, h * 0.5, w * 0.08, 6); // couple's chairs
+    // Round tables with centrepieces.
+    for (var tb = 0; tb < 6; tb++) { var tx = w * (0.08 + tb * 0.168), ty = h * 0.86; g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(tx, ty, 34, 10, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = T.a; g.beginPath(); g.ellipse(tx, ty + 3, 34, 6, 0, 0, Math.PI); g.fill();
+      var cp = lvl ? 26 : 12; g.strokeStyle = T.b; g.lineWidth = 2; g.beginPath(); g.moveTo(tx, ty - 4); g.lineTo(tx, ty - cp); g.stroke(); g.fillStyle = T.a; g.beginPath(); g.arc(tx, ty - cp - 5, lvl ? 9 : 6, 0, Math.PI * 2); g.fill(); }
+    if (p.extras && p.extras.indexOf('arch') >= 0) { g.lineWidth = 12; g.strokeStyle = T.b; g.beginPath(); g.arc(w * 0.06, h * 0.72, 46, Math.PI, 0); g.stroke(); for (var a = 0; a < 12; a++) { var an = Math.PI + a * Math.PI / 11; g.fillStyle = a % 2 ? T.a : '#ffffff'; g.beginPath(); g.arc(w * 0.06 + Math.cos(an) * 46, h * 0.72 + Math.sin(an) * 46, 6, 0, Math.PI * 2); g.fill(); } }
+    if (p.extras && p.extras.indexOf('sparks') >= 0) [w * 0.36, w * 0.64].forEach(function (sx) { for (var k = 0; k < 18; k++) { g.strokeStyle = 'rgba(255,230,150,' + (0.4 + (k % 3) * 0.2) + ')'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(sx, h * 0.62); g.lineTo(sx + Math.sin(k) * 14, h * 0.62 - 18 - (k % 5) * 9); g.stroke(); } });
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '700 14px system-ui, sans-serif'; g.textAlign = 'left'; g.fillText(T.name + ' · ' + (W.decor[p.decor] ? W.decor[p.decor].name : ''), 12, h - 10);
   }
   /* ---------- Lekki Hyde Park: five zones, buy ready-built or build your own ---------- */
   function hydeParkView() {
@@ -2909,9 +2959,14 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
+    if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
+    if (ds.wwset) { var ws = ds.wwset.split(':'); wwDraft()[ws[0]] = ws[1]; ui.wwOpen = true; render(); return; }
+    if (ds.wwextra) { var wx = wwDraft().extras, wi = wx.indexOf(ds.wwextra); if (wi >= 0) wx.splice(wi, 1); else wx.push(ds.wwextra); ui.wwOpen = true; render(); return; }
+    if (ds.wwbook) { run(function () { return L.planWhiteWedding(S, wwDraft()); }); return; }
+    if (ds.wwhold) { run(function () { var r = L.holdWhiteWedding(S); if (r.ok) openParty('wedding', S.wwPlan && S.wwPlan.plan.planner !== 'none'); return r; }); return; }
     if (ds.onb) {
       var o0 = onb(); introState();
       if (ds.onb === 'next' && onbValid(o0, o0.step)) o0.step = Math.min(ONB_STEPS.length - 1, o0.step + 1);

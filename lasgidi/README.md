@@ -291,6 +291,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 
 - **Profile photos:** add a photo of yourself on the Me tab so other players can recognise you on the map, in their district and in the Hall of Fame. An editor approves each photo before anyone else sees it, and you can hide yours at any time.
 - **Prime homes:** buy a home in Lagos's top addresses: a detached duplex in Nicon Town (Lekki Phase 1) for ₦250m, a luxury apartment in Victoria Island for ₦400m, a penthouse in Eko Atlantic for ₦900m, a mansion in Parkview, Ikoyi for ₦1.5bn, or a waterfront mansion on Banana Island for ₦4bn. You can live in it or let it out, and either way you pay a weekly estate service charge. Each one adds status, and Banana Island unlocks an achievement.
+- **White wedding:** plan it from Love and family once the families have met.
+  - **Choices:** a venue (a Yaba community hall up to the Eko Atlantic grand hall, 200 to 1,500 guests), a planner, aso-ebi, vendors priced per guest (catering, photo and video, DJ, MC, makeup and gele), a colour theme, hall decoration (simple, elegant or grand), extras (floral arch, cold sparks, photo booth, drone, live band, fireworks) and an after-party (lounge, beach or yacht).
+  - **Preview:** a live drawing shows the hall in your colours, with drapes and fairy lights, chandeliers, the flower-wall stage, tables and centrepieces, the arch and the sparks.
+  - **Booking:** pay 30% to book a Saturday at least four weeks out. On the day, between 9am and 1pm at the venue, pay the balance and walk down the aisle for the church service, the reception and the after-party.
+  - **Money:** guests' gifts and spraying help, but never cover the cost. Miss the date and the venue keeps your deposit. New recorded calls `ww` and `wh`.
 - **Phone and bottom bar:** the Phone tab is a phone in a frame, with a status bar (time, 4G or E when the light is off, battery from your energy), a lock-screen clock and date, a scrolling news ticker from your story, and a wallpaper that turns to night after 7pm. New apps:
   - **Home:** your interior and needs;
   - **Careers:** jobs and work;
