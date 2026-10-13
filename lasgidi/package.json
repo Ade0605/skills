@@ -8,5 +8,8 @@
     "build": "node tools/build-single.js",
     "serve": "python3 -m http.server 8080"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "terser": "^5.51.2"
+  }
 }

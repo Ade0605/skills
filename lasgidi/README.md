@@ -14,7 +14,9 @@ python3 -m http.server 8080      # or: npm run serve
 # open http://localhost:8080
 ```
 
-There is no build step. It is plain HTML, CSS and JavaScript at about 120 KB. Served over HTTPS (or from localhost), it installs as a PWA and works offline.
+There is no build step to play. It is plain HTML, CSS and JavaScript, about 1.3 MB as source (around 450 KB gzipped), including 48 small icon images. Served over HTTPS (or from localhost), it installs as a PWA, caches everything on first load and then works offline.
+
+`npm run build` writes the single-file version to `dist/lasgidi.html` (the one published as a claude.ai artifact). After `npm install` it is minified with terser: about 980 KB, or 384 KB gzipped. Without terser it still builds, just unminified. Only local variable names are shortened; globals and property names stay as written.
 
 To get a single self-contained file:
 
@@ -32,7 +34,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 
 ## How it plays
 
-- **The playground:** an isometric Lagos drawn live on a canvas, with no images and no 3D library. It shows the mainland, the Lagoon, the Island strip to Ajah, the harbour and the Atlantic.
+- **The playground:** an isometric Lagos drawn live on a canvas, with no 3D library. It shows the mainland, the Lagoon, the Island strip to Ajah, the harbour and the Atlantic.
   - **District character:** VI towers, dense low Mushin, Oshodi market roofs, Lekki estates, the Ikeja airstrip and the National Stadium.
   - **Day and night:** night falls with the game clock, and at night **windows light up only where there is power**. Your home follows your actual NEPA state; elsewhere, the grid, generators and darkness vary by district.
   - **Traffic:** danfos crawl at rush hour and ferries cross the Lagoon. Floods tint the Island. Other players appear as bubbles.
