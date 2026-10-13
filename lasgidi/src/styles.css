@@ -684,3 +684,22 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .act-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
 .act-grid .btn { white-space: normal; text-align: left; }
 .gov-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+
+/* Place sheet: grab handle, 3D icon title, action chips, transport picker */
+.sheet-grab { width: 44px; height: 5px; border-radius: 99px; background: var(--line); margin: 0 auto 4px; }
+.pl-title { display: flex; align-items: center; gap: 10px; }
+.pl-title small { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+.pl-ic3d .ic3d { width: 40px; height: 40px; }
+.ic3d { width: 28px; height: 28px; object-fit: contain; vertical-align: middle; filter: drop-shadow(0 2px 2px rgb(0 0 0 / .25)); }
+.mode b .ic3d { width: 24px; height: 24px; margin-right: 4px; }
+.link-btn { border: 0; background: none; color: var(--sky, #2f80ed); font: 700 13px var(--font-body); padding: 0; text-align: left; cursor: pointer; }
+.act-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.act-chip { font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--sunk); }
+.rides { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(76px, 1fr); gap: 8px; overflow-x: auto; padding: 2px; }
+.ride { display: grid; justify-items: center; gap: 2px; padding: 10px 6px; border-radius: 16px; border: 2px solid transparent; background: var(--sunk); color: var(--ink); cursor: pointer; font: 600 12px var(--font-body); }
+.ride b { font-size: 13px; }
+.ride .ic3d { width: 36px; height: 36px; }
+.ride-e { font-size: 26px; }
+.ride.sel { border-color: var(--sky, #2f80ed); background: color-mix(in srgb, var(--sky, #2f80ed) 12%, var(--surface)); }
+.ride:disabled { opacity: .45; cursor: not-allowed; }
+.big-go { width: 100%; min-height: 52px; font-size: 17px; background: linear-gradient(180deg, #2fd27a, #16a35a) !important; color: #fff !important; border-color: transparent !important; }

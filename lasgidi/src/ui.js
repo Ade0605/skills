@@ -1305,15 +1305,35 @@
       if (def.when) meta.push(esc(whenText(def.when)));
       return '<div class="item"><div><h3>' + esc(def.label) + '</h3><div class="meta">' + meta.map(function (m) { return '<span>' + m + '</span>'; }).join('') + '</div></div></div>';
     }).join('');
-    return pic('place:' + pl.id, pl.name, '', 'pl-pic') + '<div class="inline" style="justify-content:space-between"><h3><span class="pl-ic" style="border-color:' + t.color + '">' + (pl.icon || '•') + '</span> ' + esc(pl.name) + '</h3><button class="btn sm ghost" id="close-place" data-closeplace="1">Close</button></div>' +
-      '<p class="note"><span class="pl-type" style="color:' + t.color + '">' + esc(t.name) + '</span> · ' + esc(D.DISTRICTS[pl.district].name) + '</p><p>' + esc(pl.text) + '</p>' +
+    var chips = pl.acts.map(function (aid) { var def = (D.PLACE_ACTIONS[pl.district] || []).filter(function (x) { return x.id === aid; })[0]; return def ? '<span class="act-chip">' + actIcon(def) + ' ' + esc(def.label) + '</span>' : ''; }).join('');
+    return '<div class="sheet-grab" aria-hidden="true"></div>' + pic('place:' + pl.id, pl.name, '', 'pl-pic') + '<div class="inline" style="justify-content:space-between"><h3 class="pl-title">' + (icon3d(pl.glyph) ? '<span class="pl-ic3d">' + icon3d(pl.glyph, pl.name) + '</span>' : '<span class="pl-ic" style="border-color:' + t.color + '">' + (pl.icon || '•') + '</span>') + '<span>' + esc(pl.name) + '<small>' + esc(D.DISTRICTS[pl.district].name) + '</small></span></h3><button class="btn sm ghost" id="close-place" data-closeplace="1">Close</button></div>' +
+      '<p class="note"><span class="pl-type" style="color:' + t.color + '">' + esc(t.name) + '</span></p><p>' + esc(pl.text) + '</p>' +
+      '<button type="button" class="link-btn" id="share-' + pl.id + '" data-shareplace="' + pl.id + '">🔗 Share a link to ' + esc(pl.name) + '</button>' +
+      (chips ? '<div class="act-chips">' + chips + '</div>' : '') +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
       (pl.glyph === 'plane' ? '<div class="inline"><button class="btn" id="checkin-' + pl.id + '" data-app="travel" data-tab="phone">🛫 Check in: flights</button></div>' : '') +
       (pl.id === 'airport' && !S.challenge ? japaView() : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
-      (here || pl.dealer ? '' : '<div class="inline"><button class="btn go" id="trip-' + pl.district + '" data-tripto="' + pl.district + '">Plan a trip to ' + esc(D.DISTRICTS[pl.district].name) + '</button></div>');
+      (here || pl.dealer ? '' : rideRow(pl.district));
   }
+  // The transport picker on a place sheet: one chip per way to get there, then a big Go button.
+  var MODE_ICONS = { danfo: 'bus', brt: 't_brt', cab: 't_taxi', keke: 't_keke', okada: 't_okada', car: 'car', ferry: 'boat', boat: 't_speedboat', heli: 't_heli', trek: 't_walk', rail: 't_train' };
+  var MODE_EMOJI = { danfo: '🚐', brt: '🚍', cab: '🚕', keke: '🛺', okada: '🏍️', car: '🚗', ferry: '⛴️', boat: '🚤', heli: '🚁', trek: '🚶', rail: '🚆' };
+  function rideRow(dest) {
+    var opts = L.travelOptions(S, dest).filter(function (o) { return !(o.mode === 'car' && !S.car); });
+    if (!opts.length) return '';
+    var ok = opts.filter(function (o) { return !o.disabled; });
+    var sel = opts.filter(function (o) { return o.mode === ui.rideMode && !o.disabled; })[0] || ok.slice().sort(function (a, b) { return a.cost - b.cost || a.mins - b.mins; }).filter(function (o) { return o.mode !== 'trek' || ok.length === 1; })[0] || ok[0];
+    var rush = opts.some(function (o) { return o.traffic > 1.3; });
+    return '<div class="rides" role="radiogroup" aria-label="How to get there">' + opts.map(function (o) {
+      var on = sel && o.mode === sel.mode;
+      return '<button type="button" class="ride' + (on ? ' sel' : '') + '" role="radio" aria-checked="' + on + '" id="ride-' + o.mode + '" data-ridemode="' + o.mode + '"' + (o.disabled ? ' disabled title="' + esc(o.disabled) + '"' : '') + '>' +
+        (icon3d(MODE_ICONS[o.mode]) || '<span class="ride-e">' + (MODE_EMOJI[o.mode] || '🚌') + '</span>') + '<b>' + esc(o.name) + '</b><span class="num">' + (o.cost ? N(o.cost) : 'Free') + '</span></button>';
+    }).join('') + '</div>' + (rush ? '<p class="why">🚦 Go-slow: the roads are slow right now.</p>' : '') + (sel && sel.risk ? '<p class="why">' + esc(sel.risk) + '</p>' : '') +
+      (sel ? '<button class="btn go big-go" id="ride-go" data-travel="' + dest + '" data-mode="' + sel.mode + '">Go · ' + (sel.cost ? N(sel.cost) : 'free') + ' · ' + dur(sel.mins) + '</button>' : '<p class="why">No way to get there right now.</p>');
+  }
+  function icon3d(key, alt) { var src = key && window.LASGIDI_ICONS && window.LASGIDI_ICONS[key]; return src ? '<img class="ic3d" src="' + src + '" alt="' + esc(alt || '') + '" width="32" height="32">' : ''; }
   // Landmarks near the straight line between two districts, for the "now passing" note.
   function passing(from, to) {
     var a = D.DISTRICTS[from], b = D.DISTRICTS[to];
@@ -1529,7 +1549,7 @@
     var km = opts.length ? opts[0].km : 0;
     var rows = opts.filter(function (o) { return !(o.mode === 'car' && !S.car); }).map(function (o) {
       var meta = dur(o.mins) + ' · ' + (o.cost ? N(o.cost) : 'free') + (o.energy ? ' · −' + o.energy + ' energy' : '') + (o.traffic > 1.3 ? ' · go-slow ×' + o.traffic : '') + (o.wet && !L.outfitTags(S).rain ? ' · you will get wet' : '');
-      return '<div class="mode' + (o.disabled ? ' dis' : '') + '"><b>' + esc(o.name) + '</b><div class="meta">' + (o.disabled ? esc(o.disabled) : meta) +
+      return '<div class="mode' + (o.disabled ? ' dis' : '') + '"><b>' + (icon3d(MODE_ICONS[o.mode]) || '') + esc(o.name) + '</b><div class="meta">' + (o.disabled ? esc(o.disabled) : meta) +
         (o.risk && !o.disabled ? '<em>' + esc(o.risk) + '</em>' : '') + '</div>' +
         '<button class="btn sm go" id="go-' + o.mode + '" data-travel="' + dest + '" data-mode="' + o.mode + '"' + (o.disabled ? ' disabled' : '') + '>Go</button></div>';
     }).join('');
@@ -2629,7 +2649,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2919,6 +2939,8 @@
       postFame(L.fameEntry(S)).then(function (msg) { online.status = msg || ''; render(); });
       return;
     }
+    if (ds.ridemode) { ui.rideMode = ds.ridemode; render(); return; }
+    if (ds.shareplace) { var spl = D.PLACES.filter(function (p) { return p.id === ds.shareplace; })[0], stx = 'Meet me at ' + spl.name + ', ' + D.DISTRICTS[spl.district].name + ' in Lasgidi.'; try { navigator.clipboard.writeText(stx).then(function () { t.textContent = '✅ Copied'; }, function () { t.textContent = stx; }); } catch (e) { t.textContent = stx; } return; }
     if (ds.govtab) { ui.govTab = ds.govtab; online.govStatus = ''; render(); return; }
     if (ds.govmotto != null) { ui.govMotto = +ds.govmotto; render(); return; }
     if (ds.govplank) { var pl0 = (ui.govPlanks || (govState(townWeek()).n.candidates.filter(function (c) { return c.id === online.me; })[0] || { planks: [] }).planks).slice(), pi0 = pl0.indexOf(ds.govplank); if (pi0 >= 0) pl0.splice(pi0, 1); else if (pl0.length < 3) pl0.push(ds.govplank); ui.govPlanks = pl0; render(); return; }
