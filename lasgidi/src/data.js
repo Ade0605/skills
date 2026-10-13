@@ -965,7 +965,21 @@
     { id: 'stadium_rd', traffic: 1.0, name: 'National Stadium, Surulere', district: 'surulere', x: 10.4, y: 17.0 },
     { id: 'sabo', traffic: 1.1, name: 'Sabo, Yaba', district: 'yaba', x: 14.6, y: 14.2 },
     { id: 'airport_rd', traffic: 1.2, name: 'Airport Road, Ikeja', district: 'ikeja', x: 9.0, y: 6.0 },
-    { id: 'idi_araba', traffic: 0.9, name: 'Idi-Araba, Mushin', district: 'mushin', x: 11.8, y: 12.2 }
+    { id: 'idi_araba', traffic: 0.9, name: 'Idi-Araba, Mushin', district: 'mushin', x: 11.8, y: 12.2 },
+    { id: 'kudirat_1', traffic: 1.4, name: 'Kudirat Abiola Way, Ikeja Along', district: 'ikeja', x: 10.7, y: 6.0 },
+    { id: 'kudirat_2', traffic: 1.5, name: 'Kudirat Abiola Way, Alausa Secretariat', district: 'ikeja', x: 11.1, y: 5.43 },
+    { id: 'kudirat_3', traffic: 1.3, name: 'Kudirat Abiola Way, NNPC junction', district: 'ikeja', x: 11.5, y: 4.87 },
+    { id: 'kudirat_4', traffic: 1.4, name: 'Kudirat Abiola Way, Oregun', district: 'ikeja', x: 11.9, y: 4.3 },
+    { id: 'kudirat_5', traffic: 1.2, name: 'Kudirat Abiola Way, Olusosun', district: 'ikeja', x: 12.3, y: 3.73 },
+    { id: 'kudirat_6', traffic: 1.3, name: 'Kudirat Abiola Way, Ojota link', district: 'ikeja', x: 12.7, y: 3.17 },
+    { id: 'kudirat_7', traffic: 1.5, name: 'Kudirat Abiola Way, Ikeja City Mall end', district: 'ikeja', x: 13.1, y: 2.6 },
+    { id: 'airport_1', traffic: 1.8, name: 'Murtala Muhammed Airport, arrivals', district: 'ikeja', x: 4.2, y: -0.3 },
+    { id: 'airport_2', traffic: 1.8, name: 'Murtala Muhammed Airport, departures', district: 'ikeja', x: 6.0, y: -0.4 },
+    { id: 'airport_3', traffic: 1.6, name: 'Airport terminal car park', district: 'ikeja', x: 8.0, y: -0.5 },
+    { id: 'airport_4', traffic: 1.6, name: 'Airport Road roundabout', district: 'ikeja', x: 9.4, y: 1.7 },
+    { id: 'lekki_epe_1', traffic: 1.4, name: 'Lekki–Epe Expressway, Jakande', district: 'lekki', x: 30.6, y: 24.2 },
+    { id: 'lekki_epe_2', traffic: 1.2, name: 'Lekki–Epe Expressway, Sangotedo', district: 'ajah', x: 35.2, y: 24.7 },
+    { id: 'lekki_epe_3', traffic: 1.1, name: 'Lekki–Epe Expressway, Abraham Adesanya', district: 'ajah', x: 39.5, y: 25.2 }
   ];
   // How long an ad runs and the price multiple (longer runs are cheaper per day).
   var AD_PLANS = {

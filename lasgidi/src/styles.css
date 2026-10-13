@@ -86,7 +86,7 @@ h1, h2, h3 { margin: 0; text-wrap: balance; }
 .bar i.low { background: var(--debit); }
 
 /* ---------- board ---------- */
-.board { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--gap); align-items: start; }
+.board { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--gap); align-items: start; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
 .panel-h { padding: 14px 16px 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .panel-h h2 { font-size: 18px; }

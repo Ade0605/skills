@@ -227,8 +227,8 @@
       LAND_BOX.minY = Math.min(LAND_BOX.minY, p.y); LAND_BOX.maxY = Math.max(LAND_BOX.maxY, p.y);
     });
   });
-  // Lagos: fit the Sea Plots grid in the frame too.
-  if (city === 'lagos' && D.SEA) {
+  // The Sea Plots grid is not part of the fit: the frame fits the land, so the city fills the map.
+  if (false && city === 'lagos' && D.SEA) {
     var S0 = D.SEA, sx1 = S0.x0 + S0.cols * S0.gap, sy1 = S0.y0 + S0.rows * S0.gap;
     [[S0.x0, S0.y0], [sx1, S0.y0], [S0.x0, sy1], [sx1, sy1]].forEach(function (c) {
       var p = iso(c[0], c[1]);
@@ -285,6 +285,17 @@
     })();
     var scene = null, theme = null, staticLayer = null, staticKey = '';
     var W = 0, H = 0, dpr = 1, cam = { z: 1, px: 0, py: 0 }, base = { s: 1, ox: 0, oy: 0 };
+    var opened = false, OPEN_ZOOM = 1.8;
+    // 3D icon pictures (src/icons.js), drawn inside the pins when they have loaded.
+    var ICON_IMG = {};
+    function iconImg(key) {
+      var src = key && root.LASGIDI_ICONS && root.LASGIDI_ICONS[key];
+      if (!src) return null;
+      var im = ICON_IMG[key];
+      if (!im) { im = ICON_IMG[key] = new Image(); im.onload = function () { staticKey = ''; kick(); }; im.src = src; }
+      return im.complete && im.naturalWidth ? im : null;
+    }
+    var MODE_ICON = { danfo: 'bus', brt: 't_brt', cab: 't_taxi', keke: 't_keke', okada: 't_okada', car: 'car', ferry: 'boat', boat: 't_speedboat', heli: 't_heli', trek: 't_walk', rail: 't_train', plane: 'plane' };
     var lite = !!(root.document && document.documentElement.classList.contains('lite'));
     var reduce = (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches) || lite;
     var raf = 0, last = 0, clock = 0;
@@ -321,7 +332,7 @@
     function resize() {
       var r = wrap.getBoundingClientRect();
       var full = wrap.classList.contains('pg-full');
-      var w = Math.max(240, Math.round(r.width)), h = full ? Math.max(200, Math.round(r.height)) : Math.max(200, Math.round(w * (w < 600 ? 0.82 : 0.66)));
+      var w = Math.max(240, Math.round(r.width)), h = full ? Math.max(200, Math.round(r.height)) : Math.max(200, Math.round(w * (w < 600 ? 1.15 : 0.85)));
       dpr = Math.min(w < 600 ? 1.5 : 2, root.devicePixelRatio || 1); // cheap phones: fewer pixels to fill
       if (w === W && h === H && canvas.width === Math.round(w * dpr)) return false;
       W = w; H = h;
@@ -897,7 +908,7 @@
         var mine = e.id === scene.homeId, sel = e.id === scene.homeSel;
         if (!(mine || sel || scene.showHomes || cam.z >= 1.6)) return;
         var p = toScreen(e.x, e.y, 0), icon = HOME_ICON[e.type] || '🏠';
-        var cy = pin3d(ctx, p.x, p.y, mine ? er + 2 : er, mine ? theme.danfo : '#6b7280', icon, { sel: sel, lift: (MODELS[e.type].h[1] + 6) * s, bob: mine && !reduce, glyph: 'dome', bead: mine ? '#fff3c4' : null });
+        var cy = pin3d(ctx, p.x, p.y, mine ? er + 2 : er, mine ? theme.danfo : '#6b7280', icon, { sel: sel, lift: (MODELS[e.type].h[1] + 6) * s, bob: mine && !reduce, glyph: 'dome', bead: mine ? '#fff3c4' : null, img: 'h_' + (e.type === 'flat2' || e.type === 'flat3' ? 'flat' : e.type) });
         var n = scene.residents && scene.residents[e.id];
         if (n) {
           ctx.beginPath(); ctx.arc(p.x + er, cy - er * 0.6, 7, 0, Math.PI * 2); ctx.fillStyle = theme.lagoon; ctx.fill();
@@ -958,9 +969,27 @@
       // Key places: a coloured badge per category with a small vector glyph.
       placeHits = [];
       var pr = Math.max(7.5, Math.min(13, 7.2 * Math.sqrt(cam.z) * Math.min(1.3, Math.max(0.85, base.s))));
-      (scene.places || []).forEach(function (pl) {
-        var p = toScreen(pl.x, pl.y, 0), sel = pl.id === scene.place;
-        var cy = pin3d(ctx, p.x, p.y, pr, D.PLACE_TYPES[pl.type].color, pl.icon, { sel: sel, bob: sel && !reduce, glyph: pl.glyph });
+      // Space pins out: nudge overlapping ones apart on screen, with a thin line back to the real spot.
+      var spots = (scene.places || []).map(function (pl) { var g0 = toScreen(pl.x, pl.y, 0); return { pl: pl, gx: g0.x, gy: g0.y, x: g0.x, y: g0.y }; });
+      var minD = pr * 2.5, maxOff = pr * 4;
+      for (var it = 0; it < 14; it++) {
+        for (var i1 = 0; i1 < spots.length; i1++) for (var j1 = i1 + 1; j1 < spots.length; j1++) {
+          var A1 = spots[i1], B1 = spots[j1], dx = B1.x - A1.x, dy = B1.y - A1.y, dd = Math.sqrt(dx * dx + dy * dy);
+          if (dd >= minD) continue;
+          if (dd < 0.01) { dx = (i1 % 2 ? 1 : -1); dy = 0.3; dd = 1; }
+          var push = (minD - dd) / 2, ux = dx / dd, uy = dy / dd;
+          A1.x -= ux * push; A1.y -= uy * push; B1.x += ux * push; B1.y += uy * push;
+        }
+        spots.forEach(function (q) { var ox = q.x - q.gx, oy = q.y - q.gy, od = Math.sqrt(ox * ox + oy * oy); if (od > maxOff) { q.x = q.gx + ox / od * maxOff; q.y = q.gy + oy / od * maxOff; } });
+      }
+      spots.forEach(function (q) {
+        var pl = q.pl, p = { x: q.x, y: q.y }, sel = pl.id === scene.place;
+        if (Math.abs(q.x - q.gx) + Math.abs(q.y - q.gy) > 2) {
+          ctx.strokeStyle = theme.dark ? 'rgba(255,255,255,.45)' : 'rgba(23,24,26,.45)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(q.gx, q.gy); ctx.lineTo(q.x, q.y); ctx.stroke();
+          ctx.beginPath(); ctx.arc(q.gx, q.gy, 1.8, 0, Math.PI * 2); ctx.fillStyle = D.PLACE_TYPES[pl.type].color; ctx.fill();
+        }
+        var cy = pin3d(ctx, p.x, p.y, pr, D.PLACE_TYPES[pl.type].color, pl.icon, { sel: sel, bob: sel && !reduce, glyph: pl.glyph, img: pl.glyph });
         placeHits.push({ id: pl.id, x: p.x, y: cy });
         if (sel || cam.z >= 1.9) labels.push({ place: pl, top: { x: p.x, y: cy + 4 }, pri: sel ? 1 : 4, sel: sel });
       });
@@ -1037,7 +1066,9 @@
         var e = tp < 0.5 ? 2 * tp * tp : 1 - Math.pow(-2 * tp + 2, 2) / 2, A = D.DISTRICTS[tr.from], B = D.DISTRICTS[tr.to];
         var q = toScreen(A.x + (B.x - A.x) * e, A.y + (B.y - A.y) * e, 0), icon = { danfo: '🚌', brt: '🚍', cab: '🚕', keke: '🛺', okada: '🏍️', car: '🚗', ferry: '⛴️', boat: '🚤', heli: '🚁', trek: '🚶', rail: '🚆' }[tr.mode] || '🚌';
         ctx.beginPath(); ctx.arc(q.x, q.y - 14, 13, 0, Math.PI * 2); ctx.fillStyle = theme.danfo; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = theme.danfoInk; ctx.stroke();
-        ctx.font = '15px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(icon, q.x, q.y - 13.5);
+        var tpic = iconImg(MODE_ICON[tr.mode]);
+        if (tpic) ctx.drawImage(tpic, q.x - 15, q.y - 29, 30, 30);
+        else { ctx.font = '15px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(icon, q.x, q.y - 13.5); }
         var label = 'On the way to ' + D.DISTRICTS[tr.to].name + '…';
         ctx.font = '700 12px Atkinson Hyperlegible, sans-serif'; var lw = ctx.measureText(label).width + 18;
         ctx.fillStyle = theme.dark ? 'rgba(27,28,30,.92)' : 'rgba(255,255,255,.95)'; roundRect(ctx, W / 2 - lw / 2, H - 44, lw, 24, 12); ctx.fill();
@@ -1211,7 +1242,10 @@
       var bg = g.createRadialGradient(x - br * 0.3, cy - br * 0.35, br * 0.1, x, cy, br);
       bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, o.bead || '#e9ecef');
       g.beginPath(); g.arc(x, cy, br, 0, Math.PI * 2); g.fillStyle = bg; g.fill();
-      if (icon && emojiOk) {
+      var pic = iconImg(o.img);
+      if (pic) {
+        var ps = br * 2.25; g.drawImage(pic, x - ps / 2, cy - ps / 2 - br * 0.05, ps, ps);
+      } else if (icon && emojiOk) {
         g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 2; g.shadowOffsetY = 1;
         g.font = Math.round(br * 1.35) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
         g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#000'; g.fillText(icon, x, cy + br * 0.1); g.restore();
@@ -1376,6 +1410,8 @@
         canvas.setAttribute('aria-label', 'Isometric map of Lagos. You are in ' + D.DISTRICTS[next.loc].name + ', ' + next.clock + '. Use the district buttons below to plan a trip.');
         hud.innerHTML = hudHtml();
         resize();
+        // Open zoomed in on where you are, so the land fills the map; zoom out for the whole city.
+        if (!opened && W && D.DISTRICTS[next.loc]) { opened = true; var dl = D.DISTRICTS[next.loc]; cam.z = OPEN_ZOOM; cam.px = 0; cam.py = 0; var fp = toScreen(dl.x, dl.y, 0); cam.px = W / 2 - fp.x; cam.py = H / 2 - fp.y; clampCam(); staticKey = ''; }
         kick();
       }
     };
