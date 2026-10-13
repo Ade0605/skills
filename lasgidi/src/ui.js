@@ -253,6 +253,19 @@
       try { db.doc('photoreview/' + online.me).onSnapshot(function (d) { online.myPhotoReview = d && d.exists ? d.data() : null; scheduleRender(); }, function () { online.myPhotoReview = null; }); } catch (e) { online.myPhotoReview = null; }
     });
   }
+  var reportsOn = false;
+  function subscribeReports() {
+    if (reportsOn) return;
+    window.claude.use('db').then(function (db) {
+      if (!db || reportsOn) return; reportsOn = true;
+      try { db.collection('reports').limit(200).onSnapshot(function (snap) {
+        online.reports = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }).filter(function (r) { return r.raw && typeof r.raw.who === 'string' && typeof r.raw.at === 'number'; }).sort(function (a, b) { return b.raw.at - a.raw.at; });
+        var ids = online.reports.map(function (r) { return r.id; }).concat(online.reports.map(function (r) { return r.raw.who; }));
+        if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+        scheduleRender();
+      }, function () { online.reports = []; }); } catch (e) { online.reports = []; }
+    });
+  }
   function subscribeReviews() {
     if (reviewsOn) return;
     window.claude.use('db').then(function (db) {
@@ -282,7 +295,7 @@
       if (!u) return;
       online.user = u;
       u.id().then(function (id) { online.me = id; scheduleRender(); subscribeMyReview(); });
-      if (typeof u.canEdit === 'function') u.canEdit().then(function (c) { online.canEdit = !!c; scheduleRender(); if (c) subscribeReviews(); }, function () {});
+      if (typeof u.canEdit === 'function') u.canEdit().then(function (c) { online.canEdit = !!c; scheduleRender(); if (c) { subscribeReviews(); subscribeReports(); } }, function () {});
       u.can('data.write').then(function (c) { online.canWrite = c; scheduleRender(); });
     });
     window.claude.use('db').then(function (db) {
@@ -527,12 +540,41 @@
       '<button class="btn sm ghost" id="close-chat" data-closechat="1">Close</button></div>' +
       '<div class="inline"><button class="btn sm ghost" id="pwave-' + esc(by) + '" data-wave="' + esc(by) + '">👋 Wave</button>' + (home ? '<button class="btn sm ghost" id="pvisit-' + esc(by) + '" data-visit2="' + esc(by) + '">🏠 Visit</button>' : '') +
         (near ? '' : '<button class="btn sm ghost" id="pgo-' + esc(by) + '" data-go="' + p.d + '">🧭 Go to them</button>') +
-        '<button class="btn sm ghost" id="pmute-' + esc(by) + '" data-chatmute="' + esc(by) + '">' + (muted ? '🔈 Unmute' : '🔇 Mute') + '</button></div>' +
+        '<button class="btn sm ghost" id="pmute-' + esc(by) + '" data-chatmute="' + esc(by) + '">' + (muted ? '🔈 Unblock' : '🚫 Block') + '</button>' +
+        '<button class="btn sm ghost" id="preport-' + esc(by) + '" data-reportopen="' + esc(by) + '">🚩 Report</button></div>' + reportBox(by) +
       '<div class="chat-log" id="chat-log" aria-live="polite">' + (msgs.length ? msgs.slice(-30).map(function (m) { return '<div class="chat-msg' + (m.me ? ' me' : '') + '"><span>' + esc(m.text) + '</span></div>'; }).join('') : '<p class="muted">Say hello. Messages are not saved and vanish when you close the game.</p>') + '</div>' +
       '<div class="chat-quick">' + CH.QUICK.map(function (q, i) { return '<button type="button" class="act-chip" id="cq-' + i + '" data-chatq="' + i + '">' + esc(q) + '</button>'; }).join('') + '</div>' +
       '<div class="chat-send"><input id="chat-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Message ' + esc(handleOf(by)) + '" aria-label="Message" value="' + esc(ui.chatDraft || '') + '"><button class="btn" id="chat-send" data-chatsend="' + esc(by) + '">Send</button></div>' +
       (ui.chatWhy ? '<p class="why">' + esc(ui.chatWhy) + '</p>' : '') +
       '<p class="note">Keep it friendly: no sexual messages, no insults or abuse, no links, numbers or emails. Messages that break the rules are not sent, and you can mute anyone.</p></div>';
+  }
+  // Reports: one row per reporter (reports/<you>), reason from a fixed list, read only by editors.
+  var REPORT_REASONS = { sexual: 'Sexual messages', abuse: 'Insults, threats or hate', spam: 'Spam or scams', political: 'Political abuse or impersonation', other: 'Something else unsafe' };
+  function reportBox(by) {
+    if (ui.reportFor !== by) return '';
+    return '<div class="report-box" role="group" aria-label="Report ' + esc(handleOf(by)) + '"><b>Report ' + esc(handleOf(by)) + '</b><div class="pick">' + Object.keys(REPORT_REASONS).map(function (k) { return '<button type="button" class="pg-chip" id="rep-' + k + '" data-reportsend="' + esc(by) + ':' + k + '">' + esc(REPORT_REASONS[k]) + '</button>'; }).join('') + '</div>' +
+      '<p class="note">Reports go to the game\'s editors with the player and the reason only. Blocking also hides them from you at once.</p>' + (online.reportStatus ? '<p class="gain">' + esc(online.reportStatus) + '</p>' : '') + '</div>';
+  }
+  function sendReport(by, reason) {
+    if (!REPORT_REASONS[reason]) return;
+    online.muted[by] = 1; try { localStorage.setItem('lasgidi.muted.v1', JSON.stringify(online.muted)); } catch (e) {}
+    if (!online.db || !online.me) { online.reportStatus = 'Blocked. Reports send when the game is opened on claude.ai.'; render(); return; }
+    online.db.doc('reports/' + online.me).set({ who: String(by).slice(0, 80), reason: reason, at: Date.now() }).then(function () { online.reportStatus = 'Thanks. Reported and blocked.'; render(); }, function () { online.reportStatus = 'Blocked. The report could not be sent.'; render(); });
+  }
+  function reportsAdmin() {
+    if (!online.canEdit || !online.reports || !online.reports.length) return '';
+    return '<div class="section"><h3>🚩 Reports for editors</h3><div class="list">' + online.reports.slice(0, 30).map(function (r) {
+      return '<div class="item"><div><h3>' + esc(nameOf(r.raw.who)) + ' <span class="pc-handle">' + esc(handleOf(r.raw.who)) + '</span></h3><div class="meta"><span>' + esc(REPORT_REASONS[r.raw.reason] || 'Other') + '</span><span>by ' + esc(nameOf(r.id)) + '</span><span>' + new Date(r.raw.at).toLocaleString() + '</span></div></div></div>';
+    }).join('') + '</div></div>';
+  }
+  function safetyCard() {
+    return '<div class="section safety"><h3>🛡️ Safety and privacy</h3><ul class="note">' +
+      '<li><b>Who you are:</b> your claude.ai account. Lasgidi never asks for a password or an email. Players must be 18 or older.</li>' +
+      '<li><b>What other players see:</b> your display name and @handle, the district you are in, your avatar\'s look, a fixed activity label, and party, cruise or visit status.</li>' +
+      '<li><b>Chat:</b> one-to-one and deck chat are filtered for sexual content, insults, links, emails and numbers, both when sent and when received, and are never stored.</li>' +
+      '<li><b>Block and report:</b> open a player\'s card to block them (hidden from you at once) or report them to the editors with a reason.</li>' +
+      '<li><b>Politics:</b> manifestos and mottos come from fixed lists, never free text, and candidates can be reported.</li>' +
+      '<li><b>Money:</b> in-game naira has no real value. There is no gambling, no betting, no real investments and no cash-out. Billboards are player ads, labelled as such.</li></ul></div>';
   }
   function sendChat(by, text) {
     var r = CH.clean(text);
@@ -791,7 +833,7 @@
   function needsView() {
     var labels = { hunger: 'Belle', energy: 'Energy', fun: 'Fun', social: 'Social', hygiene: 'Hygiene', stress: 'Calm' };
     var icons = { hunger: '🍲', energy: '⚡', fun: '🎉', social: '💬', hygiene: '🫧', stress: '😌' };
-    return '<section class="needs hud" aria-label="Needs"><button type="button" class="hud-face" id="hud-face" data-tab="me" aria-label="Your Lagosian"><canvas id="hud-avatar" width="56" height="56"></canvas></button>' + ['hunger', 'energy', 'fun', 'social', 'hygiene', 'stress'].map(function (k) {
+    return '<section class="needs hud" aria-label="Needs"><button type="button" class="hud-face" id="hud-face" data-tab="me" aria-label="Your Lagosian"><canvas id="hud-avatar" width="56" height="56" aria-hidden="true"></canvas></button>' + ['hunger', 'energy', 'fun', 'social', 'hygiene', 'stress'].map(function (k) {
       var v = Math.round(k === 'stress' ? 100 - S.needs.stress : S.needs[k]);
       var cls = v < 25 ? 'low' : v < 50 ? 'mid' : '';
       return '<div class="need n-' + k + '"><div class="row"><span><span class="need-ic" aria-hidden="true">' + icons[k] + '</span> ' + labels[k] + '</span><span class="num">' + v + '</span></div>' +
@@ -861,6 +903,8 @@
     ['📱', 'Your phone', 'Messages, jobs, your bank, car dealers, the gem hunt, travel and the Hall of Fame are all in the Phone tab.'],
     ['💸', 'Money is hard', 'Rent is due every Saturday, prices rise every week, and PAYE comes off every shift. Save in the bank, buy bills, and build a business.']
   ];
+  // While the first-run tour is still on, keep the map calm: no quest or government chips.
+  function firstRun() { return tourStep() < TOUR.length; }
   function tourStep() { try { var v = localStorage.getItem(TOUR_KEY); return v == null ? 0 : +v; } catch (e) { return TOUR.length; } }
   function setTour(n) { try { localStorage.setItem(TOUR_KEY, String(n)); } catch (e) {} }
   function tourCard() {
@@ -1033,7 +1077,7 @@
     if (!b) return '';
     var i = D.BILLBOARDS.indexOf(b), ads = adsForBoard(id, i), paid = ads.filter(function (a) { return a.paid; });
     var html = '<div class="inline" style="justify-content:space-between"><h3>Billboard · ' + esc(b.name) + '</h3><button class="btn sm ghost" id="close-board" data-closeboard="1">Close</button></div>' +
-      '<p class="note">' + (paid.length ? '<span class="onair">ON AIR</span> ' + paid.length + ' ad' + (paid.length === 1 ? '' : 's') + ' take turns, 15 s each.' : 'No paid ads right now, so it shows public-service messages.') + '</p>' +
+      '<p class="note">' + (paid.length ? '<span class="onair">ON AIR</span> ' + paid.length + ' ad' + (paid.length === 1 ? '' : 's') + ' take turns, 15 s each.' : 'No paid ads right now, so it shows public-service messages.') + ' <span class="ad-tag">Player ads</span> Ads are made by players with game money, not real brands or investments.</p>' +
       '<div class="ads">' + ads.map(function (a) {
         var who = a.sponsored ? 'Sponsored' : a.psa ? 'Public service' : (a.by === online.me ? 'Your ad' : ((online.names[a.by] && online.names[a.by].name) || 'A Lagosian'));
         var left = a.until ? Math.max(1, Math.round((a.until - Date.now()) / 3600e3)) + 'h left' : '';
@@ -1857,7 +1901,7 @@
         (online.peers[k] ? ' <span class="num">· ' + online.peers[k] + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     return '<div class="panel-h"><h2>' + esc(d.name) + '</h2><span class="label">' + (d.side === 'island' ? 'Island' : 'Mainland') + '</span></div>' +
-      '<div class="pg-wrap">' + questChips() + '<div class="pg-slot"></div></div>' + govChips() + placeFilters() + chips +
+      '<div class="pg-wrap">' + (firstRun() ? '' : questChips()) + '<div class="pg-slot"></div></div>' + (firstRun() ? '' : govChips()) + placeFilters() + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
       '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
         : ui.chatWith ? chatView(ui.chatWith) : ui.seaOpen ? seaView() : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : ui.homeSel ? homeView(ui.homeSel) : ui.plotSel != null ? plotView(ui.plotSel)
@@ -2485,7 +2529,7 @@
     return '<div class="section" style="padding-top:0"><h3>❓ How to play Lasgidi</h3><div class="list">' + GUIDE.map(function (g, i) {
       var btn = g[3] === 'tab' ? '<button class="btn sm ghost" id="guide-' + i + '" data-tab="' + g[4] + '">Open</button>' : g[3] === 'app' ? '<button class="btn sm ghost" id="guide-' + i + '" data-app="' + g[4] + '">Open</button>' : '<button class="btn sm ghost" id="guide-' + i + '" data-seaopen="1" data-tab="map">Open</button>';
       return '<div class="item"><div><h3>' + g[0] + ' ' + esc(g[1]) + '</h3><div class="act-note">' + esc(g[2]) + '</div></div>' + btn + '</div>';
-    }).join('') + '</div><p class="note">Number keys switch tabs; A does the top suggestion. Your game saves in this browser. Copy the save code on the Me tab to move devices.</p>' + slangView() + '</div>';
+    }).join('') + '</div>' + safetyCard() + '<p class="note">Number keys switch tabs; A does the top suggestion. Your game saves in this browser. Copy the save code on the Me tab to move devices.</p>' + slangView() + '</div>';
   }
   // Your profile photo: uploaded for review, shown to others only once an editor approves it.
   function photoView() {
@@ -2746,7 +2790,8 @@
       '<li><b>Winning:</b> votes are collated from each district to the state. The winner needs the most valid votes and at least 25% in two-thirds of the districts that voted.</li></ul></div>';
     html += '<div class="section"><h3>🗳️ Ballot · ' + esc(wk) + '</h3>' + (ballot.length ? '<div class="th-opts">' + ballot.map(function (t) {
       var on = v && v.cand === t.id;
-      return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="ballot-' + esc(t.id) + '" data-govvote="' + esc(t.id) + '"' + (can && ph === 'election' ? '' : ' disabled') + '><span class="th-t">' + (on ? '✓ ' : '') + partyChip(t.party) + ' ' + esc(nameOf(t.id)) + ' & ' + esc(nameOf(t.deputy)) + '<small> · ' + esc(G.MOTTOS[t.motto]) + '</small></span></button>';
+      return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="ballot-' + esc(t.id) + '" data-govvote="' + esc(t.id) + '"' + (can && ph === 'election' ? '' : ' disabled') + '><span class="th-t">' + (on ? '✓ ' : '') + partyChip(t.party) + ' ' + esc(nameOf(t.id)) + ' & ' + esc(nameOf(t.deputy)) + '<small> · ' + esc(G.MOTTOS[t.motto]) + '</small></span></button>' +
+        (t.id !== online.me ? '<button type="button" class="link-btn rep-link" id="repc-' + esc(t.id) + '" data-reportopen="' + esc(t.id) + '" aria-label="Report ' + esc(nameOf(t.id)) + '">🚩 Report</button>' + reportBox(t.id) : '');
     }).join('') + '</div>' : '<p class="note">No complete tickets yet. A ticket needs a nominee and a deputy who accepted.</p>') +
       (ph !== 'election' ? '<p class="note">Polls open on Saturday.</p>' : v ? '<p class="note">Your vote is in at ' + esc(unitName(v.unit)) + '.</p>' : '') + '</div>';
     return html;
@@ -2778,7 +2823,7 @@
 
   function townView() {
     var T = townTally();
-    var html = '<div class="section" style="padding-top:0"><h3>🗳️ Town Hall · ' + esc(T.wk) + '</h3><p class="note">One question a week for every Lasgidi player. Your vote is shared, and you can change it until the week ends. Nothing here touches your money.</p>' +
+    var html = reportsAdmin() + '<div class="section" style="padding-top:0"><h3>🗳️ Town Hall · ' + esc(T.wk) + '</h3><p class="note">One question a week for every Lasgidi player. Your vote is shared, and you can change it until the week ends. Nothing here touches your money.</p>' +
       '<h3 class="th-q">' + esc(T.q.q) + '</h3><div class="th-opts">' + T.q.a.map(function (a, i) {
         var pct = T.total ? Math.round(T.counts[i] / T.total * 100) : 0, on = T.mine === i;
         return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="vote-' + i + '" data-vote="' + i + '"' + (online.db && online.me ? '' : ' disabled') + '><span class="th-bar" style="width:' + pct + '%"></span><span class="th-t">' + (on ? '✓ ' : '') + esc(a) + '</span><b class="num">' + pct + '%</b></button>';
@@ -2982,6 +3027,7 @@
       '<div class="lottery weekly"><span class="label">Weekly Lagos ' + esc(thisWeek()) + '</span><b>Same Lagos for everybody</b><p style="margin:0">One shared seed this week: the same start, the same events. 4 weeks, highest net worth wins, and every run is replayed to check it.</p>' +
       '<div class="inline"><button class="btn go" id="w-play-intro" data-wplay="1">' + (weeklyRun() ? 'Resume this week\'s Lagos' : 'Play this week\'s Lagos') + '</button></div></div>' +
       '<details class="import"><summary>Continue from a save code</summary><textarea id="import-code" aria-label="Paste save code" placeholder="LSG1...."></textarea><div class="inline"><button class="btn sm" id="import" data-import="1">Load save</button><span class="note">' + esc(ui.importMsg) + '</span></div></details>' +
+      '<details class="import"><summary>🛡️ Safety and privacy</summary>' + safetyCard() + '</details>' +
       '<p class="note">Lasgidi is a work of fiction. In-game naira has no real value and cannot be bought or cashed out.</p>' +
       '</div>';
   }
@@ -3053,7 +3099,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-joinclub],[data-clubact],[data-hpbuild],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3374,6 +3420,8 @@
     if (ds.hpbuild) { var hz = ds.hpbuild; run(function () { return L.hpBuild(S, hz); }); return; }
     if (ds.joinclub) { var jc = ds.joinclub.split(':'); run(function () { return L.joinClub(S, jc[0], jc[1]); }); return; }
     if (ds.clubact) { var ca = ds.clubact.split(':'); run(function () { return L.clubAct(S, ca[0], ca[1]); }); return; }
+    if (ds.reportopen) { ui.reportFor = ui.reportFor === ds.reportopen ? null : ds.reportopen; online.reportStatus = ''; render(); return; }
+    if (ds.reportsend) { var rs = ds.reportsend.split(':'); var rr = rs.pop(); sendReport(rs.join(':'), rr); return; }
     if (ds.closechat) { ui.chatWith = null; ui.chatWhy = ''; render(); return; }
     if (ds.chatq != null && t.hasAttribute('data-chatq')) { sendChat(ui.chatWith, CH.QUICK[+ds.chatq]); return; }
     if (ds.chatsend) { var ci = document.getElementById('chat-in'); sendChat(ds.chatsend, ci ? ci.value : ''); return; }

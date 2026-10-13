@@ -185,6 +185,59 @@ Gifts are symbolic. The sender pays and the receiver's mood lifts, but no naira 
 6. **Civic layer.** The policy vote becomes player-wide with real campaigning, while staying fictional with no real politicians.
 7. **Accessibility and language.** Add Pidgin, Yoruba, Igbo and Hausa text, a low-data mode, screen-reader labels on the map, and support for large text.
 
+## 6. Field review of the live site (October 2026)
+
+A colleague looked at the live Lagos Life site. They checked the map, the Home scene, the phone and some technical points. They did not sign in, buy anything, or open the Buy tab, which was greyed out.
+
+### What they found
+- **The game:** a free, browser-based Lagos version of The Sims, mixed with a social network.
+  - A 3D city map with about 35 real venues, among them Afrika Shrine, Amala Shitta, Quilox, CcHub, Freedom Park, Eko Hotels, UNILAG, a casino and a polling unit.
+  - Tabs for Port Harcourt and Abuja.
+  - Overlay layers (Moving, Billboards, Neighbours, Sea, Gov, Walk Yaba).
+  - Needs bars, a naira wallet and a live clock with a mood.
+- **Shared scenes:** every venue is a live room. On the Lagoon Boat Cruise, 6 players had @handles, a chat box and spots to move between.
+- **The phone:** Jobs, Messages and Games apps, plus branded apps (among them a "Bet Tips" app) and a news alert: "Dangote IPO closes in 14d — Buy at Flutterwave".
+- **Engagement:** a daily gem hunt with naira prizes, "Eat something" prompts, and a political ticker that shows players' posts.
+- **Money:** in-world billboards (including a betting brand), sponsor buildings and apps, a Buy store, and an "OBO · Coming soon" tier.
+- **Strengths:**
+  - a strong local feel, with ads that fit the world;
+  - a fast first load (usable in 0.34 seconds, about 480KB, installable as an app);
+  - room to grow;
+  - big claimed numbers (38.9m views, 54k online), not verified.
+- **Risks:**
+  1. **Gambling:** a casino, a betting-tips app and a betting billboard sit beside naira prizes, with no visible age check. LSLGA, ARCON and app-store rules all apply.
+  2. **Investment promotion:** an unlabeled "IPO … Buy at" push could fall foul of the SEC and be taken for real news.
+  3. **Politics:** a polling unit, a Gov layer and a ticker of player posts need moderation and reporting, especially near elections.
+  4. **Real brands:** named without visible partnerships, which needs written permission.
+  5. **Accessibility:**
+     - pinch zoom is turned off;
+     - all 5 images lack alt text;
+     - 22 of 124 buttons have no label;
+     - the UI is almost all 3D canvas.
+  6. **Wasted downloads:** the politics and gov data loaded twice each.
+  7. **A crowded first screen.**
+  8. **Safety and privacy:** open chat with strangers, but no visible report, block or privacy policy.
+
+### My take
+The review is fair and mostly right. Three points need more weight.
+
+- **The regulatory risks compound.** Gambling content next to real-naira prizes, unlabeled investment pushes and a political feed reach the same open audience, with no age gate in sight. Each one alone is a fix; together they look like a game that makes money from whatever sponsors bring. The fix is mostly *taking things out* (betting, IPO pushes, free-text politics) and *labelling the rest*, not new technology.
+- **The numbers are a claim, not evidence.** "38.9m views" and "54k online" are shown by the product itself. They should never be quoted to sponsors without an independent check.
+- **A canvas-only interface needs a text twin.** Labelling buttons is necessary but not enough. Everything a player can do in the 3D scene should also be reachable from a list: places, people, actions. Then screen readers and very low-end phones still get the game.
+
+### How Lasgidi answers each risk
+
+| Risk | Lasgidi |
+|---|---|
+| Gambling | None. There is no casino, betting or lottery (the only "lottery" is the birth lottery). In-game naira has no real value and no cash-out. Real-cash purchases, when built, will be cosmetics only (see the README). |
+| Investment promotion | The stock exchange uses fictional companies (Eko Cement, Lagoon Bank and others). Nothing promotes a real security, and billboards are labelled **Player ads** made with game money. |
+| Politics | The governor game uses mottos and manifesto planks from fixed lists, so there's no free-text political feed. Votes are secret and only totals show. Candidates can be **reported** to the editors. |
+| Real brands | Venues are public landmarks named as places, with no logos and no claim of affiliation. Luxury goods are named only to describe the item. |
+| Accessibility | Pinch zoom is allowed. The map canvas has a live text description, and every place, district and player is also reachable from lists. An automated audit of every tab finds no unlabeled button, image or input. Decorative canvases are hidden from screen readers. |
+| Data use | One single-file build (about 1.2MB including all icons) that works offline as a PWA. Shared data subscribes once per path. |
+| First screen | The first-run tour hides quest and government chips until it's done. The new-player setup goes one step at a time. |
+| Safety and privacy | Identity is the claude.ai account, with no passwords or emails, and an 18+ check at setup. Chat is filtered on send and on receipt and never stored. Players can **Block** (hidden at once) and **Report** with a reason; reports reach editors only. A **Safety and privacy** card on the start screen and in the Guide says exactly what is shared. |
+
 ## Sources
 
 - [TechMoran: Lagos Life turns Nigeria's most chaotic city into a game](https://techmoran.com/2026/10/07/lagos-life-turns-nigerias-most-chaotic-city-into-a-game-you-have-to-survive/)

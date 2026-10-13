@@ -387,6 +387,16 @@ lasgidi/
 
 The engine is deterministic: all randomness comes from a seeded PRNG kept in the save. Each life also records the **rules version** it started under, so a life recorded under older rules replays identically after updates add new systems. `test/fixtures/v0.5-life.json` is a golden replay from the real v0.5 engine that every later version must still verify. Only `post()` can change cash or bank. That makes the engine ready to run on a server for a future multiplayer version (see the roadmap in the review).
 
+## Safety
+
+- **Identity:** your claude.ai account. There are no passwords and no emails, and setup includes an 18+ check.
+- **What's shared:** your display name and @handle, district, avatar look, a fixed activity label, and party, cruise or visit status.
+- **Chat:** one-to-one and deck chat are filtered on send **and** on receipt, and never stored.
+- **Block and report:** Block hides a player at once. Report sends the player and a reason from a fixed list to the editors (`reports/<you>`, one row per reporter, readable only by editors). Candidates in the governor race can be reported too.
+- **Money:** no gambling, no betting, no real investments, no cash-out. Billboards are labelled as player ads.
+- **Where to read it:** a Safety and privacy card on the start screen and in the Guide app spells all of this out.
+- **Background:** `docs/REVIEW.md` section 6 compares this with a field review of Lagos Life.
+
 ## Planned: real-cash purchases (cosmetics only), to be built near the end
 
 Decided with the project owner on 13 Oct 2026, and not built yet:

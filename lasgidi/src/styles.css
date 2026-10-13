@@ -931,3 +931,8 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 @media (max-width: 520px) { .cv-head { grid-template-columns: auto 1fr auto; } .cv-head #cruise-leave { grid-column: 1 / -1; } }
 .toasts { z-index: 48; }
 body:has(#cruise-view) .toasts { top: 12px; bottom: auto; }
+.report-box { display: grid; gap: 6px; padding: 10px; border-radius: 14px; background: color-mix(in srgb, #e5484d 10%, var(--sunk)); }
+.report-box .pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.rep-link { font-size: 12px; justify-self: end; }
+.safety ul { padding-left: 18px; display: grid; gap: 4px; }
+.ad-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; background: var(--sunk); font: 800 10px var(--font-body); letter-spacing: .08em; text-transform: uppercase; }
