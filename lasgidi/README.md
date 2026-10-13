@@ -291,6 +291,14 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 
 - **Profile photos:** add a photo of yourself on the Me tab so other players can recognise you on the map, in their district and in the Hall of Fame. An editor approves each photo before anyone else sees it, and you can hide yours at any time.
 - **Prime homes:** buy a home in Lagos's top addresses: a detached duplex in Nicon Town (Lekki Phase 1) for ₦250m, a luxury apartment in Victoria Island for ₦400m, a penthouse in Eko Atlantic for ₦900m, a mansion in Parkview, Ikoyi for ₦1.5bn, or a waterfront mansion on Banana Island for ₦4bn. You can live in it or let it out, and either way you pay a weekly estate service charge. Each one adds status, and Banana Island unlocks an achievement.
+- **New-player setup, step by step:**
+  1. **Profile:** your name in the game (others see an @handle) and an 18+ check. Identity is your claude.ai account, so **there is no password or email field anywhere**.
+  2. **Look:** skin tone, hairstyle and body, with a live avatar preview and a Shuffle button.
+  3. **Personality:** pick exactly two of ten traits, each a small head start (a skill boost or calmer needs).
+  4. **Dream:** pick exactly one goal.
+  5. **Birth lottery:** one random roll per life.
+  6. **Home:** choose a first home your start can pay for, then **Move in**.
+  - Traits, home and look go into the replay header, so the life replays to the same seal. Older lives have none of them and replay as before.
 - **Lekki Hyde Park:** a new gated estate on the lagoon side of the Lekki–Epe Expressway, with its own gate and access road. Inside are a boulevard, a central park with a pool and tennis courts, private jetties and a lagoon promenade. It has five zones (descriptive names only, no real residents):
   - **Garden Row:** terraces for the low-class rich (₦120m);
   - **Park Crescent:** semis for the middle-class rich (₦280m);

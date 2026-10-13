@@ -1343,6 +1343,20 @@
     freestyle:{ name: 'Freestyle', text: 'No goal. Just survive Lagos.' }
   };
 
+  // New-player setup: pick exactly two traits (a small head start), and a first home your origin can afford.
+  var TRAITS = {
+    streetwise: { name: 'Street-smart', icon: '🧠', text: 'You know which bus stop has wahala and which one has deals.', xp: { hustle: 12 } },
+    techie: { name: 'Tech-head', icon: '💻', text: 'You fix everyone\'s phone and you can code a little.', xp: { tech: 12 } },
+    smooth: { name: 'Smooth talker', icon: '😎', text: 'You can talk your way into most rooms and out of most trouble.', xp: { charisma: 12 } },
+    chef: { name: 'Kitchen magic', icon: '🍲', text: 'Your jollof has settled family arguments.', xp: { cooking: 12 } },
+    performer: { name: 'Born performer', icon: '🎤', text: 'Music, skits, the dance floor: you light it up.', xp: { music: 12 } },
+    gymrat: { name: 'Gym rat', icon: '💪', text: 'Up before the sun for a run on the bridge.', xp: { fitness: 12 } },
+    maker: { name: 'Good with hands', icon: '🛠️', text: 'Tailoring, carpentry, wiring: you can make it or mend it.', xp: { craft: 12 } },
+    cool: { name: 'Cool head', icon: '🧊', text: 'Go-slow, NEPA, landlord: nothing shakes you.', needs: { stress: -15 } },
+    social: { name: 'Life of the party', icon: '🎉', text: 'You know somebody at every owambe.', needs: { social: 20, fun: 10 } },
+    earlybird: { name: 'Early bird', icon: '🌅', text: 'Awake at 5am without an alarm, full of energy.', needs: { energy: 10, hunger: 5 } }
+  };
+  var START_HOMES = { lapo: ['mushin_room', 'ikorodu_room', 'festac_room'], mid: ['yaba_selfcon', 'suru_selfcon', 'yaba_share', 'ikeja_selfcon'], nepo: ['lekki_studio', 'yaba_2bed', 'ajah_2bed'] };
   var ORIGINS = {
     lapo: { name: 'LAPO Baby', cash: 8000, home: 'mushin_room', text: 'You start with ₦8,000 and a room in Mushin. A microfinance officer has your number.' },
     mid:  { name: 'Ajepako', cash: 60000, home: 'yaba_selfcon', text: 'Your parents scraped together ₦60,000 and paid for a self-con in Yaba.' },
@@ -1360,7 +1374,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

@@ -307,6 +307,15 @@
   }
 
   /* ---------- new game ---------- */
+  function cleanTraits(t) {
+    if (!Array.isArray(t) || t.length !== 2 || t[0] === t[1] || !D.TRAITS[t[0]] || !D.TRAITS[t[1]]) return null;
+    return [String(t[0]), String(t[1])];
+  }
+  function cleanLook0(l) {
+    if (!l || typeof l !== 'object') return null;
+    var okn = function (v, arr) { return typeof v === 'number' && v >= 0 && v < arr.length && Math.round(v) === v; };
+    return okn(l.skin, D.LOOKS.skin) && okn(l.hair, D.LOOKS.hair) && okn(l.shape, D.LOOKS.shape) ? { skin: l.skin, hair: l.hair, shape: l.shape } : null;
+  }
 
   function newGame(opts) {
     opts = opts || {};
@@ -349,6 +358,10 @@
     s.home = heir ? (heir.inherit >= 3000000 ? 'lekki_studio' : heir.inherit >= 300000 ? 'yaba_selfcon' : 'mushin_room') : o.home;
     s.rentRate = D.HOMES[o.home].rent;
     s.loc = D.HOMES[o.home].district;
+    // Optional setup choices (newer starts only): a first home your origin allows, exactly two traits, and a look.
+    var startHome = !heir && opts.startHome && (D.START_HOMES[originId] || []).indexOf(opts.startHome) >= 0 ? opts.startHome : null;
+    if (startHome) { s.home = startHome; s.rentRate = D.HOMES[startHome].rent; s.loc = D.HOMES[startHome].district; }
+    var traits = cleanTraits(opts.traits);
     // Opening balance is the one deposit that is not an in-game action.
     var startCash = heir ? heir.inherit : o.cash;
     s.bank = startCash; s.opening.bank = startCash;
@@ -361,6 +374,11 @@
       if (heir.bond >= 60) s.needs.stress = Math.max(0, s.needs.stress - 15);
       if (heir.gen >= 3) unlock(s, 'dynasty');
     }
+    if (traits) {
+      s.traits = traits;
+      traits.forEach(function (k) { var T = D.TRAITS[k]; addXp(s, T.xp); if (T.needs) Object.keys(T.needs).forEach(function (n) { s.needs[n] = clamp(s.needs[n] + T.needs[n], 0, 100); }); });
+    }
+    var look = cleanLook0(opts.look); if (look) s.look = look;
     if (o.allowance) { s.allowance = o.allowance; s.allowanceWeeks = o.allowanceWeeks; }
     if (originId === 'nepo') s.friends.kunle.lvl = 60; // Daddy's banker friend
     rollPower(s);
@@ -370,7 +388,11 @@
     if (opts.challenge) { s.challenge = { id: opts.challenge, weeks: CHALLENGE_WEEKS }; s.over = false; s.goal = 'freestyle'; }
     s.replay = { seed: seed, goal: s.goal, origin: opts.origin || null, rules: s.rules, challenge: opts.challenge || null, acts: [] };
     if (heir) s.replay.heir = heir;
+    if (traits) s.replay.traits = traits;
+    if (startHome) s.replay.home = startHome;
+    if (look) s.replay.look = look;
     log(s, o.text, 'story');
+    if (startHome) log(s, 'You chose to start in ' + D.HOMES[startHome].name + '.', 'story');
     if (heir) log(s, 'You are ' + s.name + ', child of ' + heir.parent + '. Your share of the estate: ' + naira(heir.inherit) + '.' + (heir.school === 'intl' ? ' Your international school education counts as a degree.' : ''), 'story');
     log(s, 'Rent is due every Saturday at noon. Lagos no dey carry last.', 'info');
     return s;
@@ -3052,7 +3074,8 @@
     if (!(rules >= 5 && rules <= RULES && Math.round(rules) === rules)) return null;
     if (rp.challenge != null && !CHALLENGE_ID.test(rp.challenge)) return null;
     if (rp.origin === 'heir' && !cleanHeir(rp.heir)) return null;
-    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined, heir: rp.heir });
+    if (rp.traits != null && !cleanTraits(rp.traits)) return null;
+    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined, heir: rp.heir, traits: rp.traits, startHome: rp.home, look: rp.look });
     for (var i = 0; i < rp.acts.length; i++) {
       var a = rp.acts[i];
       if (!Array.isArray(a) || !RECORDED[a[0]]) return null;

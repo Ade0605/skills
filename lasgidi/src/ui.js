@@ -2778,9 +2778,6 @@
 
   /* ---------- intro / new game ---------- */
   function introView() {
-    var goals = Object.keys(D.GOALS).map(function (k, i) {
-      return '<div class="goal"><input type="radio" name="goal" id="goal-' + k + '" value="' + k + '"' + (i === 0 ? ' checked' : '') + '><label for="goal-' + k + '"><b>' + esc(D.GOALS[k].name) + '</b><span>' + esc(D.GOALS[k].text) + '</span></label></div>';
-    }).join('');
     var o = ui.draftOrigin ? D.ORIGINS[ui.draftOrigin] : null, hs = heirsWaiting();
     var heirCard = hs.length ? '<div class="lottery heir"><span class="label">The next generation · generation ' + (hs[0].gen || 2) + '</span><b>👪 Continue the family of ' + esc(hs[0].parent) + '</b>' +
       '<p style="margin:0">Each child inherits ' + N(hs[0].inherit) + ' after the estate costs and the family share. Choose who carries the family on.</p><div class="list">' + hs.map(function (h, i) {
@@ -2792,12 +2789,7 @@
     return '<div class="intro">' +
       '<h1>LASGIDI<span>Make it in Lagos. One week of rent at a time.</span></h1>' + heirCard +
       '<p class="lede">Work, hustle, sleep through NEPA, take the danfo or the ferry, join an ajo, dodge the loan apps and the Ponzi schemes. Rent is due every Saturday at noon.</p>' +
-      '<div class="field"><label class="label" for="pname">Your name</label><input id="pname" maxlength="24" value="Ade" autocomplete="off"></div>' +
-      '<div class="field"><span class="label">Your goal</span><div class="goals">' + goals + '</div></div>' +
-      '<div class="lottery"><span class="label">Birth lottery</span>' +
-      (o ? '<b>' + esc(o.name) + '</b><p style="margin:0">' + esc(o.text) + '</p>' : '<p style="margin:0">Lagos decides where you start. The roll is random and happens once per life.</p>') +
-      '<div class="odds"><span>LAPO Baby 50%</span><span>Ajepako 35%</span><span>Nepo Baby 15%</span></div>' +
-      '<div class="inline">' + (o ? '<button class="btn go" id="start" data-start="1">Start life in ' + esc(D.DISTRICTS[D.HOMES[o.home].district].name) + '</button>' : '<button class="btn go" id="roll" data-roll="1">Roll the birth lottery</button>') + '</div></div>' +
+      onboardView(o) +
       (lives().length ? '<div class="field"><span class="label">Your past lives · best scores</span>' + livesView(5) + '</div>' : '') +
       (online.db && online.fame.length ? '<div class="field">' + fameView().replace('<div class="section">', '<div>') + '</div>' : '') +
       '<div class="lottery weekly"><span class="label">Weekly Lagos ' + esc(thisWeek()) + '</span><b>Same Lagos for everybody</b><p style="margin:0">One shared seed this week: the same start, the same events. 4 weeks, highest net worth wins, and every run is replayed to check it.</p>' +
@@ -2807,17 +2799,63 @@
       '</div>';
   }
 
+  /* ---------- new-player setup: Profile, Look, Personality, Dream, Birth lottery, Home ---------- */
+  // Your identity is your claude.ai account: there is no password or email field anywhere in the game.
+  var ONB_STEPS = ['Profile', 'Look', 'Personality', 'Dream', 'Birth lottery', 'Home'];
+  function onb() { return ui.onb || (ui.onb = { step: 0, name: ui.draftName || 'Ade', adult: false, look: { skin: 2, hair: 0, shape: 1 }, traits: [], goal: null, home: null }); }
+  function onbValid(o, step) {
+    if (step === 0) return o.name.trim().length > 0 && o.adult;
+    if (step === 2) return o.traits.length === 2;
+    if (step === 3) return !!o.goal;
+    if (step === 4) return !!ui.draftOrigin;
+    if (step === 5) return !!o.home;
+    return true;
+  }
+  function onboardView(orig) {
+    var o = onb(), st = o.step, body = '';
+    if (st === 0) body = '<h2>Who are you in Lagos?</h2>' +
+      '<div class="field"><label class="label" for="pname">Your name in the game</label><input id="pname" maxlength="24" value="' + esc(o.name) + '" autocomplete="off"></div>' +
+      '<p class="note">Other players see you as <b>' + esc(window.LasgidiChat ? window.LasgidiChat.handle(o.name) : o.name) + '</b>. Your account is your claude.ai sign-in: Lasgidi never asks for a password or an email.</p>' +
+      '<label class="onb-check"><input type="checkbox" id="onb-adult"' + (o.adult ? ' checked' : '') + '> I am 18 or older</label>';
+    else if (st === 1) body = '<h2>Your look</h2><div class="onb-look"><canvas id="onb-av" width="180" height="220" aria-label="Your avatar"></canvas><div>' +
+      '<span class="label">Skin tone</span><div class="pick">' + D.LOOKS.skin.map(function (c, i) { return '<button type="button" class="pick-c' + (o.look.skin === i ? ' on' : '') + '" id="onb-sk-' + i + '" data-onbskin="' + i + '" aria-label="Skin tone ' + (i + 1) + '" aria-pressed="' + (o.look.skin === i) + '" style="background:' + c + '"></button>'; }).join('') + '</div>' +
+      '<span class="label">Hairstyle</span><div class="pick">' + D.LOOKS.hair.map(function (h, i) { return '<button type="button" class="pg-chip' + (o.look.hair === i ? ' sel' : '') + '" id="onb-hr-' + i + '" data-onbhair="' + i + '">' + esc(h) + '</button>'; }).join('') + '</div>' +
+      '<span class="label">Body</span><div class="pick">' + D.LOOKS.shape.map(function (h, i) { return '<button type="button" class="pg-chip' + (o.look.shape === i ? ' sel' : '') + '" id="onb-sh-' + i + '" data-onbshape="' + i + '">' + esc(h) + '</button>'; }).join('') + '</div>' +
+      '<button type="button" class="btn sm ghost" id="onb-shuffle" data-onb="shuffle">🎲 Shuffle</button><p class="note">Outfits, fabrics and colours come later from the markets and boutiques.</p></div></div>';
+    else if (st === 2) body = '<h2>Your personality</h2><p class="note">Pick exactly two. Each gives a small head start.</p><div class="onb-grid">' + Object.keys(D.TRAITS).map(function (k) {
+      var T = D.TRAITS[k], on = o.traits.indexOf(k) >= 0, full = o.traits.length >= 2 && !on;
+      return '<button type="button" class="onb-card' + (on ? ' sel' : '') + '" id="onb-tr-' + k + '" data-onbtrait="' + k + '" aria-pressed="' + on + '"' + (full ? ' disabled' : '') + '><span class="onb-e">' + T.icon + '</span><b>' + esc(T.name) + '</b><small>' + esc(T.text) + '</small></button>';
+    }).join('') + '</div><p class="onb-count">' + o.traits.length + ' of 2 chosen</p>';
+    else if (st === 3) body = '<h2>Your dream</h2><p class="note">Pick one. You can still do everything else.</p><div class="onb-grid">' + Object.keys(D.GOALS).map(function (k) {
+      var G = D.GOALS[k], on = o.goal === k;
+      return '<button type="button" class="onb-card' + (on ? ' sel' : '') + '" id="onb-goal-' + k + '" data-onbgoal="' + k + '" aria-pressed="' + on + '"><b>' + esc(G.name) + '</b><small>' + esc(G.text) + '</small></button>';
+    }).join('') + '</div>';
+    else if (st === 4) body = '<h2>The birth lottery</h2><div class="lottery">' + (orig ? '<b>' + esc(orig.name) + '</b><p style="margin:0">' + esc(orig.text) + '</p>' : '<p style="margin:0">Lagos decides where you start. The roll is random and happens once per life.</p>') +
+      '<div class="odds"><span>LAPO Baby 50%</span><span>Ajepako 35%</span><span>Nepo Baby 15%</span></div>' + (orig ? '' : '<div class="inline"><button class="btn go" id="roll" data-roll="1">Roll the birth lottery</button></div>') + '</div>';
+    else {
+      var homes = (orig && D.START_HOMES[ui.draftOrigin]) || [];
+      body = '<h2>Your first home</h2><p class="note">' + (orig ? esc(orig.name) + ': these are the homes your start can pay for.' : 'Roll the birth lottery first.') + ' Rent is due every Saturday at noon.</p><div class="onb-grid">' + homes.map(function (k) {
+        var H = D.HOMES[k], on = o.home === k;
+        return '<button type="button" class="onb-card' + (on ? ' sel' : '') + '" id="onb-home-' + k + '" data-onbhome="' + k + '" aria-pressed="' + on + '">' + (icon3d('h_' + (H.type === 'flat2' || H.type === 'flat3' ? 'flat' : H.type)) || '<span class="onb-e">🏠</span>') + '<b>' + esc(H.name) + '</b><small>' + esc(D.DISTRICTS[H.district].name) + ' · ' + N(H.rent) + ' a week · light ' + Math.round(H.power * 100) + '%</small></button>';
+      }).join('') + '</div>';
+    }
+    var ok = onbValid(o, st), last = st === ONB_STEPS.length - 1;
+    return '<section class="onb" aria-label="Set up your life"><ol class="onb-steps">' + ONB_STEPS.map(function (n, i) { return '<li class="' + (i < st ? 'done' : i === st ? 'now' : '') + '"><span>' + (i < st ? '✓' : i + 1) + '</span>' + esc(n) + '</li>'; }).join('') + '</ol>' +
+      '<div class="onb-body">' + body + '</div><div class="onb-nav">' + (st ? '<button type="button" class="btn ghost" id="onb-back" data-onb="back">Back</button>' : '<span></span>') +
+      (last ? '<button class="btn go" id="start" data-start="1"' + (ok ? '' : ' disabled') + '>🔑 Move in</button>' : '<button type="button" class="btn go" id="onb-next" data-onb="next"' + (ok ? '' : ' disabled') + '>Next</button>') + '</div></section>';
+  }
   function bindIntro() {
+    var av = document.getElementById('onb-av');
+    if (av && window.LasgidiAvatar) { try { window.LasgidiAvatar.draw(av, onb().look, {}); } catch (e) {} }
     var name = document.getElementById('pname');
     if (name && ui.draftName != null) name.value = ui.draftName;
     if (ui.draftGoal) { var g = document.getElementById('goal-' + ui.draftGoal); if (g) g.checked = true; }
   }
 
   function introState() {
-    var name = document.getElementById('pname');
-    var g = document.querySelector('input[name="goal"]:checked');
-    ui.draftName = name ? name.value : 'Ade';
-    ui.draftGoal = g ? g.value : 'japa';
+    var o = onb(), name = document.getElementById('pname');
+    if (name) o.name = name.value;
+    ui.draftName = o.name; ui.draftGoal = o.goal || 'freestyle';
   }
 
   /* ---------- events ---------- */
@@ -2827,9 +2865,22 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
+    if (ds.onb) {
+      var o0 = onb(); introState();
+      if (ds.onb === 'next' && onbValid(o0, o0.step)) o0.step = Math.min(ONB_STEPS.length - 1, o0.step + 1);
+      else if (ds.onb === 'back') o0.step = Math.max(0, o0.step - 1);
+      else if (ds.onb === 'shuffle') { var rr = function (n) { return Math.floor(Math.random() * n); }; o0.look = { skin: rr(D.LOOKS.skin.length), hair: rr(D.LOOKS.hair.length), shape: rr(D.LOOKS.shape.length) }; }
+      render(); var nx = document.getElementById(ds.onb === 'back' ? 'onb-back' : 'onb-next') || document.getElementById('start'); if (nx && ds.onb !== 'shuffle') nx.focus(); return;
+    }
+    if (ds.onbskin != null && t.hasAttribute('data-onbskin')) { onb().look.skin = +ds.onbskin; render(); return; }
+    if (ds.onbhair != null && t.hasAttribute('data-onbhair')) { onb().look.hair = +ds.onbhair; render(); return; }
+    if (ds.onbshape != null && t.hasAttribute('data-onbshape')) { onb().look.shape = +ds.onbshape; render(); return; }
+    if (ds.onbtrait) { var tr0 = onb().traits, ti0 = tr0.indexOf(ds.onbtrait); if (ti0 >= 0) tr0.splice(ti0, 1); else if (tr0.length < 2) tr0.push(ds.onbtrait); render(); return; }
+    if (ds.onbgoal) { onb().goal = ds.onbgoal; render(); return; }
+    if (ds.onbhome) { onb().home = ds.onbhome; render(); return; }
     if (ds.roll) {
       introState();
       ui.seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
@@ -2849,8 +2900,9 @@
     }
     if (ds.start) {
       introState();
-      S = L.newGame({ name: ui.draftName.trim() || 'Ade', goal: ui.draftGoal, seed: ui.seed });
-      ui.tab = 'do'; ui.sel = null; ui.draftOrigin = null;
+      var ob = onb();
+      S = L.newGame({ name: ui.draftName.trim() || 'Ade', goal: ui.draftGoal, seed: ui.seed, traits: ob.traits.length === 2 ? ob.traits : undefined, startHome: ob.home || undefined, look: ob.look });
+      ui.tab = 'do'; ui.sel = null; ui.draftOrigin = null; ui.onb = null;
       releaseOldSea();
       save(); render(); return;
     }
@@ -3203,12 +3255,14 @@
 
   document.addEventListener('input', function (e) {
     if (e.target && e.target.id === 'chat-in') { ui.chatDraft = e.target.value; return; }
+    if (e.target && e.target.id === 'pname' && !S) { onb().name = e.target.value.slice(0, 24); var nb = document.getElementById('onb-next'); if (nb) nb.disabled = !onbValid(onb(), onb().step); return; }
     if (e.target && e.target.id === 'chop-q') {
       ui.chopQ = e.target.value.slice(0, 40); render();
       var q = document.getElementById('chop-q'); if (q) { q.focus(); try { q.setSelectionRange(q.value.length, q.value.length); } catch (x) {} }
     }
   });
   document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'onb-adult') { onb().adult = e.target.checked; render(); return; }
     if (e.target && e.target.id === 'dep-insure') { ui.depInsure = e.target.checked; render(); return; }
     if (e.target && e.target.id === 'gov-deputy') { govWrite('govrun', { deputy: e.target.value || null }, e.target.value ? 'Offer sent to ' + nameOf(e.target.value) + '.' : 'Running mate cleared.'); return; }
     if (e.target && e.target.dataset && e.target.dataset.govappoint) {

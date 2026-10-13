@@ -2072,3 +2072,23 @@ test('Lekki Hyde Park: buy ready-built, or buy a plot and build in three stages 
   assert.ok(L.ownsHome(s, 'hp_terrace_own') && s.ach.hyde_park);
   assert.ok(L.buyProperty(s, 'hp_semi').ok, 'or buy ready-built');
 });
+
+test('new-player setup: exactly two traits, a start home the origin allows, and a look, all replay to the same seal', () => {
+  const o = L.newGame({ seed: 4242 }).origin, home = D.START_HOMES[o][1];
+  const s = L.newGame({ seed: 4242, goal: 'freestyle', traits: ['techie', 'cool'], startHome: home, look: { skin: 4, hair: 5, shape: 0 } });
+  assert.deepEqual(s.traits, ['techie', 'cool']);
+  assert.equal(s.home, home); assert.equal(s.loc, D.HOMES[home].district);
+  assert.ok(s.skills.tech >= 12);
+  assert.deepEqual(s.look, { skin: 4, hair: 5, shape: 0 });
+  // One trait, three, or a duplicate: ignored. A home from another origin: ignored.
+  assert.equal(L.newGame({ seed: 1, traits: ['techie'] }).traits, undefined);
+  assert.equal(L.newGame({ seed: 1, traits: ['techie', 'cool', 'chef'] }).traits, undefined);
+  assert.equal(L.newGame({ seed: 1, traits: ['cool', 'cool'] }).traits, undefined);
+  const lapoSeed = [...Array(50).keys()].find(n => L.newGame({ seed: n }).origin === 'lapo');
+  assert.equal(L.newGame({ seed: lapoSeed, startHome: 'lekki_studio' }).home, D.ORIGINS.lapo.home);
+  while (s.pending.length) L.resolveChoice(s, 1);
+  L.wait(s, 60);
+  const r = L.replayLife(s.replay);
+  assert.equal(r.ledgerHash, s.ledgerHash); assert.equal(r.home, s.home); assert.deepEqual(r.traits, s.traits);
+  assert.equal(L.replayLife(Object.assign({}, s.replay, { traits: ['nope', 'cool'] })), null);
+});

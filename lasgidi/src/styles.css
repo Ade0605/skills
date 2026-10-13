@@ -835,3 +835,27 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .hp-stages span.now { opacity: 1; background: #fff1c2; color: #6b4b00; }
 .hp-zone .inline { flex-wrap: wrap; }
 .hp-zone .meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; color: var(--muted); }
+
+/* New-player setup */
+.onb { display: grid; gap: 14px; padding: 16px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); }
+.onb-steps { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; overflow-x: auto; }
+.onb-steps li { display: flex; align-items: center; gap: 6px; font: 700 12px var(--font-body); color: var(--muted); white-space: nowrap; padding: 4px 10px 4px 4px; border-radius: 999px; background: var(--sunk); }
+.onb-steps li span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); font-size: 11px; }
+.onb-steps li.now { color: #1a1500; background: #fff1c2; } .onb-steps li.now span { background: #f2b600; color: #1a1500; }
+.onb-steps li.done span { background: #2fd27a; color: #06301a; }
+.onb-body h2 { margin: 0 0 8px; }
+.onb-check { display: flex; gap: 10px; align-items: center; font-weight: 600; }
+.onb-check input { width: 22px; height: 22px; }
+.onb-look { display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start; }
+.onb-look canvas { width: 180px; height: 220px; border-radius: 18px; background: linear-gradient(180deg, #ffe9a8, #f6c95c); }
+.onb-look .pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+@media (max-width: 520px) { .onb-look { grid-template-columns: 1fr; justify-items: center; } .onb-look > div { width: 100%; } }
+.onb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.onb-card { display: grid; gap: 4px; justify-items: start; text-align: left; padding: 12px; border-radius: 16px; border: 2px solid transparent; background: var(--sunk); color: var(--ink); cursor: pointer; font: 600 14px var(--font-body); }
+.onb-card small { font-weight: 400; font-size: 12px; color: var(--muted); line-height: 1.35; }
+.onb-card.sel { border-color: #2fd27a; background: color-mix(in srgb, #2fd27a 12%, var(--sunk)); }
+.onb-card:disabled { opacity: .45; cursor: not-allowed; }
+.onb-e { font-size: 26px; }
+.onb-count { margin: 6px 0 0; font: 700 13px var(--font-body); color: var(--muted); }
+.onb-nav { display: flex; justify-content: space-between; gap: 10px; }
+.onb-nav .btn { min-width: 120px; }
