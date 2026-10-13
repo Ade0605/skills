@@ -381,6 +381,26 @@ lasgidi/
 
 The engine is deterministic: all randomness comes from a seeded PRNG kept in the save. Each life also records the **rules version** it started under, so a life recorded under older rules replays identically after updates add new systems. `test/fixtures/v0.5-life.json` is a golden replay from the real v0.5 engine that every later version must still verify. Only `post()` can change cash or bank. That makes the engine ready to run on a server for a future multiplayer version (see the roadmap in the review).
 
+## Planned: real-cash purchases (cosmetics only), to be built near the end
+
+Decided with the project owner on 13 Oct 2026, and not built yet:
+
+- **What you can buy:** real cash buys **cosmetics only**: outfits, home décor, car colours and profile badges.
+  - It never buys naira, status, skills or anything else that changes a life's money. The Hall of Fame and Weekly Lagos stay fair, and money stays hard to make.
+- **Payments:** Flutterwave (Nigerian and international cards) and PayPal.
+- **Where it runs:** on a self-hosted copy of the game (the PWA), with a small server that:
+  - creates each payment;
+  - verifies it with the provider's webhook and secret key;
+  - only then unlocks the item for the player's account.
+- **The artifact build:** it can't load the providers' checkout scripts or verify a payment, so it keeps no real-money flow.
+- **Before going live:** build and test everything in Flutterwave and PayPal **sandbox** mode. The owner sets up the business accounts and puts the keys in the server's settings. Keys never go in the repository or the game code.
+- **Also needed:**
+  - an 18+ check before purchase;
+  - clear prices in ₦ and $, and a receipt;
+  - a refund and terms page;
+  - a purchase history on the Me tab.
+- **Purchases and replays:** owned cosmetics live outside a life's replay, the way profile photos do, so buying them never changes a ledger seal.
+
 ## Disclaimer
 
 Lasgidi is fiction and is not affiliated with Lagos Life or its developer. In-game naira has no real-world value and cannot be bought or cashed out. Place names refer to real Lagos districts. Businesses and people are invented.
