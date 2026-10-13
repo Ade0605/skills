@@ -930,7 +930,7 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .cv-note { margin: 0; font-size: 12px; }
 @media (max-width: 520px) { .cv-head { grid-template-columns: auto 1fr auto; } .cv-head #cruise-leave { grid-column: 1 / -1; } }
 .toasts { z-index: 48; }
-body:has(#cruise-view) .toasts { top: 12px; bottom: auto; }
+body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-view) .toasts { top: 12px; bottom: auto; }
 .report-box { display: grid; gap: 6px; padding: 10px; border-radius: 14px; background: color-mix(in srgb, #e5484d 10%, var(--sunk)); }
 .report-box .pick { display: flex; flex-wrap: wrap; gap: 6px; }
 .rep-link { font-size: 12px; justify-self: end; }
@@ -971,3 +971,5 @@ body:has(#cruise-view) .toasts { top: 12px; bottom: auto; }
 .ap-panel { max-height: 42vh; overflow-y: auto; }
 .fids-wrap { border-radius: 12px; overflow: hidden; } .fids-wrap .fids { border-radius: 0; }
 .pg-layers { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 6px; }
+.room-view.room-beach { background: #2a9cc4; }
+.room-card { background: linear-gradient(135deg, #8a5a2b, #d9822b); }

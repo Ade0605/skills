@@ -340,6 +340,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - motor yachts: Riva, Azimut, Ferretti, Sunseeker, Princess, Pershing;
     - superyachts: Benetti, Heesen, Sanlorenzo, Feadship, Lürssen, Oceanco;
     - sailing yachts: Royal Huisman, Perini Navi.
+- **More live rooms:** two venues use the cruise's deck renderer, with their own layouts, crews and spots, plus the same filtered room chat, 📷, fold and Leave.
+  - **White Sand Beach (₦3,000, 7am–7pm):** beach bar, volleyball, loungers under umbrellas, a jet-ski dock, and a bonfire after 5pm. You can also fish here.
+  - **Tidewater House (members only, 4pm–midnight):** a DJ booth, a wood-fired pizza oven, the jetty, the lounge and the bar.
+  - **Rules:** room chat only reaches people in the same room, and a player only counts as present if their district matches the venue. New recorded calls `rme`, `rms` and `rml`.
+- **People app:** everyone online in every city, with their district, city and what they're up to (on the cruise, at a room, or their activity), and a Chat button for each. Blocked players are hidden.
 - **Map layers:** buttons above the map show or hide 🏷️ **Names** (place names), 🪧 **Billboards** and 👥 **Players**, and the device remembers your choice. To keep the city readable, billboards only appear once you zoom in a little, or when the Billboards filter is on.
 - **Fishing:** buy a rod once (₦12,000), then cast a line at a waterfront (Ikoyi, Lekki, Ajah, the Island, Festac, Borokiri in PH) or from the cruise rail.
   - Each cast takes 45 minutes, with three casts a day. Most bring tilapia or catfish, some nothing (or an old slipper), and rarely a barracuda or tarpon ("Big catch").

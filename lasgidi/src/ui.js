@@ -178,6 +178,7 @@
     mountVisit();
     mountCruise();
     mountAirport();
+    mountRoom();
     Array.prototype.forEach.call(document.querySelectorAll('canvas.ww-hall'), drawHall);
     drawHudAvatar();
     mountInterior();
@@ -411,6 +412,13 @@
           ui.toasts.push({ msg: msg.data.bell ? '🔔 ' + nm + ' rang your bell. They are at your party!' : '👋 ' + nm + ' waved at you.', ok: true }); scheduleRender();
         });
         room.on('deck', function (msg) {
+          if (msg && msg.data && typeof msg.data.room === 'string') { // a live room's chat: only from people in that same room
+            var rid = msg.data.room;
+            if (!D.ROOMS[rid] || msg.by === online.me || online.muted[msg.by] || !S || !S.room || !L.roomIn(S, rid) || !roomPeers(rid).some(function (p) { return p.by === msg.by; })) return;
+            var rr = CH.clean(msg.data.text); if (!rr.ok) return;
+            online.roomChat = (online.roomChat || []).concat([{ room: rid, by: msg.by, text: rr.text, at: Date.now() }]).slice(-30);
+            mountRoom(); setTimeout(mountRoom, 7200); return;
+          }
           if (!msg || !msg.by || !msg.data || msg.by === online.me || online.muted[msg.by] || !S || !S.cruise || !L.cruiseAboard(S)) return;
           if (!deckPeers().some(function (p) { return p.by === msg.by; })) return; // only people actually on deck
           var r = CH.clean(msg.data.text); if (!r.ok) return;
@@ -440,7 +448,7 @@
   function syncPresence() {
     if (!online.room) return;
     var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null, pt = myParty();
-    var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : ui.visit || null, a: S ? myActivity() : null };
+    var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : S && S.room && L.roomIn(S, S.room.id) ? 'room:' + S.room.id + ':' + S.room.spot : ui.visit || null, a: S ? myActivity() : null };
     var key = JSON.stringify(pres);
     if (key === online.sentLoc) return;
     online.sentLoc = key;
@@ -581,6 +589,18 @@
       '<li><b>Block and report:</b> open a player\'s card to block them (hidden from you at once) or report them to the editors with a reason.</li>' +
       '<li><b>Politics:</b> manifestos and mottos come from fixed lists, never free text, and candidates can be reported.</li>' +
       '<li><b>Money:</b> in-game naira has no real value. There is no gambling, no betting, no real investments and no cash-out. Billboards are player ads, labelled as such.</li></ul></div>';
+  }
+  // Everyone online in every city, so friends in Abuja or PH are one tap away.
+  function peopleView() {
+    if (!online.room) return '<div class="section"><h3>👥 People online</h3><p class="note">Other players show here when the game is opened on claude.ai.</p></div>';
+    var list = (online.peerList || []).filter(function (p) { return !online.muted[p.by]; }), here = L.cityOf(S);
+    list.sort(function (a, b) { var ca = L.districtCity(a.d) === here ? 0 : 1, cb = L.districtCity(b.d) === here ? 0 : 1; return ca - cb || nameOf(a.by).localeCompare(nameOf(b.by)); });
+    var blocked = Object.keys(online.muted).length;
+    return '<div class="section"><h3>👥 People online <span class="muted">· ' + list.length + '</span></h3>' + (list.length ? '<div class="list">' + list.slice(0, 60).map(function (p) {
+      var city = D.CITIES[L.districtCity(p.d)].name, act = p.act ? ACTIVITIES[p.act] : '', rid = p.at && p.at.indexOf('room:') === 0 ? p.at.split(':')[1] : null, where = deckPeers().indexOf(p) >= 0 ? 'on the Lagoon Boat Cruise' : rid && D.ROOMS[rid] && roomPeers(rid).indexOf(p) >= 0 ? 'at ' + D.ROOMS[rid].name : act;
+      return '<div class="item person">' + (photoImg(p.by) || '<span class="pc-photo pc-ph" style="width:40px;height:40px;font-size:20px">🙂</span>') + '<div><h3>' + esc(nameOf(p.by)) + ' <span class="pc-handle">' + esc(handleOf(p.by)) + '</span></h3><div class="meta"><span>📍 ' + esc(D.DISTRICTS[p.d].name) + ', ' + esc(city) + '</span>' + (where ? '<span>' + esc(where) + '</span>' : '') + '</div></div>' +
+        '<div class="inline"><button class="btn sm" id="ppl-chat-' + esc(p.by) + '" data-chatopen="' + esc(p.by) + '">💬 Chat' + (online.unread[p.by] ? ' · ' + online.unread[p.by] : '') + '</button></div></div>';
+    }).join('') + '</div>' : '<p class="note">Nobody else is online right now.</p>') + (blocked ? '<p class="note">' + blocked + ' blocked player' + (blocked === 1 ? '' : 's') + ' hidden. Unblock from their player card.</p>' : '') + '</div>';
   }
   function sendChat(by, text) {
     var r = CH.clean(text);
@@ -1452,7 +1472,7 @@
       (chips ? '<div class="act-chips">' + chips + '</div>' : '') +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
-      (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.cruise ? cruiseCard() : '') + (pl.hydepark ? hydeParkView() : '') +
+      (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.cruise ? cruiseCard() : '') + roomCardFor(pl.id) + (pl.hydepark ? hydeParkView() : '') +
       (pl.id === 'airport' && !S.challenge ? japaView() : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : rideRow(pl.district));
@@ -1512,7 +1532,7 @@
         : '<button class="btn go big-go" id="cruise-board" data-cruiseboard="1"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>Board · ' + N(L.cruiseFare(S)) + '</button>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '')) + '</section>';
   }
   function deckPeers() {
-    return (online.peerList || []).filter(function (p) { return p.at && p.at.indexOf('cruise:') === 0 && D.CRUISE.spots[p.at.slice(7)] && !online.muted[p.by]; });
+    return (online.peerList || []).filter(function (p) { return p.d === D.CRUISE.district && p.at && p.at.indexOf('cruise:') === 0 && D.CRUISE.spots[p.at.slice(7)] && !online.muted[p.by]; });
   }
   var cruiseStage = null, cruisePanelKey = '';
   var CREW = [{ by: 'crew:captain', label: 'Captain', spot: 'helm', crew: true, look: { skin: 4, hair: 6, shape: 2 }, outfit: { top: 'shirt', bottom: 'trousers' } },
@@ -1540,6 +1560,8 @@
   }
   function mountCruise() {
     var ov = document.getElementById('cruise-view');
+    // Travelled off while still holding a ticket: you got off the boat (a recorded leave, after the trip).
+    if (S && S.cruise && L.cruiseAboard(S) && S.loc !== D.CRUISE.district) { L.cruiseLeave(S); ui.cruiseOpen = false; save(); }
     var want = S && S.cruise && L.cruiseAboard(S) && ui.cruiseOpen;
     if (!want) { if (ov) ov.remove(); return; }
     if (!ov) {
@@ -1654,6 +1676,67 @@
       return '<div class="item"><div><h3>' + esc(o.label) + '</h3><div class="meta"><span>' + dur(o.mins) + '</span>' + (o.cost ? '<span class="cost">' + N(o.cost) + '</span>' : '') + (o.when ? '<span>' + esc(whenText(o.when)) + '</span>' : '') + '</div></div><button class="btn sm" id="clubact-' + id + '-' + o.id + '" data-clubact="' + id + ':' + o.id + '"' + (o.disabled ? ' disabled title="' + esc(o.disabled) + '"' : '') + '>' + (member ? 'Go' : '🔒') + '</button></div>';
     }).join('') + '</div></section>';
     return html;
+  }
+  /* ---------- live rooms (beach, Tidewater House): the deck renderer with other layouts ---------- */
+  var ROOM_CREW = {
+    beach: [{ by: 'crew:bar', label: 'Barman', spot: 'bar', crew: true, look: { skin: 4, hair: 0, shape: 1 }, outfit: { top: 'st_ankara', bottom: 'st_chinos' } }, { by: 'crew:guard', label: 'Lifeguard', spot: 'jetski', crew: true, look: { skin: 3, hair: 6, shape: 2 }, outfit: { top: 'jersey', bottom: 'joggers' } }],
+    tidewater: [{ by: 'crew:dj', label: 'DJ', spot: 'dj', crew: true, look: { skin: 5, hair: 5, shape: 1 }, outfit: { top: 'crop', bottom: 'joggers' } }, { by: 'crew:chef', label: 'Chef', spot: 'oven', crew: true, look: { skin: 2, hair: 6, shape: 1 }, outfit: { top: 'st_tee', bottom: 'trousers' } }, { by: 'crew:bar', label: 'Bartender', spot: 'bar', crew: true, look: { skin: 4, hair: 2, shape: 1 }, outfit: { top: 'shirt', bottom: 'trousers' } }]
+  };
+  function roomCardFor(placeId) {
+    var id = Object.keys(D.ROOMS).filter(function (k) { return D.ROOMS[k].place === placeId; })[0]; if (!id) return '';
+    var R = D.ROOMS[id], inRoom = L.roomIn(S, id), why = L.roomBlock(S, id), n = roomPeers(id).length;
+    return '<section class="cruise-card room-card"><div class="cc-top"><span>📍 LIVE ROOM · ' + esc(R.name.toUpperCase()) + '</span><span>' + (R.fee ? N(L.price(S, R.fee)) : R.club ? 'Members' : 'Free') + '</span></div>' +
+      '<p class="note">' + (n ? n + ' player' + (n === 1 ? ' is' : 's are') + ' here now. ' : '') + 'Step in, move between spots and chat with everyone there. Open ' + R.from + ':00–' + (R.to === 24 ? 'midnight' : R.to + ':00') + '.</p>' +
+      (inRoom ? '<button class="btn go big-go" id="room-open" data-roomopen="' + id + '">Back in</button>' : '<button class="btn go big-go" id="room-enter" data-roomenter="' + id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>Go in' + (R.fee ? ' · ' + N(L.price(S, R.fee)) : '') + '</button>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '')) + '</section>';
+  }
+  function roomPeers(id) {
+    var pre = 'room:' + id + ':';
+    var dist = D.PLACES.filter(function (x) { return x.id === D.ROOMS[id].place; })[0].district;
+    return (online.peerList || []).filter(function (p) { return p.d === dist && p.at && p.at.indexOf(pre) === 0 && D.ROOMS[id].spots[p.at.slice(pre.length)] && !online.muted[p.by]; });
+  }
+  var roomStage = null, roomKey = '';
+  function roomScene(id) {
+    var pre = 'room:' + id + ':', me = { by: online.me || 'me', label: handleOf(online.me), spot: S.room.spot, me: true, look: S.look, outfit: S.outfit };
+    var peers = roomPeers(id).slice(0, 16).map(function (p) { var h = 0; for (var i = 0; i < p.by.length; i++) h = (h * 31 + p.by.charCodeAt(i)) >>> 0; return { by: p.by, label: handleOf(p.by), spot: p.at.slice(pre.length), look: p.look, outfit: { top: STARTERS[h % 4], bottom: ['st_jeans', 'st_chinos', 'st_wrapper'][h % 3] } }; });
+    var bubbles = {}, now = Date.now(); (online.roomChat || []).forEach(function (m) { if (m.room === id && now - m.at < 7000) bubbles[m.by] = m.text; });
+    var h0 = L.hour(S); return { room: id, players: (ROOM_CREW[id] || []).concat(peers, [me]), spot: S.room.spot, bubbles: bubbles, night: h0 >= 19 || h0 < 6 };
+  }
+  function roomPanel(id) {
+    var R = D.ROOMS[id], peers = roomPeers(id), left = Math.max(0, S.room.until - S.t);
+    return '<div class="cv-head">' + (photoImg(online.me, 'cv-me') || '<span class="cv-me">🙂</span>') + '<div><b>📍 ' + esc(R.name) + ' <span class="muted">· ' + esc(R.where) + '</span></b><small>' + esc(S.room.last || dur(left) + ' here. Pick a spot.') + '</small></div>' +
+      '<button class="btn sm ghost" id="room-photo" data-photo="room" aria-label="Take a photo">📷</button><button class="btn sm ghost" id="room-close" data-roomclose="1" aria-label="Back to the map">🗺️</button><button class="btn sm ghost" id="room-fold" data-roomfold="1" aria-label="' + (ui.roomFold ? 'Show the panel' : 'Hide the panel') + '">' + (ui.roomFold ? '⌃' : '⌄') + '</button></div>' +
+      (ui.roomFold ? '' : '<div class="chat-send"><input id="room-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Say something to the ' + (peers.length + 1) + ' player' + (peers.length ? 's' : '') + ' here…" aria-label="Room chat"><button class="btn" id="room-send" data-roomsend="1" aria-label="Send">➤</button></div>' +
+      (ui.roomWhy ? '<p class="why">' + esc(ui.roomWhy) + '</p>' : '') +
+      '<div class="cv-spots">' + Object.keys(R.spots).map(function (k) { var P0 = R.spots[k], on = S.room.spot === k, n = peers.filter(function (p) { return p.at.slice(('room:' + id + ':').length) === k; }).length; return '<button type="button" class="act-chip' + (on ? ' on' : '') + '" id="rspot-' + k + '" data-roomspot="' + k + '">' + P0.icon + ' ' + esc(P0.name) + (P0.cost ? ' · ' + N(L.price(S, P0.cost)) : '') + (n ? ' · 👥' + n : '') + '</button>'; }).join('') + '</div>' +
+      (id === 'beach' ? fishingCard(true) : '') +
+      '<div class="inline" style="justify-content:space-between"><p class="note cv-note">' + dur(left) + ' left. Tap a spot to move, or a player to chat. Chat is filtered and never stored.</p><button class="btn sm ghost" id="room-leave" data-roomleave="1">Leave</button></div>');
+  }
+  function mountRoom() {
+    var ov = document.getElementById('room-view');
+    if (S && S.room && L.roomIn(S, S.room.id) && S.loc !== D.PLACES.filter(function (p) { return p.id === D.ROOMS[S.room.id].place; })[0].district) { L.roomLeave(S); ui.roomOpen = null; save(); }
+    var id = S && S.room && L.roomIn(S, S.room.id) && ui.roomOpen === S.room.id ? S.room.id : null;
+    if (!id) { if (ov) ov.remove(); return; }
+    if (ov && ov.getAttribute('data-room') !== id) { ov.remove(); ov = null; }
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'room-view'; ov.className = 'cruise-view room-view room-' + id; ov.setAttribute('data-room', id); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', D.ROOMS[id].name);
+      if (!roomStage) roomStage = window.LasgidiCruise.create({
+        onSpot: function (k) { if (S.room && k !== S.room.spot) run(function () { return L.roomSpot(S, S.room.id, k); }); },
+        onPlayer: function (by) { ui.roomOpen = null; clearPicks(); ui.chatWith = by; online.unread[by] = 0; ui.tab = 'map'; render(); }
+      });
+      var pn = document.createElement('div'); pn.className = 'cv-panel'; pn.id = 'room-panel'; ov.appendChild(roomStage.el); ov.appendChild(pn); document.body.appendChild(ov); roomKey = '';
+    }
+    var html = roomPanel(id), pn2 = document.getElementById('room-panel');
+    if (html !== roomKey) { var inp = document.getElementById('room-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'room-in'; pn2.innerHTML = html; roomKey = html; var ni = document.getElementById('room-in'); if (ni) { ni.value = val; if (foc) ni.focus(); } }
+    roomStage.update(roomScene(id)); roomStage.start();
+  }
+  function sendRoom(text) {
+    var r = CH.clean(text); if (!r.ok) { ui.roomWhy = r.why; mountRoom(); return; }
+    var wait = CH.canSend(online.sentTimes, Date.now()); if (wait) { ui.roomWhy = wait; mountRoom(); return; }
+    ui.roomWhy = ''; online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
+    online.roomChat = (online.roomChat || []).concat([{ room: S.room.id, by: online.me || 'me', text: r.text, at: Date.now() }]).slice(-30);
+    var ni = document.getElementById('room-in'); if (ni) ni.value = '';
+    if (online.room) online.room.emit('deck', { room: S.room.id, text: r.text }).catch(function () {});
+    mountRoom();
   }
   /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
   var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
@@ -2637,7 +2720,7 @@
   function markRead() { try { localStorage.setItem(READ_KEY, JSON.stringify({ seed: S.seed, t: S.t })); } catch (e) {} }
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
-    ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['home', '🏠', 'Home'], ['jobs', '💼', 'Careers'], ['money', '💰', 'Money'], ['assets', '📊', 'Assets'], ['houses', '🏡', 'Houses'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
+    ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['home', '🏠', 'Home'], ['people', '👥', 'People'], ['jobs', '💼', 'Careers'], ['money', '💰', 'Money'], ['assets', '📊', 'Assets'], ['houses', '🏡', 'Houses'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
@@ -3026,6 +3109,7 @@
       else if (app === 'fame') body = '<div class="panel-b">' + (fameView() || '<div class="section"><h3>Lagos Hall of Fame</h3><p class="note">The Hall of Fame is shared with everyone you share Lasgidi with. It works when the game is opened on claude.ai.</p></div>') + '</div>';
       else if (app === 'wardrobe') body = '<div class="panel-b">' + lagosianView() + '</div>';
       else if (app === 'home') body = houseTab();
+      else if (app === 'people') body = '<div class="panel-b">' + peopleView() + '</div>';
       else if (app === 'money') body = moneyView();
       else if (app === 'assets') body = '<div class="panel-b">' + assetsView() + '</div>';
       else if (app === 'houses') body = '<div class="panel-b">' + housesView() + '</div>';
@@ -3229,7 +3313,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3541,8 +3625,8 @@
     }
     if (ds.ridemode) { ui.rideMode = ds.ridemode; render(); return; }
     if (ds.chatopen) { clearPicks(); ui.chatWith = ds.chatopen; online.unread[ds.chatopen] = 0; ui.tab = 'map'; render(); return; }
-    if (ds.cruiseboard) { run(function () { var r = L.cruiseBoard(S); if (r.ok) ui.cruiseOpen = true; return r; }); syncPresence(); return; }
-    if (ds.cruiseopen) { ui.cruiseOpen = true; render(); return; }
+    if (ds.cruiseboard) { run(function () { var r = L.cruiseBoard(S); if (r.ok) { ui.cruiseOpen = true; ui.airportOpen = false; } return r; }); syncPresence(); return; }
+    if (ds.cruiseopen) { ui.cruiseOpen = true; ui.airportOpen = false; render(); return; }
     if (ds.cruisespot) { var csp = ds.cruisespot; if (S.cruise && S.cruise.spot === csp) return; run(function () { return L.cruiseSpot(S, csp); }); syncPresence(); return; }
     if (ds.cruiseleave) { ui.cruiseOpen = false; run(function () { return L.cruiseLeave(S); }); syncPresence(); return; }
     if (ds.cruiseclose) { ui.cruiseOpen = false; render(); return; }
@@ -3551,16 +3635,23 @@
     if (ds.fishcast) { run(function () { var r = L.fish(S); if (r.ok && S.cruise && L.cruiseAboard(S)) S.cruise.last = r.msg; return r; }); return; }
     if (ds.fishsell) { run(function () { return L.sellFish(S); }); return; }
     if (ds.fishcook) { run(function () { return L.cookFish(S); }); return; }
-    if (ds.photo) { ui.photoFrom = ds.photo; if (ds.photo === 'cruise') takePhoto(document.querySelector('.cruise-canvas'), 'Lagoon Boat Cruise'); else if (ds.photo === 'airport') takePhoto(document.querySelector('.airport-canvas'), ui.airportName || 'Airport'); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); return; }
-    if (ds.photoretake) { var pv = document.getElementById('photo-view'); if (pv) pv.remove(); setTimeout(function () { if (ui.photoFrom === 'cruise') takePhoto(document.querySelector('.cruise-canvas'), 'Lagoon Boat Cruise'); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); }, 80); return; }
+    if (ds.photo) { ui.photoFrom = ds.photo; if (ds.photo === 'cruise') takePhoto(document.querySelector('#cruise-view .cruise-canvas'), 'Lagoon Boat Cruise'); else if (ds.photo === 'airport') takePhoto(document.querySelector('.airport-canvas'), ui.airportName || 'Airport'); else if (ds.photo === 'room') takePhoto(document.querySelector('#room-view .cruise-canvas'), D.ROOMS[S.room.id].name); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); return; }
+    if (ds.photoretake) { var pv = document.getElementById('photo-view'); if (pv) pv.remove(); setTimeout(function () { if (ui.photoFrom === 'cruise') takePhoto(document.querySelector('#cruise-view .cruise-canvas'), 'Lagoon Boat Cruise'); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); }, 80); return; }
     if (ds.photoclose) { ui.photo = null; var pv2 = document.getElementById('photo-view'); if (pv2) pv2.remove(); return; }
     if (ds.photosave) { savePhoto(); return; }
     if (ds.cruisefold) { ui.cruiseFold = !ui.cruiseFold; mountCruise(); return; }
-    if (ds.airportopen) { var apl = D.PLACES.filter(function (p) { return p.id === ds.airportopen; })[0]; ui.airportPlace = ds.airportopen; ui.airportName = apl ? apl.name : 'Airport'; ui.airportOpen = true; render(); return; }
+    if (ds.airportopen) { var apl = D.PLACES.filter(function (p) { return p.id === ds.airportopen; })[0]; ui.airportPlace = ds.airportopen; ui.airportName = apl ? apl.name : 'Airport'; ui.airportOpen = true; ui.cruiseOpen = false; render(); return; }
     if (ds.airportclose) { ui.airportOpen = false; render(); return; }
     if (ds.airportgo) { airportGo(ds.airportgo); return; }
     if (ds.fidstab) { ui.fidsTab = ds.fidstab; mountAirport(); return; }
     if (ds.layer) { var ly = mapLayers(); ly[ds.layer] = !ly[ds.layer]; try { localStorage.setItem(LAYER_KEY, JSON.stringify(ly)); } catch (e) {} render(); return; }
+    if (ds.roomenter) { var re0 = ds.roomenter; run(function () { var r = L.roomEnter(S, re0); if (r.ok) { ui.roomOpen = re0; ui.cruiseOpen = false; ui.airportOpen = false; } return r; }); syncPresence(); return; }
+    if (ds.roomopen) { ui.roomOpen = ds.roomopen; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
+    if (ds.roomspot) { var rsp = ds.roomspot; if (S.room && S.room.spot === rsp) return; run(function () { return L.roomSpot(S, S.room.id, rsp); }); syncPresence(); return; }
+    if (ds.roomleave) { ui.roomOpen = null; run(function () { return L.roomLeave(S); }); syncPresence(); return; }
+    if (ds.roomclose) { ui.roomOpen = null; render(); return; }
+    if (ds.roomsend) { var ri = document.getElementById('room-in'); sendRoom(ri ? ri.value : ''); return; }
+    if (ds.roomfold) { ui.roomFold = !ui.roomFold; mountRoom(); return; }
     if (ds.hpbuild) { var hz = ds.hpbuild; run(function () { return L.hpBuild(S, hz); }); return; }
     if (ds.joinclub) { var jc = ds.joinclub.split(':'); run(function () { return L.joinClub(S, jc[0], jc[1]); }); return; }
     if (ds.clubact) { var ca = ds.clubact.split(':'); run(function () { return L.clubAct(S, ca[0], ca[1]); }); return; }
@@ -3692,6 +3783,7 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target && e.target.id === 'room-in') { e.preventDefault(); sendRoom(e.target.value); return; }
     if (e.key === 'Enter' && e.target && e.target.id === 'deck-in') { e.preventDefault(); sendDeck(e.target.value); return; }
     if (e.key === 'Enter' && e.target && e.target.id === 'chat-in' && ui.chatWith) { e.preventDefault(); sendChat(ui.chatWith, e.target.value); return; }
     if (S && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target.matches && e.target.matches('input, textarea, select'))) {

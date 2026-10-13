@@ -2190,3 +2190,31 @@ test('fishing: a rod once, three casts a day at a waterfront, sell at 80% or coo
   if (v) { assert.ok(L.sellFish(s).ok); assert.equal(s.cash + s.bank - b, v); } else assert.equal(L.sellFish(s).ok, false);
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('live rooms: beach entry and spots, Tidewater members only, boosts taper, replays', () => {
+  const s = L.newGame({ seed: 99, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.cash += 400000000;
+  s.loc = 'ajah'; s.t = Math.floor(s.t / 1440) * 1440 + 1440 + 10 * 60;
+  assert.equal(L.roomSpot(s, 'beach', 'bar').ok, false, 'not there yet');
+  const b0 = s.cash + s.bank; assert.ok(L.roomEnter(s, 'beach').ok); assert.equal(b0 - (s.cash + s.bank), L.price(s, 3000));
+  assert.match(L.roomBlock(s, 'beach'), /already/);
+  assert.match(L.roomSpot(s, 'beach', 'bonfire').msg, /evening/);
+  const f0 = s.needs.fun; assert.ok(L.roomSpot(s, 'beach', 'volley').ok); assert.ok(s.needs.fun >= f0);
+  for (let i = 0; i < 2; i++) { s.pending = []; assert.ok(L.roomSpot(s, 'beach', 'volley').ok); }
+  s.pending = []; L.roomSpot(s, 'beach', 'loungers'); assert.equal(L.roomSpot(s, 'beach', 'bar').ok, false, 'two hours are up');
+  assert.ok(L.roomLeave(s).ok); assert.equal(L.roomIn(s, 'beach'), false);
+  s.pending = [];
+  s.loc = 'ikoyi'; s.t = Math.floor(s.t / 1440) * 1440 + 1440 + 18 * 60;
+  assert.match(L.roomBlock(s, 'tidewater'), /Members only/);
+  assert.ok(L.joinClub(s, 'tidewater', 'worth').ok);
+  s.pending = []; assert.ok(L.roomEnter(s, 'tidewater').ok); s.pending = []; assert.ok(L.roomSpot(s, 'tidewater', 'oven').ok);
+  const r = L.newGame({ seed: 100, origin: 'nepo', goal: 'freestyle' });
+  while (r.pending.length) L.resolveChoice(r, 1);
+  if (r.loc !== 'ajah') { const o = L.travelOptions(r, 'ajah').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'ajah', o.mode).ok); }
+  while (r.pending.length) L.resolveChoice(r, 1);
+  if (L.hour(r) < 7) L.wait(r, (7 - L.hour(r)) * 60);
+  while (r.pending.length) L.resolveChoice(r, 1);
+  if (L.roomEnter(r, 'beach').ok) { while (r.pending.length) L.resolveChoice(r, 1); L.roomSpot(r, 'beach', 'loungers'); }
+  assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});

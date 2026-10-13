@@ -2281,6 +2281,45 @@
     return finish(s, ok('Congratulations! You married ' + p.name + '.'));
   }
 
+  /* ---------- live rooms: enter (rme), move between spots (rms), leave (rml) ---------- */
+  function roomPlaceDistrict(id) { var R = D.ROOMS[id], pl = R && D.PLACES.filter(function (p) { return p.id === R.place; })[0]; return pl ? pl.district : null; }
+  function roomIn(s, id) { return !!(s.room && s.room.id === id && s.t < s.room.until); }
+  function roomBlock(s, id) {
+    var R = D.ROOMS[id]; if (!R) return 'No such place';
+    if (roomIn(s, id)) return 'You are already there';
+    if (s.loc !== roomPlaceDistrict(id)) return 'Go to ' + D.DISTRICTS[roomPlaceDistrict(id)].name + ' first';
+    if (R.club && !clubMember(s, R.club)) return 'Members only';
+    var h = hour(s); if (h < R.from || h >= R.to) return 'Open ' + pad2(R.from) + ':00–' + (R.to === 24 ? 'midnight' : pad2(R.to) + ':00');
+    if (R.fee && !canAfford(s, price(s, R.fee))) return 'Entry is ' + naira(price(s, R.fee));
+    return busyBlock(s) || '';
+  }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function roomEnter(s, id) {
+    var why = roomBlock(s, id); if (why) return fail(why + '.');
+    var R = D.ROOMS[id]; s.alerts = [];
+    if (R.fee) pay(s, price(s, R.fee), R.name + ' entry');
+    s.room = { id: id, until: s.t + R.mins, spot: Object.keys(R.spots)[0], n: 0 };
+    applyFx(s, R.fx);
+    log(s, '📍 You arrived at ' + R.name + '.', 'good');
+    return finish(s, ok('Welcome to ' + R.name + '.'));
+  }
+  function roomSpot(s, id, spot) {
+    var R = D.ROOMS[id], P0 = R && R.spots[spot];
+    if (!P0) return fail('No such spot.');
+    if (!roomIn(s, id)) return fail('You are not there.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var cost = price(s, P0.cost);
+    if (cost && !canAfford(s, cost)) return fail(P0.name + ' costs ' + naira(cost) + '.');
+    if (spot === 'bonfire' && hour(s) < 17) return fail('The bonfire is lit in the evening.');
+    s.alerts = [];
+    if (cost) pay(s, cost, R.name + ': ' + P0.name);
+    s.room.spot = spot; s.room.n = (s.room.n || 0) + 1;
+    if (s.room.n <= 6) { applyFx(s, P0.fx); addXp(s, P0.xp); }
+    advance(s, 30); s.room.last = P0.text;
+    return finish(s, ok(P0.icon + ' ' + P0.text));
+  }
+  function roomLeave(s) { if (!s.room) return fail('You are not in a room.'); s.room.until = s.t; return ok('You left.'); }
+
   /* ---------- fishing: buy a rod (fr), cast (fi), sell or cook the catch (fs, fc2) ---------- */
   function fishWhere(s) {
     if (cruiseAboard(s) && s.cruise.spot === 'rail') return 'the rail of the cruise boat';
@@ -4523,7 +4562,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
