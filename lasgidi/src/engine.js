@@ -1920,6 +1920,14 @@
   function buyProperty(s, id) {
     var p = D.PROPERTIES[id];
     if (!p || p.hidden) return fail('Unknown property.');
+    // Lekki Hyde Park: one home per zone, whether bought ready-built or built on its plot.
+    var hz = p.hpZone || (p.hydepark && Object.keys(D.HYDE_PARK.zones).filter(function (z) { return D.HYDE_PARK.zones[z].house === id; })[0]);
+    if (hz) {
+      var Z = D.HYDE_PARK.zones[hz], has = function (pid) { return s.properties.some(function (x) { return x.id === pid; }); };
+      if (s.hpBuild && s.hpBuild[hz]) return fail('You are already building in ' + Z.name + '.');
+      if (has(Z.house)) return fail('You already own a home in ' + Z.name + '.');
+      if (has(Z.plot)) return fail('You already own the plot in ' + Z.name + '. Build on it.');
+    }
     var cost = price(s, p.price);
     s.alerts = [];
     if (!pay(s, cost, 'Bought ' + p.name)) return fail('You need ' + naira(cost) + '.');
@@ -2219,6 +2227,7 @@
       else if (p.stage === 'married') o.disabled = 'Already married';
       else if (p.stage !== 'introduced') o.disabled = 'Do the family introduction first';
       else if (p.aff < 75) o.disabled = p.name + ' is not ready yet (' + p.aff + '/75)';
+      else if (s.wwPlan && !s.wwPlan.done && day(s) <= s.wwPlan.date) o.disabled = 'Your white wedding is already booked';
       else if (!canAfford(s, cost)) o.disabled = 'Costs ' + naira(cost);
       return o;
     });

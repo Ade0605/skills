@@ -2118,3 +2118,22 @@ test('white wedding: 30% deposit books a Saturday four weeks out; the balance is
   assert.equal(s.partner.stage, 'married'); assert.ok(s.ach.white_wedding);
   assert.ok(b2 - (s.cash + s.bank) > 0, 'gifts never cover the balance');
 });
+
+test('regressions: no registry wedding over a booked white wedding; one Hyde Park home or plot per zone', () => {
+  const s = L.newGame({ seed: 83, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.partner = { name: 'K', stage: 'introduced', aff: 80, since: 0, contact: 0 }; s.cash += 80000000;
+  assert.ok(L.planWhiteWedding(s, { venue: 'yaba_hall', planner: 'none', asoebi: 'none', vendors: 'basic', theme: 'lilac', decor: 'simple', extras: [], after: 'none' }).ok);
+  assert.match(L.weddingOptions(s)[0].disabled, /already booked/);
+  assert.equal(L.marry(s, 'registry').ok, false);
+  const h = L.newGame({ seed: 81, origin: 'nepo', goal: 'freestyle' });
+  while (h.pending.length) L.resolveChoice(h, 1);
+  h.cash += 500000000; h.loc = 'lekki';
+  assert.ok(L.buyProperty(h, 'hp_plot_low').ok);
+  assert.equal(L.buyProperty(h, 'hp_plot_low').ok, false, 'no second plot');
+  assert.equal(L.buyProperty(h, 'hp_terrace').ok, false, 'build on the plot instead');
+  assert.ok(L.hpBuild(h, 'low').ok);
+  assert.equal(L.buyProperty(h, 'hp_terrace').ok, false, 'not while building');
+  assert.ok(L.buyProperty(h, 'hp_semi').ok);
+  assert.equal(L.buyProperty(h, 'hp_semi').ok, false, 'one home per zone');
+});
