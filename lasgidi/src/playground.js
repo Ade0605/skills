@@ -1040,7 +1040,8 @@
       // Billboards: a panel on two posts; paid ads rotate every 15 s.
       boardHits = [];
       var slot = Math.floor(Date.now() / 15000);
-      (CITY === 'lagos' ? D.BILLBOARDS : []).forEach(function (b, bi) {
+      var showBoards = !(scene.layers && scene.layers.boards === false) && (cam.z >= 1.3 || scene.board || scene.showBoards);
+      (CITY === 'lagos' && showBoards ? D.BILLBOARDS : []).forEach(function (b, bi) {
         var ads = (scene.boards && scene.boards[b.id]) || [];
         if (!ads.length) return;
         var ad = ads[(slot + bi) % ads.length];
@@ -1102,7 +1103,7 @@
         }
         var cy = pin3d(ctx, p.x, p.y, pr, D.PLACE_TYPES[pl.type].color, pl.icon, { sel: sel, bob: sel && !reduce, glyph: pl.glyph, img: pl.glyph });
         placeHits.push({ id: pl.id, x: p.x, y: cy });
-        if (sel || cam.z >= 1.9) labels.push({ place: pl, top: { x: p.x, y: cy + 4 }, pri: sel ? 1 : 4, sel: sel });
+        if (sel || (cam.z >= 1.9 && !(scene.layers && scene.layers.names === false))) labels.push({ place: pl, top: { x: p.x, y: cy + 4 }, pri: sel ? 1 : 4, sel: sel });
       });
 
       // Sea Plots: the grid, everyone's blocks, and approved pictures laid flat on the water.
@@ -1163,7 +1164,7 @@
       // Online players: a small figure with a face and an @handle floating over each head. Tap to chat.
       playerHits = [];
       var byD = {};
-      (scene.players || []).forEach(function (pl0) {
+      (scene.layers && scene.layers.players === false ? [] : scene.players || []).forEach(function (pl0) {
         var d = D.DISTRICTS[pl0.d]; if (!d || cityOfDistrict(pl0.d) !== CITY) return;
         var g0 = toScreen(d.x, d.y, 0), stem0 = 16 * Math.min(1.4, Math.max(0.8, s)), hx, hy;
         if (pl0.me) { hx = g0.x; hy = g0.y - stem0 - 22; if (!(scene.faces && scene.faces.me)) return; }

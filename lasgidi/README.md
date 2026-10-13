@@ -340,6 +340,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - motor yachts: Riva, Azimut, Ferretti, Sunseeker, Princess, Pershing;
     - superyachts: Benetti, Heesen, Sanlorenzo, Feadship, Lürssen, Oceanco;
     - sailing yachts: Royal Huisman, Perini Navi.
+- **Map layers:** buttons above the map show or hide 🏷️ **Names** (place names), 🪧 **Billboards** and 👥 **Players**, and the device remembers your choice. To keep the city readable, billboards only appear once you zoom in a little, or when the Billboards filter is on.
 - **Fishing:** buy a rod once (₦12,000), then cast a line at a waterfront (Ikoyi, Lekki, Ajah, the Island, Festac, Borokiri in PH) or from the cruise rail.
   - Each cast takes 45 minutes, with three casts a day. Most bring tilapia or catfish, some nothing (or an old slipper), and rarely a barracuda or tarpon ("Big catch").
   - Sell the bag to fish buyers at a waterfront for 80% of its value, or take it home as pantry meals.

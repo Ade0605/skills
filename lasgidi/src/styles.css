@@ -970,3 +970,4 @@ body:has(#cruise-view) .toasts { top: 12px; bottom: auto; }
 .fids .st-go { color: #4be08a; } .fids .st-off { color: #8fa2b3; } .fids .st-late { color: #ff6b6b; }
 .ap-panel { max-height: 42vh; overflow-y: auto; }
 .fids-wrap { border-radius: 12px; overflow: hidden; } .fids-wrap .fids { border-radius: 0; }
+.pg-layers { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 6px; }
