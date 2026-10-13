@@ -189,7 +189,7 @@
    * Both light up only inside claude.ai; the game is complete without them.
    * No chat and no free text travel between players: presence carries a
    * district key, the board carries numbers. */
-  var online = { govrun: [], govvote: [], govparty: [], govprimary: [], govcab: [], govconfirm: [], photos: {}, photoOff: {}, photoreview: [], myPhotoReview: null, votes: [], sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
+  var online = { govrun: [], govvote: [], govparty: [], govprimary: [], govcab: [], govconfirm: [], photos: {}, photoOff: {}, chats: {}, unread: {}, sentTimes: [], muted: (function () { try { return JSON.parse(localStorage.getItem('lasgidi.muted.v1') || '{}') || {}; } catch (e) { return {}; } })(), photoreview: [], myPhotoReview: null, votes: [], sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
 
   // Each player's row is a small summary at fame/<id>; the replay log lives
   // beside it at fame/<id>/proof/log. Load every summary (no ordering: a
@@ -391,6 +391,15 @@
           var nm = (online.names[msg.by] && online.names[msg.by].name) || 'A Lagosian';
           ui.toasts.push({ msg: msg.data.bell ? '🔔 ' + nm + ' rang your bell. They are at your party!' : '👋 ' + nm + ' waved at you.', ok: true }); scheduleRender();
         });
+        room.on('chat', function (msg) {
+          if (!msg || !msg.by || !msg.data || msg.data.to !== online.me || online.muted[msg.by] || msg.by === online.me) return;
+          var r = CH.clean(msg.data.text); if (!r.ok) return; // the sender's filter is not trusted
+          var log0 = online.chats[msg.by] = online.chats[msg.by] || [];
+          if (log0.filter(function (m) { return !m.me && Date.now() - m.at < 60000; }).length >= 15) return;
+          log0.push({ me: false, text: r.text, at: Date.now() }); if (log0.length > 60) log0.shift();
+          if (ui.chatWith !== msg.by) { online.unread[msg.by] = (online.unread[msg.by] || 0) + 1; ui.toasts.push({ msg: '💬 ' + handleOf(msg.by) + ': ' + r.text, ok: true }); }
+          scheduleRender();
+        });
       } catch (e) {}
       syncPresence();
     });
@@ -466,6 +475,49 @@
       if (Object.keys(faceCache).length > 40) faceCache = {};
       return (faceCache[key] = c);
     } catch (e) { return null; }
+  }
+  // Online players on the map: a little figure with their @handle floating above.
+  var CH = window.LasgidiChat;
+  function handleOf(id) { return CH.handle(id === online.me ? ((online.names[id] && online.names[id].name) || (S && S.name)) : (online.names[id] && online.names[id].name)); }
+  function mapPlayers() {
+    if (!online.room || !S) return [];
+    var city = L.cityOf(S), out = [{ by: online.me || 'me', d: S.loc, label: handleOf(online.me), me: true, look: S.look || null }];
+    (online.peerList || []).forEach(function (p) {
+      if (out.length >= 17 || L.districtCity(p.d) !== city || online.muted[p.by]) return;
+      out.push({ by: p.by, d: p.d, label: handleOf(p.by), look: p.look, unread: online.unread[p.by] || 0, face: photoImage(p.by) || (p.look ? faceCanvas(p.look, null) : null) });
+    });
+    return out;
+  }
+  // The player card: who they are, where they are, wave, visit, and a filtered chat.
+  function chatView(by) {
+    var p = (online.peerList || []).filter(function (x) { return x.by === by; })[0];
+    if (!p) return '<div class="inline" style="justify-content:space-between"><h3>💬 Chat</h3><button class="btn sm ghost" id="close-chat" data-closechat="1">Close</button></div><p class="muted">' + esc(nameOf(by)) + ' is not online right now.</p>';
+    var msgs = online.chats[by] || [], muted = !!online.muted[by], home = checkHome(online.homes[by]);
+    var near = p.d === S.loc;
+    return '<div class="sheet-grab" aria-hidden="true"></div><div class="player-card"><div class="pc-head">' + (photoImg(by, 'pc-photo') || '<span class="pc-photo pc-ph">🙂</span>') +
+      '<div><h3>' + esc(nameOf(by)) + '</h3><div class="pc-handle">' + esc(handleOf(by)) + '</div><div class="meta"><span>📍 ' + esc(D.DISTRICTS[p.d].name) + '</span>' + (home ? '<span>🏠 ' + esc(home.h.name) + '</span>' : '') + '</div></div>' +
+      '<button class="btn sm ghost" id="close-chat" data-closechat="1">Close</button></div>' +
+      '<div class="inline"><button class="btn sm ghost" id="pwave-' + esc(by) + '" data-wave="' + esc(by) + '">👋 Wave</button>' + (home ? '<button class="btn sm ghost" id="pvisit-' + esc(by) + '" data-visit2="' + esc(by) + '">🏠 Visit</button>' : '') +
+        (near ? '' : '<button class="btn sm ghost" id="pgo-' + esc(by) + '" data-go="' + p.d + '">🧭 Go to them</button>') +
+        '<button class="btn sm ghost" id="pmute-' + esc(by) + '" data-chatmute="' + esc(by) + '">' + (muted ? '🔈 Unmute' : '🔇 Mute') + '</button></div>' +
+      '<div class="chat-log" id="chat-log" aria-live="polite">' + (msgs.length ? msgs.slice(-30).map(function (m) { return '<div class="chat-msg' + (m.me ? ' me' : '') + '"><span>' + esc(m.text) + '</span></div>'; }).join('') : '<p class="muted">Say hello. Messages are not saved and vanish when you close the game.</p>') + '</div>' +
+      '<div class="chat-quick">' + CH.QUICK.map(function (q, i) { return '<button type="button" class="act-chip" id="cq-' + i + '" data-chatq="' + i + '">' + esc(q) + '</button>'; }).join('') + '</div>' +
+      '<div class="chat-send"><input id="chat-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Message ' + esc(handleOf(by)) + '" aria-label="Message" value="' + esc(ui.chatDraft || '') + '"><button class="btn" id="chat-send" data-chatsend="' + esc(by) + '">Send</button></div>' +
+      (ui.chatWhy ? '<p class="why">' + esc(ui.chatWhy) + '</p>' : '') +
+      '<p class="note">Keep it friendly: no sexual messages, no insults or abuse, no links, numbers or emails. Messages that break the rules are not sent, and you can mute anyone.</p></div>';
+  }
+  function sendChat(by, text) {
+    var r = CH.clean(text);
+    if (!r.ok) { ui.chatWhy = r.why; render(); return; }
+    var wait = CH.canSend(online.sentTimes, Date.now());
+    if (wait) { ui.chatWhy = wait; render(); return; }
+    if (!online.room) { ui.chatWhy = 'Chat is not open here.'; render(); return; }
+    online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
+    online.room.emit('chat', { to: by, text: r.text }).then(function () {
+      (online.chats[by] = online.chats[by] || []).push({ me: true, text: r.text, at: Date.now() });
+      ui.chatDraft = ''; ui.chatWhy = ''; var ci0 = document.getElementById('chat-in'); if (ci0) ci0.value = ''; render();
+      var lg = document.getElementById('chat-log'); if (lg) lg.scrollTop = lg.scrollHeight;
+    }, function () { ui.chatWhy = 'Chat is not open here yet.'; render(); });
   }
   function mapFaces() {
     var out = { me: photoImage(online.me) || faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit), peers: {} }, n = 0;
@@ -748,7 +800,7 @@
     return {
       city: L.cityOf(S), loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
-      flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(), weather: L.weatherNow(S), sea: { claims: seaClaims(), mine: online.me || 'me', sel: ui.seaOpen ? seaSel() : null }, trip: ui.trip && Date.now() - ui.trip.at < 2600 ? ui.trip : null,
+      flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(), players: mapPlayers(), weather: L.weatherNow(S), sea: { claims: seaClaims(), mine: online.me || 'me', sel: ui.seaOpen ? seaSel() : null }, trip: ui.trip && Date.now() - ui.trip.at < 2600 ? ui.trip : null,
       clock: L.clockLabel(S), banner: banner,
       places: ui.placeCat === 'boards' || ui.placeCat === 'homes' || ui.placeCat === 'cities' ? [] : D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && (!ui.placeCat || p.type === ui.placeCat); }), place: ui.place,
       homeId: S.home, homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
@@ -838,8 +890,9 @@
     var gifts = Object.keys(D.GIFTS);
     return '<div class="section people"><h3>👥 Lagosians here <span class="muted">· ' + here.length + ' in ' + esc(D.DISTRICTS[S.loc].name) + '</span></h3><div class="list">' + here.slice(0, 12).map(function (p) {
       var home = checkHome(online.homes[p.by]), waved = online.waved[p.by] && Date.now() - online.waved[p.by] < 30000;
-      return '<div class="item person">' + photoImg(p.by) + '<div><h3>' + esc(nameOf(p.by)) + '</h3>' + (home ? '<div class="meta"><span>Lives in ' + esc(home.h.name) + '</span></div>' : '') + '</div><div class="inline">' +
+      return '<div class="item person">' + photoImg(p.by) + '<div><h3>' + esc(nameOf(p.by)) + ' <span class="pc-handle">' + esc(handleOf(p.by)) + '</span></h3>' + (home ? '<div class="meta"><span>Lives in ' + esc(home.h.name) + '</span></div>' : '') + '</div><div class="inline">' +
         '<button class="btn sm ghost" id="wave-' + esc(p.by) + '" data-wave="' + esc(p.by) + '"' + (waved ? ' disabled' : '') + '>👋 ' + (waved ? 'Waved' : 'Wave') + '</button>' +
+        '<button class="btn sm ghost" id="chat-' + esc(p.by) + '" data-chatopen="' + esc(p.by) + '">💬 Chat' + (online.unread[p.by] ? ' · ' + online.unread[p.by] : '') + '</button>' +
         (home ? '<button class="btn sm ghost" id="visit-' + esc(p.by) + '" data-visit2="' + esc(p.by) + '">🏠 Visit</button>' : '') +
         '<select id="giftsel-' + esc(p.by) + '" aria-label="Gift">' + gifts.map(function (g) { return '<option value="' + g + '">' + D.GIFTS[g].icon + ' ' + esc(D.GIFTS[g].name) + ' · ' + N(L.price(S, D.GIFTS[g].price)) + '</option>'; }).join('') + '</select>' +
         '<button class="btn sm" id="gift-' + esc(p.by) + '" data-gift="' + esc(p.by) + '">🎁 Send</button></div></div>';
@@ -1220,7 +1273,7 @@
   }
 
   /* ---------- homes and the Mainland Estate ---------- */
-  function clearPicks() { ui.sel = null; ui.place = null; ui.board = null; ui.homeSel = null; ui.plotSel = null; ui.seaSel = null; ui.seaOpen = false; online.status = ''; }
+  function clearPicks() { ui.chatWith = null; ui.sel = null; ui.place = null; ui.board = null; ui.homeSel = null; ui.plotSel = null; ui.seaSel = null; ui.seaOpen = false; online.status = ''; }
   function marketHomes() {
     return Object.keys(D.HOMES).filter(function (k) { var h = D.HOMES[k]; return !h.hidden && (!h.owned || L.ownsHome(S, k)); })
       .sort(function (a, b) { return D.HOMES[a].rent - D.HOMES[b].rent; });
@@ -1506,6 +1559,7 @@
     if (!playground) playground = window.LasgidiPlayground.create({
       onSelect: function (k) { ui.sel = k === S.loc ? null : k; ui.place = null; ui.board = null; render(); },
       onSelectPlace: function (id) { clearPicks(); ui.place = id; render(); },
+      onSelectPlayer: function (by) { clearPicks(); ui.chatWith = by; online.unread[by] = 0; render(); },
       onSelectBoard: function (id) { clearPicks(); ui.board = id; render(); },
       onSelectHome: function (id) { clearPicks(); ui.homeSel = id; render(); },
       onSelectPlot: function (n) { clearPicks(); ui.plotSel = n; render(); },
@@ -1593,7 +1647,7 @@
       '<div class="pg-wrap">' + questChips() + '<div class="pg-slot"></div></div>' + govChips() + placeFilters() + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
       '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
-        : ui.seaOpen ? seaView() : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : ui.homeSel ? homeView(ui.homeSel) : ui.plotSel != null ? plotView(ui.plotSel)
+        : ui.chatWith ? chatView(ui.chatWith) : ui.seaOpen ? seaView() : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : ui.homeSel ? homeView(ui.homeSel) : ui.plotSel != null ? plotView(ui.plotSel)
         : '<p>' + esc(d.blurb) + ' Tap a district, a place, a home or a billboard.</p>') + '</div>';
   }
 
@@ -2702,7 +2756,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2993,6 +3047,11 @@
       return;
     }
     if (ds.ridemode) { ui.rideMode = ds.ridemode; render(); return; }
+    if (ds.chatopen) { clearPicks(); ui.chatWith = ds.chatopen; online.unread[ds.chatopen] = 0; ui.tab = 'map'; render(); return; }
+    if (ds.closechat) { ui.chatWith = null; ui.chatWhy = ''; render(); return; }
+    if (ds.chatq != null && t.hasAttribute('data-chatq')) { sendChat(ui.chatWith, CH.QUICK[+ds.chatq]); return; }
+    if (ds.chatsend) { var ci = document.getElementById('chat-in'); sendChat(ds.chatsend, ci ? ci.value : ''); return; }
+    if (ds.chatmute) { if (online.muted[ds.chatmute]) delete online.muted[ds.chatmute]; else online.muted[ds.chatmute] = 1; try { localStorage.setItem('lasgidi.muted.v1', JSON.stringify(online.muted)); } catch (e) {} render(); return; }
     if (ds.deptab) { ui.depTab = ds.deptab; render(); return; }
     if (ds.depcity) { ui.depCity = ds.depcity; render(); return; }
     if (ds.depcabin) { ui.depCabin = ds.depcabin; render(); return; }
@@ -3069,6 +3128,7 @@
   });
 
   document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'chat-in') { ui.chatDraft = e.target.value; return; }
     if (e.target && e.target.id === 'chop-q') {
       ui.chopQ = e.target.value.slice(0, 40); render();
       var q = document.getElementById('chop-q'); if (q) { q.focus(); try { q.setSelectionRange(q.value.length, q.value.length); } catch (x) {} }
@@ -3109,6 +3169,7 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target && e.target.id === 'chat-in' && ui.chatWith) { e.preventDefault(); sendChat(ui.chatWith, e.target.value); return; }
     if (S && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target.matches && e.target.matches('input, textarea, select'))) {
       var tabs = ['do', 'map', 'home', 'work', 'money', 'me', 'gist'];
       var n = parseInt(e.key, 10);

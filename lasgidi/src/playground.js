@@ -300,7 +300,7 @@
     var reduce = (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches) || lite;
     var raf = 0, last = 0, clock = 0;
     var vehicles = [], boats = [];
-    var pins = [], faceBoxes = [], placeHits = [], boardHits = [], homeHits = [];
+    var pins = [], faceBoxes = [], placeHits = [], boardHits = [], homeHits = [], playerHits = [];
     var HOME_ICON = { room: '🛏️', share: '👥', selfcon: '🚪', miniflat: '🏠', flat2: '🏢', flat3: '🏢', duplex: '🏡', luxury: '🌆', mansion: '🏰' };
 
     // Vehicles: danfos on roads, ferries on the lagoon.
@@ -1044,7 +1044,8 @@
 
         // Other players here.
         var n = scene.peers && scene.peers[k], pf = (scene.faces && scene.faces.peers && scene.faces.peers[k]) || [];
-        if (pf.length) {
+        if (scene.players && scene.players.length) { /* drawn below as figures with @handles */ }
+        else if (pf.length) {
           pf.slice(0, 3).forEach(function (f, fi) { var fx = top.x + 14 + fi * 13, fy = top.y + 2; drawFace(f, fx, fy, 8, theme.muted); faceBoxes.push({ x: fx - 9, y: fy - 9, w: 18, h: 18 }); });
           if (n > 3) { var cx = top.x + 14 + 3 * 13; ctx.beginPath(); ctx.arc(cx, top.y + 2, 7, 0, Math.PI * 2); ctx.fillStyle = theme.lagoon; ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.font = '700 8px IBM Plex Mono, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+' + Math.min(99, n - 3), cx, top.y + 2.5); }
         } else if (n) {
@@ -1055,6 +1056,35 @@
         }
       });
       placeLabels(labels);
+      // Online players: a small figure with a face and an @handle floating over each head. Tap to chat.
+      playerHits = [];
+      var byD = {};
+      (scene.players || []).forEach(function (pl0) {
+        var d = D.DISTRICTS[pl0.d]; if (!d || cityOfDistrict(pl0.d) !== CITY) return;
+        var g0 = toScreen(d.x, d.y, 0), stem0 = 16 * Math.min(1.4, Math.max(0.8, s)), hx, hy;
+        if (pl0.me) { hx = g0.x; hy = g0.y - stem0 - 22; if (!(scene.faces && scene.faces.me)) return; }
+        else {
+          var i = byD[pl0.d] = (byD[pl0.d] || 0) + 1, ang = i * 2.2 + 0.5, rad = 22 + 8 * Math.floor((i - 1) / 5);
+          var fx = g0.x + Math.cos(ang) * rad, fy = g0.y + Math.sin(ang) * rad * 0.5, hash = 0;
+          for (var c = 0; c < pl0.by.length; c++) hash = (hash * 31 + pl0.by.charCodeAt(c)) >>> 0;
+          var body = ['#2f6fd0', '#c0392b', '#16a35a', '#8e44ad', '#e67e22', '#0e8a8a'][hash % 6];
+          ctx.beginPath(); ctx.ellipse(fx, fy, 5, 2, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fill();
+          ctx.beginPath(); ctx.moveTo(fx - 4.5, fy); ctx.lineTo(fx - 3.5, fy - 9); ctx.quadraticCurveTo(fx, fy - 12, fx + 3.5, fy - 9); ctx.lineTo(fx + 4.5, fy); ctx.closePath();
+          ctx.fillStyle = body; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.stroke();
+          hx = fx; hy = fy - 16;
+          if (pl0.face) drawFace(pl0.face, hx, hy, 6, '#ffffff');
+          else { ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI * 2); ctx.fillStyle = '#8a5a3c'; ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke(); }
+          playerHits.push({ by: pl0.by, x: hx, y: hy + 6 });
+        }
+        var txt = pl0.label || '@lagosian';
+        ctx.font = '700 10px ' + (theme.font || 'system-ui, sans-serif'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        var tw = ctx.measureText(txt).width + 10, ty = hy - (pl0.me ? 20 : 15);
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(hx - tw / 2, ty - 7.5, tw, 15, 7.5); else ctx.rect(hx - tw / 2, ty - 7.5, tw, 15);
+        ctx.fillStyle = pl0.me ? theme.danfo : 'rgba(18,20,24,.82)'; ctx.fill();
+        ctx.fillStyle = pl0.me ? (theme.danfoInk || '#17181a') : '#ffffff'; ctx.fillText(txt, hx, ty + 0.5);
+        if (pl0.unread) { ctx.beginPath(); ctx.arc(hx + tw / 2 - 1, ty - 6, 4.5, 0, Math.PI * 2); ctx.fillStyle = '#e5484d'; ctx.fill(); }
+        if (!pl0.me) playerHits.push({ by: pl0.by, x: hx, y: ty });
+      });
       // Today's hidden gems: a bobbing diamond over each place still to find.
       (scene.gems || []).forEach(function (g) {
         var pl = D.PLACES.filter(function (x) { return x.id === g.place; })[0];
@@ -1359,6 +1389,9 @@
         var dd = Math.min(Math.hypot(p.x - x, p.y - y), Math.hypot(p.gx - x, p.gy - y), Math.hypot(p.x - x, p.y - 19 - y));
         if (dd < bd) { bd = dd; best = p.k; }
       });
+      var bestPl = null, bpl = 13;
+      playerHits.forEach(function (h) { var dd = Math.hypot(h.x - x, h.y - y); if (dd < bpl) { bpl = dd; bestPl = h.by; } });
+      if (bestPl && opts.onSelectPlayer) { opts.onSelectPlayer(bestPl); return; }
       var bestHome = null, bh = 15;
       homeHits.forEach(function (h) { var dd = Math.hypot(h.x - x, h.y - y); if (dd < bh) { bh = dd; bestHome = h.id; } });
       if (bestHome && opts.onSelectHome) { opts.onSelectHome(bestHome); return; }
