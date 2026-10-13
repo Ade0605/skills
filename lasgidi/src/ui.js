@@ -610,9 +610,12 @@
     var blocked = Object.keys(online.muted).length;
     var rooms = [['cruise', '🛳️ Lagoon Boat Cruise', 'lagoon_cruise', deckPeers().length]].concat(Object.keys(D.ROOMS).map(function (k) { return [k, '📍 ' + D.ROOMS[k].name, D.ROOMS[k].place, roomPeers(k).length]; }));
     var cityOfPlace = function (pid) { var pl = D.PLACES.filter(function (x) { return x.id === pid; })[0]; return pl ? L.districtCity(pl.district) : 'lagos'; };
-    var roomRow = function (r) { return '<div class="item"><div><h3>' + esc(r[1]) + '</h3><div class="meta"><span>' + (r[3] ? '👥 ' + r[3] + ' here now' : 'Quiet right now') + '</span></div></div><button class="btn sm ghost" id="lr-' + r[0] + '" data-place="' + r[2] + '" data-tab="map">Go</button></div>'; };
+    var PP = L.passportInfo(S);
+    var roomRow = function (r) { return '<div class="item"><div><h3>' + esc(r[1]) + (PP.rooms[r[0]] != null ? ' <span class="stamp" title="Stamped">🛂 ✓</span>' : ' <span class="stamp new">New</span>') + '</h3><div class="meta"><span>' + (r[3] ? '👥 ' + r[3] + ' here now' : 'Quiet right now') + '</span></div></div><button class="btn sm ghost" id="lr-' + r[0] + '" data-place="' + r[2] + '" data-tab="map">Go</button></div>'; };
     var cityOrder = [here].concat(Object.keys(D.CITIES).filter(function (c) { return c !== here; }));
-    var roomsHtml = '<div class="section"><h3>📍 Live rooms</h3>' + cityOrder.map(function (c) {
+    var passHtml = '<div class="passport"><b>🛂 Passport ' + PP.seen + '/' + PP.total + ' rooms</b> · ' + PP.nights + ' night' + (PP.nights === 1 ? '' : 's') + ' · ' + PP.hangs + ' catch-up' + (PP.hangs === 1 ? '' : 's') +
+      '<div class="pp-badges">' + PP.badges.map(function (b) { return '<span class="pp-badge' + (b.got ? ' got' : '') + '" title="' + esc(b.text) + '">' + b.icon + ' ' + esc(b.name) + '</span>'; }).join('') + '</div></div>';
+    var roomsHtml = '<div class="section"><h3>📍 Live rooms</h3>' + passHtml + cityOrder.map(function (c) {
       var rs = rooms.filter(function (r) { return cityOfPlace(r[2]) === c; }); if (!rs.length) return '';
       return '<p class="note"><b>' + esc(D.CITIES[c].name) + '</b>' + (c === here ? ' · you are here' : ' · travel there first') + '</p><div class="list">' + rs.map(roomRow).join('') + '</div>';
     }).join('') + '</div>';
@@ -1716,7 +1719,8 @@
     var R = D.ROOMS[id], inRoom = L.roomIn(S, id), why = L.roomBlock(S, id), n = roomPeers(id).length;
     var rd = D.PLACES.filter(function (x) { return x.id === R.place; })[0].district, rc = L.districtCity(rd);
     if (why && rc !== L.cityOf(S)) why = 'Travel to ' + D.CITIES[rc].name + ' first, then ' + D.DISTRICTS[rd].name;
-    return '<section class="cruise-card room-card"><div class="cc-top"><span>📍 LIVE ROOM · ' + esc(R.name.toUpperCase()) + '</span><span>' + (R.fee ? N(L.price(S, R.fee)) : R.club ? 'Members' : 'Free') + '</span></div>' +
+    var firstVisit = L.passportInfo(S).rooms[id] == null;
+    return '<section class="cruise-card room-card"><div class="cc-top"><span>📍 LIVE ROOM · ' + esc(R.name.toUpperCase()) + (firstVisit ? ' · 🛂 FIRST VISIT' : '') + '</span><span>' + (R.fee ? N(L.price(S, R.fee)) : R.club ? 'Members' : 'Free') + '</span></div>' +
       '<p class="note">' + (n ? n + ' player' + (n === 1 ? ' is' : 's are') + ' here now. ' : '') + 'Step in, move between spots and chat with everyone there. ' + (D.ROOM_NIGHTS[id] ? (function (I) { return I.n.icon + ' ' + (I.live ? 'On now: ' : 'Every ') + esc(I.live ? I.n.name : I.n.name + ' (' + I.why + ')') + '. '; })(L.roomNightInfo(S, id)) : '') + 'Open ' + R.from + ':00–' + (R.to === 24 ? 'midnight' : (R.to % 24) + ':00') + '.</p>' +
       (inRoom ? '<button class="btn go big-go" id="room-open" data-roomopen="' + id + '">Back in</button>' : '<button class="btn go big-go" id="room-enter" data-roomenter="' + id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>Go in' + (R.fee ? ' · ' + N(L.price(S, R.fee)) : '') + '</button>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '')) + '</section>';
   }

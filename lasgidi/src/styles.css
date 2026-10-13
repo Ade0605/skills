@@ -924,6 +924,12 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .cv-head { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; }
 .cv-head small { display: block; color: var(--muted); font-size: 12px; }
 .cv-me { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; background: var(--sunk); font-size: 20px; }
+.stamp { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 8px; background: rgba(46,125,50,.14); color: var(--credit); vertical-align: middle; }
+.stamp.new { background: rgba(242,182,0,.2); color: var(--warn); }
+.passport { padding: 8px 10px; margin: 0 0 8px; border-radius: 10px; border: 1px dashed rgba(127,127,127,.5); font-size: 13px; }
+.pp-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.pp-badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: rgba(127,127,127,.15); opacity: .55; }
+.pp-badge.got { opacity: 1; background: rgba(242,182,0,.3); font-weight: 700; }
 .room-night { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; margin: 4px 0 6px; border-radius: 10px; background: #fff4cc; color: #3a2c00; font-size: 13px; }
 .room-night .muted { color: #6b5a1f; }
 .cv-spots { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }

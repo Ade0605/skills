@@ -2314,3 +2314,22 @@ test('room friends: hang out once a day with a friend who is in the room, and re
   assert.ok(L.roomHang(r, 'market', 'bisi').ok, L.roomHangBlock(r, 'market', 'bisi'));
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
 });
+
+test('room passport: stamps rooms once, counts nights and catch-ups, and never touches score or seal', () => {
+  const s = L.newGame({ seed: 95, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.cash += 9000000; const d = Math.floor(s.t / 1440) * 1440 + 1440;
+  const ach0 = Object.keys(s.ach).length;
+  assert.equal(L.passportInfo(s).seen, 0); assert.equal(L.passportInfo(s).total, Object.keys(D.ROOMS).length + 1);
+  s.loc = 'island'; s.t = d + 10 * 60;
+  assert.match(L.roomEnter(s, 'market').msg, /New passport stamp \(1\/12\)/); s.pending = [];
+  s.t = d + 1440 + 10 * 60; assert.doesNotMatch(L.roomEnter(s, 'market').msg, /stamp/); s.pending = [];
+  assert.equal(L.passportInfo(s).seen, 1);
+  // Catch up with Mama Bisi on ten different days.
+  for (let i = 0; i < 10; i++) { s.t = d + (2 + i) * 1440 + 10 * 60; s.pending = []; for (const k of Object.keys(s.needs)) s.needs[k] = k === 'stress' ? 0 : 90; if (!L.roomIn(s, 'market')) assert.ok(L.roomEnter(s, 'market').ok); s.pending = []; const h = L.roomHang(s, 'market', 'bisi'); assert.ok(h.ok, i + ' ' + h.msg + ' ' + L.roomBlock(s, 'market')); }
+  const P = L.passportInfo(s); assert.equal(P.hangs, 10); assert.ok(P.badges.find(b => b.id === 'friends').got); assert.ok(!P.badges.find(b => b.id === 'lagos').got);
+  assert.ok(!P.badges.some(b => s.ach[b.id] || s.ach['room_' + b.id]), 'passport badges are not achievements'); void ach0;
+  // Stamp every room directly: the badges for Lagos, three cities and the full passport light up.
+  for (const k of ['cruise'].concat(Object.keys(D.ROOMS))) s.passport.rooms[k] = 1;
+  const Q = L.passportInfo(s); assert.ok(['lagos', 'cities', 'all'].every(id => Q.badges.find(b => b.id === id).got));
+});

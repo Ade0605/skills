@@ -2302,7 +2302,7 @@
     s.room = { id: id, until: s.t + R.mins, spot: Object.keys(R.spots)[0], n: 0 };
     applyFx(s, R.fx);
     log(s, '📍 You arrived at ' + R.name + '.', 'good');
-    return finish(s, ok('Welcome to ' + R.name + '.'));
+    return finish(s, ok('Welcome to ' + R.name + '.' + passportStamp(s, id)));
   }
   function roomSpot(s, id, spot) {
     var R = D.ROOMS[id], P0 = R && R.spots[spot];
@@ -2333,10 +2333,35 @@
     if (I.why) return fail(I.why + '.');
     s.alerts = [];
     if (I.fee) pay(s, I.fee, D.ROOMS[id].name + ': ' + I.n.name);
-    s.room.night = I.evDay; applyFx(s, I.n.fx); addXp(s, I.n.xp);
+    s.room.night = I.evDay; var PP = passportOf(s); PP.nights[id] = (PP.nights[id] || 0) + 1; applyFx(s, I.n.fx); addXp(s, I.n.xp);
     advance(s, 60); s.room.last = I.n.text;
     log(s, I.n.icon + ' ' + I.n.name + ' at ' + D.ROOMS[id].name + '.', 'good');
     return finish(s, ok(I.n.icon + ' ' + I.n.text));
+  }
+  // Room passport: stamps for rooms visited, nights joined and catch-ups. Kept apart from achievements
+  // and the ledger, so it never changes a life's score, money or replay.
+  var PASSPORT_BADGES = [
+    ['lagos', '🌃', 'Lagos after dark', 'Every Lagos live room, the cruise included'],
+    ['cities', '🗺️', 'Three-city regular', 'A live room in Lagos, Abuja and Port Harcourt'],
+    ['all', '🛂', 'Passport full', 'All twelve live rooms'],
+    ['nights', '🦉', 'Night owl', 'Joined 5 room nights'],
+    ['friends', '🦋', 'Social butterfly', 'Caught up with friends in rooms 10 times']
+  ];
+  function passportOf(s) { if (!s.passport) s.passport = { rooms: {}, nights: {}, hangs: 0 }; return s.passport; }
+  function passportStamp(s, id) {
+    var P = passportOf(s); if (P.rooms[id] != null) return '';
+    P.rooms[id] = day(s);
+    return ' 🛂 New passport stamp (' + Object.keys(P.rooms).length + '/' + (Object.keys(D.ROOMS).length + 1) + ').';
+  }
+  function roomCityOf(id) { if (id === 'cruise') return 'lagos'; var d = roomPlaceDistrict(id); return d ? districtCity(d) : null; }
+  function passportInfo(s) {
+    var P = s.passport || { rooms: {}, nights: {}, hangs: 0 }, ids = ['cruise'].concat(Object.keys(D.ROOMS));
+    var seen = ids.filter(function (k) { return P.rooms[k] != null; }), nights = Object.keys(P.nights).reduce(function (a, k) { return a + P.nights[k]; }, 0);
+    var cities = {}; seen.forEach(function (k) { cities[roomCityOf(k)] = 1; });
+    var lagosAll = ids.filter(function (k) { return roomCityOf(k) === 'lagos'; }).every(function (k) { return P.rooms[k] != null; });
+    var got = { lagos: lagosAll, cities: !!(cities.lagos && cities.abuja && cities.ph), all: seen.length === ids.length, nights: nights >= 5, friends: (P.hangs || 0) >= 10 };
+    return { seen: seen.length, total: ids.length, rooms: P.rooms, nights: nights, hangs: P.hangs || 0,
+      badges: PASSPORT_BADGES.map(function (b) { return { id: b[0], icon: b[1], name: b[2], text: b[3], got: !!got[b[0]] }; }) };
   }
   // Hang out with a friend who is in the room (rh): once a day per friend, no money.
   function roomHangBlock(s, id, npc) {
@@ -2351,7 +2376,7 @@
     if (s.pending.length) return fail('Decide on the open event first.');
     s.alerts = [];
     if (!s.room.hung) s.room.hung = {};
-    s.room.hung[npc] = day(s);
+    s.room.hung[npc] = day(s); passportOf(s).hangs++;
     befriend(s, npc, 6 + skillLevel(s, 'charisma'));
     applyFx(s, { social: 10, fun: 6 }); advance(s, 30);
     var nm = D.NPCS[npc].name; s.room.last = 'You catch up with ' + nm + '.';
@@ -2429,7 +2454,7 @@
     s.cruise = { until: s.t + C.mins, spot: 'rail', n: 0 };
     applyFx(s, C.fx); unlock(s, 'cruise');
     log(s, '🛳️ You boarded the Lagoon Boat Cruise at Five Cowries Creek.', 'good');
-    return finish(s, ok('All aboard! Move around the deck.'));
+    return finish(s, ok('All aboard! Move around the deck.' + passportStamp(s, 'cruise')));
   }
   function cruiseSpot(s, spot) {
     var C = D.CRUISE, P = C.spots[spot];
@@ -4602,7 +4627,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), roomNightInfo: roomNightInfo, roomNight: recorded('rn', roomNight), roomHangBlock: roomHangBlock, roomHang: recorded('rh', roomHang), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), roomNightInfo: roomNightInfo, roomNight: recorded('rn', roomNight), roomHangBlock: roomHangBlock, passportInfo: passportInfo, roomHang: recorded('rh', roomHang), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
