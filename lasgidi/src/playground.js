@@ -27,9 +27,11 @@
       water: [[[22.4, 13.6], [27.2, 12.6], [27.6, 13.4], [22.8, 14.6]]], label: [['Bonny River', 18, 24], ['Amadi Creek', 25.4, 14.6]] }
   };
 
+  // Glass and stone tints for VI's towers, so the skyline isn't one grey wall.
+  var TOWER_TINTS = ['#5f8fb8', '#4f9a9a', '#8fa2b3', '#c9b99a', '#e4e6e8', '#3d6e8f', '#7aa7c7'];
   // How each district builds: height range (px), density, footprint, palette.
   var STYLE = {
-    vi:       { h: [40, 92], dens: 0.8, r: 3.0, foot: [0.55, 0.75], roof: '#9fb3c4', wall: '#7f93a6', glass: true },
+    vi:       { h: [40, 92], dens: 0.8, r: 3.0, foot: [0.5, 0.62], roof: '#9fb3c4', wall: '#7f93a6', glass: true, spaced: true },
     ikoyi:    { h: [16, 44], dens: 0.45, r: 3.0, foot: [0.5, 0.7], roof: '#c9c2b2', wall: '#a79f8d', trees: 0.35 },
     island:   { h: [12, 44], dens: 0.9, r: 2.8, foot: [0.6, 0.85], roof: '#c7a27a', wall: '#a8835c' },
     lekki:    { h: [6, 10], dens: 0.6, r: 3.6, foot: [0.45, 0.6], roof: '#b9643f', wall: '#e3d6c3', rows: true, towers: 0.06 },
@@ -155,13 +157,15 @@
       if (st.trees && hash(ix, iy, 7) < st.trees * 0.5) { trees.push({ x: px, y: py, s: 0.8 + hash(ix, iy, 8) * 0.4 }); continue; }
       if (hash(ix, iy, 5) > st.dens * Math.min(1, fall * 1.8)) continue;
       if (n2.d < 0.75) continue; // keep the centre clear for the district pin
+      // Spaced districts (VI's towers) take one plot in four, so each tower stands clear with street between.
+      if (st.spaced && ((ix & 1) || (iy & 1))) continue;
       var tower = st.towers && hash(ix, iy, 11) < st.towers;
       var core = Math.pow(fall, 0.8);
       var h = tower ? 30 + hash(ix, iy, 12) * 26 : st.h[0] + (st.h[1] - st.h[0]) * Math.pow(hash(ix, iy, 6), 1.4) * (0.45 + core * 0.55);
-      var f = (st.rows ? st.foot[0] : st.foot[0] + (st.foot[1] - st.foot[0]) * hash(ix, iy, 13)) * SUB;
+      var f = (st.rows ? st.foot[0] : st.foot[0] + (st.foot[1] - st.foot[0]) * hash(ix, iy, 13)) * SUB * (st.spaced ? 1.5 : 1);
       buildings.push({ x: px, y: py, w: f, dep: st.market ? f : f * (0.8 + hash(ix, iy, 14) * 0.4), h: h, k: n2.k,
         roof: st.market && hash(ix, iy, 15) < 0.6 ? ['#c44b3a', '#2f6fa0', '#d9a520', '#3f8f55'][Math.floor(hash(ix, iy, 16) * 4)] : (hash(ix, iy, 18) < 0.25 ? shadeHex(st.roof, 0.12) : st.roof),
-        wall: tower ? '#8fa2b3' : st.wall, glass: st.glass || tower, seed: hash(ix, iy, 17) });
+        wall: tower ? '#8fa2b3' : st.spaced ? TOWER_TINTS[Math.floor(hash(ix, iy, 19) * TOWER_TINTS.length)] : st.wall, glass: st.glass || tower, tall: st.spaced || tower, seed: hash(ix, iy, 17) });
     }
   }
   ESTATES = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && D.HOMES[k].x != null && cityOfDistrict(D.HOMES[k].district) === city; }).map(function (k) {
@@ -643,7 +647,51 @@
       return { p0: p0, p1: p1, p2: p2, p3: p3, up: up };
     }
 
+    // A tower in full 3D: ground shadow, lit and shaded glass faces with a mullion grid, edge lines, a set-back crown and a mast.
+    function drawTower(g, b, s, night) {
+      var f = boxFaces(b, s), up = f.up, lw = Math.max(0.5, 0.6 * s);
+      var sh = up * 0.35;
+      g.fillStyle = 'rgba(0,0,0,' + (theme.dark ? 0.35 : 0.16) + ')';
+      g.beginPath(); g.moveTo(f.p1.x, f.p1.y); g.lineTo(f.p2.x, f.p2.y); g.lineTo(f.p2.x + sh, f.p2.y + sh * 0.2); g.lineTo(f.p1.x + sh, f.p1.y + sh * 0.2); g.closePath(); g.fill();
+      function face(a, c, col, lit) {
+        var gr = g.createLinearGradient(0, a.y - up, 0, a.y);
+        gr.addColorStop(0, shade(col, lit + 0.1)); gr.addColorStop(1, shade(col, lit - 0.12));
+        g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(c.x, c.y); g.lineTo(c.x, c.y - up); g.lineTo(a.x, a.y - up); g.closePath(); g.fillStyle = gr; g.fill();
+        // Mullions and floor bands.
+        g.strokeStyle = lit > -0.2 ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.18)'; g.lineWidth = lw * 0.8;
+        var cols = 4;
+        for (var i = 1; i < cols; i++) { var x = a.x + (c.x - a.x) * i / cols, y = a.y + (c.y - a.y) * i / cols; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - up); g.stroke(); }
+        for (var yy = 3.5 * s; yy < up - 1 * s; yy += 3.5 * s) { g.beginPath(); g.moveTo(a.x, a.y - yy); g.lineTo(c.x, c.y - yy); g.stroke(); }
+        if (lit > -0.2) { // a diagonal sky reflection on the lit face
+          g.save(); g.clip(); g.fillStyle = 'rgba(255,255,255,.14)';
+          g.beginPath(); g.moveTo(a.x, a.y - up * 0.75); g.lineTo(c.x, c.y - up); g.lineTo(c.x, c.y - up * 0.8); g.lineTo(a.x, a.y - up * 0.5); g.closePath(); g.fill(); g.restore();
+        }
+      }
+      face(f.p1, f.p2, b.wall, -0.3);
+      face(f.p3, f.p2, b.wall, -0.04);
+      g.beginPath(); g.moveTo(f.p0.x, f.p0.y - up); g.lineTo(f.p1.x, f.p1.y - up); g.lineTo(f.p2.x, f.p2.y - up); g.lineTo(f.p3.x, f.p3.y - up); g.closePath();
+      g.fillStyle = shade(b.wall, 0.25); g.fill();
+      // Edges: a dark outline and a bright front corner.
+      g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = lw;
+      g.beginPath(); g.moveTo(f.p1.x, f.p1.y); g.lineTo(f.p1.x, f.p1.y - up); g.lineTo(f.p0.x, f.p0.y - up); g.lineTo(f.p3.x, f.p3.y - up); g.lineTo(f.p3.x, f.p3.y); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.moveTo(f.p2.x, f.p2.y); g.lineTo(f.p2.x, f.p2.y - up); g.stroke();
+      // Crown: a set-back box on top (two in three towers), then a mast with a red light.
+      var top = up;
+      if (b.seed < 0.66) {
+        var cb = { x: b.x - b.w * 0.08, y: b.y - b.dep * 0.08, w: b.w * 0.6, dep: b.dep * 0.6, h: b.h * 0.14 }, cf = boxFaces(cb, s), cu = cf.up;
+        [[cf.p1, cf.p2, -0.32], [cf.p3, cf.p2, -0.08]].forEach(function (q) { g.beginPath(); g.moveTo(q[0].x, q[0].y - up); g.lineTo(q[1].x, q[1].y - up); g.lineTo(q[1].x, q[1].y - up - cu); g.lineTo(q[0].x, q[0].y - up - cu); g.closePath(); g.fillStyle = shade(b.wall, q[2]); g.fill(); });
+        g.beginPath(); g.moveTo(cf.p0.x, cf.p0.y - up - cu); g.lineTo(cf.p1.x, cf.p1.y - up - cu); g.lineTo(cf.p2.x, cf.p2.y - up - cu); g.lineTo(cf.p3.x, cf.p3.y - up - cu); g.closePath(); g.fillStyle = shade(b.wall, 0.3); g.fill();
+        top = up + cu;
+      }
+      if (b.seed > 0.35) {
+        var m = toScreen(b.x - b.w * 0.08, b.y - b.dep * 0.08, 0), mh = 8 * s;
+        g.strokeStyle = theme.dark ? '#c9ccd1' : '#55595f'; g.lineWidth = lw; g.beginPath(); g.moveTo(m.x, m.y - top); g.lineTo(m.x, m.y - top - mh); g.stroke();
+        g.fillStyle = '#ff3b30'; g.beginPath(); g.arc(m.x, m.y - top - mh, Math.max(0.8, 1 * s), 0, Math.PI * 2); g.fill();
+      }
+    }
+
     function drawBuilding(g, b, s, night, pw) {
+      if (b.tall) return drawTower(g, b, s, night);
       var f = boxFaces(b, s), up = f.up;
       // Right face (x+), left face (y+), then roof.
       g.beginPath(); g.moveTo(f.p1.x, f.p1.y); g.lineTo(f.p2.x, f.p2.y); g.lineTo(f.p2.x, f.p2.y - up); g.lineTo(f.p1.x, f.p1.y - up); g.closePath();
