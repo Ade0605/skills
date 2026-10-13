@@ -71,6 +71,7 @@
     hyde_park:   'Lagoon living: a home in Lekki Hyde Park',
     white_wedding: 'White wedding: church, reception and after-party',
     cruise:      'All aboard: took the Lagoon Boat Cruise',
+    angler:      'Big catch: landed a barracuda or a tarpon',
     gifted:      'Received a gift from another Lagosian',
     gems:        'Found all five of a day\'s gems',
     debt_free:   'Debt free: cleared every loan',
@@ -2280,6 +2281,57 @@
     return finish(s, ok('Congratulations! You married ' + p.name + '.'));
   }
 
+  /* ---------- fishing: buy a rod (fr), cast (fi), sell or cook the catch (fs, fc2) ---------- */
+  function fishWhere(s) {
+    if (cruiseAboard(s) && s.cruise.spot === 'rail') return 'the rail of the cruise boat';
+    return D.FISHING.spots[s.loc] || null;
+  }
+  function fishInfo(s) {
+    var F = D.FISHING, f = s.fishing || { rod: false, bag: {}, day: -1, casts: 0 }, left = f.day === day(s) ? F.castsPerDay - f.casts : F.castsPerDay;
+    var where = fishWhere(s), why = '';
+    if (!f.rod) why = 'Buy a fishing rod first';
+    else if (!where) why = 'Go to a waterfront (Ikoyi, Lekki, Ajah, the Island, Festac, Borokiri) or the cruise rail';
+    else if (left <= 0) why = 'Three casts a day. The fish need a rest';
+    else why = busyBlock(s) || '';
+    var bagValue = Object.keys(f.bag || {}).reduce(function (a, k) { var c = D.FISHING.catch.filter(function (x) { return x.id === k; })[0]; return a + (c ? c.value * f.bag[k] : 0); }, 0);
+    return { rod: !!f.rod, where: where, left: Math.max(0, left), bag: f.bag || {}, bagValue: price(s, Math.round(bagValue * F.sellRate)), why: why };
+  }
+  function buyRod(s) {
+    if (s.fishing && s.fishing.rod) return fail('You already have a rod.');
+    var cost = price(s, D.FISHING.rod);
+    if (!canAfford(s, cost)) return fail('A rod costs ' + naira(cost) + '.');
+    s.alerts = []; pay(s, cost, 'Fishing rod and bait');
+    s.fishing = s.fishing || { rod: false, bag: {}, day: -1, casts: 0 }; s.fishing.rod = true;
+    return finish(s, ok('🎣 Rod, line and a tin of bait. Find a waterfront.'));
+  }
+  function fish(s) {
+    var q = fishInfo(s); if (q.why) return fail(q.why + '.');
+    var F = D.FISHING, f = s.fishing;
+    if (f.day !== day(s)) { f.day = day(s); f.casts = 0; }
+    f.casts++;
+    advance(s, F.mins); applyFx(s, F.fx);
+    var tot = F.catch.reduce(function (a, c) { return a + c.w; }, 0), r = rand(s) * tot, got = F.catch[0];
+    for (var i = 0; i < F.catch.length; i++) { r -= F.catch[i].w; if (r < 0) { got = F.catch[i]; break; } }
+    if (got.value) f.bag[got.id] = (f.bag[got.id] || 0) + 1;
+    if (got.id === 'tarpon' || got.id === 'barracuda') unlock(s, 'angler');
+    log(s, got.icon + ' Fishing at ' + q.where + ': ' + got.name.toLowerCase() + '.', got.value ? 'good' : 'info');
+    s.lastCatch = got.id;
+    return finish(s, ok(got.icon + ' ' + got.name + (got.value ? '! Worth about ' + naira(price(s, Math.round(got.value * F.sellRate))) + ' at the market.' : '.')));
+  }
+  function sellFish(s) {
+    var q = fishInfo(s); if (!q.bagValue) return fail('Your bag is empty.');
+    if (!q.where || q.where.indexOf('cruise') >= 0) return fail('Sell to the fish buyers at a waterfront.');
+    s.alerts = []; earn(s, q.bagValue, 'Sold the catch'); s.fishing.bag = {};
+    advance(s, 15);
+    return finish(s, ok('Sold your catch for ' + naira(q.bagValue) + '.'));
+  }
+  function cookFish(s) {
+    var f = s.fishing, n = f ? Object.keys(f.bag).reduce(function (a, k) { return a + f.bag[k]; }, 0) : 0;
+    if (!n) return fail('Your bag is empty.');
+    s.pantry += n; f.bag = {};
+    return ok('🍲 ' + n + ' fish into the pantry for pepper soup at home.');
+  }
+
   /* ---------- Lagoon Boat Cruise: board (cb), then spots on deck (cs) ---------- */
   function cruiseAboard(s) { return !!(s.cruise && s.t < s.cruise.until); }
   function cruiseFare(s) { var C = D.CRUISE; return price(s, isDecember(s) ? C.decFare : C.fare); }
@@ -4471,7 +4523,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,

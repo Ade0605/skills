@@ -332,6 +332,12 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - motor yachts: Riva, Azimut, Ferretti, Sunseeker, Princess, Pershing;
     - superyachts: Benetti, Heesen, Sanlorenzo, Feadship, Lürssen, Oceanco;
     - sailing yachts: Royal Huisman, Perini Navi.
+- **Fishing:** buy a rod once (₦12,000), then cast a line at a waterfront (Ikoyi, Lekki, Ajah, the Island, Festac, Borokiri in PH) or from the cruise rail.
+  - Each cast takes 45 minutes, with three casts a day. Most bring tilapia or catfish, some nothing (or an old slipper), and rarely a barracuda or tarpon ("Big catch").
+  - Sell the bag to fish buyers at a waterfront for 80% of its value, or take it home as pantry meals.
+  - New recorded calls `fr`, `fi`, `fsl` and `fk`.
+- **Photos:** a 📷 button on the cruise deck and on the map snaps the scene with a "Lasgidi · place" caption, then **Save to phone** (through the page's downloads permission, which asks you first) or Retake.
+- **Deck panel:** the cruise panel folds down to a slim bar, so you can watch the deck.
 - **CV:** a CV built only from the game's own records, so it can't be typed or padded.
   - **Contents:** current and past jobs (title, employer, shifts, and "let go" if dismissed), education (UNILAG degree or studying, NYSC, IELTS), top skills, and the criminal record.
   - **Where:** on the Me tab, and in Work, where "your CV goes with every application".

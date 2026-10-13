@@ -1447,6 +1447,52 @@
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : rideRow(pl.district));
   }
+  /* ---------- fishing: a card where there's water, and on the cruise rail ---------- */
+  function fishingCard(compact) {
+    var q = L.fishInfo(S), F = D.FISHING;
+    if (!q.where && !compact) return '';
+    var bagN = Object.keys(q.bag).reduce(function (a, k) { return a + q.bag[k]; }, 0);
+    var bag = Object.keys(q.bag).map(function (k) { var c = F.catch.filter(function (x) { return x.id === k; })[0]; return c ? c.icon + ' ' + c.name + ' ×' + q.bag[k] : ''; }).filter(Boolean).join(' · ');
+    var btns = !q.rod ? '<button class="btn sm go" id="fish-rod" data-fishrod="1">🎣 Buy a rod · ' + N(L.price(S, F.rod)) + '</button>'
+      : '<button class="btn sm go" id="fish-cast" data-fishcast="1"' + (q.why ? ' disabled title="' + esc(q.why) + '"' : '') + '>🎣 Cast a line · ' + q.left + ' left today</button>' +
+        (bagN ? '<button class="btn sm" id="fish-sell" data-fishsell="1"' + (q.where && q.where.indexOf('cruise') < 0 ? '' : ' disabled title="Sell at a waterfront"') + '>Sell · ' + N(q.bagValue) + '</button><button class="btn sm ghost" id="fish-cook" data-fishcook="1">🍲 Take home</button>' : '');
+    if (compact) return '<div class="fish-row">' + btns.replace(/id="fish-/g, 'id="deck-fish-') + (bag ? '<small>' + esc(bag) + '</small>' : '') + '</div>';
+    return '<div class="section fishing"><h3>🎣 Fishing at ' + esc(q.where) + '</h3><p class="note">45 minutes a cast, three casts a day. Most casts bring tilapia or catfish, sometimes nothing, and rarely a barracuda.</p><div class="inline">' + btns + '</div>' + (bag ? '<p class="note">In your bag: ' + esc(bag) + '</p>' : '') + (q.why && q.rod ? '<p class="why">' + esc(q.why) + '.</p>' : '') + '</div>';
+  }
+  /* ---------- photos: snap the deck or the map, label it, save it ---------- */
+  function takePhoto(srcCanvas, caption) {
+    if (!srcCanvas) return;
+    try {
+      var w = srcCanvas.width, h = srcCanvas.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+      var g = c.getContext('2d'); g.drawImage(srcCanvas, 0, 0);
+      var fs = Math.max(14, Math.round(w / 45)); g.font = '800 ' + fs + 'px system-ui, sans-serif'; g.textAlign = 'right'; g.textBaseline = 'bottom';
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.fillText('Lasgidi · ' + caption, w - fs + 2, h - fs + 2); g.fillStyle = '#ffffff'; g.fillText('Lasgidi · ' + caption, w - fs, h - fs);
+      ui.photo = { url: c.toDataURL('image/png'), caption: caption, canvas: c }; showPhoto();
+    } catch (e) { ui.toasts.push({ msg: 'Could not take the photo here.', ok: false }); renderToasts(); }
+  }
+  function showPhoto() {
+    var old = document.getElementById('photo-view'); if (old) old.remove();
+    if (!ui.photo) return;
+    var el = document.createElement('div'); el.id = 'photo-view'; el.className = 'photo-view'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Your photo');
+    el.innerHTML = '<div class="pv-top"><b>📷 Your photo</b><button class="btn sm ghost" id="photo-close" data-photoclose="1" aria-label="Close">✕</button></div>' +
+      '<img class="pv-img" src="' + ui.photo.url + '" alt="Photo: ' + esc(ui.photo.caption) + '">' +
+      '<div class="pv-bar"><button class="btn go big-go" id="photo-save" data-photosave="1">⬇ Save to phone</button><div class="inline" style="justify-content:space-between"><button class="btn sm ghost" id="photo-retake" data-photoretake="1">↺ Retake</button><span class="note" id="photo-status"></span></div></div>';
+    document.body.appendChild(el);
+    var b = document.getElementById('photo-save'); if (b) b.focus();
+  }
+  function savePhoto() {
+    var st = document.getElementById('photo-status'), name = 'lasgidi-' + (ui.photo.caption || 'photo').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '.png';
+    var say = function (m) { if (st) st.textContent = m; };
+    ui.photo.canvas.toBlob(function (blob) {
+      if (!blob) { say('Could not make the file.'); return; }
+      var viaAnchor = function () { try { var a = document.createElement('a'); a.href = ui.photo.url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); say('Downloading…'); } catch (e) { say('Long-press the photo to save it.'); } };
+      if (!window.claude || typeof window.claude.use !== 'function') { viaAnchor(); return; }
+      window.claude.use('downloads').then(function (dl) {
+        if (!dl) { viaAnchor(); return; }
+        dl.save({ filename: name, data: blob }).then(function () { say('Saved.'); }, function (e) { say(e && e.code === 'declined' ? 'Not saved.' : 'Saving is not available here. Long-press the photo instead.'); });
+      }, viaAnchor);
+    }, 'image/png');
+  }
   /* ---------- Lagoon Boat Cruise: a ticket card on the place sheet, then a full-screen deck ---------- */
   function cruiseCard() {
     var C = D.CRUISE, aboard = L.cruiseAboard(S), why = L.cruiseBlock(S), n = deckPeers().length;
@@ -1474,11 +1520,13 @@
   function cruisePanel() {
     var C = D.CRUISE, peers = deckPeers(), left = Math.max(0, S.cruise.until - S.t);
     return '<div class="cv-head">' + (photoImg(online.me, 'cv-me') || '<span class="cv-me">🙂</span>') + '<div><b>🛳️ Lagoon Boat Cruise <span class="muted">· Five Cowries Creek</span></b><small>' + esc(S.cruise.last || 'The captain sounds the horn. ' + dur(left) + ' on the water.') + '</small></div>' +
-      '<button class="btn sm ghost" id="cruise-close" data-cruiseclose="1" aria-label="Back to the map">🗺️</button><button class="btn sm ghost" id="cruise-leave" data-cruiseleave="1">Leave the boat</button></div>' +
+      '<button class="btn sm ghost" id="cruise-photo" data-photo="cruise" aria-label="Take a photo">📷</button><button class="btn sm ghost" id="cruise-close" data-cruiseclose="1" aria-label="Back to the map">🗺️</button><button class="btn sm ghost" id="cruise-fold" data-cruisefold="1" aria-label="' + (ui.cruiseFold ? 'Show the panel' : 'Hide the panel') + '">' + (ui.cruiseFold ? '⌃' : '⌄') + '</button></div>' +
+      (ui.cruiseFold ? '' : 
       '<div class="chat-send"><input id="deck-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Say something to the ' + (peers.length + 1) + ' player' + (peers.length ? 's' : '') + ' here…" aria-label="Deck chat"><button class="btn" id="deck-send" data-decksend="1" aria-label="Send">➤</button></div>' +
       (ui.deckWhy ? '<p class="why">' + esc(ui.deckWhy) + '</p>' : '') +
       '<div class="cv-spots">' + Object.keys(C.spots).map(function (k) { var P0 = C.spots[k], on = S.cruise.spot === k, n = peers.filter(function (p) { return p.at.slice(7) === k; }).length; return '<button type="button" class="act-chip' + (on ? ' on' : '') + '" id="spot-' + k + '" data-cruisespot="' + k + '">' + P0.icon + ' ' + esc(P0.name) + (P0.cost ? ' · ' + N(L.price(S, P0.cost)) : '') + (n ? ' · 👥' + n : '') + '</button>'; }).join('') + '</div>' +
-      '<p class="note cv-note">' + dur(left) + ' left on board. Tap a spot to move, or a player to chat. Chat is filtered and never stored.</p>';
+      (S.cruise.spot === 'rail' ? fishingCard(true) : '') +
+      '<div class="inline" style="justify-content:space-between"><p class="note cv-note">' + dur(left) + ' left on board. Tap a spot to move, or a player to chat. Chat is filtered and never stored.</p><button class="btn sm ghost" id="cruise-leave" data-cruiseleave="1">Leave the boat</button></div>');
   }
   function mountCruise() {
     var ov = document.getElementById('cruise-view');
@@ -2162,7 +2210,7 @@
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
     html += sickCard() + dettyCard();
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
-    html += peopleHere() + gemCard();
+    html += fishingCard() + peopleHere() + gemCard();
     if (home.length) html += '<div class="section"><h3>At home · ' + esc(L.homeDef(S).name) + '</h3><div class="list">' + home.sort(sortOpen).map(actionRow).join('') + '</div></div>';
     else html += lodgingView();
     html += '<div class="section"><div class="inline"><button class="btn ghost" id="wait-1" data-wait="60">Wait 1 hour</button><span class="note">Pantry: ' + S.pantry + ' meals at home</span></div></div>';
@@ -3135,7 +3183,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3453,6 +3501,15 @@
     if (ds.cruiseleave) { ui.cruiseOpen = false; run(function () { return L.cruiseLeave(S); }); syncPresence(); return; }
     if (ds.cruiseclose) { ui.cruiseOpen = false; render(); return; }
     if (ds.decksend) { var di = document.getElementById('deck-in'); sendDeck(di ? di.value : ''); return; }
+    if (ds.fishrod) { run(function () { return L.buyRod(S); }); return; }
+    if (ds.fishcast) { run(function () { var r = L.fish(S); if (r.ok && S.cruise && L.cruiseAboard(S)) S.cruise.last = r.msg; return r; }); return; }
+    if (ds.fishsell) { run(function () { return L.sellFish(S); }); return; }
+    if (ds.fishcook) { run(function () { return L.cookFish(S); }); return; }
+    if (ds.photo) { ui.photoFrom = ds.photo; if (ds.photo === 'cruise') takePhoto(document.querySelector('.cruise-canvas'), 'Lagoon Boat Cruise'); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); return; }
+    if (ds.photoretake) { var pv = document.getElementById('photo-view'); if (pv) pv.remove(); setTimeout(function () { if (ui.photoFrom === 'cruise') takePhoto(document.querySelector('.cruise-canvas'), 'Lagoon Boat Cruise'); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); }, 80); return; }
+    if (ds.photoclose) { ui.photo = null; var pv2 = document.getElementById('photo-view'); if (pv2) pv2.remove(); return; }
+    if (ds.photosave) { savePhoto(); return; }
+    if (ds.cruisefold) { ui.cruiseFold = !ui.cruiseFold; mountCruise(); return; }
     if (ds.hpbuild) { var hz = ds.hpbuild; run(function () { return L.hpBuild(S, hz); }); return; }
     if (ds.joinclub) { var jc = ds.joinclub.split(':'); run(function () { return L.joinClub(S, jc[0], jc[1]); }); return; }
     if (ds.clubact) { var ca = ds.clubact.split(':'); run(function () { return L.clubAct(S, ca[0], ca[1]); }); return; }

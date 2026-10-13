@@ -288,7 +288,7 @@
     hud.className = 'pg-hud';
     var zoom = document.createElement('div');
     zoom.className = 'pg-zoom';
-    zoom.innerHTML = '<button type="button" class="pg-zbtn" data-z="full" aria-label="Enlarge map" aria-pressed="false">⛶</button><button type="button" class="pg-zbtn" data-z="1" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-z="-1" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-z="0" aria-label="Centre on me">◎</button>';
+    zoom.innerHTML = '<button type="button" class="pg-zbtn" data-z="full" aria-label="Enlarge map" aria-pressed="false">⛶</button><button type="button" class="pg-zbtn" data-z="1" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-z="-1" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-z="0" aria-label="Centre on me">◎</button><button type="button" class="pg-zbtn" data-photo="map" aria-label="Take a photo of the map">📷</button>';
     canvas.tabIndex = 0;
     wrap.appendChild(canvas); wrap.appendChild(hud); wrap.appendChild(zoom);
 

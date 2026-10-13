@@ -2176,3 +2176,17 @@ test('CV: built from the game records, keeps past jobs, never touches money', ()
   assert.equal(s.ledgerHash, h, 'the CV is state, not money');
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('fishing: a rod once, three casts a day at a waterfront, sell at 80% or cook, replays', () => {
+  const s = L.newGame({ seed: 97, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  assert.match(L.fishInfo(s).why, /rod/);
+  assert.ok(L.buyRod(s).ok); assert.equal(L.buyRod(s).ok, false);
+  if (!D.FISHING.spots[s.loc]) { const o = L.travelOptions(s, 'lekki').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(s, 'lekki', o.mode).ok); }
+  for (let i = 0; i < 3; i++) { while (s.pending.length) L.resolveChoice(s, 1); assert.ok(L.fish(s).ok); }
+  while (s.pending.length) L.resolveChoice(s, 1);
+  assert.match(L.fishInfo(s).why, /Three casts/);
+  const v = L.fishInfo(s).bagValue, b = s.cash + s.bank;
+  if (v) { assert.ok(L.sellFish(s).ok); assert.equal(s.cash + s.bank - b, v); } else assert.equal(L.sellFish(s).ok, false);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

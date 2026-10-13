@@ -950,3 +950,11 @@ body:has(#cruise-view) .toasts { top: 12px; bottom: auto; }
 .cv-tag { font: 700 11px var(--font-body); color: var(--muted); }
 .cv-skills { display: flex; flex-wrap: wrap; gap: 6px; }
 .cv-wrap > summary { cursor: pointer; font-weight: 800; padding: 6px 0; }
+
+/* Fishing and photos */
+.fish-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.fish-row small { color: var(--muted); font-size: 12px; }
+.photo-view { position: fixed; inset: 0; z-index: 90; display: grid; grid-template-rows: auto 1fr auto; gap: 10px; padding: 14px; background: rgba(10, 14, 22, .92); color: #fff; }
+.pv-top { display: flex; justify-content: space-between; align-items: center; }
+.pv-img { max-width: 100%; max-height: 100%; margin: auto; border-radius: 22px; box-shadow: 0 16px 50px rgba(0,0,0,.5); object-fit: contain; min-height: 0; }
+.pv-bar { display: grid; gap: 8px; padding: 12px; border-radius: 20px; background: var(--surface); color: var(--ink); width: min(680px, 100%); margin: 0 auto; }
