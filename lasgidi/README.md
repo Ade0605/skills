@@ -291,6 +291,14 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 
 - **Profile photos:** add a photo of yourself on the Me tab so other players can recognise you on the map, in their district and in the Hall of Fame. An editor approves each photo before anyone else sees it, and you can hide yours at any time.
 - **Prime homes:** buy a home in Lagos's top addresses: a detached duplex in Nicon Town (Lekki Phase 1) for ₦250m, a luxury apartment in Victoria Island for ₦400m, a penthouse in Eko Atlantic for ₦900m, a mansion in Parkview, Ikoyi for ₦1.5bn, or a waterfront mansion on Banana Island for ₦4bn. You can live in it or let it out, and either way you pay a weekly estate service charge. Each one adds status, and Banana Island unlocks an achievement.
+- **Lekki Hyde Park:** a new gated estate on the lagoon side of the Lekki–Epe Expressway, with its own gate and access road. Inside are a boulevard, a central park with a pool and tennis courts, private jetties and a lagoon promenade. It has five zones (descriptive names only, no real residents):
+  - **Garden Row:** terraces for the low-class rich (₦120m);
+  - **Park Crescent:** semis for the middle-class rich (₦280m);
+  - **Celebrity Row:** gated villas with home studios (₦1.8bn);
+  - **Billionaire Row:** lagoon-front mansions (₦3bn);
+  - **The Islet:** a super-luxury private island reached by a bridge (₦8bn).
+  - **Buy or build:** buy ready-built, or buy the zone's plot (30%) and build it yourself in three stages (foundation and piling, structure and roof, finishing and landscaping). That costs about 72% of the price on top of the plot, and you must visit the site to start each stage.
+  - **Running costs:** every home and plot pays a weekly estate service charge. Each home adds status and can be let out.
 - **Luxury catalogue** at Lekki luxury motors, grouped by tier. Makes and models are named only to describe the item; there's no affiliation with any maker. Weekly upkeep covers insurance, servicing and the hangar, berth and crew, and each one adds status.
   - **Cars, ultra-luxury:** Rolls-Royce Phantom, Cullinan and Ghost; Bentley Bentayga and Continental GT; Ferrari SF90, Roma and Purosangue; Lamborghini Urus and Revuelto; Aston Martin DBX; McLaren 750S; Bugatti Chiron.
   - **Cars, premium:** Mercedes S-Class, G 63 and Maybach S 680; BMW 7 Series and X7; Audi A8 and Q8; Porsche 911 and Cayenne; Range Rover Autobiography; Lexus LX 600; Cadillac Escalade.

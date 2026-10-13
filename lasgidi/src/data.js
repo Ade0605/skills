@@ -393,6 +393,12 @@
     ph_dline_selfcon:  { name: 'Self-con, D-Line', district: 'ph_dline', rent: 7000, power: 0.5, sleep: 0.9, type: 'selfcon', x: 8.2, y: 16.0 },
     ph_gra_flat:       { name: '3-bed flat, GRA Phase 2', district: 'ph_gra', rent: 40000, power: 0.75, sleep: 1.05, type: 'flat3', x: 12.4, y: 9.8 },
     ph_oldgra_duplex:  { name: 'Duplex, Old GRA', district: 'ph_oldgra', rent: 90000, power: 0.85, sleep: 1.1, type: 'duplex', x: 14.6, y: 16.2, daily: { stress: -3 } },
+    // Lekki Hyde Park: a gated estate on the lagoon side of the Lekki–Epe Expressway, in five zones.
+    hp_terrace_own: { name: 'Your terrace, Garden Row, Lekki Hyde Park', district: 'lekki', rent: 0, power: 0.9, sleep: 1.1, type: 'duplex', owned: true, ownedBy: 'hp_terrace', hydepark: true, x: 31.4, y: 23.7, daily: { stress: -3 }, perk: 'Garden Row: neat terraces by the estate park. Rich, quietly.' },
+    hp_semi_own: { name: 'Your semi-detached, Park Crescent, Lekki Hyde Park', district: 'lekki', rent: 0, power: 0.93, sleep: 1.15, type: 'duplex', owned: true, ownedBy: 'hp_semi', hydepark: true, x: 32.5, y: 23.4, daily: { stress: -4 }, perk: 'Park Crescent: semis around the pool and tennis courts.' },
+    hp_vip_own: { name: 'Your villa, Celebrity Row, Lekki Hyde Park', district: 'lekki', rent: 0, power: 0.98, sleep: 1.25, type: 'luxury', owned: true, ownedBy: 'hp_vip', hydepark: true, x: 32.5, y: 22.9, daily: { stress: -6, fun: 4 }, perk: 'Celebrity Row: gated villas with a home studio, a pool and a lagoon view. Fans wait at the gate.' },
+    hp_billionaire_own: { name: 'Your mansion, Billionaire Row, Lekki Hyde Park', district: 'lekki', rent: 0, power: 1, sleep: 1.3, type: 'mansion', owned: true, ownedBy: 'hp_billionaire', hydepark: true, x: 31.4, y: 22.9, daily: { stress: -8 }, perk: 'Billionaire Row: lagoon-front mansions with private jetties.' },
+    hp_island_own: { name: 'Your private island, Lekki Hyde Park', district: 'lekki', rent: 0, power: 1, sleep: 1.35, type: 'mansion', owned: true, ownedBy: 'hp_island', hydepark: true, x: 32.4, y: 21.95, daily: { stress: -10, fun: 4 }, perk: 'Super-luxury: your own islet in the lagoon, reached by a private bridge.' },
     lekki_nicon_own:  { name: 'Your duplex, Nicon Town', district: 'lekki', rent: 0, power: 0.92, sleep: 1.15, type: 'duplex', owned: true, ownedBy: 'lekki_nicon', daily: { stress: -4 }, perk: 'A gated estate popular with young professionals and families: upscale, but not the Ikoyi axis.' },
     vi_luxapt_own:    { name: 'Your luxury apartment, VI', district: 'vi', rent: 0, power: 0.98, sleep: 1.15, type: 'luxury', owned: true, ownedBy: 'vi_luxapt', daily: { stress: -4, social: 2 }, perk: 'High floors, a concierge and the city\'s offices, lounges and nightlife on your doorstep.' },
     eko_atlantic_own: { name: 'Your penthouse, Eko Atlantic', district: 'vi', rent: 0, power: 1, sleep: 1.2, type: 'luxury', owned: true, ownedBy: 'eko_atlantic', daily: { stress: -6, fun: 2 }, perk: 'The new master-planned city on reclaimed land: steady power, wide roads and an ocean view.' },
@@ -703,7 +709,9 @@
       { id: 'lekki_gym', label: 'Gym class', mins: 90, cost: 3000, fx: { energy: -18, hygiene: -20, stress: -10 }, xp: { fitness: 6 }, when: { from: 6, to: 21 } },
       { id: 'lekki_content', label: 'Shoot content', mins: 120, fx: { fun: 10, energy: -8 }, xp: { charisma: 3, music: 1 }, special: 'content', when: { from: 8, to: 20 } },
       { id: 'lekki_super', label: 'Supermarket shop (7 meals)', mins: 45, cost: 7500, special: 'pantry7', when: { from: 8, to: 21 } },
-      { id: 'lekki_cafe', label: 'Brunch at a café', mins: 60, cost: 6000, fx: { hunger: 50, fun: 10 } }
+      { id: 'lekki_cafe', label: 'Brunch at a café', mins: 60, cost: 6000, fx: { hunger: 50, fun: 10 } },
+      { id: 'lekki_hp_walk', label: 'Walk the Lekki Hyde Park lagoon promenade', mins: 45, fx: { fun: 10, stress: -8 }, when: { from: 6, to: 19 } },
+      { id: 'lekki_hp_tennis', label: 'Play tennis at the Hyde Park courts', mins: 60, cost: 8000, fx: { fun: 18, energy: -12, stress: -6 }, xp: { fitness: 1 }, when: { from: 6, to: 20 } }
     ],
     ajah: [
       { id: 'ajah_eleko', label: 'Beach day at Eleko beach, out on the Lekki–Epe coast', mins: 420, cost: 4000, fx: { fun: 45, stress: -25, energy: -15, hygiene: -15 }, sight: true, when: { from: 8, to: 14 } },
@@ -829,6 +837,7 @@
     { id: 'ph_mile1', icon: '🧺', name: 'Mile 1 market', type: 'food', glyph: 'basket', district: 'ph_dline', x: 9.6, y: 14.0, acts: ['ph_mile1_food', 'ph_mile1_gig'], text: 'The busiest market in Port Harcourt.' },
     { id: 'ph_bole', icon: '🐟', name: 'Bole and fish spot', type: 'food', glyph: 'bowl', district: 'ph_oldgra', x: 13.4, y: 15.8, acts: ['ph_bole', 'ph_bolegame'], text: 'Roasted plantain and fish with pepper sauce. A PH classic. Mama lets you work the grill for a share of sales.' },
     { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
+    { id: 'lekki_hyde_park', icon: '🏡', name: 'Lekki Hyde Park', type: 'outdoors', glyph: 'h_mansion', district: 'lekki', x: 31.6, y: 23.85, acts: ['lekki_hp_walk', 'lekki_hp_tennis'], hydepark: true, nogem: true, text: 'A gated estate by the lagoon, off the Lekki–Epe Expressway: terraces, semis, Celebrity Row, Billionaire Row and a private islet. Buy ready-built or build your own.' },
     { id: 'club_tidewater', icon: '🍕', name: 'Tidewater House (members only)', type: 'nightlife', glyph: 'glass', district: 'ikoyi', x: 21.4, y: 20.6, acts: [], club: 'tidewater', nogem: true, text: 'Members only, by the water on Ademola Street.' },
     { id: 'club_jetski', icon: '🌊', name: 'Five Cowries Jet Ski Club', type: 'outdoors', glyph: 'wave', district: 'ikoyi', x: 19.9, y: 20.7, acts: [], club: 'jetski', nogem: true, text: 'A members\' pontoon on the lagoon.' },
     { id: 'club_yacht', icon: '🛥️', name: 'Atlantic Marina Yacht Club', type: 'outdoors', glyph: 'boat', district: 'vi', x: 14.2, y: 29.4, acts: [], club: 'yacht', nogem: true, text: 'Members only, at the Eko Atlantic marina.' },
@@ -1260,7 +1269,35 @@
     eko_atlantic: { name: 'Penthouse, Eko Atlantic', price: 900000000, weekly: 2200000, charge: 180000, house: true, home: 'eko_atlantic_own', status: 35, prime: 3 },
     ikoyi_parkview: { name: 'Mansion, Parkview Estate, Ikoyi', price: 1500000000, weekly: 3500000, charge: 250000, house: true, home: 'ikoyi_parkview_own', status: 50, prime: 2 },
     banana_island: { name: 'Waterfront mansion, Banana Island', price: 4000000000, weekly: 8000000, charge: 600000, house: true, home: 'banana_island_own', status: 100, prime: 1 },
+    hp_terrace: { name: 'Terrace, Garden Row, Lekki Hyde Park', price: 120000000, weekly: 380000, charge: 45000, house: true, home: 'hp_terrace_own', status: 10, hydepark: 'low' },
+    hp_semi: { name: 'Semi-detached, Park Crescent, Lekki Hyde Park', price: 280000000, weekly: 800000, charge: 75000, house: true, home: 'hp_semi_own', status: 18, hydepark: 'middle' },
+    hp_vip: { name: 'Gated villa, Celebrity Row, Lekki Hyde Park', price: 1800000000, weekly: 4200000, charge: 350000, house: true, home: 'hp_vip_own', status: 60, hydepark: 'vip' },
+    hp_billionaire: { name: 'Lagoon-front mansion, Billionaire Row, Lekki Hyde Park', price: 3000000000, weekly: 6500000, charge: 500000, house: true, home: 'hp_billionaire_own', status: 80, hydepark: 'billionaire' },
+    hp_island: { name: 'Private island lot, Lekki Hyde Park', price: 8000000000, weekly: 15000000, charge: 1200000, house: true, home: 'hp_island_own', status: 150, hydepark: 'super' },
+    // Empty plots in each zone, to build on yourself (cheaper, slower).
+    hp_plot_low: { name: 'Plot, Garden Row, Lekki Hyde Park', price: 36000000, weekly: 0, charge: 15000, house: false, hpZone: 'low' },
+    hp_plot_middle: { name: 'Plot, Park Crescent, Lekki Hyde Park', price: 84000000, weekly: 0, charge: 25000, house: false, hpZone: 'middle' },
+    hp_plot_vip: { name: 'Plot, Celebrity Row, Lekki Hyde Park', price: 540000000, weekly: 0, charge: 100000, house: false, hpZone: 'vip' },
+    hp_plot_billionaire: { name: 'Plot, Billionaire Row, Lekki Hyde Park', price: 900000000, weekly: 0, charge: 150000, house: false, hpZone: 'billionaire' },
+    hp_plot_super: { name: 'Islet plot, Lekki Hyde Park', price: 2400000000, weekly: 0, charge: 350000, house: false, hpZone: 'super' },
     built_house: { name: 'Your own house, Ikorodu', price: 0, weekly: 70000, house: true, hidden: true, home: 'built_own' }
+  };
+  // Lekki Hyde Park zones, from the expressway gate to the lagoon. Build stages are shares of the ready-built price.
+  var HYDE_PARK = {
+    name: 'Lekki Hyde Park', district: 'lekki', box: [30.9, 22.6, 33.1, 24.0], gate: [32.0, 24.0],
+    zones: {
+      low: { name: 'Garden Row', tier: 'Low-class rich', house: 'hp_terrace', plot: 'hp_plot_low', style: 'Terraces' },
+      middle: { name: 'Park Crescent', tier: 'Middle-class rich', house: 'hp_semi', plot: 'hp_plot_middle', style: 'Semi-detached houses' },
+      vip: { name: 'Celebrity Row', tier: 'VIP and celebrity', house: 'hp_vip', plot: 'hp_plot_vip', style: 'Gated villas with home studios' },
+      billionaire: { name: 'Billionaire Row', tier: 'Billionaires', house: 'hp_billionaire', plot: 'hp_plot_billionaire', style: 'Lagoon-front mansions' },
+      super: { name: 'The Islet', tier: 'Super-luxury', house: 'hp_island', plot: 'hp_plot_super', style: 'A private island' }
+    },
+    approval: 0.02,
+    stages: [
+      { name: 'Foundation and piling', share: 0.15, days: 4, icon: '🧱' },
+      { name: 'Structure and roof', share: 0.3, days: 8, icon: '🏗️' },
+      { name: 'Finishing and landscaping', share: 0.25, days: 6, icon: '🌴' }
+    ]
   };
   // Building on your Ikorodu plot, one stage at a time (days each).
   var BUILD = {
@@ -1323,7 +1360,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, BUILD: BUILD, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

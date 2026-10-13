@@ -68,6 +68,7 @@
     private_jet: 'Wheels up: flew private',
     chopper:     'Straight to the door: took a VIP chopper',
     members_club: 'Members only: joined a waterfront club',
+    hyde_park:   'Lagoon living: a home in Lekki Hyde Park',
     gifted:      'Received a gift from another Lagosian',
     gems:        'Found all five of a day\'s gems',
     debt_free:   'Debt free: cleared every loan',
@@ -416,6 +417,7 @@
 
   function onNewDay(s) {
     if (s.build) buildTick(s);
+    if (s.hpBuild) hpBuildTick(s);
     var hd = homeDef(s);
     if (hd.daily) applyFx(s, hd.daily); // perks of homes added after v0.6
     var fd = furnitureDaily(s);
@@ -1902,6 +1904,7 @@
     log(s, 'Omo! You now own a ' + p.name + '. Make sure the C of O is real.', 'good');
     if (p.house) unlock(s, 'landlord');
     if (id === 'banana_island') unlock(s, 'banana');
+    if (p.hydepark) unlock(s, 'hyde_park');
     return finish(s, ok('Property bought.' + (p.home ? ' Move in from the homes list (no rent), or let it and collect ' + naira(roundTo(p.weekly * s.econ.infl, 50)) + ' a week.' : '')));
   }
 
@@ -1950,6 +1953,55 @@
     s.properties.push({ id: 'built_house', value: roundTo((plot ? plot.value : 0) + b.spent * 0.9, 1000) });
     unlock(s, 'builder'); unlock(s, 'landlord');
     log(s, '🏠 Your house in Ikorodu is finished! Move in from the Money tab (no rent, ever), or let tenants pay you ' + naira(price(s, D.PROPERTIES.built_house.weekly)) + ' a week.', 'ach');
+  }
+
+  /* ---------- Lekki Hyde Park: build your own in any zone (new recorded call hb) ---------- */
+  function hpInfo(s, zone) {
+    var H = D.HYDE_PARK, Z = H.zones[zone]; if (!Z) return { why: 'No such zone' };
+    var hasPlot = s.properties.some(function (p) { return p.id === Z.plot; }), b = s.hpBuild && s.hpBuild[zone];
+    var built = s.properties.some(function (p) { return p.id === Z.house; });
+    var full = price(s, D.PROPERTIES[Z.house].price), done = b ? b.done : 0, next = built && !b ? null : H.stages[done];
+    var cost = next ? Math.round(full * next.share / 1000) * 1000 + (!b ? Math.round(full * H.approval / 1000) * 1000 : 0) : 0;
+    var why = '';
+    if (built && !b) why = 'You already own a house here';
+    else if (!hasPlot && !b) why = 'Buy the plot first';
+    else if (b && b.working) why = 'The ' + H.stages[done].name.toLowerCase() + ' is still going on';
+    else if (s.loc !== H.district) why = 'Visit the site in ' + D.DISTRICTS[H.district].name + ' to start the next stage';
+    else if (!canAfford(s, cost)) why = 'This stage needs ' + naira(cost);
+    else why = busyBlock(s) || '';
+    return { zone: zone, hasPlot: hasPlot, built: built, done: done, working: !!(b && b.working), readyIn: b && b.working ? Math.max(0, b.ready - day(s)) : 0, next: next, cost: cost, approval: !b ? Math.round(full * H.approval / 1000) * 1000 : 0, why: why };
+  }
+  function hpBuild(s, zone) {
+    var q = hpInfo(s, zone);
+    if (q.why) return fail(q.why + '.');
+    var H = D.HYDE_PARK, Z = H.zones[zone];
+    s.alerts = [];
+    s.hpBuild = s.hpBuild || {};
+    if (!s.hpBuild[zone]) {
+      pay(s, q.approval, 'Estate building approval, ' + Z.name);
+      s.hpBuild[zone] = { done: 0, working: false, ready: -1, spent: q.approval };
+      q.cost -= q.approval;
+    }
+    var b = s.hpBuild[zone], st = H.stages[b.done];
+    pay(s, q.cost, 'Building in ' + Z.name + ': ' + st.name);
+    b.spent += q.cost; b.working = true; b.ready = day(s) + st.days;
+    advance(s, 60);
+    return finish(s, ok(st.icon + ' ' + st.name + ' has started in ' + Z.name + '. The estate says ' + st.days + ' days.'));
+  }
+  function hpBuildTick(s) {
+    var H = D.HYDE_PARK;
+    Object.keys(s.hpBuild).forEach(function (zone) {
+      var b = s.hpBuild[zone], Z = H.zones[zone];
+      if (!b.working || day(s) < b.ready) return;
+      var st = H.stages[b.done]; b.working = false; b.done++;
+      if (b.done < H.stages.length) { log(s, '🏗️ ' + st.name + ' is done in ' + Z.name + '. Visit the site to start the ' + H.stages[b.done].name.toLowerCase() + '.', 'good'); return; }
+      var plot = s.properties.filter(function (p) { return p.id === Z.plot; })[0];
+      s.properties = s.properties.filter(function (p) { return p !== plot; });
+      s.properties.push({ id: Z.house, value: roundTo((plot ? plot.value : 0) + b.spent * 0.95, 1000), built: true });
+      delete s.hpBuild[zone];
+      unlock(s, 'builder'); unlock(s, 'landlord'); unlock(s, 'hyde_park');
+      log(s, '🏡 Your ' + D.PROPERTIES[Z.house].name + ' is finished! Move in from the homes list, or let it.', 'ach');
+    });
   }
 
   // Detty December (rules 14): diaspora relatives come home and expect to be shown around.
@@ -4243,7 +4295,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,

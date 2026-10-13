@@ -820,3 +820,18 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .club-way .btn { white-space: normal; height: auto; min-height: 36px; line-height: 1.2; padding: 6px 10px; }
 @media (max-width: 420px) { .club-ways { grid-template-columns: 1fr; } }
 .dl-tier { margin: 12px 0 2px; font: 800 11px var(--font-body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+/* Lekki Hyde Park */
+.hp { display: grid; gap: 8px; margin-top: 10px; }
+.hp h3 { margin: 0; }
+.hp-zone { display: grid; gap: 6px; padding: 12px; border-radius: 16px; background: var(--sunk); border-left: 5px solid #7fb35f; }
+.hp-zone.hp-middle { border-left-color: #2f7a63; } .hp-zone.hp-billionaire { border-left-color: #c9a24a; } .hp-zone.hp-vip { border-left-color: #8e44ad; } .hp-zone.hp-super { border-left-color: #2f6fa0; }
+.hp-h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.hp-h b { font-size: 15px; }
+.hp-tier { font: 800 10px var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.hp-stages { display: flex; flex-wrap: wrap; gap: 4px; }
+.hp-stages span { padding: 3px 8px; border-radius: 999px; background: var(--surface); font-size: 11px; opacity: .6; }
+.hp-stages span.done { opacity: 1; background: #d7f5e3; color: #0b5a2f; }
+.hp-stages span.now { opacity: 1; background: #fff1c2; color: #6b4b00; }
+.hp-zone .inline { flex-wrap: wrap; }
+.hp-zone .meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; color: var(--muted); }

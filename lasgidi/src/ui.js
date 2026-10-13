@@ -1365,10 +1365,27 @@
       (chips ? '<div class="act-chips">' + chips + '</div>' : '') +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
-      (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') +
+      (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.hydepark ? hydeParkView() : '') +
       (pl.id === 'airport' && !S.challenge ? japaView() : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : rideRow(pl.district));
+  }
+  /* ---------- Lekki Hyde Park: five zones, buy ready-built or build your own ---------- */
+  function hydeParkView() {
+    var H = D.HYDE_PARK, wallet = S.cash + S.bank, order = ['low', 'middle', 'billionaire', 'vip', 'super'];
+    return '<section class="hp"><h3>🏡 Homes in Lekki Hyde Park</h3><p class="note">Gated, by the lagoon, with its own gate onto the Lekki–Epe Expressway. Every home pays the estate service charge each week. Building yourself costs less than buying ready-built, but takes about 18 days on site.</p>' +
+      order.map(function (z) {
+        var Z = H.zones[z], P = D.PROPERTIES[Z.house], PL = D.PROPERTIES[Z.plot], pr = L.price(S, P.price), pp = L.price(S, PL.price), q = L.hpInfo(S, z);
+        var own = S.properties.some(function (p) { return p.id === Z.house; }), lives = S.home === P.home;
+        var buildTotal = H.stages.reduce(function (a, st) { return a + Math.round(pr * st.share / 1000) * 1000; }, 0) + Math.round(pr * H.approval / 1000) * 1000;
+        var body;
+        if (own) body = '<span class="gain">✓ You own this' + (lives ? ' and live here' : '') + '</span>' + (lives ? '' : '<button class="btn sm" id="hp-move-' + z + '" data-move="' + P.home + '">Move in</button>');
+        else if (q.hasPlot || q.done || q.working) {
+          body = '<div class="hp-stages">' + H.stages.map(function (st, i) { return '<span class="' + (i < q.done ? 'done' : i === q.done && q.working ? 'now' : '') + '">' + st.icon + ' ' + esc(st.name) + '</span>'; }).join('') + '</div>' +
+            (q.working ? '<span class="muted">Ready in ' + q.readyIn + ' day' + (q.readyIn === 1 ? '' : 's') + '</span>' : '<button class="btn sm go" id="hp-build-' + z + '" data-hpbuild="' + z + '"' + (q.why ? ' disabled title="' + esc(q.why) + '"' : '') + '>Start ' + esc(q.next.name.toLowerCase()) + ' · ' + N(q.cost) + '</button>' + (q.why ? '<span class="why">' + esc(q.why) + '</span>' : ''));
+        } else body = '<div class="inline"><button class="btn sm" id="hp-buy-' + z + '" data-buyp="' + Z.house + '"' + (wallet >= pr ? '' : ' disabled') + '>Buy ready-built · ' + N(pr) + '</button><button class="btn sm ghost" id="hp-plot-' + z + '" data-buyp="' + Z.plot + '"' + (wallet >= pp ? '' : ' disabled') + '>Buy the plot · ' + N(pp) + '</button></div><span class="muted">Then build for about ' + N(buildTotal) + '</span>';
+        return '<div class="hp-zone hp-' + z + '"><div class="hp-h"><b>' + esc(Z.name) + '</b><span class="hp-tier">' + esc(Z.tier) + '</span></div><div class="meta"><span>' + esc(Z.style) + '</span><span>+' + P.status + ' status</span><span>Service ' + N(L.price(S, P.charge)) + '/wk</span><span class="gain">Lets for ' + N(L.price(S, P.weekly)) + '/wk</span></div>' + body + '</div>';
+      }).join('') + '</section>';
   }
   /* ---------- members-only clubs: a membership card, two ways in, then the members' list ---------- */
   function clubView(id) {
@@ -2119,11 +2136,12 @@
     html += businessesView();
 
     html += '<div class="section"><h3>Property and car</h3>' + (S.properties.length ? '<ul class="note">' + S.properties.map(function (p) { return '<li>' + esc(D.PROPERTIES[p.id].name) + ' · worth ' + N(p.value) + '</li>'; }).join('') + '</ul>' : '') +
-      buildView() + '<div class="list">' + Object.keys(D.PROPERTIES).filter(function (k) { return !D.PROPERTIES[k].hidden; }).map(function (k) {
+      buildView() + '<div class="list">' + Object.keys(D.PROPERTIES).filter(function (k) { return !D.PROPERTIES[k].hidden && !D.PROPERTIES[k].hydepark && !D.PROPERTIES[k].hpZone; }).map(function (k) {
         var p = D.PROPERTIES[k], pr = L.price(S, p.price);
         return '<div class="item"><div><h3>' + esc(p.name) + '</h3><div class="meta"><span class="cost num">' + N(pr) + '</span>' + (p.weekly ? '<span class="gain num">' + N(p.weekly) + '/week from tenants</span>' : '<span>Appreciates ~1.2%/week</span>') + '</div></div>' +
           '<button class="btn sm" id="buyp-' + k + '" data-buyp="' + k + '"' + (S.cash + S.bank >= pr ? '' : ' disabled') + '>Buy</button></div>';
       }).join('') +
+      '<div class="item"><div><h3>🏡 Lekki Hyde Park</h3><div class="meta"><span>Five zones by the lagoon, from ' + N(L.price(S, D.PROPERTIES.hp_plot_low.price)) + ' plots to a private islet</span></div></div><button class="btn sm" id="to-hp" data-place="lekki_hyde_park" data-tab="map">See the estate</button></div>' +
       '<div class="item"><div><h3>Cars, boats, helicopters and jets</h3><div class="meta"><span>' + (S.car ? esc(D.CAR.name) + ' owned · ' : '') + 'Your garage and hangar are on the Home tab</span></div></div><button class="btn sm" id="to-garage" data-tab="home">Open garage</button></div></div></div>';
 
     html += '<div class="section"><h3>Statement</h3><p class="note">Every naira in or out is a sealed line. Edited saves show up as tampered.</p><div class="stmt-wrap"><table class="stmt"><tbody>' +
@@ -2809,7 +2827,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2860,7 +2878,7 @@
       ui.confirmRestart = false; ui.flash = ''; playWeekly(true); return;
     }
     if (ds.wpost) { t.disabled = true; postWeekly().then(function (m) { online.wStatus = m; render(); }); return; }
-    if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; if (t.hasAttribute('data-app')) ui.app = ds.app || null; if (ds.tripto) { clearPicks(); ui.sel = ds.tripto === S.loc ? null : ds.tripto; } if (ds.seaopen) { clearPicks(); ui.seaOpen = true; } render(); if (ds.seaopen && playground && playground.focusSea) playground.focusSea(); return; }
+    if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; if (t.hasAttribute('data-app')) ui.app = ds.app || null; if (ds.tripto) { clearPicks(); ui.sel = ds.tripto === S.loc ? null : ds.tripto; } if (ds.seaopen) { clearPicks(); ui.seaOpen = true; } if (ds.place && t.hasAttribute('data-place')) { clearPicks(); ui.place = ds.place; } render(); if (ds.seaopen && playground && playground.focusSea) playground.focusSea(); return; }
     if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
     if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
     if (ds.place) { ui.place = ds.place; ui.board = null; ui.sel = null; render(); return; }
@@ -3101,6 +3119,7 @@
     }
     if (ds.ridemode) { ui.rideMode = ds.ridemode; render(); return; }
     if (ds.chatopen) { clearPicks(); ui.chatWith = ds.chatopen; online.unread[ds.chatopen] = 0; ui.tab = 'map'; render(); return; }
+    if (ds.hpbuild) { var hz = ds.hpbuild; run(function () { return L.hpBuild(S, hz); }); return; }
     if (ds.joinclub) { var jc = ds.joinclub.split(':'); run(function () { return L.joinClub(S, jc[0], jc[1]); }); return; }
     if (ds.clubact) { var ca = ds.clubact.split(':'); run(function () { return L.clubAct(S, ca[0], ca[1]); }); return; }
     if (ds.closechat) { ui.chatWith = null; ui.chatWhy = ''; render(); return; }

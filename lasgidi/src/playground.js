@@ -21,10 +21,12 @@
   // A white-sand beach on the Ibeju-Lekki coast, south of Ajah and east of the Sea Plots.
   var BEACH = [[40.9, 27.0], [43, 26.5], [49.6, 26.0], [50.4, 26.8], [50.2, 29.6], [41.2, 29.7], [40.8, 28.4]];
   var ISLAND = [[14.4, 21], [17.8, 19.9], [21.6, 19.8], [25.6, 21.4], [33, 22.4], [43, 22.6], [51.4, 22.4], [51.8, 25.8], [43, 26.6], [33, 26.9], [24, 26.9], [20.6, 27.1], [17.6, 26.4], [16, 24.2], [14.2, 22.6]];
+  // Lekki Hyde Park's private islet in the lagoon, joined to Billionaire Row by a bridge.
+  var HP_ISLET = [[31.9, 21.75], [32.5, 21.55], [33.0, 21.75], [33.0, 22.2], [32.4, 22.35], [31.95, 22.2]];
   var CREEK = [[17.2, 23.1], [21.4, 22.6], [21.6, 23.3], [17.4, 23.8]]; // Five Cowries creek between the Island and VI
   // Each city in its own frame: land polygons, water carved out of them, and the drawing box.
   var GEO = {
-    lagos: { box: [-2, 52, -1, 31], land: [MAINLAND, ISLAND, EKO, BEACH], water: [CREEK], label: [] },
+    lagos: { box: [-2, 52, -1, 31], land: [MAINLAND, ISLAND, EKO, BEACH, HP_ISLET], water: [CREEK], label: [] },
     abuja: { box: [-3, 35, -3, 28], land: [[[-3, -3], [35, -3], [35, 28], [-3, 28]]],
       water: [[[4.6, 12.8], [6.4, 12.4], [8.8, 12.9], [9.4, 14.0], [8.2, 15.0], [5.6, 14.9], [4.4, 14.0]]], label: [['Jabi Lake', 6.9, 13.8]] },
     ph: { box: [-2, 32, -2, 26], land: [[[-2, -2], [32, -2], [32, 8], [28, 12.5], [25, 17.5], [20.5, 21], [16.5, 21.6], [12, 21.2], [6, 19.8], [-2, 19]]],
@@ -183,7 +185,7 @@
         wall: tower ? '#8fa2b3' : st.spaced ? TOWER_TINTS[Math.floor(hash(ix, iy, 19) * TOWER_TINTS.length)] : st.wall, glass: st.glass || tower, tall: st.spaced || tower, seed: hash(ix, iy, 17) });
     }
   }
-  ESTATES = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && !D.HOMES[k].beach && D.HOMES[k].x != null && cityOfDistrict(D.HOMES[k].district) === city; }).map(function (k) {
+  ESTATES = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && !D.HOMES[k].beach && !D.HOMES[k].hydepark && D.HOMES[k].x != null && cityOfDistrict(D.HOMES[k].district) === city; }).map(function (k) {
     var h = D.HOMES[k], m = MODELS[h.type] || MODELS.room;
     return { id: k, x: h.x, y: h.y, type: h.type, k: h.district, m: m, r: Math.max(0.45, (Math.max(m.n[0], m.n[1]) * Math.max(m.gap, m.w)) / 2 + 0.25) };
   });
@@ -193,6 +195,17 @@
   trees = trees.filter(function (t) { return !(city === 'lagos' && (inPoly(t.x, t.y, EKO) || inPoly(t.x, t.y, BEACH))); });
   buildings = buildings.filter(function (b) { return !(city === 'lagos' && inPoly(b.x, b.y, BEACH)); });
   if (city === 'lagos') {
+    // Lekki Hyde Park: clear the box, then lay out each zone's houses in rows.
+    var HB = D.HYDE_PARK.box, inHP = function (x, y) { return (x > HB[0] - 0.1 && x < HB[2] + 0.1 && y > HB[1] - 0.1 && y < HB[3] + 0.35) || inPoly(x, y, HP_ISLET); };
+    buildings = buildings.filter(function (b) { return !inHP(b.x, b.y); });
+    trees = trees.filter(function (t) { return !inHP(t.x, t.y); });
+    var hpRoof = ['#3f8f55', '#2f7a63', '#4a9a5a', '#2f6fa0'];
+    for (var ti = 0; ti < 8; ti++) buildings.push({ x: 31.05 + ti * 0.2, y: 23.72, w: 0.16, dep: 0.26, h: 7, k: 'lekki', roof: hpRoof[ti % 2], wall: '#f3efe6', seed: hash(ti, 3, 41) }); // Garden Row terraces
+    for (var si = 0; si < 5; si++) buildings.push({ x: 32.25 + si * 0.17, y: 23.42, w: 0.13, dep: 0.22, h: 8, k: 'lekki', roof: '#2f7a63', wall: '#efe9dc', seed: hash(si, 4, 41) }), buildings.push({ x: 32.25 + si * 0.17, y: 23.68, w: 0.13, dep: 0.22, h: 8, k: 'lekki', roof: '#4a9a5a', wall: '#efe9dc', seed: hash(si, 5, 41) }); // Park Crescent semis
+    for (var vi2 = 0; vi2 < 3; vi2++) buildings.push({ x: 32.25 + vi2 * 0.3, y: 22.9, w: 0.22, dep: 0.22, h: 11, k: 'lekki', roof: '#2f6fa0', wall: '#ffffff', glass: true, seed: hash(vi2, 6, 41) }); // Celebrity Row villas
+    for (var bi2 = 0; bi2 < 3; bi2++) buildings.push({ x: 31.15 + bi2 * 0.32, y: 22.88, w: 0.26, dep: 0.26, h: 12, k: 'lekki', roof: '#3d4a52', wall: '#f7f3ea', seed: hash(bi2, 7, 41) }); // Billionaire Row mansions
+    buildings.push({ x: 32.45, y: 21.95, w: 0.32, dep: 0.28, h: 14, k: 'lekki', roof: '#2f6fa0', wall: '#ffffff', glass: true, seed: hash(1, 8, 41) }); // the islet villa
+    [[31.95, 23.5], [32.05, 23.2], [31.2, 23.3], [31.6, 23.3], [33.0, 23.0], [32.8, 22.2], [32.1, 21.9]].forEach(function (p, i) { trees.push({ x: p[0], y: p[1], s: 0.9 + (i % 3) * 0.1, palm: i % 2 === 0 }); });
     // Ten beach houses facing the sea, with palms between them.
     var bh = ['#2fa3a3', '#c0603f', '#3f78b0', '#d9a520', '#2f8f5a'];
     for (var hi = 0; hi < 10; hi++) {
@@ -459,6 +472,7 @@
       g.lineWidth = Math.max(0.6, 0.8 * s); g.strokeStyle = '#f5c518'; g.stroke();
       g.fillStyle = '#ffffff'; g.font = '700 ' + Math.max(6, 7 * s) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('H', hp.x, hp.y);
       drawRefinery(g, s); drawNewAirport(g, s); drawEko(g, s); drawBeach(g, s);
+      drawHydePark(g, s);
       // Members' clubs: a timber jetty into the water with boats tied up.
       [[21.4, 20.6, -1], [19.9, 20.7, -1], [14.2, 29.4, 1], [18.9, 29.6, 1]].forEach(function (c) {
         var y0 = c[1] + c[2] * 0.25, y1 = c[1] + c[2] * 1.0;
@@ -697,6 +711,24 @@
       poly(g, [[13.2, 9.6], [14.4, 9.6], [14.4, 10.0], [13.2, 10.0]], theme.road); // Garrison flyover deck
       var z = toScreen(19.4, 9.4, 0); g.beginPath(); g.ellipse(z.x, z.y, 0.9 * TW * s * 0.5, 0.7 * TH * s * 0.5, 0, 0, Math.PI * 2); g.fillStyle = theme.dark ? '#2f4a2c' : '#7fb35f'; g.fill(); // zoo grounds
       drawBuilding(g, { x: 10.8, y: 12.2, w: 0.7, dep: 0.5, h: 6, wall: '#d9c38f', roof: '#8a6a3a' }, s, 0, true); // cultural centre
+    }
+    function drawHydePark(g, s) {
+      var B = D.HYDE_PARK.box, x0 = B[0], y0 = B[1], x1 = B[2], y1 = B[3];
+      // Estate pad, a fence line, the access road to the expressway and the gatehouse.
+      poly(g, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], theme.dark ? '#33402f' : '#cfe0b4', theme.dark ? '#7b7f86' : '#8a9a74', Math.max(1, 1.4 * s));
+      poly(g, [[31.95, y1], [32.05, y1], [32.07, 24.32], [31.93, 24.32]], theme.road);
+      poly(g, [[x0 + 0.05, 23.55], [x1 - 0.05, 23.55], [x1 - 0.05, 23.6], [x0 + 0.05, 23.6]], theme.road); // estate boulevard
+      poly(g, [[x0 + 0.05, 23.12], [x1 - 0.05, 23.12], [x1 - 0.05, 23.17], [x0 + 0.05, 23.17]], theme.road);
+      poly(g, [[31.97, y0 + 0.05], [32.03, y0 + 0.05], [32.03, y1], [31.97, y1]], theme.road);
+      drawBuilding(g, { x: 32.0, y: 23.92, w: 0.12, dep: 0.08, h: 4, wall: '#d9c38f', roof: '#8a6a3a' }, s, 0, true);
+      // Central park with a pool and two tennis courts.
+      poly(g, [[31.1, 23.2], [31.9, 23.2], [31.9, 23.5], [31.1, 23.5]], theme.dark ? '#2f4a2c' : '#7fb35f');
+      poly(g, [[31.55, 23.26], [31.8, 23.26], [31.8, 23.36], [31.55, 23.36]], '#3fb6d8', '#ffffff', 1);
+      [[31.2, 23.27], [31.38, 23.27]].forEach(function (c) { poly(g, [[c[0], c[1]], [c[0] + 0.14, c[1]], [c[0] + 0.14, c[1] + 0.18], [c[0], c[1] + 0.18]], '#2f7fb0', '#ffffff', 1); });
+      // Lagoon frontage: private jetties for Billionaire Row and a bridge to the islet.
+      [31.15, 31.47, 31.79].forEach(function (x) { poly(g, [[x - 0.03, 22.45], [x + 0.03, 22.45], [x + 0.03, 22.66], [x - 0.03, 22.66]], theme.dark ? '#6b5640' : '#a07a4f'); });
+      poly(g, [[32.18, 22.2], [32.26, 22.2], [32.26, 22.66], [32.18, 22.66]], theme.dark ? '#8a8f96' : '#d8d4c8');
+      var lb = toScreen((x0 + x1) / 2, y1 - 0.12, 0); g.font = '800 ' + Math.min(12, Math.max(7, 6 * s)) + 'px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = theme.dark ? '#d9e6c9' : '#2f5a2f'; g.fillText('LEKKI HYDE PARK', lb.x, lb.y);
     }
     function drawRefinery(g, s) {
       var R = REFINERY;

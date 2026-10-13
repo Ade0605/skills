@@ -2053,3 +2053,22 @@ test('members-only clubs: net worth or a referral gets you in, membership is wee
   s.t += 8 * 1440;
   assert.equal(L.clubMember(s, 'tidewater'), false, 'a week runs out');
 });
+
+test('Lekki Hyde Park: buy ready-built, or buy a plot and build in three stages into the same house', () => {
+  const s = L.newGame({ seed: 81, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.cash += 500000000; s.loc = 'lekki';
+  assert.match(L.hpInfo(s, 'low').why, /plot/);
+  assert.ok(L.buyProperty(s, 'hp_plot_low').ok);
+  for (let k = 0; k < 3; k++) {
+    while (s.pending.length) L.resolveChoice(s, 1);
+    const q = L.hpInfo(s, 'low'); assert.equal(q.why, '', q.why);
+    assert.ok(L.hpBuild(s, 'low').ok);
+    assert.match(L.hpInfo(s, 'low').why, /still going on/);
+    for (let d = 0; d < 9 && s.hpBuild && s.hpBuild.low && s.hpBuild.low.working; d++) { L._advance(s, 1440); while (s.pending.length) L.resolveChoice(s, 1); s.loc = 'lekki'; }
+  }
+  assert.ok(s.properties.some(p => p.id === 'hp_terrace' && p.built), 'the plot became the terrace');
+  assert.ok(!s.properties.some(p => p.id === 'hp_plot_low'));
+  assert.ok(L.ownsHome(s, 'hp_terrace_own') && s.ach.hyde_park);
+  assert.ok(L.buyProperty(s, 'hp_semi').ok, 'or buy ready-built');
+});
