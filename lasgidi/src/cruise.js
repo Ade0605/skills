@@ -65,11 +65,11 @@
     function frame(t) {
       size();
       g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-      var room = scene.room || 'cruise', SP = LAYOUTS[room] || SPOTS, bob = reduce || room !== 'cruise' ? 0 : Math.sin(t / 900) * 2;
+      var room = scene.layout || scene.room || 'cruise', SP = LAYOUTS[room] || SPOTS, bob = reduce || room !== 'cruise' ? 0 : Math.sin(t / 900) * 2;
       // Sky and lagoon.
       var sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, scene.night ? '#0d1733' : '#bfe3f7'); sky.addColorStop(0.28, scene.night ? '#1c2c55' : '#d9f0fb'); sky.addColorStop(0.3, scene.night ? '#0f2f4a' : '#2a9cc4'); sky.addColorStop(1, scene.night ? '#0a2236' : '#1d7fa3');
       g.fillStyle = sky; g.fillRect(0, 0, W, H);
-      var roomNow = scene.room || 'cruise';
+      var roomNow = scene.layout || scene.room || 'cruise';
       if (roomNow === 'club') { g.fillStyle = '#0b0d18'; g.fillRect(0, 0, W, H); }
       if (roomNow === 'market' || roomNow === 'park') { g.fillStyle = roomNow === 'market' ? (scene.night ? '#3b2c22' : '#b98a5e') : (scene.night ? '#23402a' : '#6fa65a'); g.fillRect(0, H * 0.3, W, H * 0.7); }
       g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 1.5;
@@ -128,6 +128,7 @@
       [[7.3, 1.9], [8.4, 1.9], [9.5, 1.9]].forEach(function (q) { var a4 = P(q[0], q[1], 0), b4 = P(q[0], q[1], 0.45); g.strokeStyle = '#d4af37'; g.lineWidth = 2; g.beginPath(); g.moveTo(a4.x, a4.y); g.lineTo(b4.x, b4.y); g.stroke(); });
       var r0 = P(7.3, 1.9, 0.38), r1 = P(9.5, 1.9, 0.38); g.strokeStyle = '#b8322b'; g.lineWidth = 3; g.beginPath(); g.moveTo(r0.x, r0.y); g.quadraticCurveTo((r0.x + r1.x) / 2, (r0.y + r1.y) / 2 + 8, r1.x, r1.y); g.stroke();
       sign(7.8, 0.3, 1.0, 'VIP', '#d4af37');
+      if (scene.sign) sign(1.6, 5.4, 1.4, scene.sign, '#ff2d95');
       if (!reduce) for (var nt = 0; nt < 12; nt++) { var u5 = ((t / 2200 + nt * 0.083) % 1), np = P(6.0 + (nt % 4) * 0.4, 4.2 + Math.floor(nt / 4) * 0.3, 1.6 - u5 * 1.6); g.fillStyle = '#4caf50'; g.save(); g.translate(np.x, np.y); g.rotate(nt + u5 * 6); g.fillRect(-4, -2, 8, 4); g.restore(); }
       } else if (room === 'market') {
       // Balogun market: red earth, rows of stalls under coloured umbrellas and awnings, bales of fabric, a buka and the gate.
@@ -141,7 +142,7 @@
       });
       sign(1.2, 0.2, 1.3, 'FABRICS', '#7a1f2b'); sign(4.2, 0.2, 1.3, 'PHONES', '#1f4f7a'); sign(7.4, 0.2, 1.3, 'BUKA', '#2e7d32');
       var gt0 = P(7.2, 5.6, 0), gt1 = P(9.2, 5.6, 0); g.strokeStyle = '#4a3a2a'; g.lineWidth = 4; g.beginPath(); g.moveTo(gt0.x, gt0.y); g.lineTo(gt0.x, gt0.y - gt0.s * 1.3); g.lineTo(gt1.x, gt1.y - gt1.s * 1.3); g.lineTo(gt1.x, gt1.y); g.stroke();
-      sign(7.9, 5.6, 1.5, 'BALOGUN MARKET', '#c0392b');
+      sign(7.9, 5.6, 1.5, scene.sign || 'BALOGUN MARKET', '#c0392b');
       } else if (room === 'park') {
       // Freedom Park: lawns and paths, a lit stage with a backdrop, stone amphitheatre steps, food stalls, art stalls and old trees.
       poly([[0, DECK.d, 0], [DECK.w, DECK.d, 0], [DECK.w, DECK.d, -0.25], [0, DECK.d, -0.25]], '#3f6e34');
@@ -150,7 +151,7 @@
       box(3.2, 0.2, 3.6, 1.0, 0.35, '#3a3f46', '#2b2f36', '#4a4f57');
       poly([[3.2, 0.2, 0.35], [6.8, 0.2, 0.35], [6.8, 0.2, 1.4], [3.2, 0.2, 1.4]], '#1f2933');
       for (var sl = 0; sl < 6; sl++) { var sp2 = P(3.5 + sl * 0.6, 0.25, 1.45), on2 = reduce || Math.floor(t / 500 + sl) % 2 === 0; g.fillStyle = on2 ? '#ffe27a' : 'rgba(255,226,122,.3)'; g.beginPath(); g.arc(sp2.x, sp2.y, sp2.s * 0.07, 0, Math.PI * 2); g.fill(); }
-      sign(4.2, 0.2, 1.75, 'FREEDOM PARK', '#2e7d32');
+      sign(4.2, 0.2, 1.75, scene.sign || 'FREEDOM PARK', '#2e7d32');
       for (var st2 = 0; st2 < 3; st2++) poly([[3.0, 2.8 + st2 * 0.5, 0.06 * st2], [7.0, 2.8 + st2 * 0.5, 0.06 * st2], [7.0, 3.2 + st2 * 0.5, 0.06 * st2], [3.0, 3.2 + st2 * 0.5, 0.06 * st2]], ['#cfc6b8', '#bfb5a6', '#afa594'][st2]);
       [[0.6, 4.0], [1.8, 4.0]].forEach(function (q, i) { box(q[0], q[1], 1.0, 0.6, 0.35, '#8a5a2b', '#6f4722', '#c98b4a'); poly([[q[0], q[1], 0.75], [q[0] + 1.0, q[1], 0.75], [q[0] + 1.0, q[1] + 0.6, 0.6], [q[0], q[1] + 0.6, 0.6]], i ? '#f2b600' : '#c0392b'); });
       [[7.8, 4.0], [9.0, 4.0]].forEach(function (q) { box(q[0], q[1], 0.9, 0.5, 0.25, '#f4f1e8', '#d8d2c4', '#e8e2d4'); var ap = P(q[0] + 0.45, q[1], 0.6); g.fillStyle = ['#2f6fd0', '#e67e22'][Math.round(q[0]) % 2]; g.fillRect(ap.x - ap.s * 0.18, ap.y - ap.s * 0.3, ap.s * 0.36, ap.s * 0.3); });
@@ -176,7 +177,15 @@
         return { pl: pl, x: base[0] + Math.cos(ang) * rad, y: base[1] + Math.sin(ang) * rad * 0.8 };
       }).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
       // Stagger labels that would sit on top of each other.
-      list.forEach(function (it, i) { var p0 = P(it.x, it.y, 0); for (var j = 0; j < i; j++) { var q = P(list[j].x, list[j].y, 0); if (Math.abs(q.x - p0.x) < 70 && Math.abs((q.y - (list[j].lift || 0)) - (p0.y - (it.lift || 0))) < 18) it.lift = (it.lift || 0) + 18; } });
+      list.forEach(function (it, i) {
+        var p0 = P(it.x, it.y, 0); g.font = '700 ' + Math.min(12, Math.max(9, p0.s * 0.2)) + 'px system-ui, sans-serif';
+        it.lw = g.measureText(it.pl.label || '').width + 12; it.lx = p0.x; it.ly0 = p0.y - p0.s * 1.5 - 4; it.lift = 0;
+        for (var k = 0; k < 4; k++) {
+          var hit = false;
+          for (var j = 0; j < i; j++) { var o = list[j]; if (Math.abs(o.lx - it.lx) < (o.lw + it.lw) / 2 + 2 && Math.abs((o.ly0 - o.lift) - (it.ly0 - it.lift)) < 20) { hit = true; break; } }
+          if (!hit) break; it.lift += 20;
+        }
+      });
       list.forEach(function (it) {
         var p = P(it.x, it.y, 0), s = p.s, fig = figure(it.pl), fh = s * 1.5, fw = fh * 180 / 260;
         var dance = !reduce && it.pl.spot === 'party' ? Math.abs(Math.sin(t / 220 + it.x * 3)) * s * 0.12 : 0;

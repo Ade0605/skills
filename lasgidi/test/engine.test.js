@@ -2230,3 +2230,43 @@ test('live rooms: the club strip opens late and runs past midnight; market and p
   s.loc = 'island'; s.t = d + 2 * 1440 + 9 * 60; s.pending = [];
   assert.equal(L.roomBlock(s, 'market'), ''); assert.match(L.roomBlock(s, 'park'), /Open 16/);
 });
+
+test('live rooms: every room uses a known layout and only that layout\'s spots', () => {
+  require('../src/cruise.js'); const C = globalThis;
+  for (const [id, R] of Object.entries(D.ROOMS)) {
+    const lay = C.LasgidiCruise.LAYOUTS[R.layout || id]; assert.ok(lay, 'layout for ' + id);
+    for (const sp of Object.keys(R.spots)) assert.ok(lay[sp], id + ' spot ' + sp);
+    assert.ok(D.PLACES.find(p => p.id === R.place), 'place for ' + id);
+  }
+});
+
+test('live rooms: Abuja and PH rooms open in their own city, keep their hours, and replay', () => {
+  const s = L.newGame({ seed: 77, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.cash += 5000000;
+  const d = Math.floor(s.t / 1440) * 1440 + 1440;
+  s.t = d + 11 * 60; assert.match(L.roomBlock(s, 'wuse_mkt'), /Go to Wuse first/);
+  s.loc = 'abj_wuse'; assert.equal(L.roomBlock(s, 'wuse_mkt'), '');
+  s.t = d + 20 * 60; assert.match(L.roomBlock(s, 'wuse2'), /Open 22:00–04:00/);
+  s.t = d + 1440 + 60; assert.equal(L.roomBlock(s, 'wuse2'), '');
+  const b0 = s.cash + s.bank; assert.ok(L.roomEnter(s, 'wuse2').ok); assert.equal(b0 - (s.cash + s.bank), L.price(s, 8000));
+  s.loc = 'abj_maitama'; s.t = d + 2 * 1440 + 9 * 60; assert.equal(L.roomBlock(s, 'millennium'), '');
+  s.loc = 'ph_dline'; assert.equal(L.roomBlock(s, 'mile1'), ''); assert.match(L.roomBlock(s, 'garden_city'), /Go to GRA first/);
+  s.loc = 'ph_oldgra'; s.t = d + 2 * 1440 + 20 * 60; assert.match(L.roomBlock(s, 'isaac_boro'), /Open 07/);
+  // A real life: fly to Abuja, go to Wuse market and walk the stalls; it replays to the same seal.
+  const r = L.newGame({ seed: 78, origin: 'nepo', goal: 'freestyle' });
+  while (r.pending.length) L.resolveChoice(r, 1);
+  const go = L.travelOptions(r, 'ikeja').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0];
+  assert.ok(L.travel(r, 'ikeja', go.mode).ok); while (r.pending.length) L.resolveChoice(r, 1);
+  const o = L.intercityOptions(r, 'abuja').find(o => o.mode === 'flight' && !o.disabled);
+  assert.ok(o && L.intercity(r, 'abuja', 'flight').ok, 'fly to Abuja');
+  {
+    while (r.pending.length) L.resolveChoice(r, 1);
+    if (r.loc !== 'abj_wuse') { const t = L.travelOptions(r, 'abj_wuse').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; if (t) L.travel(r, 'abj_wuse', t.mode); }
+    while (r.pending.length) L.resolveChoice(r, 1);
+    const h = L.hour(r); if (h < 8 || h >= 16) L.wait(r, ((32 - h) % 24) * 60);
+    while (r.pending.length) L.resolveChoice(r, 1);
+    assert.ok(L.roomEnter(r, 'wuse_mkt').ok, L.roomBlock(r, 'wuse_mkt')); while (r.pending.length) L.resolveChoice(r, 1); assert.ok(L.roomSpot(r, 'wuse_mkt', 'buka').ok);
+  }
+  assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});

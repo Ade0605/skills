@@ -340,13 +340,17 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - motor yachts: Riva, Azimut, Ferretti, Sunseeker, Princess, Pershing;
     - superyachts: Benetti, Heesen, Sanlorenzo, Feadship, Lürssen, Oceanco;
     - sailing yachts: Royal Huisman, Perini Navi.
-- **More live rooms:** five venues use the cruise's deck renderer, with their own layouts, crews and spots, plus the same filtered room chat, 📷, fold and Leave.
+- **More live rooms:** eleven venues use the cruise's deck renderer, with their own layouts, crews and spots, plus the same filtered room chat, 📷, fold and Leave.
   - **White Sand Beach (₦3,000, 7am–7pm):** beach bar, volleyball, loungers under umbrellas, a jet-ski dock, and a bonfire after 5pm. You can also fish here.
   - **Tidewater House (members only, 4pm–midnight):** a DJ booth, a wood-fired pizza oven, the jetty, the lounge and the bar.
   - **The VI club strip (₦10,000, 10pm–4am):** an LED dance floor under moving beams, the DJ booth, the bar, a roped-off VIP table (₦80,000), and money spraying (₦20,000). It is always night inside.
   - **Balogun market (free, 8am–6pm):** fabric and phone stalls under coloured awnings, a buka for lunch, shoe sellers, and the alaaru at the gate.
   - **Freedom Park (₦1,000, 4pm–11pm):** a highlife band on the stage, the steps, a suya stand, an art corner, and benches under the trees.
-  - **Live rooms list:** the People app opens with every live room (the cruise included), how many players are in each right now, and a Go button.
+  - **Abuja:** Wuse 2 nights (₦8,000, 10pm–4am), Wuse Market (free, 8am–6pm) and Millennium Park (free, 7am–7pm).
+  - **Port Harcourt:** Garden City nights in GRA (₦8,000, 10pm–4am), Mile 1 market (free, 7am–6pm) and Isaac Boro Park (free, 7am–7pm).
+  - These reuse the club, market and park scenes with their own sign, spot names, prices and crew (a hype man, a mai shayi, a bole mama, an ogene band).
+  - **Live rooms list:** the People app opens with every live room (the cruise included), grouped by city with yours first, how many players are in each right now, and a Go button. A room in another city tells you which city to travel to.
+  - **Name tags:** tags that would overlap are lifted apart using their real size.
   - **Rules:** room chat only reaches people in the same room, and a player only counts as present if their district matches the venue. New recorded calls `rme`, `rms` and `rml`.
 - **People app:** everyone online in every city, with their district, city and what they're up to (on the cruise, at a room, or their activity), and a Chat button for each. Blocked players are hidden.
 - **Map layers:** buttons above the map show or hide 🏷️ **Names** (place names), 🪧 **Billboards** and 👥 **Players**, and the device remembers your choice. To keep the city readable, billboards only appear once you zoom in a little, or when the Billboards filter is on.

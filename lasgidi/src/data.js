@@ -1408,6 +1408,55 @@
         food: { name: 'Food court', icon: '🍢', cost: 2500, fx: { hunger: 35, fun: 4 }, text: 'Suya, asun and a cold drink.' },
         art: { name: 'Art stalls', icon: '🎨', cost: 0, fx: { fun: 10 }, xp: { craft: 1 }, text: 'Paintings and beadwork by young artists.' },
         trees: { name: 'Under the trees', icon: '🌳', cost: 0, fx: { stress: -12, social: 6 }, text: 'Old prison walls, new conversations.' }
+      } },
+    // Abuja and Port Harcourt rooms reuse the club, market and park layouts (same spot ids) with local names.
+    wuse2: { name: 'Wuse 2 nights', place: 'abj_wuse2', layout: 'club', sign: 'WUSE 2', where: 'Wuse, Abuja', fee: 8000, mins: 180, from: 22, to: 28, fx: { fun: 18, social: 14, energy: -10 },
+      spots: {
+        floor: { name: 'Dance floor', icon: '🪩', cost: 0, fx: { fun: 22, social: 12, energy: -14 }, text: 'Afrobeats and a few civil servants letting loose.' },
+        dj: { name: 'DJ booth', icon: '🎧', cost: 0, fx: { fun: 12, social: 6 }, text: 'The DJ plays your request. Nobody else likes it.' },
+        bar: { name: 'Bar', icon: '🍸', cost: 5000, fx: { fun: 10, social: 8 }, text: 'Chilled stout and a plate of peppered gizzard.' },
+        vip: { name: 'VIP booth', icon: '🍾', cost: 70000, fx: { fun: 28, social: 24, stress: -8 }, text: 'A table full of contractors. You nod like you belong.' },
+        spray: { name: 'Spray money', icon: '💸', cost: 20000, fx: { fun: 20, social: 18 }, text: 'New notes fly. The hype man shouts your name.' }
+      } },
+    wuse_mkt: { name: 'Wuse Market', place: 'abj_wuse_market', layout: 'market', sign: 'WUSE MARKET', where: 'Wuse, Abuja', fee: 0, mins: 120, from: 8, to: 18, fx: { energy: -6 },
+      spots: {
+        fabric: { name: 'Cloth section', icon: '🧵', cost: 0, fx: { fun: 6 }, xp: { craft: 1 }, text: 'Atampa, ankara and northern embroidery.' },
+        phones: { name: 'Phone plaza', icon: '📱', cost: 0, fx: { fun: 5 }, xp: { tech: 1 }, text: 'UK-used phones and a man who fixes anything.' },
+        buka: { name: 'Mama Put', icon: '🍛', cost: 1500, fx: { hunger: 40 }, text: 'Tuwo shinkafa and miyan kuka.' },
+        shoes: { name: 'Shoe line', icon: '👟', cost: 0, fx: { fun: 4 }, xp: { hustle: 1, charisma: 1 }, text: 'You talk the price down. The seller laughs.' },
+        gate: { name: 'Market gate', icon: '🚪', cost: 0, fx: { social: 6 }, text: 'Wheelbarrow boys shout for loads to carry.' }
+      } },
+    millennium: { name: 'Millennium Park', place: 'abj_millennium', layout: 'park', sign: 'MILLENNIUM PARK', where: 'Maitama, Abuja', fee: 0, mins: 150, from: 7, to: 19, fx: { fun: 12, stress: -8 },
+      spots: {
+        stage: { name: 'Park stage', icon: '🎤', cost: 0, fx: { fun: 18, social: 10 }, text: 'A church choir rehearses for Sunday.' },
+        seats: { name: 'Steps', icon: '🪑', cost: 0, fx: { stress: -10, fun: 6 }, text: 'You sit by the river and watch the joggers.' },
+        food: { name: 'Picnic stand', icon: '🍢', cost: 2000, fx: { hunger: 30, fun: 4 }, text: 'Suya, kilishi and a cold zobo.' },
+        art: { name: 'Photo corner', icon: '📸', cost: 0, fx: { fun: 10, social: 4 }, text: 'Wedding couples queue for the same fountain shot.' },
+        trees: { name: 'Under the trees', icon: '🌳', cost: 0, fx: { stress: -14, social: 6 }, text: 'Cool shade and the hum of the capital.' }
+      } },
+    garden_city: { name: 'Garden City nights', place: 'ph_garden', layout: 'club', sign: 'GARDEN CITY', where: 'GRA, Port Harcourt', fee: 8000, mins: 180, from: 22, to: 28, fx: { fun: 20, social: 14, energy: -10 },
+      spots: {
+        floor: { name: 'Dance floor', icon: '🪩', cost: 0, fx: { fun: 24, social: 12, energy: -14 }, text: 'Owerri bongo into amapiano. PH does not sleep.' },
+        dj: { name: 'DJ booth', icon: '🎧', cost: 0, fx: { fun: 12, social: 6 }, text: 'The DJ greets everyone from Rumuola.' },
+        bar: { name: 'Bar', icon: '🍸', cost: 5000, fx: { fun: 10, social: 8 }, text: 'Palm wine cocktails. Strong.' },
+        vip: { name: 'VIP booth', icon: '🍾', cost: 75000, fx: { fun: 28, social: 24, stress: -8 }, text: 'Oil-service men order bottles by the crate.' },
+        spray: { name: 'Spray money', icon: '💸', cost: 20000, fx: { fun: 20, social: 18 }, text: 'Notes rain down. The hype man calls you chairman.' }
+      } },
+    mile1: { name: 'Mile 1 market', place: 'ph_mile1', layout: 'market', sign: 'MILE 1 MARKET', where: 'D-Line, Port Harcourt', fee: 0, mins: 120, from: 7, to: 18, fx: { energy: -6 },
+      spots: {
+        fabric: { name: 'Wrapper lane', icon: '🧵', cost: 0, fx: { fun: 6 }, xp: { craft: 1 }, text: 'George wrappers and Kalabari prints.' },
+        phones: { name: 'Phone stalls', icon: '📱', cost: 0, fx: { fun: 5 }, xp: { tech: 1 }, text: 'Chargers, cases and arguments about football.' },
+        buka: { name: 'Fish and bole', icon: '🐟', cost: 2000, fx: { hunger: 40 }, text: 'Roast plantain, catfish and pepper sauce.' },
+        shoes: { name: 'Fish sellers', icon: '🦐', cost: 0, fx: { fun: 4 }, xp: { hustle: 1, charisma: 1 }, text: 'Periwinkle, crayfish and loud bargaining.' },
+        gate: { name: 'Market gate', icon: '🚪', cost: 0, fx: { social: 6 }, text: 'Keke riders call out for Rumuokoro.' }
+      } },
+    isaac_boro: { name: 'Isaac Boro Park', place: 'ph_isaac', layout: 'park', sign: 'ISAAC BORO PARK', where: 'Old GRA, Port Harcourt', fee: 0, mins: 150, from: 7, to: 19, fx: { fun: 12, stress: -8 },
+      spots: {
+        stage: { name: 'Bandstand', icon: '🎤', cost: 0, fx: { fun: 18, social: 10 }, text: 'An ogene band warms up for the weekend.' },
+        seats: { name: 'Steps', icon: '🪑', cost: 0, fx: { stress: -10, fun: 6 }, text: 'Old men argue politics on the steps.' },
+        food: { name: 'Corn and ube', icon: '🌽', cost: 1000, fx: { hunger: 25, fun: 4 }, text: 'Roast corn and ube from the woman by the gate.' },
+        art: { name: 'Memorial', icon: '🗿', cost: 0, fx: { fun: 6 }, xp: { craft: 1 }, text: 'You read the plaques under the old statue.' },
+        trees: { name: 'Under the trees', icon: '🌳', cost: 0, fx: { stress: -14, social: 6 }, text: 'Old trees, quiet paths, a cool breeze from the creek.' }
       } }
   };
   // Lagoon Boat Cruise: board at the Ikoyi jetty, then move between spots on deck (a shared scene).
