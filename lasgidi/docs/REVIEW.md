@@ -77,7 +77,7 @@ Dozens of look-alike domains (lagoslife.org, .site, .xyz, .online, lagoslifegame
 A low-poly 3D world is expensive on ₦80k Android phones, on patchy 3G and on metered data, which is the reality for many of its players.
 
 **Lasgidi's answer:**
-- It started at about 120 KB with no images. After many features (three cities, live rooms, a canvas city, 48 icon images) the published single file is about 980 KB minified, or 384 KB gzipped. That is still below the roughly 480 KB first load measured for Lagos Life in §6, but it is no longer tiny. The icons are about 160 KB of that and are the next thing to trim.
+- It started at about 120 KB with no images. After many features (three cities, live rooms, a canvas city, 48 icon images) the published single file is about 930 KB minified, or 350 KB gzipped. That is below the roughly 480 KB first load measured for Lagos Life in §6, but it is no longer tiny. The 48 icons were re-encoded at WebP quality 60 (162 KB down to 113 KB, with no visible change at 64px); most of what remains is game code.
 - It works offline as a PWA, caching all its files on first load.
 - It uses legible fonts (Atkinson Hyperlegible) and supports dark mode, both of which matter at night when power is out.
 

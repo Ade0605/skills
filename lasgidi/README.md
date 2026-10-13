@@ -14,9 +14,9 @@ python3 -m http.server 8080      # or: npm run serve
 # open http://localhost:8080
 ```
 
-There is no build step to play. It is plain HTML, CSS and JavaScript, about 1.3 MB as source (around 450 KB gzipped), including 48 small icon images. Served over HTTPS (or from localhost), it installs as a PWA, caches everything on first load and then works offline.
+There is no build step to play. It is plain HTML, CSS and JavaScript, about 1.3 MB as source (around 420 KB gzipped), including 48 small icon images (64px WebP, about 2.4 KB each). Served over HTTPS (or from localhost), it installs as a PWA, caches everything on first load and then works offline.
 
-`npm run build` writes the single-file version to `dist/lasgidi.html` (the one published as a claude.ai artifact). After `npm install` it is minified with terser: about 980 KB, or 384 KB gzipped. Without terser it still builds, just unminified. Only local variable names are shortened; globals and property names stay as written.
+`npm run build` writes the single-file version to `dist/lasgidi.html` (the one published as a claude.ai artifact). After `npm install` it is minified with terser: about 930 KB, or 350 KB gzipped. Without terser it still builds, just unminified. Only local variable names are shortened; globals and property names stay as written.
 
 To get a single self-contained file:
 
