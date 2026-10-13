@@ -1396,7 +1396,7 @@
     var W = D.WHITE_WEDDING, b = S.wwPlan;
     if (b && !b.done && Math.floor(S.t / 1440) <= b.date) {
       var V = W.venues[b.plan.venue], why = L.wwDayBlock(S), days = b.date - Math.floor(S.t / 1440);
-      return '<div class="ww"><h3>💒 Your white wedding</h3><div class="ww-count"><b>' + (days > 0 ? days + ' day' + (days === 1 ? '' : 's') : 'Today') + '</b><span>' + D.DAYS[b.date % 7] + ', week ' + (Math.floor(b.date / 7) + 1) + ' · ' + esc(V.name) + ' · ' + b.guests + ' guests</span></div>' +
+      return '<div class="ww"><h3>' + (icon3d('rings', '') || '💒') + ' Your white wedding</h3><div class="ww-count"><b>' + (days > 0 ? days + ' day' + (days === 1 ? '' : 's') : 'Today') + '</b><span>' + D.DAYS[b.date % 7] + ', week ' + (Math.floor(b.date / 7) + 1) + ' · ' + esc(V.name) + ' · ' + b.guests + ' guests</span></div>' +
         '<canvas class="ww-hall" id="ww-hall" width="640" height="300" data-wwplan="' + esc(JSON.stringify(b.plan)) + '" aria-label="Your decorated hall"></canvas>' +
         '<p class="note">' + esc(W.themes[b.plan.theme].name) + ' · ' + esc(W.decor[b.plan.decor].text) + '</p><dl class="kv"><dt>Paid</dt><dd class="num">' + N(b.paid) + '</dd><dt>Balance on the day</dt><dd class="num">' + N(b.total - b.paid) + '</dd></dl>' +
         '<div class="inline"><button class="btn go" id="ww-hold" data-wwhold="1"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>💍 Walk down the aisle</button>' + (S.loc !== V.district ? '<button class="btn ghost" id="ww-go" data-tripto="' + V.district + '" data-tab="map">Go to ' + esc(D.DISTRICTS[V.district].name) + '</button>' : '') + '</div>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '') + '</div>';
@@ -1406,7 +1406,7 @@
       return '<div class="ww-row"><span class="label">' + label + '</span><div class="pick">' + Object.keys(opts).map(function (k) { var on = d[key] === k; return '<button type="button" class="pg-chip' + (on ? ' sel' : '') + '" id="ww-' + key + '-' + k + '" data-wwset="' + key + ':' + k + '" aria-pressed="' + on + '">' + esc(opts[k].name) + (fmt ? ' · ' + fmt(opts[k]) : '') + '</button>'; }).join('') + '</div></div>';
     };
     var cost = function (o) { return o.cost ? N(L.price(S, o.cost)) : 'free'; };
-    return '<details class="ww"' + (ui.wwOpen ? ' open' : '') + '><summary id="ww-open" data-wwopen="1">💒 Plan a white wedding</summary>' +
+    return '<details class="ww"' + (ui.wwOpen ? ' open' : '') + '><summary id="ww-open" data-wwopen="1">' + (icon3d('rings', '') || '💒') + ' Plan a white wedding</summary>' +
       '<p class="note">Church, then the reception and an after-party. Real planners take 6 to 12 months; in Lagos time you book a Saturday at least four weeks away, pay 30% now and the rest on the day.</p>' +
       row('venue', 'Venue', W.venues, function (o) { return N(L.price(S, o.cost)) + ', ' + o.guests + ' guests'; }) + row('planner', 'Planner', W.planners, cost) + row('asoebi', 'Aso-ebi', W.asoebi, cost) +
       row('vendors', 'Vendors (catering, photo, DJ, MC, makeup and gele)', W.vendors, function (o) { return N(L.price(S, o.perGuest)) + '/guest'; }) +
@@ -1525,7 +1525,7 @@
           return '<div class="item"><div><h3>' + (p.icon || '•') + ' ' + esc(p.name) + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[p.district].name) + '</span><span>' + dur(cq2.mins) + '</span><span class="cost">' + N(cq2.cost) + '</span></div></div><button class="btn sm" id="chop-' + p.id + '" data-chopper="' + p.id + '"' + (cq2.disabled ? ' disabled title="' + esc(cq2.disabled) + '"' : '') + '>Fly</button></div>';
         }).join('') + (list.length ? '' : '<p class="muted">No place matches.</p>') + '</div>';
     }
-    return '<section class="departures"><h3>🛫 Departures</h3>' + tabs + body + '</section>';
+    return '<section class="departures"><h3>' + (icon3d('jet', '') || '🛫') + ' Departures</h3>' + tabs + body + '</section>';
   }
   // The transport picker on a place sheet: one chip per way to get there, then a big Go button.
   var MODE_ICONS = { danfo: 'bus', brt: 't_brt', cab: 't_taxi', keke: 't_keke', okada: 't_okada', car: 'car', ferry: 'boat', boat: 't_speedboat', heli: 't_heli', trek: 't_walk', rail: 't_train' };
