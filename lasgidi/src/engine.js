@@ -33,8 +33,9 @@
   // 9 adds weather; 10 charges mini-games when they start, so quitting forfeits;
   // 11 adds malaria (nights without light or a net can give you a fever);
   // 12 adds car wear and breakdowns (service at Ladipo);
-  // 13 adds job interviews for the degree careers (a connect still gets you in).
-  var RULES = 13;
+  // 13 adds job interviews for the degree careers (a connect still gets you in);
+  // 14 adds the full Detty December: December rates, traffic, IJGB relatives, a hustle boom.
+  var RULES = 14;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -85,7 +86,8 @@
     corper:      'Corper wee! Finished your NYSC service year',
     scholar:     'Straight A: a child brought home an A',
     dynasty:     'Dynasty: the third generation of your family in Lagos',
-    builder:     'Builder: built your own house, block by block'
+    builder:     'Builder: built your own house, block by block',
+    detty_legend: 'Detty legend: six December events in one season'
   };
 
   /* ---------- small helpers ---------- */
@@ -201,6 +203,9 @@
     if (/^Chemist/.test(m)) return 'health';
     if (/^(Ladipo|Roadside mechanic)/.test(m)) return 'transport';
     if (/^(Building: |Omo-onile)/.test(m)) return 'housing';
+    if (/^IJGB gift/.test(m)) return 'family';
+    if (/^Ground money/.test(m)) return 'losses';
+    if (/IJGB/.test(m)) return 'lifestyle';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
     if (/^(Chieftaincy|Party: |Phone: |Pet)/.test(m)) return 'lifestyle';
@@ -469,6 +474,7 @@
     weeklyProperty(s);
     payDividends(s, w);
     if (s.rules >= 6) weeklyFamily(s);
+    if (s.rules >= 14) weeklyDetty(s);
     resolvePonzi(s);
 
     if (s.econ.policyWeeks > 0 && --s.econ.policyWeeks === 0) {
@@ -584,6 +590,7 @@
     if (!when) return true;
     if (when.days && when.days.indexOf(dow(s)) < 0) return false;
     if (when.months && when.months.indexOf(monthIndex(s)) < 0) return false;
+    if (when.lastDay && !(week(s) % 4 === 3 && dow(s) === 6)) return false; // the month's last day
     var h = hour(s);
     if (when.from != null && h < when.from) return false;
     if (when.to != null && h >= when.to) return false;
@@ -743,6 +750,7 @@
     if (a.minigame === 'quiz' && s.quizDay === day(s)) return 'One show a day: come back tomorrow';
     switch (a.special) {
       case 'cook': if (s.pantry <= 0) return 'No foodstuff at home'; break;
+      case 'flex': if (!luxuryCar(s)) return 'Bring a luxury car (₦40m or more) to flex here'; break;
       case 'enrol': if (s.edu.enrolled || s.edu.degree) return 'Already enrolled'; break;
       case 'lecture': if (!s.edu.enrolled) return 'Enrol at UNILAG first'; break;
       case 'ielts_exam': if (s.edu.ieltsPassed) return 'Already passed'; break;
@@ -759,6 +767,7 @@
     var f = s.econ.infl;
     if (monthIndex(s) === 0) f *= 0.8; // January sapa
     if (s.rules >= 7) f *= 0.85;       // rules 7: customers price you down
+    if (s.rules >= 14 && isDecember(s)) f *= 1.2; // Detty December: everybody is spending
     return roundTo(base * f * spread, 50);
   }
 
@@ -786,6 +795,7 @@
       applyFx(s, a.fx);
     }
     if (a.event) s.stats.events = (s.stats.events || 0) + 1;
+    if (a.dec && s.rules >= 14 && isDecember(s)) { s.stats.decEvents = (s.stats.decEvents || 0) + 1; if (s.stats.decEvents >= 6) unlock(s, 'detty_legend'); }
     addXp(s, a.xp);
     if (a.xp && a.xp.fitness && outfitTags(s).gym) addXp(s, { fitness: 1 }); // gym kit
 
@@ -843,7 +853,21 @@
         befriend(s, k, 10);
         return 'Your aso-ebi was the talk of the party. You bonded with ' + D.NPCS[k].name + '.' + dressBonus(s, 'owambe');
       }
-      return 'Jollof, small chops and plenty spraying.' + dressBonus(s, 'owambe');
+      return 'Jollof, small chops and plenty spraying.' + glamBonus(s) + dressBonus(s, 'owambe');
+    },
+    // Island flex culture (new actions only, so older lives never reach these).
+    spray: function (s) {
+      var g = glamBonus(s);
+      return 'Naira notes in the air, the DJ shouted your name, and the whole club saw you.' + g + dressBonus(s, 'club');
+    },
+    flex: function (s) {
+      var v = luxuryCar(s), V = D.VEHICLES[v.id];
+      if (s.creator) { var n = Math.round(followerGain(s) * 0.5); s.creator.followers += n; }
+      return 'You parked the ' + V.name + ' right by the entrance. Phones came out.' + (s.creator ? ' Your Story got you new followers.' : '');
+    },
+    glam: function (s) {
+      s.glamUntil = s.t + 24 * 60;
+      return 'Hair laid, face beat, nails done. You are "outside" ready for the next 24 hours: your next night out or owambe will hit different.';
     },
     club: function (s) {
       if (rand(s) < 0.06) {
@@ -851,7 +875,7 @@
         if (lost) post(s, 'cash', -lost, 'Phone and wallet snatched');
         return 'Someone snatched your wallet outside the club.';
       }
-      return 'Great night.' + dressBonus(s, 'club');
+      return 'Great night.' + glamBonus(s) + dressBonus(s, 'club');
     },
     content: function (s) {
       var chance = 0.03 + skillLevel(s, 'charisma') * 0.01, viral = false, msg;
@@ -1127,6 +1151,7 @@
         if (m.weave) f = 1 + (f - 1) * m.weave;
         if (flood) f *= 1.6;
         if (wet) f *= wx === 'storm' ? 1.7 : 1.35;
+        if (s.rules >= 14 && isDecember(s) && districtCity(from) === 'lagos') f *= 1.3; // December go-slow
       }
       o.traffic = Math.round(f * 10) / 10;
       var spd = ride ? Math.max(m.speed, ride.speed) : m.speed;
@@ -1171,6 +1196,10 @@
     if (mode === 'ferry') unlock(s, 'ferry');
     var msg = 'You reached ' + D.DISTRICTS[dest].name + ' in ' + fmtMins(o.mins) + '.' + (soaked ? ' You are soaked: rain, no umbrella.' : '');
     if (mode === 'car' && s.rules >= 12) { var bd = carWear(s, o.km); if (bd) msg += ' ' + bd; }
+    if (mode === 'car' && s.rules >= 14 && GROUND_MONEY[dest] && rand(s) < 0.3) {
+      var gm = price(s, 1000); payPartial(s, gm, 'Ground money (area boys)');
+      msg += ' Area boys "helped" you park and collected ' + naira(gm) + ' ground money.';
+    }
     if (o.risk && rand(s) < 0.2) {
       var fine = price(s, 5000);
       payPartial(s, fine, 'Task force fine');
@@ -1378,6 +1407,19 @@
       case 'school':
         var kid = s.kids[ev.kid], tier = ['public', 'private', 'intl'][idx];
         if (kid) { kid.school = tier; msg = 'You chose a ' + SCHOOLS[tier].name + '. Fees are ' + naira(price(s, SCHOOLS[tier].fee)) + ' a term.'; chargeFees(s, kid); }
+        break;
+      case 'ijgb':
+        if (idx === 0) {
+          payPartial(s, price(s, 30000), 'Showing an IJGB around Lagos');
+          applyFx(s, { social: 30, fun: 25, energy: -15 });
+          msg = 'Suya at night, a beach club by day: ' + ev.who + ' loved it.';
+          if (rand(s) < 0.5) { var gift = price(s, roundTo(50000 + rand(s) * 100000, 5000)); earn(s, gift, 'IJGB gift (dollars changed at the BDC)'); msg += ' They pressed ' + naira(gift) + ' into your hand at the airport.'; }
+        } else if (idx === 1) {
+          payPartial(s, price(s, 8000), 'Family jollof for an IJGB');
+          applyFx(s, { social: 20, fun: 10 });
+          msg = 'Mama\'s jollof, the whole family, and ' + ev.who + ' asking where the light went.';
+          if (rand(s) < 0.25) { var g2 = price(s, 30000); earn(s, g2, 'IJGB gift (dollars changed at the BDC)'); msg += ' They left you ' + naira(g2) + '.'; }
+        } else { applyFx(s, { stress: 5, fun: -5 }); msg = 'You stayed out of sight. The family group chat noticed.'; }
         break;
       case 'police':
         if (idx === 0) { payPartial(s, price(s, 2000), 'Checkpoint "settlement"'); msg = 'He waves you through.'; }
@@ -1738,6 +1780,15 @@
     log(s, '🏠 Your house in Ikorodu is finished! Move in from the Money tab (no rent, ever), or let tenants pay you ' + naira(price(s, D.PROPERTIES.built_house.weekly)) + ' a week.', 'ach');
   }
 
+  // Detty December (rules 14): diaspora relatives come home and expect to be shown around.
+  var IJGB_FROM = ['Houston', 'Atlanta', 'London', 'Manchester', 'Toronto', 'Dublin', 'Johannesburg'], IJGB_WHO = ['cousin', 'aunty', 'uncle', 'childhood friend'];
+  function weeklyDetty(s) {
+    if (!isDecember(s) || rand(s) >= 0.6) return;
+    var who = 'your ' + pick(s, IJGB_WHO) + ' ' + pick(s, D.KID_NAMES), from = pick(s, IJGB_FROM);
+    queue(s, { id: 'ijgb', who: who, title: 'IJGB in the house', text: 'Just got back from ' + from + ': ' + who + ' is in Lagos for Detty December and wants to "see the real Lagos".',
+      options: ['Show them around (' + naira(price(s, 30000)) + ')', 'Bring them home for jollof (' + naira(price(s, 8000)) + ')', 'Hide: you are broke'] });
+  }
+
   function weeklyProperty(s) {
     s.properties.forEach(function (p) {
       var def = D.PROPERTIES[p.id];
@@ -2006,6 +2057,15 @@
     });
     return out;
   }
+  // A car worth flexing: ₦40m or more.
+  function luxuryCar(s) { return (s.vehicles || []).filter(function (v) { var V = D.VEHICLES[v.id]; return V.kind === 'car' && V.price >= 40000000; })[0] || null; }
+  // After a glam session, the next night out lands better (only set by the new glam action).
+  function glamBonus(s) {
+    if (!(s.glamUntil > s.t)) return '';
+    s.glamUntil = 0;
+    applyFx(s, { social: 15, fun: 10 });
+    return ' Everybody noticed your look.';
+  }
   function statusPoints(s) {
     var t = 0;
     (s.wardrobe || []).forEach(function (w) { t += D.CLOTHES[w.id].status || 0; });
@@ -2100,6 +2160,8 @@
 
   /* ---------- car wear and Ladipo (rules 12) ---------- */
   // The car instance you drive: your pick, else the fastest car (as bestCar).
+  // Where the agberos collect ground money from drivers (rules 14).
+  var GROUND_MONEY = { oshodi: 1, island: 1, vi: 1, lekki: 1, surulere: 1, ikeja: 1 };
   function drivenVehicle(s) {
     var dv = s.vehicles && s.driving >= 0 ? s.vehicles[s.driving] : null;
     if (dv && D.VEHICLES[dv.id].kind === 'car') return dv;
@@ -3051,6 +3113,7 @@
     var f = (s.creator && s.creator.followers) || 0;
     var reach = 1 + Math.min(2, f / 20000), look = outfitTags(s).club || outfitTags(s).owambe ? 1.2 : 1;
     var g = Math.round(40 * phoneCam(s) * (1 + skillLevel(s, 'charisma') * 0.15) * reach * look);
+    if (s.rules >= 14 && isDecember(s)) g = Math.round(g * 1.5); // Detty December is all over Instagram and TikTok
     return viral ? g * 4 + 2000 : g;
   }
   function brandDeal(s) {
@@ -3692,10 +3755,12 @@
   }
 
   /* ---------- somewhere to sleep away from home ---------- */
+  // December rates (rules 14): Lagos hotels and short-lets are booked out.
+  function decRates(s) { return s.rules >= 14 && isDecember(s) && cityOf(s) === 'lagos'; }
   function lodgingOptions(s) {
     var home = homeDef(s).district === s.loc;
     return Object.keys(D.LODGING).filter(function (k) { return D.LODGING[k].where.indexOf(s.loc) >= 0; }).map(function (k) {
-      var L = D.LODGING[k], o = { id: k, name: L.name, icon: L.icon, price: price(s, L.price), sleep: L.sleep };
+      var L = D.LODGING[k], o = { id: k, name: L.name, icon: L.icon, price: roundTo(price(s, L.price) * (decRates(s) ? 1.6 : 1), 500), sleep: L.sleep };
       if (home) o.disabled = 'You are at home: sleep there';
       else if (busyBlock(s)) o.disabled = busyBlock(s);
       else if (s.needs.energy > 85) o.disabled = 'You are not tired';
@@ -3906,7 +3971,7 @@
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
     nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
-    lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
+    decRates: decRates, luxuryCar: luxuryCar, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,

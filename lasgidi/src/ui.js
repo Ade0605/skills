@@ -1697,6 +1697,16 @@
     var dots = ''; for (var i = 0; i < 7; i++) dots += '<i class="' + (i < info.slot ? 'on' : i === info.slot ? 'now' : '') + '"></i>';
     return '<div class="streak"><span class="st-ic">🔥</span><div class="st-t"><b>Day ' + info.n + ' streak</b><span class="st-dots" aria-label="Day ' + (info.slot + 1) + ' of 7">' + dots + '</span></div><button class="btn sm go" id="streak" data-streak="1">Claim ' + N(info.prize) + '</button></div>';
   }
+  // December in Lagos: what is on, and what it costs.
+  function dettyCard() {
+    if (!L.isDecember(S) || L.cityOf(S) !== 'lagos') return '';
+    var wk = L.week(S) % 4, phase = ['the warm-up', 'the build-up', 'Christmas week', 'the New Year countdown'][wk], live = [];
+    Object.keys(D.PLACE_ACTIONS).forEach(function (d) { if (L.districtCity(d) !== 'lagos') return; D.PLACE_ACTIONS[d].forEach(function (a) { if (a.dec && L.inWindow(S, a.when)) live.push({ a: a, d: d }); }); });
+    var newRules = S.rules >= 14;
+    return '<div class="section detty"><h3>🎉 Detty December · ' + phase + '</h3><p class="note">IJGBs are home, the city never sleeps and everything costs more: prices +15%' + (newRules ? ', hotels and short-lets +60%, heavier traffic, gigs pay 20% more' : '') + '.' + (S.stats.decEvents ? ' You have been to ' + S.stats.decEvents + ' December event' + (S.stats.decEvents === 1 ? '' : 's') + ' this season.' : '') + '</p>' +
+      (live.length ? '<div class="label">On right now</div><ul class="note detty-live">' + live.slice(0, 5).map(function (r) { return '<li>' + esc(r.a.label) + ' · ' + esc(D.DISTRICTS[r.d].name) + (r.a.cost ? ' · ' + N(L.price(S, r.a.cost)) : ' · free') + '</li>'; }).join('') + '</ul>' : '') +
+      '<div class="inline"><button class="btn sm" id="detty-whatson" data-tab="phone" data-app="events">🎟️ What\'s on this December</button></div></div>';
+  }
   function sickCard() {
     var k = L.sickInfo(S);
     if (!k) return '';
@@ -1721,7 +1731,7 @@
     var d = D.DISTRICTS[S.loc];
     var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + tourCard() + streakCard() + partyInvites() + visitView() + adviceView() + gemHere() + giftInbox();
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
-    html += sickCard();
+    html += sickCard() + dettyCard();
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
     html += peopleHere() + gemCard();
     if (home.length) html += '<div class="section"><h3>At home · ' + esc(L.homeDef(S).name) + '</h3><div class="list">' + home.sort(sortOpen).map(actionRow).join('') + '</div></div>';
@@ -2161,7 +2171,12 @@
       D.PLACE_ACTIONS[d].forEach(function (a) { if (a.event) rows.push({ a: a, d: d, pl: D.PLACES.filter(function (p) { return p.acts.indexOf(a.id) >= 0; })[0] }); });
     });
     var m = L.monthIndex(S);
-    rows.sort(function (x, y) { var a = !x.a.when.months || x.a.when.months.indexOf(m) >= 0, b = !y.a.when.months || y.a.when.months.indexOf(m) >= 0; return (b ? 1 : 0) - (a ? 1 : 0); });
+    var here = L.cityOf(S);
+    // This month first, then your own city, then whatever is on right now.
+    rows.sort(function (x, y) {
+      var a = !x.a.when.months || x.a.when.months.indexOf(m) >= 0, b = !y.a.when.months || y.a.when.months.indexOf(m) >= 0;
+      return (b ? 1 : 0) - (a ? 1 : 0) || (L.districtCity(y.d) === here ? 1 : 0) - (L.districtCity(x.d) === here ? 1 : 0) || (L.inWindow(S, y.a.when) ? 1 : 0) - (L.inWindow(S, x.a.when) ? 1 : 0);
+    });
     var html = '<div class="section"><h3>🎟️ What\'s on</h3><p class="note">Festivals, concerts and matches across Lagos, Abuja and Port Harcourt. It is ' + esc(D.MONTHS[m]) + ' in your life.</p><div class="list">';
     html += rows.map(function (r) {
       var w = r.a.when, thisMonth = !w.months || w.months.indexOf(m) >= 0, now = thisMonth && L.inWindow(S, w), sameCity = L.districtCity(r.d) === L.cityOf(S);

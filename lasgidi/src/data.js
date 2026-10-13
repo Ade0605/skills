@@ -474,6 +474,8 @@
       { id: 'suru_studio', label: 'Book studio time', mins: 120, cost: 5000, fx: { fun: 15, energy: -10 }, xp: { music: 6 }, when: { from: 10, to: 23 } },
       { id: 'suru_theatre', label: 'See a play at the National Theatre', mins: 150, cost: 3000, fx: { fun: 35, social: 10, stress: -8 }, xp: { charisma: 1 }, when: { days: [4,5,6], from: 15, to: 22 } },
       { id: 'suru_danceoff', label: 'Owambe dance-off (mini-game)', mins: 120, cost: 3000, fx: { fun: 35, social: 30, hunger: 40, energy: -25 }, xp: { charisma: 2, fitness: 1 }, minigame: 'dance', when: { days: [5], from: 12, to: 20 } },
+      { id: 'suru_peppersoup', label: 'Pepper soup and asun at the joint', mins: 60, cost: 4000, fx: { hunger: 50, social: 15, fun: 10 }, when: { from: 17, to: 24 } },
+      { id: 'suru_dec_wedding', label: 'December wedding owambe (aso-ebi season)', mins: 300, cost: 10000, fx: { fun: 55, social: 55, hunger: 70, energy: -25 }, xp: { charisma: 2 }, special: 'owambe', event: true, dec: true, when: { months: [11], days: [5, 6], from: 11, to: 20 } },
       { id: 'suru_owambe', label: 'Attend an owambe', mins: 240, cost: 3000, fx: { fun: 40, social: 40, hunger: 60, energy: -20 }, xp: { charisma: 2 }, special: 'owambe', when: { days: [5], from: 12, to: 19 } }
     ],
     ikeja: [
@@ -505,9 +507,22 @@
       { id: 'island_alaaru', label: 'Carry loads at Balogun (alaaru)', mins: 180, earn: 2200, fx: { energy: -22, hygiene: -15 }, xp: { hustle: 3, fitness: 1 }, gig: true, when: { days: [0,1,2,3,4,5], from: 7, to: 18 } },
       { id: 'island_freedom', label: 'Live music at Freedom Park', mins: 120, cost: 1000, fx: { fun: 30, social: 20, stress: -10 }, when: { from: 16, to: 23 } },
       { id: 'island_museum', label: 'Visit the National Museum', mins: 90, cost: 500, fx: { fun: 12, stress: -5 }, xp: { charisma: 1 }, when: { days: [0,1,2,3,4,5], from: 9, to: 17 } },
+      { id: 'island_dec_tbs', label: 'Homecoming concert at Tafawa Balewa Square', mins: 300, cost: 30000, fx: { fun: 85, social: 50, energy: -35, hygiene: -15 }, xp: { music: 1 }, special: 'club', event: true, dec: true, when: { months: [11], days: [4, 5, 6], from: 18, to: 24 } },
+      { id: 'island_dec_food', label: 'December food village: jollof, suya, ofada and small chops', mins: 90, cost: 7000, fx: { hunger: 70, fun: 25, social: 15 }, event: true, dec: true, when: { months: [11], from: 12, to: 22 } },
       { id: 'island_ewa', label: 'Ewa agoyin and bread', mins: 30, cost: 1300, fx: { hunger: 45 } }
     ],
     vi: [
+      { id: 'vi_club_late', label: 'Club after midnight: Amapiano till 5 a.m.', mins: 240, cost: 15000, fx: { fun: 60, social: 40, energy: -45, hygiene: -20 }, special: 'club', when: { days: [5, 6], from: 0, to: 4 } },
+      { id: 'vi_spray', label: 'Spray money at the club (bottle service and a VIP table)', mins: 240, cost: 120000, fx: { fun: 75, social: 60, energy: -40, hygiene: -15 }, xp: { charisma: 2 }, special: 'spray', when: { days: [4, 5, 6], from: 22, to: 24 } },
+      { id: 'vi_flex', label: 'Car meet: park and flex outside the club', mins: 90, fx: { social: 30, fun: 20 }, special: 'flex', when: { days: [4, 5, 6], from: 21, to: 24 } },
+      { id: 'vi_brunch', label: 'Brunch and day drinks', mins: 180, cost: 18000, fx: { hunger: 55, fun: 30, social: 30 }, when: { days: [5, 6], from: 11, to: 16 } },
+      { id: 'vi_suya', label: 'Late-night suya by the roadside', mins: 30, cost: 3000, fx: { hunger: 40, fun: 10 }, when: { from: 20, to: 24 } },
+      { id: 'vi_landmark', label: 'Beach day at Landmark Beach, Oniru: cabana and seafood grill', mins: 300, cost: 20000, fx: { fun: 50, social: 30, hunger: 45, stress: -20, hygiene: -10 }, when: { from: 11, to: 19 } },
+      { id: 'vi_jetski', label: 'Jet ski ride off Oniru', mins: 60, cost: 25000, fx: { fun: 40, stress: -10, energy: -10 }, xp: { fitness: 1 }, when: { from: 11, to: 18 } },
+      { id: 'vi_fashion', label: 'Fashion pop-up and art market', mins: 120, cost: 5000, fx: { fun: 25, social: 25 }, xp: { charisma: 1 }, when: { days: [5], from: 12, to: 19 } },
+      { id: 'vi_dec_headline', label: 'Headline Afrobeats concert at Eko Convention Centre', mins: 300, cost: 60000, fx: { fun: 90, social: 55, energy: -40, hygiene: -15 }, xp: { music: 1 }, special: 'club', event: true, dec: true, when: { months: [11], days: [4, 5, 6], from: 19, to: 24 } },
+      { id: 'vi_dec_vip', label: 'VIP table at the headline concert (bottle service)', mins: 300, cost: 450000, fx: { fun: 95, social: 70, energy: -40, hygiene: -15 }, xp: { charisma: 3 }, special: 'club', event: true, dec: true, when: { months: [11], days: [4, 5, 6], from: 19, to: 24 } },
+      { id: 'vi_dec_afterparty', label: 'After-party till 5 a.m.', mins: 240, cost: 20000, fx: { fun: 50, social: 35, energy: -45, hygiene: -20 }, special: 'club', event: true, dec: true, when: { months: [11], from: 1, to: 4 } },
       { id: 'vi_dec_festival', label: 'Detty December festival on the beach', mins: 360, cost: 40000, fx: { fun: 85, social: 55, energy: -40, hygiene: -20 }, special: 'club', event: true, when: { months: [11], days: [5,6], from: 16, to: 24 } },
       { id: 'vi_carwash', label: 'Wash cars outside the banks', mins: 180, earn: 2800, fx: { energy: -15, hygiene: -10 }, xp: { hustle: 2 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
       { id: 'vi_lounge', label: 'Network at a lounge', mins: 120, cost: 8000, fx: { social: 25, fun: 10 }, xp: { charisma: 5 }, when: { from: 17, to: 24 } },
@@ -519,12 +534,20 @@
       { id: 'vi_quilox_door', label: 'Queue at the Quilox door', mins: 120, cost: 20000, fx: { fun: 30, social: 20, energy: -20 }, special: 'club', when: { days: [4,5], from: 22, to: 24 } },
     ],
     ikoyi: [
+      { id: 'ikoyi_ilashe', label: 'Boat to a private beach at Ilashe (day trip)', mins: 480, cost: 60000, fx: { fun: 70, social: 40, stress: -30, hunger: 40, hygiene: -10 }, when: { days: [5, 6], from: 9, to: 12 } },
+      { id: 'ikoyi_dec_yacht', label: 'Lagoon yacht party', mins: 300, cost: 150000, fx: { fun: 80, social: 60, energy: -25, stress: -15 }, xp: { charisma: 2 }, event: true, dec: true, when: { months: [11], days: [5, 6], from: 13, to: 20 } },
+      { id: 'ikoyi_dec_cruise', label: 'Lagoon boat cruise', mins: 120, cost: 20000, fx: { fun: 45, social: 30, stress: -15 }, event: true, dec: true, when: { months: [11], from: 10, to: 18 } },
       { id: 'ikoyi_garden', label: 'Tend a madam\'s garden', mins: 180, earn: 3000, fx: { energy: -15, hygiene: -10 }, xp: { craft: 2 }, gig: true, when: { days: [0,1,2,3,4,5], from: 7, to: 17 } },
       { id: 'ikoyi_jog', label: 'Jog around the park', mins: 60, fx: { energy: -12, fun: 10, hygiene: -15, stress: -12 }, xp: { fitness: 3 }, when: { from: 6, to: 19 } },
       { id: 'ikoyi_gallery', label: 'Visit an art gallery', mins: 90, cost: 2000, fx: { fun: 20, social: 10, stress: -8 }, when: { from: 10, to: 18 } },
       { id: 'ikoyi_dine', label: 'Fine dining', mins: 90, cost: 25000, fx: { hunger: 70, fun: 25, social: 10 }, when: { from: 12, to: 23 } }
     ],
     lekki: [
+      { id: 'lekki_shisha', label: 'Shisha lounge and Amapiano', mins: 180, cost: 12000, fx: { fun: 40, social: 35, energy: -15 }, when: { from: 19, to: 24 } },
+      { id: 'lekki_rooftop', label: 'Rooftop session with a DJ', mins: 240, cost: 20000, fx: { fun: 55, social: 40, energy: -30 }, special: 'club', when: { days: [4, 5], from: 21, to: 24 } },
+      { id: 'lekki_glam', label: 'Get "outside" ready: hair, make-up and nails', mins: 150, cost: 25000, fx: { stress: -5, fun: 10 }, special: 'glam', when: { from: 9, to: 19 } },
+      { id: 'lekki_dec_pool', label: 'Rooftop pool party (every night in December)', mins: 240, cost: 30000, fx: { fun: 65, social: 45, energy: -30, hygiene: -5 }, special: 'club', event: true, dec: true, when: { months: [11], from: 20, to: 24 } },
+      { id: 'lekki_dec_nye', label: 'New Year\'s Eve fireworks at the Lekki–Ikoyi Link Bridge', mins: 240, fx: { fun: 70, social: 45, energy: -20, stress: -20 }, event: true, dec: true, when: { months: [11], lastDay: true, from: 20, to: 24 } },
       { id: 'lekki_dec_concert', label: 'Detty December beach concert at Elegushi', mins: 300, cost: 25000, fx: { fun: 80, social: 50, energy: -35, hygiene: -15 }, special: 'club', event: true, when: { months: [11], days: [4,5,6], from: 18, to: 24 } },
       { id: 'lekki_errands', label: 'Run errands in the estate', mins: 120, earn: 2200, fx: { energy: -10 }, xp: { hustle: 2, charisma: 1 }, gig: true, when: { from: 8, to: 20 } },
       { id: 'lekki_beach', label: 'Beach day', mins: 180, cost: 2000, fx: { fun: 45, social: 20, hygiene: -15, stress: -15 }, when: { from: 9, to: 18 } },
@@ -539,6 +562,7 @@
       { id: 'lekki_cafe', label: 'Brunch at a café', mins: 60, cost: 6000, fx: { hunger: 50, fun: 10 } }
     ],
     ajah: [
+      { id: 'ajah_dec_rave', label: 'Beach rave at a beach resort (day into night)', mins: 360, cost: 15000, fx: { fun: 75, social: 50, energy: -35, hygiene: -25, stress: -10 }, special: 'club', event: true, dec: true, when: { months: [11], from: 12, to: 23 } },
       { id: 'ajah_market', label: 'Buy foodstuff at Ajah market (7 meals)', mins: 45, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
       { id: 'ajah_spot', label: 'Eat at a local spot', mins: 30, cost: 1500, fx: { hunger: 45 } },
       { id: 'ajah_shop', label: "Help at a cousin's shop", mins: 180, earn: 2400, fx: { energy: -12 }, xp: { hustle: 3 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 19 } }
@@ -592,7 +616,7 @@
     { id: 'stadium', icon: '🏟️', name: 'National Stadium', type: 'outdoors', glyph: 'ball', district: 'surulere', x: 9.2, y: 16.6, acts: ['suru_match', 'suru_stadium', 'suru_recharge'], text: 'Run the tracks for free. Sell recharge cards to the crowd.' },
     { id: 'theatre', icon: '🎭', name: 'National Theatre', type: 'culture', glyph: 'mask', district: 'surulere', x: 11.4, y: 18.9, acts: ['suru_theatre'], text: 'The famous military-cap building at Iganmu. Plays Friday to Sunday.' },
     { id: 'studio', icon: '🎙️', name: 'Recording studio', type: 'learn', glyph: 'note', district: 'surulere', x: 10.6, y: 17.4, acts: ['suru_studio'], text: 'Where Afrobeats careers start.' },
-    { id: 'owambe_hall', icon: '🎉', name: 'Event hall', type: 'nightlife', glyph: 'note', district: 'surulere', x: 9.5, y: 18.6, acts: ['suru_owambe', 'suru_danceoff'], text: 'Saturday owambes: jollof, small chops, money spraying. Win the dance-off and the guests spray you.' },
+    { id: 'owambe_hall', icon: '🎉', name: 'Event hall', type: 'nightlife', glyph: 'note', district: 'surulere', x: 9.5, y: 18.6, acts: ['suru_owambe', 'suru_danceoff', 'suru_dec_wedding'], text: 'Saturday owambes: jollof, small chops, money spraying. Win the dance-off and the guests spray you.' },
     { id: 'amala', icon: '🍲', name: 'Amala Shitta', type: 'food', glyph: 'bowl', district: 'surulere', x: 10.4, y: 18.7, acts: ['suru_amala'], text: 'Amala, ewedu and gbegiri, eaten with your hand.' },
     { id: 'unilag', icon: '🎓', name: 'University of Lagos', type: 'learn', glyph: 'cap', district: 'yaba', x: 15.6, y: 16.1, acts: ['yaba_enrol', 'yaba_lecture'], text: 'Part-time degrees on weekdays. 30 lectures to graduate.' },
     { id: 'hub', icon: '💡', name: 'CcHub, Yaba', type: 'learn', glyph: 'laptop', district: 'yaba', x: 14.5, y: 14.6, acts: ['yaba_cchub', 'yaba_hackathon', 'yaba_typing'], text: 'The tech hub on Herbert Macaulay Way. Tuesday and Thursday meetups, weekend hackathons, freelance typing gigs.' },
@@ -648,6 +672,14 @@
     { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
     { id: 'ojuelegba_park', icon: '🚐', name: 'Ojuelegba danfo park', type: 'transport', glyph: 'bus', district: 'surulere', x: 12.2, y: 16.8, acts: ['suru_danfo'], nogem: true, text: 'Under the bridge, conductors shout routes and danfos fill up. Rent one from the owner for a run to Yaba and back.' },
+    { id: 'landmark_beach', icon: '🏖️', name: 'Landmark Beach, Oniru', type: 'outdoors', glyph: 'wave', district: 'vi', x: 20.6, y: 26.3, acts: ['vi_landmark', 'vi_jetski'], nogem: true, text: 'Cabanas, seafood grilled on the sand, jet skis off the shore, and beach parties that start in the afternoon and go late.' },
+    { id: 'vi_strip', icon: '🍾', name: 'The VI club strip', type: 'nightlife', glyph: 'glass', district: 'vi', x: 18.9, y: 24.4, acts: ['vi_club_late', 'vi_spray', 'vi_flex'], nogem: true, text: 'Peak time is after midnight. Bottle service, money spraying, Amapiano till 5 a.m., and a car park where G-Wagons line up to be seen.' },
+    { id: 'lekki_lounges', icon: '💨', name: 'Lekki lounges and rooftops', type: 'nightlife', glyph: 'glass', district: 'lekki', x: 28.9, y: 23.6, acts: ['lekki_shisha', 'lekki_rooftop', 'lekki_glam'], nogem: true, text: 'Shisha, DJs and rooftop views, and a glam studio downstairs to get you "outside" ready.' },
+    { id: 'eko_convention', icon: '🎤', name: 'Eko Convention Centre', type: 'nightlife', glyph: 'note', district: 'vi', x: 18.4, y: 26.0, acts: ['vi_dec_headline', 'vi_dec_vip', 'vi_dec_afterparty'], nogem: true, text: 'The big December stage. Homecoming headliners, international guests and a crowd of thousands. Tickets climb as Christmas gets closer.' },
+    { id: 'tbs', icon: '🏟️', name: 'Tafawa Balewa Square', type: 'culture', glyph: 'dome', district: 'island', x: 16.6, y: 22.7, acts: ['island_dec_tbs', 'island_dec_food'], nogem: true, text: 'The old parade ground fills with December concerts and a food village of jollof, suya and ofada.' },
+    { id: 'ajah_resort', icon: '🏝️', name: 'Beach resort, Ajah coast', type: 'outdoors', glyph: 'wave', district: 'ajah', x: 38.8, y: 26.0, acts: ['ajah_dec_rave'], nogem: true, text: 'DJs from noon, swimming, lounging and a beach rave that runs into the night all December.' },
+    { id: 'lagoon_jetty', icon: '🛥️', name: 'Lagoon jetty', type: 'transport', glyph: 'boat', district: 'ikoyi', x: 20.6, y: 21.8, acts: ['ikoyi_dec_cruise', 'ikoyi_dec_yacht', 'ikoyi_ilashe'], nogem: true, text: 'Boat cruises across the lagoon in December, with yacht parties for the big spenders.' },
+    { id: 'link_bridge', icon: '🎆', name: 'Lekki–Ikoyi Link Bridge', type: 'outdoors', glyph: 'wave', district: 'lekki', x: 26.8, y: 23.4, acts: ['lekki_dec_nye', 'lekki_dec_pool'], nogem: true, text: 'The cable-stayed bridge where Lagos counts down to the New Year with fireworks.' },
     { id: 'ladipo', icon: '🔧', name: 'Ladipo auto market', type: 'services', glyph: 'tool', district: 'mushin', x: 12.9, y: 12.2, acts: [], nogem: true, text: 'Spare parts for every car ever made, and a mechanic for each one. Service your car here (Garage, Monday to Saturday, 08:00–18:00).' },
     { id: 'nysc_camp', icon: '🎖️', name: 'NYSC Orientation Camp, Kubwa', type: 'learn', glyph: 'hall', district: 'abj_kubwa', x: 3.4, y: 1.6, acts: [], nogem: true, text: 'The FCT orientation camp. Three weeks of 5 am drills, Man O\'War, lectures and Mammy market, squeezed into three camp days. Register in Phone → NYSC.' }
   ];

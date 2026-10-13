@@ -1807,3 +1807,60 @@ test('build your own house: the plot, the omo-onile, five stages over weeks, the
   const r1 = rent(); for (let i = 0; i < 60; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; L.wait(s, 240); }
   assert.equal(rent(), r1, 'no tenants while you live there');
 });
+
+test('Detty December (rules 14): December rates, traffic, a hustle boom, IJGBs, NYE on the last day, Detty legend', () => {
+  const dec = (rules) => { const s = L.newGame({ seed: 108, origin: 'nepo', goal: 'freestyle', rules }); s.t = s.t - (s.t % 1440) + 8 * 7 * 1440 + 10 * 60; return s; }; // week 9: December
+  const s = dec(14), old = dec(13);
+  assert.ok(L.isDecember(s));
+  s.loc = old.loc = 'vi';
+  const hotel = (g) => L.lodgingOptions(g).find(o => o.id === 'hotel').price;
+  assert.ok(hotel(s) > hotel(old) * 1.5, 'December rates for hotels');
+  s.loc = old.loc = 'ikeja';
+  const mins = (g) => L.travelOptions(g, 'yaba').find(o => o.mode === 'danfo').mins;
+  assert.ok(mins(s) > mins(old), 'December go-slow');
+  // IJGB relatives turn up in December weeks.
+  const g = dec(14); g.bank += 5000000; g.opening.bank += 5000000;
+  let seen = 0;
+  for (let i = 0; i < 4 * 7 * 6 && L.isDecember(g); i++) {
+    while (g.pending.length) { const ev = g.pending[0]; if (ev.id === 'ijgb') { seen++; assert.match(ev.text, /Just got back from/); } L.resolveChoice(g, 0); }
+    g.needs.energy = 90; g.needs.hunger = 80; g.needs.hygiene = 80; L.wait(g, 240);
+  }
+  assert.ok(seen >= 1, 'at least one IJGB in four December weeks: ' + seen);
+  assert.equal(L.category('IJGB gift (dollars changed at the BDC)', 1), 'family');
+  // NYE fireworks only on the month's last day.
+  const n = dec(14); n.loc = 'lekki'; n.t = n.t - (n.t % 1440) + 21 * 60;
+  const nye = () => L.availableActions(n).find(a => a.id === 'lekki_dec_nye');
+  assert.ok(!nye() || nye().disabled, 'not on an ordinary December night');
+  n.t = (Math.floor(L.day(n) / 28) * 28 + 27) * 1440 + 21 * 60;
+  while (n.pending.length) L.resolveChoice(n, 0);
+  assert.ok(nye() && !nye().disabled, nye() && nye().disabled);
+  // Six December events make a Detty legend.
+  const e = dec(14); e.bank += 3000000; e.opening.bank += 3000000; e.loc = 'island';
+  for (let i = 0; i < 6; i++) { while (e.pending.length) L.resolveChoice(e, 0); e.needs.hunger = 20; e.t = e.t - (e.t % 1440) + 1440 + 13 * 60; const r = L.doAction(e, 'island_dec_food'); assert.ok(r.ok, r.msg); }
+  assert.ok(e.ach.detty_legend);
+});
+
+test('Island life: flex needs a luxury car, glam lifts the next night out, area boys collect ground money (rules 14)', () => {
+  const s = L.newGame({ seed: 109, origin: 'nepo', goal: 'freestyle' });
+  s.loc = 'vi'; s.t = s.t - (s.t % 1440) + ((4 - L.dow(s) + 7) % 7 + 7) * 1440 + 22 * 60; // a Friday night
+  while (s.pending.length) L.resolveChoice(s, 0);
+  assert.match(L.availableActions(s).find(a => a.id === 'vi_flex').disabled || '', /luxury car/);
+  s.vehicles.push({ id: 'suv', paid: 45000000 });
+  assert.ok(!L.availableActions(s).find(a => a.id === 'vi_flex').disabled);
+  assert.ok(L.doAction(s, 'vi_flex').ok);
+  // Glam, then a night out.
+  const g = L.newGame({ seed: 110, origin: 'nepo', goal: 'freestyle' });
+  g.loc = 'lekki'; g.t = g.t - (g.t % 1440) + 1440 + 12 * 60; while (g.pending.length) L.resolveChoice(g, 0);
+  assert.ok(L.doAction(g, 'lekki_glam').ok);
+  assert.ok(g.glamUntil > g.t);
+  g.t = g.t - (g.t % 1440) + ((4 - L.dow(g) + 7) % 7) * 1440 + 22 * 60; g.needs.energy = 90; g.needs.hunger = 70; while (g.pending.length) L.resolveChoice(g, 0);
+  if (g.glamUntil > g.t) { const r = L.doAction(g, 'lekki_rooftop'); assert.ok(r.ok, r.msg); assert.equal(g.glamUntil, 0, 'used up'); }
+  // Ground money when you drive to busy places.
+  const a = L.newGame({ seed: 111, origin: 'nepo', goal: 'freestyle' });
+  a.vehicles.push({ id: 'tokunbo', paid: 8000000 });
+  let paid = 0;
+  for (let i = 0; i < 30; i++) { while (a.pending.length) L.resolveChoice(a, 0); a.needs.energy = 90; a.needs.hunger = 80; a.t = a.t - (a.t % 1440) + 1440 + 11 * 60; a.vehicles[0].wear = 0; L.travel(a, a.loc === 'vi' ? 'ikoyi' : 'vi', 'car'); }
+  paid = a.ledger.filter(l => l.memo === 'Ground money (area boys)').length;
+  assert.ok(paid >= 1, 'ground money collected: ' + paid);
+  assert.equal(L.category('Ground money (area boys)', -1), 'losses');
+});

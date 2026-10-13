@@ -185,14 +185,33 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Events:** grid collapse, fuel scarcity, floods, black tax, BVN scam texts, Ponzi schemes, landlord hikes, owambe aso-ebi, checkpoints and area boys. Detty December arrives in week 9.
 - **Policy vote:** every 4 weeks you vote on a governorship policy that changes the rules for a month.
 - **CBN governor race:** two weeks after each policy vote, three candidates compete for the Central Bank, and you can vote for one. The Hawk raises savings and bill rates, makes new loans dearer and slows inflation. The Dove does the opposite. The Builder boosts businesses and cooperative loans. The winner's stance lasts 4 weeks, and its rates show on the bank card.
-- **Making money is hard.** New lives start on rules 11: everything in rules 8, plus weather (rules 9), mini-games paid for at the start (rules 10), malaria (rules 11) car wear (rules 12) and job interviews (rules 13).
-  New lives start on rules 13. Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
+- **Making money is hard.** New lives start on rules 11: everything in rules 8, plus weather (rules 9), mini-games paid for at the start (rules 10), malaria (rules 11) car wear (rules 12), job interviews (rules 13) and the full Detty December (rules 14).
+  New lives start on rules 14. Lives begun under rules 7 keep their rules 7 numbers: PAYE income tax comes off every shift. The first ₦4,000 is free, the next ₦16,000 is taxed at 10%, and anything above at 20%. Gigs pay 15% less, and state and council levies take 12% of business payouts. Each tax is a separate line on your statement. Rules 8 makes this steeper:
   - PAYE starts at ₦3,000 and goes up to 25% on big pay.
   - Every 4 weeks the landlord reviews your rent in line with prices.
   - Vehicle upkeep is 1.5×, and vehicles costing over ₦100m pay 0.2% insurance a week.
   - Promotions take 30% more shifts.
 
   Lives started earlier keep their old rules.
+- **🎉 Detty December:** the city goes into full party mode from the start of December to New Year's Eve.
+  - **On the Do tab:** a season card says which phase you're in (warm-up, build-up, Christmas week, the New Year countdown) and what's on right now.
+  - **Concerts:**
+    - a headline Afrobeats concert at Eko Convention Centre, with a ₦450k VIP table with bottle service;
+    - a homecoming concert at Tafawa Balewa Square.
+  - **Beach and water:** a day-into-night beach rave on the Ajah coast, lagoon boat cruises and yacht parties.
+  - **Parties and food:** rooftop pool parties every night, after-parties till 5 a.m., December wedding owambes and a food village of jollof, suya, ofada and small chops.
+  - **New Year's Eve:** fireworks at the Lekki–Ikoyi Link Bridge, on the last night only.
+  - **Rules 14, new lives only:**
+    - "December rates": Lagos hotels and short-lets cost 60% more, on top of the 15% December rise in every price.
+    - Traffic is heavier, gigs pay 20% more, and creators gain 50% more followers.
+    - IJGB relatives turn up from Houston, London or Toronto and want to "see the real Lagos". Show them around and they may leave you dollars.
+    - Six December events in one season unlocks "Detty legend".
+- **🌴 Island life all year (VI, Oniru, Ikoyi, Lekki):**
+  - **Clubs:** club nights after midnight (Amapiano till 5 a.m.), money spraying with bottle service, and car-meet flexing outside the club. Flexing needs a car worth ₦40m or more and gets creators followers.
+  - **Days out:** brunch and day drinks; Landmark Beach in Oniru with cabanas, a seafood grill and jet skis; boat day trips to Ilashe.
+  - **Lekki:** shisha lounges, rooftop DJ sessions, and a glam studio. Getting "outside" ready with hair, make-up and nails makes your next night out or owambe land better.
+  - **Food and markets:** late-night suya, pepper soup and asun, and a fashion pop-up and art market.
+  - **Area boys (rules 14):** they collect "ground money" when you drive to busy spots such as Oshodi, the Island, VI, Lekki, Surulere and Ikeja.
 - **🏗️ Build your own house:** own the plot of land in Ikorodu and you can build on it from the Money tab, one stage at a time.
   - **The omo-onile:** before the foundation, they come to "greet" the land and you pay their ₦250k development levy.
   - **Five stages:** foundation, blocks to lintel level, roofing, plastering with windows and doors, then finishing. They cost ₦12.5m in all and take about five and a half weeks, and you must visit the site in Ikorodu to start each one.
@@ -253,7 +272,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (98 tests)
+  test/engine.test.js   node:test suite (100 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

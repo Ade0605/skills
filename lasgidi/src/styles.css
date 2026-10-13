@@ -612,3 +612,5 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .bd-steps li { padding: 4px 8px; border-radius: 8px; background: color-mix(in srgb, var(--line) 35%, transparent); }
 .bd-steps .bd-done { background: color-mix(in srgb, #2fa36b 18%, transparent); }
 .bd-steps .bd-now { background: color-mix(in srgb, #f2b600 30%, transparent); font-weight: 700; }
+.detty { border-left: 4px solid #c2417f; padding-left: 12px; background: linear-gradient(90deg, color-mix(in srgb, #f2b600 12%, transparent), transparent); }
+.detty-live { margin: 4px 0 8px; padding-left: 18px; }
