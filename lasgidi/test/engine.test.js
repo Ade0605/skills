@@ -2218,3 +2218,15 @@ test('live rooms: beach entry and spots, Tidewater members only, boosts taper, r
   if (L.roomEnter(r, 'beach').ok) { while (r.pending.length) L.resolveChoice(r, 1); L.roomSpot(r, 'beach', 'loungers'); }
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
 });
+
+test('live rooms: the club strip opens late and runs past midnight; market and park keep their hours', () => {
+  const s = L.newGame({ seed: 101, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.cash += 5000000; s.loc = 'vi';
+  const d = Math.floor(s.t / 1440) * 1440 + 1440;
+  s.t = d + 20 * 60; assert.match(L.roomBlock(s, 'club'), /Open 22:00–04:00/);
+  s.t = d + 1440 + 2 * 60; assert.equal(L.roomBlock(s, 'club'), '');
+  assert.ok(L.roomEnter(s, 'club').ok); s.pending = []; assert.ok(L.roomSpot(s, 'club', 'floor').ok);
+  s.loc = 'island'; s.t = d + 2 * 1440 + 9 * 60; s.pending = [];
+  assert.equal(L.roomBlock(s, 'market'), ''); assert.match(L.roomBlock(s, 'park'), /Open 16/);
+});

@@ -596,7 +596,9 @@
     var list = (online.peerList || []).filter(function (p) { return !online.muted[p.by]; }), here = L.cityOf(S);
     list.sort(function (a, b) { var ca = L.districtCity(a.d) === here ? 0 : 1, cb = L.districtCity(b.d) === here ? 0 : 1; return ca - cb || nameOf(a.by).localeCompare(nameOf(b.by)); });
     var blocked = Object.keys(online.muted).length;
-    return '<div class="section"><h3>👥 People online <span class="muted">· ' + list.length + '</span></h3>' + (list.length ? '<div class="list">' + list.slice(0, 60).map(function (p) {
+    var rooms = [['cruise', '🛳️ Lagoon Boat Cruise', 'lagoon_cruise', deckPeers().length]].concat(Object.keys(D.ROOMS).map(function (k) { return [k, '📍 ' + D.ROOMS[k].name, D.ROOMS[k].place, roomPeers(k).length]; }));
+    var roomsHtml = '<div class="section"><h3>📍 Live rooms</h3><div class="list">' + rooms.map(function (r) { return '<div class="item"><div><h3>' + esc(r[1]) + '</h3><div class="meta"><span>' + (r[3] ? '👥 ' + r[3] + ' here now' : 'Quiet right now') + '</span></div></div><button class="btn sm ghost" id="lr-' + r[0] + '" data-place="' + r[2] + '" data-tab="map">Go</button></div>'; }).join('') + '</div></div>';
+    return roomsHtml + '<div class="section"><h3>👥 People online <span class="muted">· ' + list.length + '</span></h3>' + (list.length ? '<div class="list">' + list.slice(0, 60).map(function (p) {
       var city = D.CITIES[L.districtCity(p.d)].name, act = p.act ? ACTIVITIES[p.act] : '', rid = p.at && p.at.indexOf('room:') === 0 ? p.at.split(':')[1] : null, where = deckPeers().indexOf(p) >= 0 ? 'on the Lagoon Boat Cruise' : rid && D.ROOMS[rid] && roomPeers(rid).indexOf(p) >= 0 ? 'at ' + D.ROOMS[rid].name : act;
       return '<div class="item person">' + (photoImg(p.by) || '<span class="pc-photo pc-ph" style="width:40px;height:40px;font-size:20px">🙂</span>') + '<div><h3>' + esc(nameOf(p.by)) + ' <span class="pc-handle">' + esc(handleOf(p.by)) + '</span></h3><div class="meta"><span>📍 ' + esc(D.DISTRICTS[p.d].name) + ', ' + esc(city) + '</span>' + (where ? '<span>' + esc(where) + '</span>' : '') + '</div></div>' +
         '<div class="inline"><button class="btn sm" id="ppl-chat-' + esc(p.by) + '" data-chatopen="' + esc(p.by) + '">💬 Chat' + (online.unread[p.by] ? ' · ' + online.unread[p.by] : '') + '</button></div></div>';
@@ -1680,13 +1682,16 @@
   /* ---------- live rooms (beach, Tidewater House): the deck renderer with other layouts ---------- */
   var ROOM_CREW = {
     beach: [{ by: 'crew:bar', label: 'Barman', spot: 'bar', crew: true, look: { skin: 4, hair: 0, shape: 1 }, outfit: { top: 'st_ankara', bottom: 'st_chinos' } }, { by: 'crew:guard', label: 'Lifeguard', spot: 'jetski', crew: true, look: { skin: 3, hair: 6, shape: 2 }, outfit: { top: 'jersey', bottom: 'joggers' } }],
+    club: [{ by: 'crew:dj', label: 'DJ', spot: 'dj', crew: true, look: { skin: 5, hair: 5, shape: 1 }, outfit: { top: 'crop', bottom: 'joggers' } }, { by: 'crew:bouncer', label: 'Bouncer', spot: 'vip', crew: true, look: { skin: 5, hair: 6, shape: 2 }, outfit: { top: 'blazer', bottom: 'trousers' } }, { by: 'crew:bar', label: 'Bartender', spot: 'bar', crew: true, look: { skin: 3, hair: 2, shape: 1 }, outfit: { top: 'st_tee', bottom: 'trousers' } }],
+    market: [{ by: 'crew:mama', label: 'Mama Put', spot: 'buka', crew: true, look: { skin: 4, hair: 2, shape: 2 }, outfit: { top: 'st_ankara', bottom: 'st_wrapper' } }, { by: 'crew:seller', label: 'Fabric seller', spot: 'fabric', crew: true, look: { skin: 3, hair: 4, shape: 1 }, outfit: { top: 'st_asooke', bottom: 'st_wrapper' } }, { by: 'crew:alaaru', label: 'Alaaru', spot: 'gate', crew: true, look: { skin: 5, hair: 0, shape: 1 }, outfit: { top: 'st_tee', bottom: 'st_chinos' } }],
+    park: [{ by: 'crew:band', label: 'Highlife band', spot: 'stage', crew: true, look: { skin: 4, hair: 3, shape: 1 }, outfit: { top: 'st_adire', bottom: 'trousers' } }, { by: 'crew:suya', label: 'Suya man', spot: 'food', crew: true, look: { skin: 5, hair: 6, shape: 1 }, outfit: { top: 'st_tee', bottom: 'st_chinos' } }],
     tidewater: [{ by: 'crew:dj', label: 'DJ', spot: 'dj', crew: true, look: { skin: 5, hair: 5, shape: 1 }, outfit: { top: 'crop', bottom: 'joggers' } }, { by: 'crew:chef', label: 'Chef', spot: 'oven', crew: true, look: { skin: 2, hair: 6, shape: 1 }, outfit: { top: 'st_tee', bottom: 'trousers' } }, { by: 'crew:bar', label: 'Bartender', spot: 'bar', crew: true, look: { skin: 4, hair: 2, shape: 1 }, outfit: { top: 'shirt', bottom: 'trousers' } }]
   };
   function roomCardFor(placeId) {
     var id = Object.keys(D.ROOMS).filter(function (k) { return D.ROOMS[k].place === placeId; })[0]; if (!id) return '';
     var R = D.ROOMS[id], inRoom = L.roomIn(S, id), why = L.roomBlock(S, id), n = roomPeers(id).length;
     return '<section class="cruise-card room-card"><div class="cc-top"><span>📍 LIVE ROOM · ' + esc(R.name.toUpperCase()) + '</span><span>' + (R.fee ? N(L.price(S, R.fee)) : R.club ? 'Members' : 'Free') + '</span></div>' +
-      '<p class="note">' + (n ? n + ' player' + (n === 1 ? ' is' : 's are') + ' here now. ' : '') + 'Step in, move between spots and chat with everyone there. Open ' + R.from + ':00–' + (R.to === 24 ? 'midnight' : R.to + ':00') + '.</p>' +
+      '<p class="note">' + (n ? n + ' player' + (n === 1 ? ' is' : 's are') + ' here now. ' : '') + 'Step in, move between spots and chat with everyone there. Open ' + R.from + ':00–' + (R.to === 24 ? 'midnight' : (R.to % 24) + ':00') + '.</p>' +
       (inRoom ? '<button class="btn go big-go" id="room-open" data-roomopen="' + id + '">Back in</button>' : '<button class="btn go big-go" id="room-enter" data-roomenter="' + id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>Go in' + (R.fee ? ' · ' + N(L.price(S, R.fee)) : '') + '</button>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '')) + '</section>';
   }
   function roomPeers(id) {
@@ -1699,7 +1704,7 @@
     var pre = 'room:' + id + ':', me = { by: online.me || 'me', label: handleOf(online.me), spot: S.room.spot, me: true, look: S.look, outfit: S.outfit };
     var peers = roomPeers(id).slice(0, 16).map(function (p) { var h = 0; for (var i = 0; i < p.by.length; i++) h = (h * 31 + p.by.charCodeAt(i)) >>> 0; return { by: p.by, label: handleOf(p.by), spot: p.at.slice(pre.length), look: p.look, outfit: { top: STARTERS[h % 4], bottom: ['st_jeans', 'st_chinos', 'st_wrapper'][h % 3] } }; });
     var bubbles = {}, now = Date.now(); (online.roomChat || []).forEach(function (m) { if (m.room === id && now - m.at < 7000) bubbles[m.by] = m.text; });
-    var h0 = L.hour(S); return { room: id, players: (ROOM_CREW[id] || []).concat(peers, [me]), spot: S.room.spot, bubbles: bubbles, night: h0 >= 19 || h0 < 6 };
+    var h0 = L.hour(S); return { room: id, players: (ROOM_CREW[id] || []).concat(peers, [me]), spot: S.room.spot, bubbles: bubbles, night: id === 'club' || h0 >= 19 || h0 < 6 };
   }
   function roomPanel(id) {
     var R = D.ROOMS[id], peers = roomPeers(id), left = Math.max(0, S.room.until - S.t);

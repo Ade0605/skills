@@ -1384,6 +1384,30 @@
         jetty: { name: 'Jetty', icon: '🛥️', cost: 0, fx: { fun: 10, stress: -8 }, text: 'Boats tie up and members climb aboard.' },
         lounge: { name: 'Lounge', icon: '🛋️', cost: 0, fx: { social: 14, stress: -8 }, text: 'Low sofas and the pregame before the clubs.' },
         bar: { name: 'Bar', icon: '🥂', cost: 9000, fx: { fun: 12, social: 8 }, text: 'A long drink with a lagoon view.' }
+      } },
+    club: { name: 'The VI club strip', place: 'vi_strip', where: 'Victoria Island', fee: 10000, mins: 180, from: 22, to: 28, fx: { fun: 20, social: 15, energy: -10 },
+      spots: {
+        floor: { name: 'Dance floor', icon: '🪩', cost: 0, fx: { fun: 25, social: 12, energy: -14 }, text: 'Amapiano drop. The whole floor bounces.' },
+        dj: { name: 'DJ booth', icon: '🎧', cost: 0, fx: { fun: 12, social: 6 }, text: 'The DJ shouts out your name. Small celebrity.' },
+        bar: { name: 'Bar', icon: '🍸', cost: 6000, fx: { fun: 10, social: 8 }, text: 'Two shots and a chaser.' },
+        vip: { name: 'VIP booth', icon: '🍾', cost: 80000, fx: { fun: 30, social: 25, stress: -8 }, text: 'Sparklers on the bottle. Everyone looks over.' },
+        spray: { name: 'Spray money', icon: '💸', cost: 20000, fx: { fun: 20, social: 18 }, text: 'Crisp naira notes rain on the dance floor.' }
+      } },
+    market: { name: 'Balogun market', place: 'balogun', where: 'Lagos Island', fee: 0, mins: 120, from: 8, to: 18, fx: { energy: -6 },
+      spots: {
+        fabric: { name: 'Fabric lane', icon: '🧵', cost: 0, fx: { fun: 6 }, xp: { craft: 1 }, text: 'Ankara, lace and aso-oke stacked to the roof.' },
+        phones: { name: 'Phone stalls', icon: '📱', cost: 0, fx: { fun: 5 }, xp: { tech: 1 }, text: 'Screen guards, chargers and big talk.' },
+        buka: { name: 'Buka', icon: '🍛', cost: 1500, fx: { hunger: 40 }, text: 'Amala, ewedu and gbegiri, eaten standing.' },
+        shoes: { name: 'Shoe sellers', icon: '👟', cost: 0, fx: { fun: 4 }, xp: { hustle: 1, charisma: 1 }, text: 'You haggle the price down by half. Respect.' },
+        gate: { name: 'Market gate', icon: '🚪', cost: 0, fx: { social: 6 }, text: 'Alaaru with loads on their heads push past.' }
+      } },
+    park: { name: 'Freedom Park', place: 'freedom', where: 'Lagos Island', fee: 1000, mins: 150, from: 16, to: 23, fx: { fun: 15, stress: -6 },
+      spots: {
+        stage: { name: 'Main stage', icon: '🎤', cost: 0, fx: { fun: 25, social: 10 }, text: 'Live highlife and afrobeat under the lights.' },
+        seats: { name: 'Amphitheatre', icon: '🪑', cost: 0, fx: { stress: -10, fun: 8 }, text: 'You find a seat on the stone steps.' },
+        food: { name: 'Food court', icon: '🍢', cost: 2500, fx: { hunger: 35, fun: 4 }, text: 'Suya, asun and a cold drink.' },
+        art: { name: 'Art stalls', icon: '🎨', cost: 0, fx: { fun: 10 }, xp: { craft: 1 }, text: 'Paintings and beadwork by young artists.' },
+        trees: { name: 'Under the trees', icon: '🌳', cost: 0, fx: { stress: -12, social: 6 }, text: 'Old prison walls, new conversations.' }
       } }
   };
   // Lagoon Boat Cruise: board at the Ikoyi jetty, then move between spots on deck (a shared scene).

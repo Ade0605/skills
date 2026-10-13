@@ -2289,7 +2289,8 @@
     if (roomIn(s, id)) return 'You are already there';
     if (s.loc !== roomPlaceDistrict(id)) return 'Go to ' + D.DISTRICTS[roomPlaceDistrict(id)].name + ' first';
     if (R.club && !clubMember(s, R.club)) return 'Members only';
-    var h = hour(s); if (h < R.from || h >= R.to) return 'Open ' + pad2(R.from) + ':00–' + (R.to === 24 ? 'midnight' : pad2(R.to) + ':00');
+    var h = hour(s), openNow = R.to > 24 ? (h >= R.from || h < R.to - 24) : (h >= R.from && h < R.to);
+    if (!openNow) return 'Open ' + pad2(R.from) + ':00–' + (R.to === 24 ? 'midnight' : pad2(R.to % 24) + ':00');
     if (R.fee && !canAfford(s, price(s, R.fee))) return 'Entry is ' + naira(price(s, R.fee));
     return busyBlock(s) || '';
   }
