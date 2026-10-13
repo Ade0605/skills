@@ -675,3 +675,12 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .app:hover .app-ic, .app:focus-visible .app-ic { transform: translateY(-2px) scale(1.04); }
 .app:active .app-ic { transform: translateY(1px) scale(.97); box-shadow: 0 2px 4px rgb(0 0 0 / .2), inset 0 -2px 0 rgb(0 0 0 / .18); }
 .act-ic { background: linear-gradient(160deg, #ffffff, var(--sunk)); box-shadow: 0 3px 6px rgb(0 0 0 / .12), inset 0 -2px 0 rgb(0 0 0 / .08); text-shadow: 0 2px 2px rgb(0 0 0 / .25); }
+/* State government */
+.party-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; background: var(--pc); color: #fff; font-size: 11.5px; font-weight: 800; vertical-align: 1px; }
+.gov-now .label { display: block; }
+.gov-now b { font-size: 16px; }
+.camp-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 0 8px; }
+.camp-tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--sunk); }
+.act-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.act-grid .btn { white-space: normal; text-align: left; }
+.gov-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; }

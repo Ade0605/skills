@@ -189,7 +189,7 @@
    * Both light up only inside claude.ai; the game is complete without them.
    * No chat and no free text travel between players: presence carries a
    * district key, the board carries numbers. */
-  var online = { govrun: [], govvote: [], photos: {}, photoOff: {}, photoreview: [], myPhotoReview: null, votes: [], sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
+  var online = { govrun: [], govvote: [], govparty: [], govprimary: [], govcab: [], govconfirm: [], photos: {}, photoOff: {}, photoreview: [], myPhotoReview: null, votes: [], sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
 
   // Each player's row is a small summary at fame/<id>; the replay log lives
   // beside it at fame/<id>/proof/log. Load every summary (no ordering: a
@@ -328,6 +328,14 @@
           if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
           scheduleRender();
         }, function () { online.govrun = []; });
+        ['govparty', 'govprimary', 'govcab', 'govconfirm'].forEach(function (c) {
+          db.collection(c).limit(1000).onSnapshot(function (snap) {
+            online[c] = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
+            var ids = online[c].map(function (d) { return d.id; }).filter(function (i) { return !online.names[i]; });
+            if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+            scheduleRender();
+          }, function () { online[c] = []; });
+        });
         db.collection('govvote').limit(1000).onSnapshot(function (snap) { online.govvote = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); scheduleRender(); }, function () { online.govvote = []; });
         db.collection('votes').limit(1000).onSnapshot(function (snap) { online.votes = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); scheduleRender(); }, function () { online.votes = []; });
         db.collection('seaimg').limit(500).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.seaimg = m; scheduleRender(); }, function () { online.seaimg = {}; });
@@ -2115,7 +2123,7 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
   var GUIDE = [
@@ -2248,42 +2256,185 @@
     });
     return { q: q, counts: counts, total: counts.reduce(function (a, b) { return a + b; }, 0), mine: mine, wk: wk };
   }
-  /* ---------- Governor: players run each week; last week's winner holds the seat ---------- */
-  // Each doc keeps this week's entry and the one before it ({week, ..., prev: {week, ...}}).
-  function weekVal(raw, wk) { if (!raw) return null; if (raw.week === wk) return raw; if (raw.prev && raw.prev.week === wk) return raw.prev; return null; }
+  /* ---------- State government: parties, primaries, tickets, campaign, election, Executive Council ---------- */
+  var G = window.LasgidiGov;
   function lastWeek() { return L.challengeId(new Date(Date.now() - 7 * 86400000)); }
-  function govTally(wk) {
-    var cands = {};
-    (online.govrun || []).forEach(function (r) { var v = weekVal(r.raw, wk); if (v && typeof v.motto === 'number' && D.GOV_MOTTOS[v.motto]) cands[r.id] = { id: r.id, motto: v.motto, at: +v.at || 0, votes: 0 }; });
-    var mine = null;
-    (online.govvote || []).forEach(function (r) { var v = weekVal(r.raw, wk); if (v && cands[v.cand]) { cands[v.cand].votes++; if (r.id === online.me) mine = v.cand; } });
-    var list = Object.keys(cands).map(function (k) { return cands[k]; }).sort(function (a, b) { return b.votes - a.votes || a.at - b.at; });
-    return { list: list, mine: mine };
+  function govPhase() { return G.phase(new Date()); }
+  var LAGOS_UNITS = (function () { var m = {}; Object.keys(D.DISTRICTS).forEach(function (k) { if (L.districtCity(k) === 'lagos') m[k] = true; }); return m; })();
+  function myUnit() { var h = D.HOMES[S.home], d = h && h.district; return d && LAGOS_UNITS[d] ? d : LAGOS_UNITS[S.loc] ? S.loc : 'other'; }
+  function unitName(u) { return D.DISTRICTS[u] ? D.DISTRICTS[u].name : 'Outside Lagos'; }
+  function govState(wk) {
+    var n = G.nominees(online.govrun, online.govparty, online.govprimary, wk);
+    return { n: n, e: G.election(n.tickets, online.govvote, wk, LAGOS_UNITS) };
   }
-  function governor() { var t = govTally(lastWeek()), w = t.list[0]; return w && w.votes > 0 ? w : null; }
+  // The governing ticket this week: last week's election winner.
+  function government() {
+    var lw = lastWeek(), st = govState(lw), w = st.e.winner;
+    if (!w) return null;
+    return { gov: w.ticket.id, deputy: w.ticket.deputy, ticket: w.ticket, result: st.e, assembly: st.e.voters, cabinet: G.council(w.ticket.id, online.govcab, online.govconfirm, st.e.voters, townWeek()) };
+  }
+  function governor() { var g = government(); return g ? { id: g.gov, motto: g.ticket.motto } : null; }
+  function partyChip(p) { var P = G.PARTIES[p]; return P ? '<span class="party-chip" style="--pc:' + P.color + '">' + P.icon + ' ' + esc(P.short) + '</span>' : ''; }
+  var PHASE_LABEL = { primaries: '🗳️ Party primaries (Mon–Tue)', campaign: '📣 Campaign season (Wed–Fri)', election: '🗳️ Election weekend (Sat–Sun)' };
   function govChips() {
     if (L.cityOf(S) !== 'lagos') return '';
-    var g = governor(), homes = Object.keys(online.homes || {}).length;
-    return '<div class="gov-row">' + (online.room ? '<span class="gov-chip live"><i class="pg-live"></i> ' + (online.others + 1) + ' online</span>' : '') + '<button type="button" class="gov-chip" id="gov-chip" data-app="town">🏛️ ' + (g ? 'Gov ' + esc(nameOf(g.id)) : 'Seat open') + '</button>' +
+    var g = government(), homes = Object.keys(online.homes || {}).length;
+    return '<div class="gov-row">' + (online.room ? '<span class="gov-chip live"><i class="pg-live"></i> ' + (online.others + 1) + ' online</span>' : '') +
+      '<button type="button" class="gov-chip" id="gov-chip" data-app="govt">🏛️ ' + (g ? 'Gov ' + esc(nameOf(g.gov)) : 'Seat open') + '</button>' +
+      '<button type="button" class="gov-chip" id="gov-phase" data-app="govt">' + PHASE_LABEL[govPhase()] + '</button>' +
       '<button type="button" class="gov-chip" id="gov-sea" data-seaopen="1">🌊 Sea Plots</button>' +
       '<button type="button" class="gov-chip" id="gov-homes" data-placecat="homes">🏘️ ' + homes + ' home' + (homes === 1 ? '' : 's') + '</button></div>' +
-      '<button type="button" class="gov-banner" id="gov-banner" data-app="town">🏛️ ' + (g ? 'Gov ' + esc(nameOf(g.id)) + ': ' + esc(D.GOV_MOTTOS[g.motto]) : 'No governor yet. Run for the seat in the Town Hall') + '</button>';
+      '<button type="button" class="gov-banner" id="gov-banner" data-app="govt">🏛️ ' + (g ? 'Gov ' + esc(nameOf(g.gov)) + ' & Deputy ' + esc(nameOf(g.deputy)) + ': ' + esc(G.MOTTOS[g.ticket.motto]) : 'No governor yet. Join a party and run in the primaries') + '</button>';
   }
-  function govView() {
-    var wk = townWeek(), T = govTally(wk), g = governor(), pts = L.statusPoints(S), mineRun = T.list.filter(function (c) { return c.id === online.me; })[0];
-    var can = online.db && online.me, sel = ui.govMotto != null ? ui.govMotto : mineRun ? mineRun.motto : 0;
-    var html = '<div class="section"><h3>👑 Governor of Lasgidi</h3>' +
-      (g ? '<div class="gov-now">' + photoImg(g.id, 'pphoto') + '<div><b>Gov ' + esc(nameOf(g.id)) + '</b><p>“' + esc(D.GOV_MOTTOS[g.motto]) + '”</p><span class="muted">Won ' + esc(lastWeek()) + ' with ' + g.votes + ' vote' + (g.votes === 1 ? '' : 's') + '</span></div></div>' : '<p class="note">The seat is open. Whoever wins this week\'s vote is governor all next week, and their slogan flies over the map.</p>') +
-      '<h3 class="th-q">Race for ' + esc(wk) + '</h3>' +
-      (T.list.length ? '<div class="th-opts">' + T.list.map(function (c) {
-        var on = T.mine === c.id, tot = T.list.reduce(function (a, b) { return a + b.votes; }, 0), pct = tot ? Math.round(c.votes / tot * 100) : 0;
-        return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="govv-' + esc(c.id) + '" data-govvote="' + esc(c.id) + '"' + (can ? '' : ' disabled') + '><span class="th-bar" style="width:' + pct + '%"></span><span class="th-t">' + (on ? '✓ ' : '') + esc(nameOf(c.id)) + (c.id === online.me ? ' (you)' : '') + '<small> · ' + esc(D.GOV_MOTTOS[c.motto]) + '</small></span><b class="num">' + c.votes + '</b></button>';
-      }).join('') + '</div>' : '<p class="note">No one is running yet this week.</p>') +
-      '<div class="label">' + (mineRun ? 'Change your slogan' : 'Run for governor') + '</div><div class="pg-chips" style="padding:0">' + D.GOV_MOTTOS.map(function (m, i) { return '<button type="button" class="pg-chip' + (i === sel ? ' sel' : '') + '" id="govm-' + i + '" data-govmotto="' + i + '">' + esc(m) + '</button>'; }).join('') + '</div>' +
-      '<div class="inline"><button class="btn go" id="gov-run" data-govrun="' + sel + '"' + (can && pts >= D.GOV_MIN_STATUS ? '' : ' disabled') + '>🗳️ ' + (mineRun ? 'Update campaign' : 'Declare for governor') + '</button></div>' +
-      '<p class="note">' + (pts < D.GOV_MIN_STATUS ? 'You need ' + D.GOV_MIN_STATUS + ' status points to run (you have ' + pts + '). Property, cars and titles add status. ' : '') + 'Campaigning is free and touches nothing in your life. One vote per player a week.' + (online.govStatus ? ' ' + esc(online.govStatus) : '') + '</p></div>';
+
+  function govtView() {
+    var tab = ui.govTab || 'house', can = !!(online.db && online.me);
+    var tabs = [['house', '🏛️ Government House'], ['parties', '🎌 Parties'], ['campaign', '📣 Campaign'], ['vote', '🗳️ Vote'], ['results', '📊 Results']];
+    var html = '<div class="section" style="padding-top:0"><p class="note">Lasgidi elects a Governor and Deputy Governor every week, on a joint ticket. Primaries run Monday and Tuesday, the campaign Wednesday to Friday, and voting Saturday and Sunday. The winners govern the next week and form the Executive Council. None of it touches money in your life. Today: <b>' + esc(PHASE_LABEL[govPhase()]) + '</b>.' + (can ? '' : ' The government works when the game is opened on claude.ai.') + '</p>' +
+      '<div class="pg-chips" style="padding:0">' + tabs.map(function (t) { return '<button type="button" class="pg-chip' + (t[0] === tab ? ' sel' : '') + '" id="gt-' + t[0] + '" data-govtab="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>' +
+      (online.govStatus ? '<p class="note"><b>' + esc(online.govStatus) + '</b></p>' : '') + '</div>';
+    if (tab === 'house') html += govHouse(can);
+    else if (tab === 'parties') html += govParties(can);
+    else if (tab === 'campaign') html += govCampaign(can);
+    else if (tab === 'vote') html += govVote(can);
+    else html += govResults();
     return html;
   }
+  function person(id, role, extra) {
+    return '<div class="gov-now">' + photoImg(id, 'pphoto') + '<div><span class="label">' + esc(role) + '</span><b>' + esc(nameOf(id)) + (id === online.me ? ' (you)' : '') + '</b>' + (extra || '') + '</div></div>';
+  }
+  function govHouse(can) {
+    var g = government();
+    if (!g) return '<div class="section"><h3>🏛️ Government House</h3><p class="note">The seat is empty: no ticket won last week. Join a party in the Parties tab, win your primary, pick a deputy and take the ticket to the voters this weekend.</p></div>';
+    var t = g.ticket, mine = g.gov === online.me, inAssembly = !!g.assembly[online.me];
+    var html = '<div class="section"><h3>🏛️ Government House · ' + esc(townWeek()) + '</h3>' +
+      person(g.gov, 'Governor · chief executive', '<p>' + partyChip(t.party) + ' “' + esc(G.MOTTOS[t.motto]) + '”</p><span class="muted">' + t.planks.map(function (p) { return G.PLANKS[p].icon + ' ' + G.PLANKS[p].name; }).join(' · ') + '</span>') +
+      person(g.deputy, 'Deputy Governor · acts when the governor is away') + '</div>';
+    // Executive Council.
+    var byPost = {}; g.cabinet.forEach(function (c) { byPost[c.post] = c; });
+    var myCab = (online.govcab || []).filter(function (r) { return r.id === online.me; })[0], myPosts = mine && myCab && G.weekVal(myCab.raw, townWeek()) ? G.weekVal(myCab.raw, townWeek()).posts || {} : {};
+    var pool = Object.keys(online.names).filter(function (id) { return id !== g.gov; });
+    html += '<div class="section"><h3>🧑🏾‍💼 Executive Council</h3><p class="note">The governor appoints Commissioners and Special Advisers. Commissioners serve once the State House of Assembly confirms them; Special Advisers need no confirmation.</p><div class="list">' +
+      Object.keys(G.PORTFOLIOS).map(function (k) {
+        var P = G.PORTFOLIOS[k], c = byPost[k];
+        var status = !c ? '<span class="muted">Vacant</span>' : c.status === 'confirmed' ? '<span class="gain">Confirmed ' + c.yes + '–' + c.no + '</span>' : c.status === 'rejected' ? '<span class="cost">Rejected ' + c.yes + '–' + c.no + '</span>' : c.status === 'appointed' ? '<span class="gain">Appointed</span>' : '<span>Awaiting confirmation ' + c.yes + '–' + c.no + '</span>';
+        var pick = mine && can ? '<select id="cab-' + k + '" data-govappoint="' + k + '"><option value="">Choose…</option>' + pool.map(function (id) { return '<option value="' + esc(id) + '"' + (myPosts[k] === id ? ' selected' : '') + '>' + esc(nameOf(id)) + '</option>'; }).join('') + '</select>' : '';
+        var vote = c && !P.sa && inAssembly && can && !mine ? '<span class="inline"><button class="btn sm go" id="cf-y-' + k + '" data-govconfirm="' + k + ':1">Confirm</button><button class="btn sm ghost" id="cf-n-' + k + '" data-govconfirm="' + k + ':-1">Reject</button></span>' : '';
+        return '<div class="item"><div><h3>' + P.icon + ' ' + esc(P.name) + '</h3><div class="meta">' + (c ? '<span>' + esc(nameOf(c.id)) + '</span>' : '') + status + '</div>' + pick + '</div>' + vote + '</div>';
+      }).join('') + '</div></div>';
+    var r = g.result;
+    html += '<div class="section"><h3>🏛️ State House of Assembly</h3><p class="note">Every player who voted in last week\'s election sits in the Assembly this week (' + Object.keys(g.assembly).length + ' members) and votes to confirm or reject Commissioners.' + (inAssembly ? ' You are a member.' : '') + '</p>' +
+      '<h3>⚖️ Judiciary: Election Tribunal</h3><p class="note">' + (r.simpleMajority ? 'No ticket reached 25% of the vote in two-thirds of the districts. The tribunal returned the ticket with the most valid votes.' : 'The tribunal certified the result: the winning ticket had the most valid votes and the required spread (25% in at least ' + r.need + ' of ' + Object.keys(r.units).length + ' districts).') + '</p></div>';
+    return html;
+  }
+  function govParties(can) {
+    var wk = townWeek(), ph = govPhase(), st = govState(wk), mem = st.n.members, myParty = mem[online.me], pts = L.statusPoints(S);
+    var counts = {}; Object.keys(mem).forEach(function (k) { counts[mem[k]] = (counts[mem[k]] || 0) + 1; });
+    var html = '<div class="section"><h3>🎌 Political parties</h3><p class="note">Join one party a week. Members choose its candidate for governor in the primaries (Monday and Tuesday).</p><div class="list">' +
+      Object.keys(G.PARTIES).map(function (p) {
+        var P = G.PARTIES[p], on = myParty === p;
+        return '<div class="item"><div><h3>' + partyChip(p) + ' ' + esc(P.name) + '</h3><div class="meta"><span>' + (counts[p] || 0) + ' member' + (counts[p] === 1 ? '' : 's') + '</span></div></div>' +
+          (on ? '<span class="gain">✓ Member</span>' : '<button class="btn sm' + (myParty ? ' ghost' : ' go') + '" id="party-' + p + '" data-govjoin="' + p + '"' + (can ? '' : ' disabled') + '>' + (myParty ? 'Switch' : 'Join') + '</button>') + '</div>';
+      }).join('') + '</div></div>';
+    if (!myParty) return html;
+    // Primaries in my party.
+    var cands = st.n.candidates.filter(function (c) { return c.party === myParty; }).sort(function (a, b) { return b.primary - a.primary || a.at - b.at; });
+    var myVote = (online.govprimary || []).filter(function (r) { return r.id === online.me; })[0], mv = myVote && G.weekVal(myVote.raw, wk);
+    html += '<div class="section"><h3>' + partyChip(myParty) + ' Primary for governor</h3>' +
+      (cands.length ? '<div class="th-opts">' + cands.map(function (c) {
+        var on = mv && mv.cand === c.id;
+        return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="pri-' + esc(c.id) + '" data-govprimary="' + esc(c.id) + '"' + (can && ph === 'primaries' ? '' : ' disabled') + '><span class="th-t">' + (on ? '✓ ' : '') + esc(nameOf(c.id)) + (c.id === online.me ? ' (you)' : '') + '<small> · ' + esc(G.MOTTOS[c.motto]) + '</small></span><b class="num">' + c.primary + '</b></button>';
+      }).join('') + '</div>' : '<p class="note">No one has declared yet.</p>') + (ph !== 'primaries' ? '<p class="note">Primary voting is closed until Monday. ' + (cands[0] ? esc(nameOf(cands[0].id)) + ' is the nominee.' : '') + '</p>' : '') + '</div>';
+    // Declare / edit my candidacy.
+    var mine = st.n.candidates.filter(function (c) { return c.id === online.me; })[0];
+    var sel = ui.govMotto != null ? ui.govMotto : mine ? mine.motto : 0, planks = ui.govPlanks || (mine ? mine.planks.slice() : []);
+    if (mine || ph === 'primaries') {
+      html += '<div class="section"><h3>' + (mine ? '✏️ Your campaign' : '🙋🏾 Declare for governor') + '</h3>' +
+        '<div class="label">Slogan</div><div class="pg-chips" style="padding:0">' + G.MOTTOS.map(function (m, i) { return '<button type="button" class="pg-chip' + (i === sel ? ' sel' : '') + '" id="govm-' + i + '" data-govmotto="' + i + '">' + esc(m) + '</button>'; }).join('') + '</div>' +
+        '<div class="label">Your three priorities</div><div class="pg-chips" style="padding:0">' + Object.keys(G.PLANKS).map(function (k) { return '<button type="button" class="pg-chip' + (planks.indexOf(k) >= 0 ? ' sel' : '') + '" id="plank-' + k + '" data-govplank="' + k + '">' + G.PLANKS[k].icon + ' ' + esc(G.PLANKS[k].name) + '</button>'; }).join('') + '</div>' +
+        '<div class="inline"><button class="btn go" id="gov-run" data-govrun="1"' + (can && pts >= G.MIN_STATUS ? '' : ' disabled') + '>' + (mine ? 'Save campaign' : '🗳️ Declare') + '</button></div>' +
+        (pts < G.MIN_STATUS ? '<p class="why">You need ' + G.MIN_STATUS + ' status points to run (you have ' + pts + '). Property, cars and titles add status.</p>' : '') + '</div>';
+    }
+    // Running mate.
+    var ticket = st.n.tickets.filter(function (t) { return t.id === online.me; })[0];
+    if (ticket) {
+      var mates = Object.keys(mem).filter(function (id) { return mem[id] === myParty && id !== online.me; });
+      html += '<div class="section"><h3>🤝 Your running mate</h3><p class="note">You are your party\'s nominee. Choose a Deputy Governor from your party. They must accept before the ticket can go on the ballot.</p>' +
+        (mates.length ? '<select id="gov-deputy" data-govdeputy="1"><option value="">Choose a party member…</option>' + mates.map(function (id) { return '<option value="' + esc(id) + '"' + (ticket.deputyAsk === id ? ' selected' : '') + '>' + esc(nameOf(id)) + '</option>'; }).join('') + '</select>' : '<p class="note">No other members in your party yet. Invite friends to join ' + esc(G.PARTIES[myParty].short) + '.</p>') +
+        '<p class="note">' + (ticket.deputy ? '✅ ' + esc(nameOf(ticket.deputy)) + ' accepted. Your ticket is on the ballot.' : ticket.deputyAsk ? '⏳ Waiting for ' + esc(nameOf(ticket.deputyAsk)) + ' to accept.' : 'No deputy yet: the ticket cannot go on the ballot.') + '</p></div>';
+    }
+    // Asked to be someone's deputy?
+    var asks = st.n.tickets.filter(function (t) { return t.deputyAsk === online.me && t.party === myParty; });
+    if (asks.length) {
+      var mp = (online.govparty || []).filter(function (r) { return r.id === online.me; })[0], mpv = mp && G.weekVal(mp.raw, wk);
+      html += '<div class="section"><h3>🎖️ Deputy Governor offer</h3><div class="list">' + asks.map(function (t) {
+        var on = mpv && mpv.mate === t.id;
+        return '<div class="item"><div><h3>' + esc(nameOf(t.id)) + ' wants you as Deputy Governor</h3><div class="meta"><span>“' + esc(G.MOTTOS[t.motto]) + '”</span></div></div>' + (on ? '<span class="gain">✓ Accepted</span>' : '<button class="btn sm go" id="mate-' + esc(t.id) + '" data-govmate="' + esc(t.id) + '"' + (can ? '' : ' disabled') + '>Accept</button>') + '</div>';
+      }).join('') + '</div></div>';
+    }
+    return html;
+  }
+  function ticketCard(t, extra) {
+    return '<div class="item"><div><h3>' + partyChip(t.party) + ' ' + esc(nameOf(t.id)) + (t.deputy ? ' & ' + esc(nameOf(t.deputy)) : ' <span class="muted">(no deputy yet)</span>') + '</h3>' +
+      '<div class="meta"><span>“' + esc(G.MOTTOS[t.motto]) + '”</span>' + t.planks.map(function (p) { return '<span>' + G.PLANKS[p].icon + ' ' + esc(G.PLANKS[p].name) + '</span>'; }).join('') + '</div></div>' + (extra || '') + '</div>';
+  }
+  function govCampaign(can) {
+    var wk = townWeek(), ph = govPhase(), st = govState(wk), today = new Date().toISOString().slice(0, 10);
+    var html = '<div class="section"><h3>📣 On the campaign trail</h3><p class="note">Nominees take their ticket across the state: town halls, rallies, road shows, media, debates, policy presentations and community visits. Each activity counts once a day and adds buzz. Buzz is bragging rights: only votes decide the winner.</p><div class="list">' +
+      (st.n.tickets.length ? st.n.tickets.slice().sort(function (a, b) { return b.buzz - a.buzz; }).map(function (t) {
+        return ticketCard(t, '<b class="num">🔥 ' + t.buzz + '</b>') + '<div class="camp-row">' + Object.keys(G.CAMPAIGN).map(function (k) { return t.camp[k] ? '<span class="camp-tag">' + G.CAMPAIGN[k].icon + ' ×' + t.camp[k] + '</span>' : ''; }).join('') + '</div>';
+      }).join('') : '<p class="note">No nominees yet. Primaries run Monday and Tuesday.</p>') + '</div></div>';
+    var mine = st.n.tickets.filter(function (t) { return t.id === online.me; })[0];
+    if (mine) {
+      var raw = ((online.govrun || []).filter(function (r) { return r.id === online.me; })[0] || {}).raw || {}, days = raw.campDay || {};
+      html += '<div class="section"><h3>🎤 Campaign as ' + esc(nameOf(online.me)) + '</h3><div class="act-grid">' + Object.keys(G.CAMPAIGN).map(function (k) {
+        var done = days[k] === today, C = G.CAMPAIGN[k];
+        return '<button type="button" class="btn' + (done ? ' ghost' : ' go') + '" id="camp-' + k + '" data-govcamp="' + k + '"' + (can && ph === 'campaign' && !done ? '' : ' disabled') + '>' + C.icon + ' ' + esc(C.name) + (done ? ' ✓' : '') + '</button>';
+      }).join('') + '</div>' + (ph !== 'campaign' ? '<p class="note">The campaign runs Wednesday to Friday.</p>' : '') + '</div>';
+    }
+    return html;
+  }
+  function govVote(can) {
+    var wk = townWeek(), ph = govPhase(), st = govState(wk), u = myUnit();
+    var mv = (online.govvote || []).filter(function (r) { return r.id === online.me; })[0], v = mv && G.weekVal(mv.raw, wk);
+    var ballot = st.n.tickets.filter(function (t) { return t.deputy; });
+    var html = '<div class="section"><h3>📘 Voter education</h3><ul class="gov-list">' +
+      '<li><b>When:</b> Saturday and Sunday (UTC). Voting closes at the end of Sunday.</li>' +
+      '<li><b>Where:</b> your polling unit is the district your Lasgidi home is in: <b>' + esc(unitName(u)) + '</b>.</li>' +
+      '<li><b>How:</b> one secret vote per player for a Governor–Deputy ticket. You can change it until voting closes. The game only ever shows totals, never who voted for whom.</li>' +
+      '<li><b>Winning:</b> votes are collated from each district to the state. The winner needs the most valid votes and at least 25% in two-thirds of the districts that voted.</li></ul></div>';
+    html += '<div class="section"><h3>🗳️ Ballot · ' + esc(wk) + '</h3>' + (ballot.length ? '<div class="th-opts">' + ballot.map(function (t) {
+      var on = v && v.cand === t.id;
+      return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="ballot-' + esc(t.id) + '" data-govvote="' + esc(t.id) + '"' + (can && ph === 'election' ? '' : ' disabled') + '><span class="th-t">' + (on ? '✓ ' : '') + partyChip(t.party) + ' ' + esc(nameOf(t.id)) + ' & ' + esc(nameOf(t.deputy)) + '<small> · ' + esc(G.MOTTOS[t.motto]) + '</small></span></button>';
+    }).join('') + '</div>' : '<p class="note">No complete tickets yet. A ticket needs a nominee and a deputy who accepted.</p>') +
+      (ph !== 'election' ? '<p class="note">Polls open on Saturday.</p>' : v ? '<p class="note">Your vote is in at ' + esc(unitName(v.unit)) + '.</p>' : '') + '</div>';
+    return html;
+  }
+  function resultTable(e) {
+    if (!e.rows.length) return '<p class="note">No tickets were on the ballot.</p>';
+    var units = Object.keys(e.units);
+    return '<div class="list">' + e.rows.map(function (r, i) {
+      var pct = e.total ? Math.round(r.votes / e.total * 100) : 0;
+      return ticketCard(r.ticket, '<b class="num">' + r.votes + ' · ' + pct + '%</b>') + '<p class="note">' + (i === 0 && e.winner === r ? '🏆 Declared winner. ' : '') + 'At least 25% in ' + r.spread + ' of ' + units.length + ' districts' + (r.meetsSpread ? ' ✓' : ' (needs ' + e.need + ')') + '.</p>';
+    }).join('') + '</div><div class="label">Collation by district</div><div class="list">' + units.map(function (u) {
+      return '<div class="item"><div><h3>' + esc(unitName(u)) + '</h3><div class="meta">' + e.rows.map(function (r) { return '<span>' + esc(G.PARTIES[r.ticket.party].short) + ' ' + (r.units[u] || 0) + '</span>'; }).join('') + '</div></div><b class="num">' + e.units[u] + '</b></div>';
+    }).join('') + '</div>';
+  }
+  function govResults() {
+    var now = govState(townWeek()).e, last = govState(lastWeek()).e;
+    return '<div class="section"><h3>📊 This weekend · ' + esc(townWeek()) + (govPhase() === 'election' ? ' (counting live)' : '') + '</h3>' + (govPhase() === 'election' ? resultTable(now) : '<p class="note">Results appear when the polls open on Saturday.</p>') + '</div>' +
+      '<div class="section"><h3>🏁 Final result · ' + esc(lastWeek()) + '</h3>' + resultTable(last) + '</div>';
+  }
+  // Write one of my government docs: keep this week's fields, carry last week's entry in prev.
+  function govWrite(col, patch, msg) {
+    if (!online.db || !online.me) return;
+    var wk = townWeek(), old = (online[col] || []).filter(function (r) { return r.id === online.me; })[0], o = old && old.raw;
+    var doc;
+    if (o && o.week === wk) { doc = JSON.parse(JSON.stringify(o)); Object.keys(patch).forEach(function (k) { doc[k] = patch[k]; }); }
+    else { doc = JSON.parse(JSON.stringify(patch)); doc.week = wk; if (o && o.week) { var pv = JSON.parse(JSON.stringify(o)); delete pv.prev; doc.prev = pv; } }
+    online.db.doc(col + '/' + online.me).set(doc).then(function () { online.govStatus = msg; render(); }, function () { online.govStatus = 'That could not be saved.'; render(); });
+  }
+
   function townView() {
     var T = townTally();
     var html = '<div class="section" style="padding-top:0"><h3>🗳️ Town Hall · ' + esc(T.wk) + '</h3><p class="note">One question a week for every Lasgidi player. Your vote is shared, and you can change it until the week ends. Nothing here touches your money.</p>' +
@@ -2291,7 +2442,7 @@
         var pct = T.total ? Math.round(T.counts[i] / T.total * 100) : 0, on = T.mine === i;
         return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="vote-' + i + '" data-vote="' + i + '"' + (online.db && online.me ? '' : ' disabled') + '><span class="th-bar" style="width:' + pct + '%"></span><span class="th-t">' + (on ? '✓ ' : '') + esc(a) + '</span><b class="num">' + pct + '%</b></button>';
       }).join('') + '</div><p class="note">' + T.total + ' vote' + (T.total === 1 ? '' : 's') + ' so far.' + (online.db ? '' : ' Voting works when the game is opened on claude.ai.') + (online.voteStatus ? ' ' + esc(online.voteStatus) : '') + '</p></div>';
-    return html + govView();
+    return html + '<div class="section"><button class="btn go" id="town-govt" data-app="govt">🏛️ Open the State Government</button></div>';
   }
 
   function gamesView() {
@@ -2339,6 +2490,7 @@
       if (app === 'messages') { body = gistView(); markRead(); }
       else if (app === 'jobs') body = workView();
       else if (app === 'town') body = '<div class="panel-b">' + townView() + '</div>';
+      else if (app === 'govt') body = '<div class="panel-b">' + govtView() + '</div>';
       else if (app === 'nysc') body = '<div class="panel-b">' + nyscView() + '</div>';
       else if (app === 'sports') body = '<div class="panel-b">' + sportsView() + '</div>';
       else if (app === 'sights') body = '<div class="panel-b">' + sightsView() + '</div>';
@@ -2477,7 +2629,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2767,16 +2919,28 @@
       postFame(L.fameEntry(S)).then(function (msg) { online.status = msg || ''; render(); });
       return;
     }
+    if (ds.govtab) { ui.govTab = ds.govtab; online.govStatus = ''; render(); return; }
     if (ds.govmotto != null) { ui.govMotto = +ds.govmotto; render(); return; }
-    if (ds.govvote || ds.govrun != null) {
-      if (!online.db || !online.me) return;
-      var gwk = townWeek(), gcol = ds.govvote ? 'govvote' : 'govrun', old = (online[gcol] || []).filter(function (r) { return r.id === online.me; })[0];
-      var prev = old && old.raw ? (old.raw.week === gwk ? old.raw.prev || null : { week: old.raw.week, cand: old.raw.cand, motto: old.raw.motto, at: old.raw.at }) : null;
-      var doc = ds.govvote ? { week: gwk, cand: ds.govvote, at: Date.now() } : { week: gwk, motto: +ds.govrun, at: old && old.raw && old.raw.week === gwk ? old.raw.at : Date.now() };
-      if (prev) { Object.keys(prev).forEach(function (k) { if (prev[k] === undefined) delete prev[k]; }); doc.prev = prev; }
-      online.db.doc(gcol + '/' + online.me).set(doc).then(function () { online.govStatus = ds.govvote ? 'Vote cast.' : 'You are on the ballot!'; render(); }, function () { online.govStatus = 'That could not be saved.'; render(); });
-      return;
+    if (ds.govplank) { var pl0 = (ui.govPlanks || (govState(townWeek()).n.candidates.filter(function (c) { return c.id === online.me; })[0] || { planks: [] }).planks).slice(), pi0 = pl0.indexOf(ds.govplank); if (pi0 >= 0) pl0.splice(pi0, 1); else if (pl0.length < 3) pl0.push(ds.govplank); ui.govPlanks = pl0; render(); return; }
+    if (ds.govjoin) { govWrite('govparty', { party: ds.govjoin, mate: null, at: Date.now() }, 'You joined ' + G.PARTIES[ds.govjoin].name + '.'); return; }
+    if (ds.govmate) { govWrite('govparty', { mate: ds.govmate }, 'You are on the ticket as Deputy Governor.'); return; }
+    if (ds.govrun) {
+      var st0 = govState(townWeek()), me0 = st0.n.candidates.filter(function (c) { return c.id === online.me; })[0], mp0 = st0.n.members[online.me];
+      if (!mp0) { online.govStatus = 'Join a party first.'; render(); return; }
+      var cur = me0 || {};
+      govWrite('govrun', { party: mp0, motto: ui.govMotto != null ? ui.govMotto : cur.motto || 0, planks: ui.govPlanks || cur.planks || [], deputy: cur.deputyAsk || null, camp: cur.camp || {}, at: me0 ? me0.at : Date.now() }, me0 ? 'Campaign saved.' : 'You declared for governor!');
+      ui.govMotto = null; ui.govPlanks = null; return;
     }
+    if (ds.govprimary) { govWrite('govprimary', { cand: ds.govprimary, at: Date.now() }, 'Primary vote cast.'); return; }
+    if (ds.govcamp) {
+      var raw0 = ((online.govrun || []).filter(function (r) { return r.id === online.me; })[0] || {}).raw || {}, day0 = new Date().toISOString().slice(0, 10);
+      var camp0 = JSON.parse(JSON.stringify(raw0.camp || {})), cd0 = JSON.parse(JSON.stringify(raw0.campDay || {}));
+      if (cd0[ds.govcamp] === day0) return;
+      camp0[ds.govcamp] = (camp0[ds.govcamp] || 0) + 1; cd0[ds.govcamp] = day0;
+      govWrite('govrun', { camp: camp0, campDay: cd0 }, G.CAMPAIGN[ds.govcamp].name + ' done. The crowd loved it!'); return;
+    }
+    if (ds.govvote) { govWrite('govvote', { cand: ds.govvote, unit: myUnit(), at: Date.now() }, 'Your vote is in.'); return; }
+    if (ds.govconfirm) { var cf = ds.govconfirm.split(':'), oldc = (online.govconfirm || []).filter(function (r) { return r.id === online.me; })[0], ov = oldc && G.weekVal(oldc.raw, townWeek()); var votes0 = JSON.parse(JSON.stringify((ov && ov.week === townWeek() && ov.votes) || {})); votes0[cf[0]] = +cf[1]; govWrite('govconfirm', { votes: votes0 }, 'Assembly vote recorded.'); return; }
     if (ds.vote != null && t.hasAttribute('data-vote')) {
       if (!online.db || !online.me) return;
       var ch = +ds.vote;
@@ -2823,6 +2987,13 @@
   });
 
   document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'gov-deputy') { govWrite('govrun', { deputy: e.target.value || null }, e.target.value ? 'Offer sent to ' + nameOf(e.target.value) + '.' : 'Running mate cleared.'); return; }
+    if (e.target && e.target.dataset && e.target.dataset.govappoint) {
+      var gw = townWeek(), oc = (online.govcab || []).filter(function (r) { return r.id === online.me; })[0], ov = oc && G.weekVal(oc.raw, gw);
+      var posts = JSON.parse(JSON.stringify((ov && ov.week === gw && ov.posts) || {}));
+      if (e.target.value) posts[e.target.dataset.govappoint] = e.target.value; else delete posts[e.target.dataset.govappoint];
+      govWrite('govcab', { posts: posts }, 'Appointment announced.'); return;
+    }
     if (e.target && e.target.id === 'ad-file') {
       var f = e.target.files && e.target.files[0];
       preparePicture(f).then(function (d) { ui.picDraft = d; online.picStatus = ''; render(); }, function (err) { ui.picDraft = null; online.picStatus = err.message; render(); });
