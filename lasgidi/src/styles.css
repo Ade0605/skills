@@ -803,3 +803,19 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .ride-view.still *, .ride-view.still { animation: none !important; }
 .ride-view.still .rv-sign { left: 16px; opacity: 1; position: relative; display: inline-grid; margin: 4px; bottom: auto; }
 .ride-view.still .rv-bar i { width: 100%; }
+
+/* Members-only clubs */
+.club { display: grid; gap: 10px; margin-top: 10px; }
+.club-card { border-radius: 18px; padding: 14px 16px; color: #f5e7c0; background: linear-gradient(135deg, #1b1b1f, #3a2f1c 60%, #8a6a2a); display: grid; gap: 2px; box-shadow: inset 0 0 0 1px rgba(245, 206, 120, .35); }
+.club-card.on { background: linear-gradient(135deg, #0f2a22, #1f4d3c 60%, #c9a24a); }
+.cc-top { display: flex; justify-content: space-between; font: 800 10px var(--font-body); letter-spacing: .2em; opacity: .85; }
+.club-card b { font-size: 20px; letter-spacing: .02em; }
+.club-card small { opacity: .8; }
+.cc-mem { margin-top: 8px; font: 700 12px var(--font-body); letter-spacing: .06em; }
+.club-ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.club-way { display: grid; gap: 4px; align-content: start; padding: 10px; border-radius: 14px; background: var(--sunk); font-size: 12px; }
+.club-way b { font-size: 14px; }
+.club-way .btn { margin-top: 4px; }
+.club-way { min-width: 0; }
+.club-way .btn { white-space: normal; height: auto; min-height: 36px; line-height: 1.2; padding: 6px 10px; }
+@media (max-width: 420px) { .club-ways { grid-template-columns: 1fr; } }

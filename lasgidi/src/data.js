@@ -264,6 +264,35 @@
     business: { name: 'Business', icon: '🥂', mult: 4, perk: 'The lounge, a flat seat and a proper meal', fx: { energy: -2, stress: -6, hunger: 30, fun: 4 } },
     first: { name: 'First Class', icon: '👑', mult: 9, perk: 'A private suite, champagne and a chauffeur at the other end', fx: { energy: 6, stress: -12, hunger: 35, fun: 8 } }
   };
+  // Members-only waterfront clubs. Get in by net worth or by a member vouching for you, then pay by the week.
+  var CLUBS = {
+    tidewater: { name: 'Tidewater House', icon: '🍕', district: 'ikoyi', place: 'club_tidewater', where: 'Ademola Street, Ikoyi', join: 1500000, weekly: 250000, minWorth: 150000000, referStatus: 40, referCharisma: 3,
+      text: 'Members only, on the water off Ademola Street. House music, wood-fired pizza, boats tying up at the jetty, and the pregame before the clubs.',
+      acts: [
+        { id: 'pregame', label: 'Pregame: house music and wood-fired pizza', mins: 120, cost: 35000, fx: { fun: 35, social: 25, hunger: 40, stress: -10 }, when: { from: 17, to: 23 } },
+        { id: 'jetty', label: 'Sundowners as the boats tie up at the jetty', mins: 90, cost: 25000, fx: { fun: 25, social: 18, stress: -14 }, when: { from: 16, to: 20 } },
+        { id: 'sunday', label: 'Sunday day party on the deck', mins: 240, cost: 60000, fx: { fun: 50, social: 35, energy: -18 }, when: { days: [6], from: 13, to: 21 } }
+      ] },
+    jetski: { name: 'Five Cowries Jet Ski Club', icon: '🌊', district: 'ikoyi', place: 'club_jetski', where: 'Ikoyi lagoon front', join: 800000, weekly: 150000, minWorth: 80000000, referStatus: 30, referCharisma: 3,
+      text: 'A members\' pontoon on the lagoon. Club skis, a safety boat and a bar for after.',
+      acts: [
+        { id: 'ride', label: 'Take a club jet ski out on the lagoon', mins: 60, cost: 40000, fx: { fun: 40, stress: -12, energy: -10 }, xp: { fitness: 1 }, when: { from: 8, to: 18 } },
+        { id: 'race', label: 'Saturday jet ski race night', mins: 150, cost: 70000, fx: { fun: 55, social: 25, energy: -18 }, when: { days: [5], from: 16, to: 21 } }
+      ] },
+    yacht: { name: 'Atlantic Marina Yacht Club', icon: '🛥️', district: 'vi', place: 'club_yacht', where: 'Eko Atlantic marina', join: 5000000, weekly: 600000, minWorth: 500000000, referStatus: 70, referCharisma: 4,
+      text: 'Berths, a clubhouse and a sea wall view. Charter a member\'s yacht or crew in the regatta.',
+      acts: [
+        { id: 'cruise', label: 'Sunset cruise along the sea wall', mins: 180, cost: 150000, fx: { fun: 45, social: 25, stress: -20 }, when: { from: 16, to: 20 } },
+        { id: 'day', label: 'Yacht day out to the Lekki coast', mins: 360, cost: 400000, fx: { fun: 70, social: 35, stress: -30, energy: -15 }, when: { from: 9, to: 12 } },
+        { id: 'regatta', label: 'Crew in the weekend regatta', mins: 240, cost: 120000, fx: { fun: 55, social: 30, energy: -20 }, xp: { fitness: 1 }, when: { days: [5, 6], from: 9, to: 14 } }
+      ] },
+    powerboat: { name: 'Harbour Powerboat Club', icon: '🚤', district: 'vi', place: 'club_powerboat', where: 'Eko Atlantic harbour', join: 3000000, weekly: 400000, minWorth: 300000000, referStatus: 55, referCharisma: 4,
+      text: 'Race-tuned powerboats, a pit lane on the water and a timing board in the bar.',
+      acts: [
+        { id: 'laps', label: 'Timed laps in a club powerboat', mins: 90, cost: 120000, fx: { fun: 50, stress: -10, energy: -12 }, when: { from: 9, to: 17 } },
+        { id: 'raceday', label: 'Race day: watch from the pit pontoon', mins: 240, cost: 80000, fx: { fun: 45, social: 30, energy: -10 }, when: { days: [5, 6], from: 11, to: 18 } }
+      ] }
+  };
   var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC' };
   var AIR = { rushFrom: 6, rushTo: 9, rush: 1.5, insure: 0.06, lostBag: 25000, lostOdds: 0.08, jetFuel: 5000000, charter: 12000000, chopperCity: 1500000, chopperIntercity: 4000000 };
   // Flight and bus times (minutes) and base fares between cities.
@@ -800,6 +829,10 @@
     { id: 'ph_mile1', icon: '🧺', name: 'Mile 1 market', type: 'food', glyph: 'basket', district: 'ph_dline', x: 9.6, y: 14.0, acts: ['ph_mile1_food', 'ph_mile1_gig'], text: 'The busiest market in Port Harcourt.' },
     { id: 'ph_bole', icon: '🐟', name: 'Bole and fish spot', type: 'food', glyph: 'bowl', district: 'ph_oldgra', x: 13.4, y: 15.8, acts: ['ph_bole', 'ph_bolegame'], text: 'Roasted plantain and fish with pepper sauce. A PH classic. Mama lets you work the grill for a share of sales.' },
     { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
+    { id: 'club_tidewater', icon: '🍕', name: 'Tidewater House (members only)', type: 'nightlife', glyph: 'glass', district: 'ikoyi', x: 21.4, y: 20.6, acts: [], club: 'tidewater', nogem: true, text: 'Members only, by the water on Ademola Street.' },
+    { id: 'club_jetski', icon: '🌊', name: 'Five Cowries Jet Ski Club', type: 'outdoors', glyph: 'wave', district: 'ikoyi', x: 19.9, y: 20.7, acts: [], club: 'jetski', nogem: true, text: 'A members\' pontoon on the lagoon.' },
+    { id: 'club_yacht', icon: '🛥️', name: 'Atlantic Marina Yacht Club', type: 'outdoors', glyph: 'boat', district: 'vi', x: 14.2, y: 29.4, acts: [], club: 'yacht', nogem: true, text: 'Members only, at the Eko Atlantic marina.' },
+    { id: 'club_powerboat', icon: '🚤', name: 'Harbour Powerboat Club', type: 'outdoors', glyph: 'boat', district: 'vi', x: 18.9, y: 29.6, acts: [], club: 'powerboat', nogem: true, text: 'Members only, on the Eko Atlantic harbour.' },
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
     { id: 'abj_mosque_pl', icon: '🕌', name: 'National Mosque', type: 'culture', glyph: 'dome', district: 'abj_garki', x: 18.0, y: 13.0, acts: ['abj_mosque'], text: 'Golden dome and four minarets on the edge of the Central Area.' },
     { id: 'abj_ecumenical_pl', icon: '⛪', name: 'National Christian Centre', type: 'culture', glyph: 'hall', district: 'abj_garki', x: 13.6, y: 14.8, acts: ['abj_ecumenical'], text: 'A white spire you can see from the expressway.' },
@@ -1234,7 +1267,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, BUILD: BUILD, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, BUILD: BUILD, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

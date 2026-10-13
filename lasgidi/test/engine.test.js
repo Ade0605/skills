@@ -2032,3 +2032,24 @@ test('airport departures: cabins scale the fare, the cab leg is included, jets, 
   assert.ok(g.ok, g.msg); assert.equal(u.loc, 'abj_airport');
   assert.equal(L.replayLife(u.replay).ledgerHash, u.ledgerHash);
 });
+
+test('members-only clubs: net worth or a referral gets you in, membership is weekly, acts are members only', () => {
+  const s = L.newGame({ seed: 79, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  assert.match(L.clubQuote(s, 'tidewater', 'worth').disabled, /Net worth/);
+  assert.match(L.clubQuote(s, 'tidewater', 'referral').disabled, /vouch/);
+  assert.match(L.clubActOptions(s, 'tidewater')[0].disabled, /Members only/);
+  assert.equal(L.joinClub(s, 'tidewater', 'worth').ok, false);
+  // Rich enough now (test top-up): the joining fee is charged once, then just the week.
+  s.cash += 400000000;
+  const q = L.clubQuote(s, 'tidewater', 'worth');
+  assert.ok(!q.disabled && q.fee > 0 && q.total === q.fee + q.weekly);
+  assert.ok(L.joinClub(s, 'tidewater', 'worth').ok);
+  assert.ok(L.clubMember(s, 'tidewater') && s.ach.members_club);
+  assert.equal(L.clubQuote(s, 'tidewater', 'worth').fee, 0, 'renewal skips the joining fee');
+  s.loc = 'ikoyi'; s.t = Math.floor(s.t / 1440) * 1440 + 1440 + 18 * 60;
+  const before = s.cash + s.bank, r = L.clubAct(s, 'tidewater', 'pregame');
+  assert.ok(r.ok, r.msg); assert.ok(before - (s.cash + s.bank) >= L.price(s, 35000));
+  s.t += 8 * 1440;
+  assert.equal(L.clubMember(s, 'tidewater'), false, 'a week runs out');
+});

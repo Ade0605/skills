@@ -459,6 +459,17 @@
       g.lineWidth = Math.max(0.6, 0.8 * s); g.strokeStyle = '#f5c518'; g.stroke();
       g.fillStyle = '#ffffff'; g.font = '700 ' + Math.max(6, 7 * s) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('H', hp.x, hp.y);
       drawRefinery(g, s); drawNewAirport(g, s); drawEko(g, s); drawBeach(g, s);
+      // Members' clubs: a timber jetty into the water with boats tied up.
+      [[21.4, 20.6, -1], [19.9, 20.7, -1], [14.2, 29.4, 1], [18.9, 29.6, 1]].forEach(function (c) {
+        var y0 = c[1] + c[2] * 0.25, y1 = c[1] + c[2] * 1.0;
+        poly(g, [[c[0] - 0.06, Math.min(y0, y1)], [c[0] + 0.06, Math.min(y0, y1)], [c[0] + 0.06, Math.max(y0, y1)], [c[0] - 0.06, Math.max(y0, y1)]], theme.dark ? '#6b5640' : '#a07a4f');
+        [[0.25, 0.55], [-0.25, 0.75], [0.25, 0.95]].forEach(function (b, i) {
+          var q = toScreen(c[0] + b[0], c[1] + c[2] * b[1], 0);
+          g.beginPath(); g.ellipse(q.x, q.y, 5 * s, 2 * s, -0.45, 0, Math.PI * 2); g.fillStyle = ['#ffffff', '#f2efe6', '#2f6fa0'][i]; g.fill();
+          g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = Math.max(0.4, 0.5 * s); g.stroke();
+          g.fillStyle = '#9fc4dc'; g.fillRect(q.x - 1.5 * s, q.y - 2.5 * s, 3 * s, 1.6 * s);
+        });
+      });
       }
       if (CITY === 'abuja') drawAbuja(g, s);
       if (CITY === 'ph') drawPH(g, s);

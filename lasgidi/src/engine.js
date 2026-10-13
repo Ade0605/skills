@@ -67,6 +67,7 @@
     first_class: 'First class: flew in a private suite',
     private_jet: 'Wheels up: flew private',
     chopper:     'Straight to the door: took a VIP chopper',
+    members_club: 'Members only: joined a waterfront club',
     gifted:      'Received a gift from another Lagosian',
     gems:        'Found all five of a day\'s gems',
     debt_free:   'Debt free: cleared every loan',
@@ -1113,6 +1114,60 @@
     unlock(s, 'traveller');
     log(s, 'You arrived in ' + D.CITIES[city].name + ' (' + D.DISTRICTS[o.to].name + ').', 'good');
     return finish(s, ok('Welcome to ' + D.CITIES[city].name + '. ' + (msg || '')));
+  }
+
+  /* ---------- members-only waterfront clubs (new recorded calls jc and ca) ---------- */
+  function clubMember(s, id) { var m = s.clubs && s.clubs[id]; return !!(m && m.until > s.t); }
+  function clubQuote(s, id, via) {
+    var C = D.CLUBS[id]; if (!C) return { disabled: 'No such club' };
+    var m = s.clubs && s.clubs[id], first = !(m && m.joined);
+    var q = { club: id, via: via, fee: first ? price(s, C.join) : 0, weekly: price(s, C.weekly) };
+    q.total = q.fee + q.weekly;
+    var worthOk = netWorth(s) >= price(s, C.minWorth), referOk = statusPoints(s) >= C.referStatus || skillLevel(s, 'charisma') >= C.referCharisma;
+    q.worthOk = worthOk; q.referOk = referOk;
+    if (first && via === 'worth' && !worthOk) q.disabled = 'Net worth of ' + naira(price(s, C.minWorth)) + ' needed';
+    else if (first && via === 'referral' && !referOk) q.disabled = 'No member will vouch for you yet: status ' + C.referStatus + '+ or Charisma level ' + C.referCharisma + '+';
+    else if (first && via !== 'worth' && via !== 'referral') q.disabled = 'Pick how you get in';
+    else if (s.pending.length) q.disabled = 'Decide on the open event first';
+    else if (s.over) q.disabled = 'This Weekly Lagos is over';
+    else if (!canAfford(s, q.total)) q.disabled = 'You need ' + naira(q.total);
+    return q;
+  }
+  function joinClub(s, id, via) {
+    var q = clubQuote(s, id, via);
+    if (q.disabled) return fail(q.disabled);
+    s.alerts = [];
+    var C = D.CLUBS[id];
+    if (!pay(s, q.total, (q.fee ? 'Joining fee and first week, ' : 'Weekly membership, ') + C.name)) return fail('Not enough money.');
+    s.clubs = s.clubs || {};
+    var m = s.clubs[id] || {};
+    s.clubs[id] = { joined: true, via: m.via || via, until: Math.max(m.until || 0, s.t) + 7 * 1440 };
+    unlock(s, 'members_club');
+    log(s, (q.fee ? 'You are in: ' : 'Membership renewed: ') + C.name + '.', 'good');
+    return finish(s, ok((q.fee ? 'Welcome to ' : 'Another week at ') + C.name + '.'));
+  }
+  function clubActOptions(s, id) {
+    var C = D.CLUBS[id]; if (!C) return [];
+    return C.acts.map(function (a) {
+      var o = { id: a.id, label: a.label, mins: a.mins, cost: price(s, a.cost || 0), when: a.when };
+      if (!clubMember(s, id)) o.disabled = 'Members only';
+      else if (s.loc !== C.district) o.disabled = 'Go to ' + D.DISTRICTS[C.district].name + ' first';
+      else if (!inWindow(s, a.when)) o.disabled = 'Only ' + windowLabel(a.when);
+      else if (s.pending.length) o.disabled = 'Decide on the open event first';
+      else if (!canAfford(s, o.cost)) o.disabled = 'You need ' + naira(o.cost);
+      return o;
+    });
+  }
+  function clubAct(s, id, actId) {
+    var C = D.CLUBS[id], o = clubActOptions(s, id).filter(function (x) { return x.id === actId; })[0];
+    if (!o) return fail('Not on the club list.');
+    if (o.disabled) return fail(o.disabled);
+    s.alerts = [];
+    var a = C.acts.filter(function (x) { return x.id === actId; })[0];
+    if (o.cost && !pay(s, o.cost, C.name + ': ' + a.label)) return fail('Not enough money.');
+    advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp);
+    log(s, a.label + ' at ' + C.name + '.', 'good');
+    return finish(s, ok(a.label + '.'));
   }
 
   /* ---------- airport departures (new recorded calls; old lives never make them) ---------- */
@@ -4188,7 +4243,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
