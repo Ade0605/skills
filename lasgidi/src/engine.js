@@ -87,7 +87,9 @@
     scholar:     'Straight A: a child brought home an A',
     dynasty:     'Dynasty: the third generation of your family in Lagos',
     builder:     'Builder: built your own house, block by block',
-    detty_legend: 'Detty legend: six December events in one season'
+    detty_legend: 'Detty legend: six December events in one season',
+    streamer:    'Streamer: 1,000 people watched you live',
+    allrounder:  'All-rounder: played 8 different sports in Lagos'
   };
 
   /* ---------- small helpers ---------- */
@@ -205,6 +207,8 @@
     if (/^(Building: |Omo-onile)/.test(m)) return 'housing';
     if (/^IJGB gift/.test(m)) return 'family';
     if (/^Ground money/.test(m)) return 'losses';
+    if (/^(Live stream gifts|Event appearance fee|Prize: )/.test(m)) return 'gigs';
+    if (/^Data for a live/.test(m)) return 'lifestyle';
     if (/IJGB/.test(m)) return 'lifestyle';
     if (/Allowance|Aunty/.test(m)) return 'family';
     if (/Hospital|Check-up|HMO/.test(m)) return 'health';
@@ -751,6 +755,7 @@
     switch (a.special) {
       case 'cook': if (s.pantry <= 0) return 'No foodstuff at home'; break;
       case 'flex': if (!luxuryCar(s)) return 'Bring a luxury car (₦40m or more) to flex here'; break;
+      case 'appearance': if (!s.creator || s.creator.followers < 20000) return 'Promoters book creators with 20,000+ followers'; if (s.creator.appearWeek === week(s)) return 'One appearance a week'; break;
       case 'enrol': if (s.edu.enrolled || s.edu.degree) return 'Already enrolled'; break;
       case 'lecture': if (!s.edu.enrolled) return 'Enrol at UNILAG first'; break;
       case 'ielts_exam': if (s.edu.ieltsPassed) return 'Already passed'; break;
@@ -795,6 +800,7 @@
       applyFx(s, a.fx);
     }
     if (a.event) s.stats.events = (s.stats.events || 0) + 1;
+    if (a.sport) { var sp = s.stats.sports = s.stats.sports || {}; sp[a.sport] = (sp[a.sport] || 0) + 1; if (Object.keys(sp).length >= 8) unlock(s, 'allrounder'); }
     if (a.dec && s.rules >= 14 && isDecember(s)) { s.stats.decEvents = (s.stats.decEvents || 0) + 1; if (s.stats.decEvents >= 6) unlock(s, 'detty_legend'); }
     addXp(s, a.xp);
     if (a.xp && a.xp.fitness && outfitTags(s).gym) addXp(s, { fitness: 1 }); // gym kit
@@ -864,6 +870,18 @@
       var v = luxuryCar(s), V = D.VEHICLES[v.id];
       if (s.creator) { var n = Math.round(followerGain(s) * 0.5); s.creator.followers += n; }
       return 'You parked the ' + V.name + ' right by the entrance. Phones came out.' + (s.creator ? ' Your Story got you new followers.' : '');
+    },
+    // Amateur tournaments: your skill against the field, with a capped prize (new actions only).
+    compete: function (s, a) {
+      var C = a.compete, score = skillLevel(s, C.skill) * 8 + rand(s) * 60;
+      if (score >= 50) { var prize = price(s, C.prize); earn(s, prize, 'Prize: ' + C.name); s.stats.wins = (s.stats.wins || 0) + 1; return '🏆 You won the ' + C.name + ': ' + naira(prize) + '!'; }
+      return 'You lost the ' + C.name + '. Train more and come back.';
+    },
+    appearance: function (s) {
+      var c = s.creator, fee = Math.min(price(s, 400000), roundTo(price(s, c.followers * 1.5), 1000));
+      c.appearWeek = week(s);
+      earn(s, fee, 'Event appearance fee');
+      return 'You walked in, waved, took 200 selfies and hyped the DJ. The promoter paid ' + naira(fee) + '.';
     },
     glam: function (s) {
       s.glamUntil = s.t + 24 * 60;
@@ -1705,6 +1723,7 @@
       if (b.manager) v *= 0.9; // the manager's cut
       if (s.econ.cbn === 'builder') v *= D.CBN.builder.biz;
       if (def.weekend) v *= (d >= 4 ? 2.2 : 0.3);
+      if (def.weekdays) v *= (d <= 4 ? 1.3 : 0.2); // schools: term days only
       if (def.december && isDecember(s)) v *= def.december;
       if (monthIndex(s) === 0) v *= 0.75;
       if (!b.manager && day(s) - b.visit > 7) { v *= 0.45; notes.push(businessName(b) + ' staff are stealing'); }
@@ -1959,7 +1978,7 @@
   }
   function kidsInfo(s) {
     return (s.kids || []).map(function (k, i) {
-      return { name: kidName(s, i), school: k.school, feesIn: Math.max(0, k.nextFees - day(s)), bond: k.bond || 0, hw: k.hw || 0, last: k.reports && k.reports.length ? k.reports[k.reports.length - 1].grade : null, hwWhy: homeworkBlock(s, i), outWhy: outingBlock(s, i) };
+      return { name: kidName(s, i), label: kidLabel(s, i), school: k.school, feesIn: Math.max(0, k.nextFees - day(s)), bond: k.bond || 0, hw: k.hw || 0, last: k.reports && k.reports.length ? k.reports[k.reports.length - 1].grade : null, hwWhy: homeworkBlock(s, i), outWhy: outingBlock(s, i) };
     });
   }
 
@@ -3116,6 +3135,95 @@
     if (s.rules >= 14 && isDecember(s)) g = Math.round(g * 1.5); // Detty December is all over Instagram and TikTok
     return viral ? g * 4 + 2000 : g;
   }
+  /* ---------- skits and live streaming ---------- */
+  /* ---------- Lagos labels (display only: no state, no random draw) ---------- */
+  function lagosLabels(s) {
+    var out = [], o = s.origin, hustle = skillLevel(s, 'hustle');
+    if (o === 'lapo') out.push('lapo'); else if (o === 'mid') out.push('ajepako'); else if (o === 'nepo') out.push('nepo');
+    if ((o === 'nepo' || (s.heir && (s.heir.school === 'intl' || s.heir.school === 'private'))) && hustle < 3) out.push('ajebo');
+    if (s.heir && s.heir.bond >= 60) out.push('omoile');
+    if (week(s) < 2 && (s.stats.trips || 0) < 15) out.push('jjc');
+    if (hustle >= 5 && (s.stats.trips || 0) >= 50) out.push('areaboy');
+    return out;
+  }
+  function kidLabel(s, i) {
+    var k = s.kids[i]; if (!k) return null;
+    if (k.school === 'intl') return 'butty';
+    if (k.school === 'private') return 'ajebo';
+    if ((k.bond || 0) >= 70) return 'omoile';
+    if (k.school === 'public' && (k.reports || []).some(function (r) { return r.grade === 'A'; })) return 'ajepako';
+    return null;
+  }
+  function trendingTheme(s) {
+    var keys = Object.keys(D.SKIT_THEMES).filter(function (k) { return !D.SKIT_THEMES[k].december || isDecember(s); });
+    if (isDecember(s)) return 'detty';
+    return keys[parseInt(fnv(s.seed + ':trend:' + week(s)), 16) % keys.length];
+  }
+  function skitMult(s, theme) {
+    var T = D.SKIT_THEMES[theme], m = 1;
+    if (theme === trendingTheme(s)) m *= 2;
+    if (T.at.indexOf(s.loc) >= 0 || (T.at.indexOf('home') >= 0 && homeDistrict(s) === s.loc)) m *= 1.4;
+    return m;
+  }
+  function skitBlock(s, theme) {
+    var T = D.SKIT_THEMES[theme];
+    if (!T || (T.december && !isDecember(s))) return 'Pick a skit theme';
+    var h = hour(s); if (h < 8 || h >= 23) return 'Film between 08:00 and 23:00';
+    if (s.needs.energy < 15) return 'Too tired to perform';
+    return busyBlock(s);
+  }
+  function shootSkit(s, theme) {
+    var why = skitBlock(s, theme); if (why) return fail(why + '.');
+    if (!s.creator) s.creator = { followers: 0, posts: 0, lastPost: -1 };
+    var c = s.creator, T = D.SKIT_THEMES[theme], viral = false, msg = '';
+    s.alerts = [];
+    advance(s, 90); applyFx(s, { fun: 8, energy: -8 }); addXp(s, { charisma: 2 });
+    var chance = 0.03 + skillLevel(s, 'charisma') * 0.01 + (theme === trendingTheme(s) ? 0.03 : 0);
+    if (week(s) !== s.viralWeek && rand(s) < chance) {
+      s.viralWeek = week(s); viral = true; unlock(s, 'viral');
+      var pay2 = price(s, roundTo(15000 + rand(s) * 35000, 1000)) * (1 + Math.floor(skillLevel(s, 'charisma') / 3));
+      earn(s, pay2, 'Brand deal from viral post');
+      msg = ' It went viral: a brand paid ' + naira(pay2) + '.';
+    }
+    var got = Math.round(followerGain(s, viral) * skitMult(s, theme));
+    c.followers += got; c.posts++; c.lastPost = day(s);
+    c.skits = c.skits || {}; c.skits[theme] = (c.skits[theme] || 0) + 1;
+    return finish(s, ok(T.icon + ' Skit: ' + T.name + (theme === trendingTheme(s) ? ' (trending this week)' : '') + '. +' + got.toLocaleString('en') + ' followers.' + msg));
+  }
+  function liveBlock(s) {
+    var c = s.creator;
+    if (!c || c.followers < 500) return 'Go live from 500 followers: post skits first';
+    if (c.liveDay === day(s)) return 'One live stream a day';
+    if (!canAfford(s, price(s, 1500))) return 'Data for a stream costs ' + naira(price(s, 1500));
+    if (s.needs.energy < 20) return 'Too tired to go live';
+    return busyBlock(s);
+  }
+  function liveEstimate(s) {
+    var c = s.creator || { followers: 0 }, h = hour(s), prime = h >= 20 || h < 1 ? 1.5 : 1;
+    return Math.round(c.followers * 0.02 * phoneCam(s) * (1 + skillLevel(s, 'charisma') * 0.1) * prime * (isDecember(s) ? 1.5 : 1));
+  }
+  function goLive(s) {
+    var why = liveBlock(s); if (why) return fail(why + '.');
+    var c = s.creator, viewers = liveEstimate(s);
+    s.alerts = [];
+    pay(s, price(s, 1500), 'Data for a live stream');
+    // Light and network: at home with no light and no inverter or solar, the stream drops.
+    var home = homeDistrict(s) === s.loc, backup = fxSum(s, 'power') > 0, drop = home ? (!s.power && !backup) : rand(s) < 0.1;
+    advance(s, 120); applyFx(s, { social: 20, fun: 15, energy: -15 });
+    c.liveDay = day(s);
+    var gifts = Math.min(price(s, 60000), price(s, viewers * 4 * (0.6 + rand(s) * 0.8))); // about ₦4 a viewer
+    if (drop) { gifts = roundTo(gifts * 0.25, 50); viewers = Math.round(viewers * 0.3); }
+    if (gifts) earn(s, gifts, 'Live stream gifts');
+    var gained = Math.round(viewers * 0.1); c.followers += gained;
+    c.lives = (c.lives || 0) + 1; c.peakViewers = Math.max(c.peakViewers || 0, viewers);
+    if (viewers >= 1000) unlock(s, 'streamer');
+    return finish(s, ok('🔴 Live: ' + viewers.toLocaleString('en') + ' watching' + (drop ? (home ? ', until NEPA took light and the stream dropped' : ', until the network dropped') : '') + '. Gifts ' + naira(gifts) + ', +' + gained.toLocaleString('en') + ' followers.'));
+  }
+  function creatorInfo(s) {
+    return { trend: trendingTheme(s), themes: Object.keys(D.SKIT_THEMES).filter(function (k) { return !D.SKIT_THEMES[k].december || isDecember(s); }).map(function (k) { return { id: k, mult: skitMult(s, k), why: skitBlock(s, k) }; }),
+      live: liveBlock(s), viewers: liveEstimate(s), peak: (s.creator && s.creator.peakViewers) || 0 };
+  }
+
   function brandDeal(s) {
     var c = s.creator;
     if (!c || c.followers < 2000) return 0;
@@ -3970,7 +4078,8 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
+    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
+    buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
     decRates: decRates, luxuryCar: luxuryCar, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),

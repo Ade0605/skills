@@ -608,7 +608,7 @@
     }
     if (S.kids.length) {
       html += '<h3>Children</h3><div class="list">' + L.kidsInfo(S).map(function (k, i) {
-        return '<div class="item kid"><div><h3>🧒 ' + esc(k.name) + (k.last ? ' <span class="kid-grade g' + k.last + '" title="Last report card">' + k.last + '</span>' : '') + '</h3>' +
+        return '<div class="item kid"><div><h3>🧒 ' + esc(k.name) + (k.label ? ' <span class="slang" title="' + esc(D.SLANG[k.label][1]) + '">' + esc(D.SLANG[k.label][0]) + '</span>' : '') + (k.last ? ' <span class="kid-grade g' + k.last + '" title="Last report card">' + k.last + '</span>' : '') + '</h3>' +
           '<div class="meta"><span>' + (k.school ? esc(L.SCHOOLS[k.school].name) + ', next fees in ' + k.feesIn + ' days' : 'school starts in ' + k.feesIn + ' days') + '</span>' + (k.school ? '<span>Homework this term: ' + k.hw + '</span>' : '') + '</div>' +
           '<div class="kid-bond" aria-label="Bond ' + k.bond + ' of 100"><span>Bond</span><div class="progress"><i style="width:' + k.bond + '%"></i></div></div>' +
           '<div class="inline"><button class="btn sm" id="kid-hw-' + i + '" data-kid="hw:' + i + '"' + (k.hwWhy ? ' disabled title="' + esc(k.hwWhy) + '"' : '') + '>📚 Homework</button><button class="btn sm" id="kid-out-' + i + '" data-kid="out:' + i + '"' + (k.outWhy ? ' disabled title="' + esc(k.outWhy) + '"' : '') + '>🎡 Outing · ' + N(L.price(S, 5000)) + '</button></div>' +
@@ -1853,11 +1853,14 @@
     html += '<details' + (S.businesses.length && !ui.bizOpen ? '' : ' open') + '><summary>Build a business</summary>' +
       '<div class="inline"><label class="label" for="biz-site">Site</label><select id="biz-site">' + Object.keys(D.BUSINESS_SITES).map(function (k) {
         return '<option value="' + k + '"' + (k === site ? ' selected' : '') + '>' + esc(D.DISTRICTS[k].name) + ' · ×' + D.BUSINESS_SITES[k].mult.toFixed(2) + ' · rent ' + N(L.price(S, D.BUSINESS_SITES[k].rent)) + '/wk</option>';
-      }).join('') + '</select></div><div class="list">' + Object.keys(D.BUSINESSES).map(function (k) {
+      }).join('') + '</select></div>' + ['high', 'mid', 'low'].map(function (tier) {
+        var keys = Object.keys(D.BUSINESSES).filter(function (k) { return D.BUSINESSES[k].tier === tier; });
+        return '<h4 class="dl-group">' + esc(D.BUSINESS_TIERS[tier]) + '</h4><div class="list">' + keys.map(function (k) {
         var bz = D.BUSINESSES[k], p = L.price(S, bz.price), g = D.BUSINESS_GROWTH[k];
-        return '<div class="item biz">' + pic('biz:' + k, bz.name, '<div class="dl-ic">' + g.icon + '</div>', 'dl-pic') + '<div><h3>' + esc(bz.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span class="gain num">~' + N(Math.round(bz.daily * S.econ.infl * sd.mult / 50) * 50) + '/day here</span><span>Grows into ' + esc(g.names[2]) + '</span>' + (bz.power ? '<span>Needs light</span>' : '') + (bz.weekend ? '<span>Busy Fri–Sun</span>' : '') + (bz.december ? '<span>Booms in December</span>' : '') + '</div></div>' +
+        return '<div class="item biz">' + pic('biz:' + k, bz.name, '<div class="dl-ic">' + g.icon + '</div>', 'dl-pic') + '<div><h3>' + esc(bz.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span class="gain num">~' + N(Math.round(bz.daily * S.econ.infl * sd.mult / 50) * 50) + '/day here</span><span>Grows into ' + esc(g.names[2]) + '</span>' + (bz.power ? '<span>Needs light</span>' : '') + (bz.weekend ? '<span>Busy Fri–Sun</span>' : '') + (bz.december ? '<span>Booms in December (×' + bz.december + ')</span>' : '') + (bz.weekdays ? '<span>Term days only</span>' : '') + (bz.risky ? '<span class="cost">Risky: dues and losses</span>' : '') + '</div></div>' +
           '<button class="btn sm" id="buyb-' + k + '" data-buyb="' + k + '"' + (S.cash + S.bank >= p && S.businesses.length < 12 ? '' : ' disabled') + '>Build</button></div>';
-      }).join('') + '</div></details></div>';
+      }).join('') + '</div>';
+      }).join('') + '<p class="note">The jump from small to big is capital, location (the Island pays most) and scale. Detty December lifts anything that touches hospitality, events, transport and luxury.</p></details></div>';
     return html;
   }
 
@@ -1924,7 +1927,7 @@
   }
   function meView() {
     var gp = L.goalProgress(S), g = D.GOALS[S.goal];
-    var html = '<div class="panel-h"><h2>' + esc(L.titledName(S)) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">';
+    var html = '<div class="panel-h"><h2>' + esc(L.titledName(S)) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">' + labelChips(L.lagosLabels(S));
     html += '<div class="section" style="padding-top:0"><h3>Goal: ' + esc(g.name) + (S.won ? ' · done' : '') + '</h3><p class="note">' + esc(g.text) + '</p>' +
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
@@ -1998,6 +2001,14 @@
     var html = '<div class="section" style="padding-top:0"><div class="wallet-card"><div class="wc-l">📸 ' + esc(S.name) + ' · ' + c.posts + ' posts</div><div class="wc-big num">' + c.followers.toLocaleString('en') + ' <span style="font-size:.45em">followers</span></div>' +
       '<div class="wc-s">' + (S.rules >= 9 ? (deal ? 'Brand deals: about ' + N(deal) + ' a week while you keep posting' : 'Brand deals start at 2,000 followers') : 'Weekly brand deals come with your next life') + ' · next post +' + L.followerGain(S, false).toLocaleString('en') + '</div></div>' +
       '<p class="note">' + (active || !c.followers ? 'Post at least once a week. A quiet week loses 3% of your followers.' : '⚠️ No post this week: you are losing followers.') + ' Shoot at Lekki beach, or film a skit at home. Charisma, a sharp phone and a club or owambe outfit all help. Viral posts bring thousands at once.</p>';
+    var ci = L.creatorInfo(S);
+    html += '<h3>🎬 Skits</h3><p class="note">Pick a theme. 🔥 ' + esc(D.SKIT_THEMES[ci.trend].name) + ' is trending this week (double followers), and filming in the right place helps (×1.4).</p><div class="skit-grid">' + ci.themes.map(function (t) {
+      var T = D.SKIT_THEMES[t.id];
+      return '<button type="button" class="skit-btn' + (t.id === ci.trend ? ' hot' : '') + '" id="skit-' + t.id + '" data-skit="' + t.id + '"' + (t.why ? ' disabled title="' + esc(t.why) + '"' : '') + '><span>' + T.icon + '</span><b>' + esc(T.name) + '</b><small>' + (t.id === ci.trend ? '🔥 trending · ' : '') + '×' + (Math.round(t.mult * 10) / 10) + '</small></button>';
+    }).join('') + '</div>';
+    html += '<h3>🔴 Go live</h3><p class="note">Viewers send gifts. Prime time is 20:00 to 01:00, and December crowds are bigger. At home, NEPA can drop your stream unless you have an inverter or solar. Data costs ' + N(L.price(S, 1500)) + ' a stream.' + (ci.peak ? ' Your best: ' + ci.peak.toLocaleString('en') + ' watching.' : '') + '</p>' +
+      '<div class="inline"><button class="btn' + (ci.live ? '' : ' go') + '" id="go-live" data-golive="1"' + (ci.live ? ' disabled' : '') + '>🔴 Go live · about ' + ci.viewers.toLocaleString('en') + ' viewers</button></div>' + (ci.live ? '<p class="why">' + esc(ci.live) + '.</p>' : '') +
+      '<p class="note">From 20,000 followers, promoters pay for appearances at VI club nights (Thursday and Friday).</p>';
     html += '<h3>Phones</h3><div class="list">' + Object.keys(D.PHONES).map(function (k) {
       var P = D.PHONES[k], have = S.phone === k, trade = S.phone ? Math.floor(L.price(S, D.PHONES[S.phone].price) * 0.3) : 0, cost = L.price(S, P.price) - trade;
       return '<div class="item"><div><h3>' + P.icon + ' ' + esc(P.name) + (have ? ' <span class="gain">· yours</span>' : '') + '</h3><div class="meta"><span>Camera ×' + P.cam + '</span>' + (P.status ? '<span>+' + P.status + ' status</span>' : '') + (have || (S.phone && D.PHONES[S.phone].price >= P.price) ? '' : '<span class="cost num">' + N(cost) + (trade ? ' after trade-in' : '') + '</span>') + '</div></div>' +
@@ -2072,7 +2083,7 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['nysc', '🎖️', 'NYSC'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
   var GUIDE = [
@@ -2084,6 +2095,7 @@
     ['🌊', 'Sea Plots', 'Buy a block of plots in the Atlantic and put your picture on it for every player to see, after an editor checks it.', 'sea', ''],
     ['🏠', 'Home life', 'Furnish your home, hire staff, adopt pets, take a health plan, and host parties (with a decorator) that online friends can join.', 'tab', 'home'],
     ['📸', 'Fame', 'Grow followers for brand deals, post your life to the Hall of Fame, and take chieftaincy titles.', 'app', 'creator'],
+    ['🏅', 'Sports', 'Football from the street to the NPFL, basketball, boxing, tennis, golf, polo, e-sports, ayo olopon and more. Play 8 sports to become an All-rounder, and win tournament prizes.', 'app', 'sports'],
     ['🎖️', 'NYSC', 'After your UNILAG degree, register for the service year: three camp days in Kubwa, Abuja, then 12 weeks at your posting with CDS every Thursday and a monthly allawee.', 'app', 'nysc'],
     ['✈️', 'The end', 'Pass IELTS, save ₦15m proof of funds and japa from Ikeja airport to complete a life. Or play forever.', 'app', 'travel']
   ];
@@ -2091,8 +2103,34 @@
     return '<div class="section" style="padding-top:0"><h3>❓ How to play Lasgidi</h3><div class="list">' + GUIDE.map(function (g, i) {
       var btn = g[3] === 'tab' ? '<button class="btn sm ghost" id="guide-' + i + '" data-tab="' + g[4] + '">Open</button>' : g[3] === 'app' ? '<button class="btn sm ghost" id="guide-' + i + '" data-app="' + g[4] + '">Open</button>' : '<button class="btn sm ghost" id="guide-' + i + '" data-seaopen="1" data-tab="map">Open</button>';
       return '<div class="item"><div><h3>' + g[0] + ' ' + esc(g[1]) + '</h3><div class="act-note">' + esc(g[2]) + '</div></div>' + btn + '</div>';
-    }).join('') + '</div><p class="note">Number keys switch tabs; A does the top suggestion. Your game saves in this browser. Copy the save code on the Me tab to move devices.</p></div>';
+    }).join('') + '</div><p class="note">Number keys switch tabs; A does the top suggestion. Your game saves in this browser. Copy the save code on the Me tab to move devices.</p>' + slangView() + '</div>';
   }
+  // Lagos slang labels as chips, each explained on hover/tap (title) and in the Guide.
+  function labelChips(ids) {
+    if (!ids || !ids.length) return '';
+    return '<div class="slang-chips" aria-label="What Lagos calls you">' + ids.map(function (k) { var L2 = D.SLANG[k]; return '<span class="slang" title="' + esc(L2[1]) + '">' + esc(L2[0]) + '</span>'; }).join('') + '</div>';
+  }
+  function slangView() {
+    return '<h3>🗣️ Lagos labels</h3><p class="note">What people call each other. Your own labels show on the Me tab and change as you play.</p><dl class="slang-dl">' +
+      Object.keys(D.SLANG).map(function (k) { return '<dt>' + esc(D.SLANG[k][0]) + '</dt><dd>' + esc(D.SLANG[k][1]) + '</dd>'; }).join('') + '</dl>';
+  }
+
+  /* ---------- Sports: where to play in Lagos ---------- */
+  function sportsView() {
+    var played = (S.stats && S.stats.sports) || {}, byGroup = {};
+    Object.keys(D.PLACE_ACTIONS).forEach(function (d) { D.PLACE_ACTIONS[d].forEach(function (a) { if (!a.sport) return; var g = D.SPORTS[a.sport][2]; (byGroup[g] = byGroup[g] || []).push({ a: a, d: d }); }); });
+    var html = '<div class="section"><h3>🏅 Sports in Lagos</h3><p class="note">Football runs from the street to the NPFL, and there is a game for everyone across the city. You have played ' + Object.keys(played).length + ' of ' + Object.keys(D.SPORTS).length + ' sports' + (Object.keys(played).length < 8 ? ' (8 makes you an All-rounder)' : ': All-rounder!') + '. Tournaments pay a prize if you are good enough.' + (S.stats && S.stats.wins ? ' Wins: ' + S.stats.wins + '.' : '') + '</p>';
+    ['Most popular', 'Widely played', 'Traditional and local', 'Emerging'].forEach(function (g) {
+      if (!byGroup[g]) return;
+      html += '<h4 class="dl-group">' + esc(g) + '</h4><div class="list">' + byGroup[g].map(function (r) {
+        var a = r.a, SP = D.SPORTS[a.sport], now = L.inWindow(S, a.when), here = S.loc === r.d, sameCity = L.districtCity(r.d) === L.cityOf(S);
+        var go = here ? (now ? '<span class="gain">Open now</span>' : '') : sameCity ? '<button class="btn sm ghost" id="sp-go-' + a.id + '" data-tripto="' + r.d + '" data-tab="map">Go there</button>' : '';
+        return '<div class="item"><div><h3>' + SP[1] + ' ' + esc(a.label) + (played[a.sport] ? ' <span class="gain">✓</span>' : '') + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[r.d].name) + '</span><span>' + esc(whenText(a.when)) + '</span>' + (a.cost ? '<span class="cost num">' + N(L.price(S, a.cost)) + '</span>' : '<span>Free</span>') + (a.compete ? '<span class="gain">Prize ' + N(L.price(S, a.compete.prize)) + '</span>' : '') + '</div></div>' + go + '</div>';
+      }).join('') + '</div>';
+    });
+    return html + '</div>';
+  }
+
   /* ---------- NYSC: the service year ---------- */
   // A button that takes you to a district: a trip in this city, or the Travel app for another city.
   function goBtn(id, d) {
@@ -2196,6 +2234,7 @@
       else if (app === 'jobs') body = workView();
       else if (app === 'town') body = '<div class="panel-b">' + townView() + '</div>';
       else if (app === 'nysc') body = '<div class="panel-b">' + nyscView() + '</div>';
+      else if (app === 'sports') body = '<div class="panel-b">' + sportsView() + '</div>';
       else if (app === 'guide') body = '<div class="panel-b">' + guideView() + '</div>';
       else if (app === 'games') body = '<div class="panel-b">' + gamesView() + '</div>';
       else if (app === 'creator') body = '<div class="panel-b">' + creatorView() + '</div>';
@@ -2329,7 +2368,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2482,6 +2521,8 @@
     if (ds.danfodriver) { var dv = ds.danfodriver === '1'; run(function () { return L.setDanfoDriver(S, dv); }); return; }
     if (ds.minigame) { openMinigame(ds.minigame); return; }
     if (ds.nysc) { var nk = ds.nysc; run(function () { return nk === 'register' ? L.nyscRegister(S) : nk === 'camp' ? L.nyscCamp(S) : nk === 'cds' ? L.nyscCDS(S) : nk === 'retain' ? L.nyscRetain(S) : L.nyscWork(S); }); return; }
+    if (ds.skit) { var sk = ds.skit; run(function () { return L.shootSkit(S, sk); }); return; }
+    if (ds.golive) { run(function () { return L.goLive(S); }); return; }
     if (ds.build) { run(function () { return L.buildStage(S); }); return; }
     if (ds.service) { run(function () { return L.serviceCars(S); }); return; }
     if (ds.treat) { run(function () { return L.treatMalaria(S); }); return; }

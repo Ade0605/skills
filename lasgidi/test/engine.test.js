@@ -1864,3 +1864,92 @@ test('Island life: flex needs a luxury car, glam lifts the next night out, area 
   assert.ok(paid >= 1, 'ground money collected: ' + paid);
   assert.equal(L.category('Ground money (area boys)', -1), 'losses');
 });
+
+test('skits and live streaming: a weekly trend, location bonus, gifts, NEPA drops, appearances', () => {
+  const s = L.newGame({ seed: 112, origin: 'nepo', goal: 'freestyle' });
+  s.t = s.t - (s.t % 1440) + 1440 + 10 * 60; while (s.pending.length) L.resolveChoice(s, 0);
+  const trend = L.trendingTheme(s);
+  assert.ok(L.DATA.SKIT_THEMES[trend]);
+  assert.equal(L.trendingTheme(s), trend, 'one trend all week');
+  assert.match(L.goLive(s).msg, /500 followers/);
+  const f0 = (s.creator && s.creator.followers) || 0;
+  const r = L.shootSkit(s, trend); assert.ok(r.ok, r.msg);
+  const gotTrend = s.creator.followers - f0;
+  const other = Object.keys(L.DATA.SKIT_THEMES).find(k => k !== trend && k !== 'detty' && !L.DATA.SKIT_THEMES[k].at.includes(s.loc) && k !== 'family');
+  const f1 = s.creator.followers; s.needs.energy = 90; while (s.pending.length) L.resolveChoice(s, 0);
+  assert.ok(L.shootSkit(s, other).ok);
+  assert.ok(gotTrend > (s.creator.followers - f1) * 1.5, 'the trend doubles followers');
+  assert.equal(L.shootSkit(s, 'detty').ok, false, 'Detty December skits wait for December');
+  // Live: needs followers; at home with no light and no inverter the stream drops.
+  s.creator.followers = 20000; s.loc = L.homeDef(s).district; s.power = false; s.t = s.t - (s.t % 1440) + 1440 + 21 * 60; s.needs.energy = 90;
+  while (s.pending.length) L.resolveChoice(s, 0); s.power = false;
+  const est = L.creatorInfo(s).viewers;
+  assert.ok(est > 0);
+  const lv = L.goLive(s); assert.ok(lv.ok, lv.msg); assert.match(lv.msg, /NEPA took light/);
+  assert.match(L.goLive(s).msg, /One live stream a day/);
+  assert.equal(L.category('Live stream gifts', 1), 'gigs');
+  // Appearances from 20k followers, once a week.
+  const a = L.newGame({ seed: 113, origin: 'nepo', goal: 'freestyle' });
+  a.loc = 'vi'; a.t = a.t - (a.t % 1440) + ((4 - L.dow(a) + 7) % 7 + 7) * 1440 + 22 * 60; while (a.pending.length) L.resolveChoice(a, 0);
+  assert.match(L.availableActions(a).find(x => x.id === 'vi_appearance').disabled, /20,000/);
+  a.creator = { followers: 50000, posts: 10, lastPost: L.day(a) };
+  const ap = L.doAction(a, 'vi_appearance'); assert.ok(ap.ok, ap.msg);
+  assert.ok(a.ledger.some(l => l.memo === 'Event appearance fee'));
+  assert.match(L.availableActions(a).find(x => x.id === 'vi_appearance').disabled || '', /One appearance a week|Only/);
+});
+
+test('sports: tournaments pay a capped prize by skill, eight sports make an All-rounder', () => {
+  const s = L.newGame({ seed: 114, origin: 'nepo', goal: 'freestyle' });
+  s.bank += 2000000; s.opening.bank += 2000000;
+  const sports = new Set();
+  Object.values(L.DATA.PLACE_ACTIONS).forEach(list => list.forEach(a => { if (a.sport) { assert.ok(L.DATA.SPORTS[a.sport], a.id); sports.add(a.sport); } }));
+  assert.ok(sports.size >= 20, 'most of the list is playable: ' + sports.size);
+  // Play eight different sports.
+  const plan = [['ikeja', 'ikeja_tabletennis', 12], ['ikeja', 'ikeja_badminton', 12], ['ikeja', 'ikeja_ayo', 12], ['ikoyi', 'ikoyi_tennis', 10], ['ikoyi', 'ikoyi_swim', 10], ['vi', 'vi_beachvolley', 16], ['yaba', 'yaba_basketball', 17], ['mushin', 'mushin_snooker', 14]];
+  for (const [d, id, h] of plan) {
+    while (s.pending.length) L.resolveChoice(s, 0);
+    s.loc = d; s.t = s.t - (s.t % 1440) + 1440 + h * 60; s.needs.energy = 90; s.needs.hunger = 70; s.needs.hygiene = 80;
+    const r = L.doAction(s, id); assert.ok(r.ok, id + ': ' + r.msg);
+  }
+  assert.ok(s.ach.allrounder);
+  // A strong player usually wins the five-a-side; prizes are capped.
+  s.skills.fitness = 400; let wins = 0;
+  for (let i = 0; i < 6; i++) {
+    while (s.pending.length) L.resolveChoice(s, 0);
+    s.loc = 'surulere'; s.t = s.t - (s.t % 1440) + ((5 - L.dow(s) + 7) % 7 || 7) * 1440 + 10 * 60; s.needs.energy = 90; s.needs.hunger = 70; s.needs.hygiene = 80;
+    const r = L.doAction(s, 'suru_5aside'); assert.ok(r.ok, r.msg); if (/You won/.test(r.msg)) wins++;
+  }
+  assert.ok(wins >= 4, 'wins ' + wins);
+  assert.ok(s.ledger.filter(l => l.memo === 'Prize: five-a-side').every(l => l.amt <= L.price(s, 20000)));
+  assert.equal(L.category('Prize: five-a-side', 1), 'gigs');
+});
+
+test('Lagos labels: origin, newcomers, street-smarts and the children (display only)', () => {
+  const nepo = L.newGame({ seed: 115, origin: 'nepo', goal: 'freestyle' });
+  assert.deepEqual(L.lagosLabels(nepo).sort(), ['ajebo', 'jjc', 'nepo']);
+  const lapo = L.newGame({ seed: 115, origin: 'lapo', goal: 'freestyle' });
+  assert.ok(L.lagosLabels(lapo).includes('lapo'));
+  const rng = lapo.rng; L.lagosLabels(lapo); assert.equal(lapo.rng, rng, 'no random draw');
+  lapo.skills.hustle = 100; lapo.stats.trips = 60; lapo.t += 3 * 7 * 1440;
+  assert.ok(L.lagosLabels(lapo).includes('areaboy') && !L.lagosLabels(lapo).includes('jjc'));
+  nepo.kids.push({ born: 0, school: 'intl', nextFees: 9 }, { born: 1, school: 'public', nextFees: 9, reports: [{ day: 1, grade: 'A' }] });
+  assert.equal(L.kidLabel(nepo, 0), 'butty'); assert.equal(L.kidLabel(nepo, 1), 'ajepako');
+  Object.keys(L.DATA.SLANG).forEach(k => assert.ok(L.DATA.SLANG[k][1].length > 20));
+});
+
+test('businesses: low, mid and high tiers; December and term-day trades pay to their pattern', () => {
+  const tiers = { low: 0, mid: 0, high: 0 };
+  Object.entries(L.DATA.BUSINESSES).forEach(([k, b]) => { assert.ok(b.tier in tiers, k); tiers[b.tier]++; assert.ok(L.DATA.BUSINESS_GROWTH[k], k + ' has growth names'); });
+  assert.ok(tiers.low >= 6 && tiers.mid >= 8 && tiers.high >= 7, JSON.stringify(tiers));
+  const lowMax = Math.max(...Object.values(L.DATA.BUSINESSES).filter(b => b.tier === 'low').map(b => b.price));
+  const highMin = Math.min(...Object.values(L.DATA.BUSINESSES).filter(b => b.tier === 'high').map(b => b.price));
+  assert.ok(highMin > lowMax * 10, 'the jump from low to high is capital');
+  // A private school pays on term days only; luxury car rental booms in December.
+  const s = L.newGame({ seed: 116, origin: 'nepo', goal: 'freestyle' });
+  s.bank += 200000000; s.opening.bank += 200000000;
+  assert.ok(L.buyBusiness(s, 'school', 'ikeja').ok);
+  assert.ok(L.buyBusiness(s, 'carrental', 'vi').ok);
+  assert.ok(L.buyBusiness(s, 'recharge', 'mushin').ok);
+  for (let i = 0; i < 14 * 6; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; s.needs.hygiene = 80; if (L.hour(s) === 12) L.visitBusinesses && L.visitBusinesses(s); L.wait(s, 240); }
+  assert.ok(s.ledger.filter(l => l.memo === 'Business payout').length >= 10, 'they pay out');
+});

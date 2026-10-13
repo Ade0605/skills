@@ -614,3 +614,17 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .bd-steps .bd-now { background: color-mix(in srgb, #f2b600 30%, transparent); font-weight: 700; }
 .detty { border-left: 4px solid #c2417f; padding-left: 12px; background: linear-gradient(90deg, color-mix(in srgb, #f2b600 12%, transparent), transparent); }
 .detty-live { margin: 4px 0 8px; padding-left: 18px; }
+
+/* Skits */
+.skit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 6px 0 12px; }
+.skit-btn { display: grid; gap: 2px; text-align: left; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--card, transparent); color: inherit; font: inherit; cursor: pointer; }
+.skit-btn span { font-size: 22px; }
+.skit-btn small { color: var(--muted); }
+.skit-btn.hot { border-color: #c2417f; box-shadow: 0 0 0 2px color-mix(in srgb, #c2417f 25%, transparent); }
+.skit-btn:disabled { opacity: .55; cursor: default; }
+
+/* Lagos labels */
+.slang-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.slang { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #6b3fa0 18%, transparent); color: inherit; cursor: help; }
+.slang-dl dt { font-weight: 800; margin-top: 8px; }
+.slang-dl dd { margin: 2px 0 0; color: var(--muted); font-size: 13.5px; }

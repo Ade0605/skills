@@ -212,6 +212,29 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Lekki:** shisha lounges, rooftop DJ sessions, and a glam studio. Getting "outside" ready with hair, make-up and nails makes your next night out or owambe land better.
   - **Food and markets:** late-night suya, pepper soup and asun, and a fashion pop-up and art market.
   - **Area boys (rules 14):** they collect "ground money" when you drive to busy spots such as Oshodi, the Island, VI, Lekki, Surulere and Ikeja.
+- **🎬 Skits and 🔴 live streaming (Phone → Creator):**
+  - **Skits:** pick a theme: area boys and agberos, "outside" culture, family wahala, relationships, hustle and NEPA, or Detty December in December.
+    - One theme trends each week and doubles followers.
+    - Filming in the right place helps (×1.4): the Island for "outside", Oshodi for hustle.
+  - **Going live:** viewers and gifts grow with your followers. Prime time is 20:00–01:00, and December crowds are bigger.
+    - Data costs ₦1.5k a stream, and gifts are capped.
+    - At home, NEPA drops the stream unless you have an inverter or solar.
+    - 1,000 viewers unlocks "Streamer".
+  - **Appearances:** from 20k followers, VI promoters pay for club appearances.
+- **🏅 Sports (Phone → Sports):** 23 sports where Lagos plays them.
+  - **Most popular:** football from street and five-a-side to NPFL matches, basketball, athletics, table tennis, tennis, volleyball and handball, and boxing.
+  - **Widely played:** swimming, cricket, badminton, beach volleyball, and wrestling with judo and weightlifting.
+  - **Traditional:** ayo olopon, ludo and draughts, chess and Scrabble.
+  - **Emerging:** flag football, polo, golf, e-sports, snooker, cycling, arm wrestling and darts.
+  - **Tournaments:** five-a-side, a FIFA e-sports cup, Scrabble and arm wrestling pay capped prizes if your skill wins. Eight different sports unlocks "All-rounder".
+- **🗣️ Lagos labels:** the Me tab shows what Lagos calls you, and the Guide explains each label.
+  - **Your labels:** from your background and play: LAPO baby, Ajepako, NEPO baby, Ajebo/Ajebutter, JJC for newcomers, "area boy" street-smarts, and Omo ile for heirs.
+  - **Your children:** each child carries a label too (Butty, Ajebo, Ajepako, Omo ile).
+- **🏪 Businesses by tier:** 25 businesses to build, ranked as Lagos ranks them.
+  - **Entry level:** POS, recharge and data, small chops, a market stall, phone repair, laundry, okadas on hire purchase.
+  - **Mid-range:** buka, barber, car wash, beauty salon, mini importation, owambe catering, delivery riders, a private school (term days only), building materials.
+  - **High income:** event centre, short-lets, a digital and fintech agency, import/export wholesale, luxury car rental, haulage, a VI nightclub share, oil and gas supply.
+  - **December:** it lifts hospitality, events, transport and luxury (car rental ×2.5).
 - **🏗️ Build your own house:** own the plot of land in Ikorodu and you can build on it from the Money tab, one stage at a time.
   - **The omo-onile:** before the foundation, they come to "greet" the land and you pay their ₦250k development levy.
   - **Five stages:** foundation, blocks to lintel level, roofing, plastering with windows and doors, then finishing. They cost ₦12.5m in all and take about five and a half weeks, and you must visit the site in Ikorodu to start each one.
@@ -272,7 +295,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (100 tests)
+  test/engine.test.js   node:test suite (104 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

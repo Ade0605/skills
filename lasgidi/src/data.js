@@ -185,6 +185,37 @@
       ['Market size: Lagos has about 20m people and 1 in 10 buys your product monthly. Monthly buyers?', ['About 2 million', 'About 200,000', 'About 20 million'], 0]
     ]
   };
+  // Lagos labels for kids and young people (shown in the Guide and on your profile).
+  var SLANG = {
+    ajebo:    ['Ajebo / Ajebutter', 'A privileged, soft kid: from "ajẹbọta", eating butter. Good schools, comfort, little hardship, and not much street sense.'],
+    butty:    ['Butty', 'Short for Ajebutter: the same soft, privileged vibe.'],
+    nepo:     ['NEPO baby', 'Opportunities from Mummy and Daddy\'s money, name or connections rather than their own effort.'],
+    lapo:     ['LAPO baby', 'The opposite of a NEPO baby: little money and no connections (after LAPO, the microfinance bank).'],
+    ajepako:  ['Ajepako', 'The opposite of Ajebo: tough, street-raised, hardened by hardship. "Kpako" means solid, rough.'],
+    areaboy:  ['Area boy', 'A street hustler or tout (agbero) at motor parks and junctions. Very street-smart; may collect "ground money".'],
+    jjc:      ['JJC (Johnny Just Come)', 'A newcomer who does not know the unwritten rules yet, how to move, or how not to get played.'],
+    ijgb:     ['IJGB (I Just Got Back)', 'Diaspora kids home from the UK or US: a bit soft, a bit flashy, not fully tuned to Lagos yet.'],
+    omoile:   ['Omo ile', '"House child": raised mostly at home, sheltered and protected by family.']
+  };
+  // Sports in Lagos, grouped as people talk about them. id: [name, icon, group]
+  var SPORTS = {
+    football: ['Football', '⚽', 'Most popular'], basketball: ['Basketball', '🏀', 'Most popular'], athletics: ['Athletics', '🏃', 'Most popular'],
+    tabletennis: ['Table tennis', '🏓', 'Most popular'], tennis: ['Tennis', '🎾', 'Most popular'], handball: ['Volleyball and handball', '🏐', 'Most popular'], boxing: ['Boxing', '🥊', 'Most popular'],
+    swimming: ['Swimming', '🏊', 'Widely played'], cricket: ['Cricket', '🏏', 'Widely played'], badminton: ['Badminton', '🏸', 'Widely played'], beachvolley: ['Beach volleyball', '🏖️', 'Widely played'],
+    wrestling: ['Wrestling, judo and weightlifting', '🤼', 'Widely played'],
+    ayo: ['Ayo olopon, ludo and draughts', '🎲', 'Traditional and local'], chess: ['Chess', '♟️', 'Traditional and local'], scrabble: ['Scrabble', '🔤', 'Traditional and local'],
+    flagfootball: ['Flag football', '🏈', 'Emerging'], polo: ['Polo', '🐎', 'Emerging'], golf: ['Golf', '⛳', 'Emerging'], esports: ['E-sports', '🎮', 'Emerging'],
+    snooker: ['Snooker and pool', '🎱', 'Emerging'], cycling: ['Cycling', '🚴', 'Emerging'], armwrestling: ['Arm wrestling', '💪', 'Emerging'], darts: ['Darts', '🎯', 'Emerging']
+  };
+  // Skit themes: one trends each week (from the seed); some land better where you film them.
+  var SKIT_THEMES = {
+    area:     { name: 'Area boys and agberos', icon: '🚏', at: ['oshodi', 'mushin', 'island'] },
+    outside:  { name: '"Outside" culture', icon: '🕶️', at: ['vi', 'lekki', 'ikoyi'] },
+    family:   { name: 'Nigerian parents and family wahala', icon: '👨‍👩‍👧', at: ['home'] },
+    love:     { name: 'Relationships and talking stages', icon: '💔', at: [] },
+    hustle:   { name: 'Hustle, traffic and NEPA', icon: '🚦', at: ['oshodi', 'ikeja', 'yaba'] },
+    detty:    { name: 'Detty December and IJGBs', icon: '🎉', at: ['vi', 'lekki'], december: true }
+  };
   // A PPA that pays a stipend can retain a corper who showed up: the career it offers.
   // Children's names come from the life's seed (display only).
   var KID_NAMES = ['Tobi', 'Ada', 'Emeka', 'Zainab', 'Tolu', 'Chioma', 'Ibrahim', 'Funmi', 'Kelechi', 'Amina', 'Seun', 'Ngozi', 'Femi', 'Hauwa', 'Obinna', 'Yetunde'];
@@ -447,6 +478,9 @@
       { id: 'ph_fish_gig', label: 'Help fishermen land the catch', mins: 180, earn: 2600, fx: { energy: -20, hygiene: -15 }, xp: { fitness: 1, hustle: 1 }, gig: true, when: { from: 5, to: 12 } }
     ],
     mushin: [
+      { id: 'mushin_boxing', label: 'Train at a boxing gym', mins: 90, cost: 1500, fx: { energy: -22, hygiene: -20, stress: -12, fun: 10 }, xp: { fitness: 4 }, sport: 'boxing', when: { from: 6, to: 20 } },
+      { id: 'mushin_snooker', label: 'Snooker and pool at the joint', mins: 90, cost: 1000, fx: { fun: 25, social: 20 }, sport: 'snooker', when: { from: 12, to: 24 } },
+      { id: 'mushin_arm', label: 'Arm-wrestling challenge at the bar (stake ₦2,000, win ₦5,000)', mins: 30, cost: 2000, fx: { fun: 15, social: 15, energy: -5 }, sport: 'armwrestling', special: 'compete', compete: { skill: 'fitness', prize: 5000, name: 'arm-wrestling' }, when: { from: 18, to: 24 } },
       { id: 'mushin_market', label: 'Buy foodstuff at the local market (7 meals)', mins: 45, cost: 4800, special: 'pantry7', when: { from: 7, to: 20 } },
       { id: 'mushin_mamaput', label: 'Eat at Mama Put', mins: 30, cost: 1200, fx: { hunger: 45 } },
       { id: 'mushin_barber', label: 'Gist at the barbershop', mins: 60, fx: { social: 20, fun: 5 }, xp: { charisma: 2 } },
@@ -454,6 +488,10 @@
       { id: 'mushin_football', label: 'Street football', mins: 60, fx: { fun: 25, energy: -15, hygiene: -20, stress: -8 }, xp: { fitness: 3 }, when: { from: 6, to: 19 } }
     ],
     yaba: [
+      { id: 'yaba_esports', label: 'E-sports: FIFA tournament at a gaming lounge (₦3,000 entry)', mins: 240, cost: 3000, fx: { fun: 40, social: 20, energy: -10 }, xp: { tech: 1 }, sport: 'esports', special: 'compete', compete: { skill: 'tech', prize: 25000, name: 'FIFA tournament' }, when: { days: [5], from: 14, to: 20 } },
+      { id: 'yaba_chess', label: 'Chess and Scrabble club', mins: 120, fx: { fun: 15, social: 15, stress: -5 }, xp: { tech: 2, charisma: 1 }, sport: 'chess', when: { days: [2, 5], from: 16, to: 20 } },
+      { id: 'yaba_scrabble', label: 'Scrabble tournament (₦1,000 entry)', mins: 180, cost: 1000, fx: { fun: 20, social: 15 }, xp: { tech: 1 }, sport: 'scrabble', special: 'compete', compete: { skill: 'tech', prize: 15000, name: 'Scrabble tournament' }, when: { days: [6], from: 11, to: 17 } },
+      { id: 'yaba_basketball', label: 'Pickup basketball at the court', mins: 90, fx: { fun: 25, social: 15, energy: -20, hygiene: -20 }, xp: { fitness: 3 }, sport: 'basketball', when: { from: 16, to: 20 } },
       { id: 'yaba_typing', label: 'Type assignments for students', mins: 120, earn: 2000, fx: { energy: -8 }, xp: { tech: 2 }, gig: true, when: { from: 8, to: 22 } },
       { id: 'yaba_tejuosho', label: 'Buy foodstuff at Tejuosho (7 meals)', mins: 60, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
       { id: 'yaba_buka', label: 'Eat at a Yaba buka', mins: 30, cost: 1500, fx: { hunger: 45 } },
@@ -465,6 +503,10 @@
       { id: 'yaba_cchub', label: 'Startup meetup at CcHub', mins: 150, fx: { social: 20, fun: 10, energy: -10 }, xp: { tech: 3, charisma: 2 }, when: { days: [1,3], from: 17, to: 21 } },
     ],
     surulere: [
+      { id: 'suru_npfl', label: 'Watch an NPFL league match at Teslim Balogun Stadium', mins: 150, cost: 2000, fx: { fun: 35, social: 25, stress: -8 }, sport: 'football', when: { days: [6], from: 15, to: 19 } },
+      { id: 'suru_5aside', label: 'Five-a-side tournament (team entry ₦2,000)', mins: 150, cost: 2000, fx: { fun: 35, social: 25, energy: -25, hygiene: -25 }, xp: { fitness: 3 }, sport: 'football', special: 'compete', compete: { skill: 'fitness', prize: 20000, name: 'five-a-side' }, when: { days: [5], from: 9, to: 14 } },
+      { id: 'suru_track', label: 'Athletics: sprints on the Teslim Balogun track', mins: 90, fx: { energy: -22, hygiene: -20, stress: -10 }, xp: { fitness: 4 }, sport: 'athletics', when: { from: 6, to: 10 } },
+      { id: 'suru_wrestling', label: 'Wrestling, judo and weightlifting at the youth centre', mins: 90, cost: 1000, fx: { energy: -22, hygiene: -20, stress: -8 }, xp: { fitness: 4 }, sport: 'wrestling', when: { days: [0, 1, 2, 3, 4, 5], from: 15, to: 20 } },
       { id: 'suru_danfo', label: 'Drive a danfo: the Ojuelegba run (mini-game)', mins: 180, fx: { energy: -18, stress: 8, hygiene: -10 }, xp: { hustle: 2 }, gig: true, minigame: 'danfo', when: { from: 6, to: 21 } },
       { id: 'suru_match', label: 'Super Eagles match at the National Stadium', mins: 180, cost: 3000, fx: { fun: 40, social: 25, stress: -10 }, event: true, when: { days: [5], from: 15, to: 19 } },
       { id: 'suru_recharge', label: 'Sell recharge cards by the stadium', mins: 180, earn: 2300, fx: { energy: -10, social: 5 }, xp: { hustle: 3 }, gig: true, when: { from: 7, to: 21 } },
@@ -479,6 +521,9 @@
       { id: 'suru_owambe', label: 'Attend an owambe', mins: 240, cost: 3000, fx: { fun: 40, social: 40, hunger: 60, energy: -20 }, xp: { charisma: 2 }, special: 'owambe', when: { days: [5], from: 12, to: 19 } }
     ],
     ikeja: [
+      { id: 'ikeja_tabletennis', label: 'Table tennis at the community centre', mins: 60, cost: 500, fx: { fun: 20, social: 15, energy: -8 }, xp: { fitness: 2 }, sport: 'tabletennis', when: { from: 10, to: 20 } },
+      { id: 'ikeja_badminton', label: 'Badminton at the indoor hall', mins: 60, cost: 1500, fx: { fun: 20, energy: -12, hygiene: -10 }, xp: { fitness: 2 }, sport: 'badminton', when: { from: 9, to: 20 } },
+      { id: 'ikeja_ayo', label: 'Ayo olopon, ludo and draughts with the elders', mins: 60, fx: { fun: 15, social: 25, stress: -8 }, xp: { charisma: 1 }, sport: 'ayo', when: { from: 10, to: 19 } },
       { id: 'ikeja_air_lounge', label: 'Premium lounge: shower, buffet, quiet', mins: 60, cost: 30000, fx: { hunger: 40, hygiene: 25, energy: 10, stress: -12, fun: 6 } },
       { id: 'ikeja_air_spot', label: 'Plane-spotting at the apron window', mins: 30, fx: { fun: 6, stress: -3 } },
       { id: 'ikeja_felabration', label: 'Felabration night at the Shrine', mins: 300, cost: 5000, fx: { fun: 70, social: 40, energy: -25, stress: -15 }, xp: { music: 3 }, special: 'club', event: true, when: { months: [9], from: 19, to: 24 } },
@@ -499,6 +544,8 @@
       { id: 'oshodi_bukka', label: 'Eat at a bukka', mins: 30, cost: 1000, fx: { hunger: 40 } }
     ],
     island: [
+      { id: 'island_cricket', label: 'Cricket at the Onikan ground', mins: 180, cost: 2000, fx: { fun: 25, social: 20, energy: -15 }, xp: { fitness: 2 }, sport: 'cricket', when: { days: [5, 6], from: 9, to: 16 } },
+      { id: 'island_handball', label: 'Handball and volleyball at Mobolaji Johnson Arena', mins: 90, cost: 500, fx: { fun: 25, social: 20, energy: -18, hygiene: -15 }, xp: { fitness: 3 }, sport: 'handball', when: { from: 15, to: 20 } },
       { id: 'island_eyo', label: 'Watch the Eyo festival procession', mins: 240, fx: { fun: 45, social: 25, energy: -15 }, event: true, when: { months: [0], days: [5], from: 8, to: 16 } },
       { id: 'island_balogun', label: 'Haggle at Balogun market', mins: 60, fx: { fun: 5, energy: -5 }, xp: { hustle: 3, charisma: 1 }, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
       { id: 'island_worship', label: 'Worship at church or mosque', mins: 90, fx: { stress: -25, social: 15 } },
@@ -512,9 +559,12 @@
       { id: 'island_ewa', label: 'Ewa agoyin and bread', mins: 30, cost: 1300, fx: { hunger: 45 } }
     ],
     vi: [
+      { id: 'vi_beachvolley', label: 'Beach volleyball on Bar Beach', mins: 90, fx: { fun: 30, social: 20, energy: -15, hygiene: -15 }, xp: { fitness: 2 }, sport: 'beachvolley', when: { from: 15, to: 19 } },
+      { id: 'vi_darts', label: 'Darts and the match on the big screen at a sports bar', mins: 120, cost: 4000, fx: { fun: 30, social: 25 }, sport: 'darts', when: { from: 17, to: 24 } },
       { id: 'vi_club_late', label: 'Club after midnight: Amapiano till 5 a.m.', mins: 240, cost: 15000, fx: { fun: 60, social: 40, energy: -45, hygiene: -20 }, special: 'club', when: { days: [5, 6], from: 0, to: 4 } },
       { id: 'vi_spray', label: 'Spray money at the club (bottle service and a VIP table)', mins: 240, cost: 120000, fx: { fun: 75, social: 60, energy: -40, hygiene: -15 }, xp: { charisma: 2 }, special: 'spray', when: { days: [4, 5, 6], from: 22, to: 24 } },
       { id: 'vi_flex', label: 'Car meet: park and flex outside the club', mins: 90, fx: { social: 30, fun: 20 }, special: 'flex', when: { days: [4, 5, 6], from: 21, to: 24 } },
+      { id: 'vi_appearance', label: 'Paid appearance at a club night (creators with 20k+ followers)', mins: 180, fx: { social: 35, fun: 25, energy: -25 }, xp: { charisma: 2 }, special: 'appearance', when: { days: [4, 5], from: 21, to: 24 } },
       { id: 'vi_brunch', label: 'Brunch and day drinks', mins: 180, cost: 18000, fx: { hunger: 55, fun: 30, social: 30 }, when: { days: [5, 6], from: 11, to: 16 } },
       { id: 'vi_suya', label: 'Late-night suya by the roadside', mins: 30, cost: 3000, fx: { hunger: 40, fun: 10 }, when: { from: 20, to: 24 } },
       { id: 'vi_landmark', label: 'Beach day at Landmark Beach, Oniru: cabana and seafood grill', mins: 300, cost: 20000, fx: { fun: 50, social: 30, hunger: 45, stress: -20, hygiene: -10 }, when: { from: 11, to: 19 } },
@@ -534,6 +584,10 @@
       { id: 'vi_quilox_door', label: 'Queue at the Quilox door', mins: 120, cost: 20000, fx: { fun: 30, social: 20, energy: -20 }, special: 'club', when: { days: [4,5], from: 22, to: 24 } },
     ],
     ikoyi: [
+      { id: 'ikoyi_tennis', label: 'Tennis at the Ikoyi club courts', mins: 90, cost: 8000, fx: { fun: 20, social: 15, energy: -15, hygiene: -15 }, xp: { fitness: 3, charisma: 1 }, sport: 'tennis', when: { from: 7, to: 19 } },
+      { id: 'ikoyi_swim', label: 'Swim laps at the club pool', mins: 60, cost: 5000, fx: { fun: 15, stress: -12, energy: -12, hygiene: 10 }, xp: { fitness: 3 }, sport: 'swimming', when: { from: 7, to: 19 } },
+      { id: 'ikoyi_golf', label: 'A round of golf at Ikoyi', mins: 300, cost: 35000, fx: { fun: 25, social: 25, stress: -15, energy: -15 }, xp: { charisma: 3 }, sport: 'golf', when: { from: 7, to: 14 } },
+      { id: 'ikoyi_polo', label: 'Watch polo at the polo grounds', mins: 180, cost: 15000, fx: { fun: 30, social: 30 }, xp: { charisma: 2 }, sport: 'polo', when: { days: [5, 6], from: 14, to: 18 } },
       { id: 'ikoyi_ilashe', label: 'Boat to a private beach at Ilashe (day trip)', mins: 480, cost: 60000, fx: { fun: 70, social: 40, stress: -30, hunger: 40, hygiene: -10 }, when: { days: [5, 6], from: 9, to: 12 } },
       { id: 'ikoyi_dec_yacht', label: 'Lagoon yacht party', mins: 300, cost: 150000, fx: { fun: 80, social: 60, energy: -25, stress: -15 }, xp: { charisma: 2 }, event: true, dec: true, when: { months: [11], days: [5, 6], from: 13, to: 20 } },
       { id: 'ikoyi_dec_cruise', label: 'Lagoon boat cruise', mins: 120, cost: 20000, fx: { fun: 45, social: 30, stress: -15 }, event: true, dec: true, when: { months: [11], from: 10, to: 18 } },
@@ -543,6 +597,8 @@
       { id: 'ikoyi_dine', label: 'Fine dining', mins: 90, cost: 25000, fx: { hunger: 70, fun: 25, social: 10 }, when: { from: 12, to: 23 } }
     ],
     lekki: [
+      { id: 'lekki_flagfootball', label: 'Flag football league game', mins: 150, cost: 3000, fx: { fun: 35, social: 25, energy: -22, hygiene: -20 }, xp: { fitness: 4 }, sport: 'flagfootball', when: { days: [5], from: 9, to: 13 } },
+      { id: 'lekki_cycling', label: 'Weekend ride down the Lekki–Epe expressway', mins: 150, fx: { fun: 20, stress: -15, energy: -25, hygiene: -20 }, xp: { fitness: 4 }, sport: 'cycling', when: { days: [6], from: 6, to: 10 } },
       { id: 'lekki_shisha', label: 'Shisha lounge and Amapiano', mins: 180, cost: 12000, fx: { fun: 40, social: 35, energy: -15 }, when: { from: 19, to: 24 } },
       { id: 'lekki_rooftop', label: 'Rooftop session with a DJ', mins: 240, cost: 20000, fx: { fun: 55, social: 40, energy: -30 }, special: 'club', when: { days: [4, 5], from: 21, to: 24 } },
       { id: 'lekki_glam', label: 'Get "outside" ready: hair, make-up and nails', mins: 150, cost: 25000, fx: { stress: -5, fun: 10 }, special: 'glam', when: { from: 9, to: 19 } },
@@ -673,7 +729,7 @@
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
     { id: 'ojuelegba_park', icon: '🚐', name: 'Ojuelegba danfo park', type: 'transport', glyph: 'bus', district: 'surulere', x: 12.2, y: 16.8, acts: ['suru_danfo'], nogem: true, text: 'Under the bridge, conductors shout routes and danfos fill up. Rent one from the owner for a run to Yaba and back.' },
     { id: 'landmark_beach', icon: '🏖️', name: 'Landmark Beach, Oniru', type: 'outdoors', glyph: 'wave', district: 'vi', x: 20.6, y: 26.3, acts: ['vi_landmark', 'vi_jetski'], nogem: true, text: 'Cabanas, seafood grilled on the sand, jet skis off the shore, and beach parties that start in the afternoon and go late.' },
-    { id: 'vi_strip', icon: '🍾', name: 'The VI club strip', type: 'nightlife', glyph: 'glass', district: 'vi', x: 18.9, y: 24.4, acts: ['vi_club_late', 'vi_spray', 'vi_flex'], nogem: true, text: 'Peak time is after midnight. Bottle service, money spraying, Amapiano till 5 a.m., and a car park where G-Wagons line up to be seen.' },
+    { id: 'vi_strip', icon: '🍾', name: 'The VI club strip', type: 'nightlife', glyph: 'glass', district: 'vi', x: 18.9, y: 24.4, acts: ['vi_club_late', 'vi_spray', 'vi_flex', 'vi_appearance'], nogem: true, text: 'Peak time is after midnight. Bottle service, money spraying, Amapiano till 5 a.m., and a car park where G-Wagons line up to be seen.' },
     { id: 'lekki_lounges', icon: '💨', name: 'Lekki lounges and rooftops', type: 'nightlife', glyph: 'glass', district: 'lekki', x: 28.9, y: 23.6, acts: ['lekki_shisha', 'lekki_rooftop', 'lekki_glam'], nogem: true, text: 'Shisha, DJs and rooftop views, and a glam studio downstairs to get you "outside" ready.' },
     { id: 'eko_convention', icon: '🎤', name: 'Eko Convention Centre', type: 'nightlife', glyph: 'note', district: 'vi', x: 18.4, y: 26.0, acts: ['vi_dec_headline', 'vi_dec_vip', 'vi_dec_afterparty'], nogem: true, text: 'The big December stage. Homecoming headliners, international guests and a crowd of thousands. Tickets climb as Christmas gets closer.' },
     { id: 'tbs', icon: '🏟️', name: 'Tafawa Balewa Square', type: 'culture', glyph: 'dome', district: 'island', x: 16.6, y: 22.7, acts: ['island_dec_tbs', 'island_dec_food'], nogem: true, text: 'The old parade ground fills with December concerts and a food village of jollof, suya and ofada.' },
@@ -904,14 +960,37 @@
 
   // Daily payout at 18:00 after running costs. upkeep: needs a visit every 7 days.
   var BUSINESSES = {
-    pos:      { name: 'POS kiosk', price: 150000, daily: 4200, power: false },
-    buka:     { name: 'Buka', price: 600000, daily: 15000, power: false },
-    barber:   { name: 'Barbershop', price: 900000, daily: 21000, power: true },
-    laundry:  { name: 'Laundry', price: 1500000, daily: 33000, power: true },
-    danfo:    { name: 'Danfo bus', price: 4000000, daily: 80000, power: false, risky: true },
-    event:    { name: 'Event centre', price: 25000000, daily: 420000, power: true, weekend: true },
-    shortlet: { name: 'Short-let flat, Lekki', price: 60000000, daily: 900000, power: true, december: 2 }
+    // tier: how Lagos ranks the trade, from low capital and thin margins to big capital and big profit.
+    pos:      { name: 'POS kiosk', price: 150000, daily: 4200, power: false, tier: 'low' },
+    buka:     { name: 'Buka', price: 600000, daily: 15000, power: false, tier: 'mid' },
+    barber:   { name: 'Barbershop', price: 900000, daily: 21000, power: true, tier: 'mid' },
+    laundry:  { name: 'Laundry', price: 1500000, daily: 33000, power: true, tier: 'low' },
+    danfo:    { name: 'Danfo bus', price: 4000000, daily: 80000, power: false, risky: true, tier: 'mid' },
+    event:    { name: 'Event centre', price: 25000000, daily: 420000, power: true, weekend: true, tier: 'high' },
+    shortlet: { name: 'Short-let flat, Lekki', price: 60000000, daily: 900000, power: true, december: 2, tier: 'high' },
+    // Low capital, daily cash, heavy competition.
+    recharge: { name: 'Recharge card and data kiosk', price: 60000, daily: 1600, power: false, tier: 'low' },
+    smallchops: { name: 'Small chops and street food stand', price: 120000, daily: 3200, power: false, tier: 'low', december: 1.3 },
+    stall:    { name: 'Market stall (Balogun or Computer Village)', price: 250000, daily: 6000, power: false, tier: 'low', december: 1.3 },
+    phonefix: { name: 'Phone repair corner', price: 180000, daily: 4500, power: true, tier: 'low' },
+    okada:    { name: 'Okadas and kekes on hire purchase', price: 900000, daily: 18000, power: false, risky: true, tier: 'low' },
+    // Steady middle-class demand.
+    carwash:  { name: 'Car wash', price: 700000, daily: 16000, power: true, tier: 'mid', december: 1.4 },
+    salon:    { name: 'Beauty salon and nail bar', price: 1200000, daily: 26000, power: true, tier: 'mid', december: 1.5 },
+    reseller: { name: 'Mini importation (online reseller)', price: 800000, daily: 17000, power: false, tier: 'mid', december: 1.4 },
+    catering: { name: 'Catering for owambes', price: 2000000, daily: 42000, power: false, weekend: true, tier: 'mid', december: 1.5 },
+    delivery: { name: 'Delivery riders (last-mile logistics)', price: 3000000, daily: 60000, power: false, risky: true, tier: 'mid', december: 1.3 },
+    school:   { name: 'Private nursery and primary school', price: 15000000, daily: 260000, power: true, weekdays: true, tier: 'mid' },
+    construction: { name: 'Building materials and contracting', price: 8000000, daily: 150000, power: false, risky: true, tier: 'mid' },
+    // Big capital, location and networks.
+    tech:     { name: 'Digital agency and fintech app', price: 30000000, daily: 450000, power: true, tier: 'high' },
+    import:   { name: 'Import/export wholesale (Apapa port)', price: 50000000, daily: 700000, power: false, risky: true, tier: 'high' },
+    carrental: { name: 'Luxury car rental', price: 70000000, daily: 900000, power: false, tier: 'high', december: 2.5 },
+    haulage:  { name: 'Haulage trucks and freight', price: 60000000, daily: 800000, power: false, risky: true, tier: 'high' },
+    nightclub: { name: 'Nightclub share, VI', price: 90000000, daily: 1100000, power: true, weekend: true, tier: 'high', december: 2 },
+    oilgas:   { name: 'Oil and gas supply services', price: 150000000, daily: 1800000, power: false, risky: true, tier: 'high' }
   };
+  var BUSINESS_TIERS = { high: 'High income: big capital, location and networks', mid: 'Mid-range: steady demand, good margins if well run', low: 'Entry level: little capital, daily cash, thin margins' };
 
   // Where you build a business: a payout factor and weekly shop rent.
   var BUSINESS_SITES = {
@@ -928,7 +1007,25 @@
     laundry:  { icon: '🧺', names: ['Laundry', 'Dry cleaner', 'Laundry chain'] },
     danfo:    { icon: '🚌', names: ['Danfo bus', 'Danfo fleet', 'Transport company'] },
     event:    { icon: '🎉', names: ['Event centre', 'Banquet hall', 'Events empire'] },
-    shortlet: { icon: '🏙️', names: ['Short-let flat, Lekki', 'Short-let block', 'Serviced apartments'] }
+    shortlet: { icon: '🏙️', names: ['Short-let flat, Lekki', 'Short-let block', 'Serviced apartments'] },
+    recharge: { icon: '📶', names: ['Recharge card and data kiosk', 'Data and bill-pay shop', 'Airtime distributor'] },
+    smallchops: { icon: '🍢', names: ['Small chops and street food stand', 'Small chops kitchen', 'Party trays company'] },
+    stall:    { icon: '🧺', names: ['Market stall', 'Market shop', 'Wholesale shop'] },
+    phonefix: { icon: '🔧', names: ['Phone repair corner', 'Gadget clinic', 'Phone repair chain'] },
+    okada:    { icon: '🛺', names: ['Okadas and kekes on hire purchase', 'Keke fleet', 'Transport finance company'] },
+    carwash:  { icon: '🫧', names: ['Car wash', 'Car wash and detailing', 'Auto spa chain'] },
+    salon:    { icon: '💅', names: ['Beauty salon and nail bar', 'Beauty studio', 'Beauty franchise'] },
+    reseller: { icon: '📦', names: ['Mini importation (online reseller)', 'Online store and warehouse', 'E-commerce brand'] },
+    catering: { icon: '🍛', names: ['Catering for owambes', 'Catering company', 'Events catering group'] },
+    delivery: { icon: '🛵', names: ['Delivery riders', 'Delivery fleet', 'Logistics company'] },
+    school:   { icon: '🏫', names: ['Private nursery and primary school', 'Primary and secondary school', 'School group'] },
+    construction: { icon: '🏗️', names: ['Building materials and contracting', 'Construction company', 'Developer'] },
+    tech:     { icon: '💻', names: ['Digital agency and fintech app', 'Fintech startup', 'Fintech unicorn'] },
+    import:   { icon: '🚢', names: ['Import/export wholesale', 'Trading house', 'Import conglomerate'] },
+    carrental: { icon: '🏎️', names: ['Luxury car rental', 'Luxury fleet', 'Chauffeur and fleet company'] },
+    haulage:  { icon: '🚛', names: ['Haulage trucks', 'Haulage fleet', 'Freight company'] },
+    nightclub: { icon: '🍾', names: ['Nightclub share, VI', 'Nightclub', 'Nightlife group'] },
+    oilgas:   { icon: '🛢️', names: ['Oil and gas supply services', 'Oilfield services', 'Energy group'] }
   };
   var BUSINESS_LEVEL = { cost: [0, 0.8, 1.6], mult: [1, 1.6, 2.4] };
 
@@ -1001,7 +1098,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, BUILD: BUILD, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, BUILD: BUILD, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 
