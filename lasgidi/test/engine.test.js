@@ -2292,3 +2292,25 @@ test('room nights: join once on the right weekday and hours, past midnight too, 
   assert.ok(L.roomEnter(r, 'park').ok, L.roomBlock(r, 'park')); while (r.pending.length) L.resolveChoice(r, 1); assert.ok(L.roomNight(r, 'park').ok, L.roomNightInfo(r, 'park').why);
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
 });
+
+test('room friends: hang out once a day with a friend who is in the room, and replay', () => {
+  const s = L.newGame({ seed: 93, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.loc = 'island'; const d = Math.floor(s.t / 1440) * 1440 + 1440; s.t = d + 10 * 60;
+  assert.match(L.roomHang(s, 'market', 'bisi').msg, /Go in first/);
+  assert.ok(L.roomEnter(s, 'market').ok); s.pending = [];
+  assert.match(L.roomHang(s, 'market', 'kunle').msg, /not here/);
+  const before = s.friends.bisi.lvl;
+  assert.ok(L.roomHang(s, 'market', 'bisi').ok); assert.ok(s.friends.bisi.lvl > before); s.pending = [];
+  assert.match(L.roomHang(s, 'market', 'bisi').msg, /already caught up/);
+  s.t = d + 1440 + 10 * 60; s.pending = []; assert.ok(L.roomEnter(s, 'market').ok); s.pending = [];
+  assert.ok(L.roomHang(s, 'market', 'bisi').ok);
+  // A real life: go to Lagos Island, walk into Balogun and catch up with Mama Bisi.
+  const r = L.newGame({ seed: 94, origin: 'nepo', goal: 'freestyle' }); while (r.pending.length) L.resolveChoice(r, 1);
+  if (r.loc !== 'island') { const o = L.travelOptions(r, 'island').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'island', o.mode).ok); }
+  while (r.pending.length) L.resolveChoice(r, 1);
+  while (L.roomBlock(r, 'market')) { L.wait(r, 60); while (r.pending.length) L.resolveChoice(r, 1); }
+  assert.ok(L.roomEnter(r, 'market').ok); while (r.pending.length) L.resolveChoice(r, 1);
+  assert.ok(L.roomHang(r, 'market', 'bisi').ok, L.roomHangBlock(r, 'market', 'bisi'));
+  assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});

@@ -1459,19 +1459,24 @@
         trees: { name: 'Under the trees', icon: '🌳', cost: 0, fx: { stress: -14, social: 6 }, text: 'Old trees, quiet paths, a cool breeze from the creek.' }
       } }
   };
+  // Friends who hang out in a live room (NPC id -> spot). Lagos people stay in Lagos rooms.
+  var ROOM_NPCS = {
+    market: { bisi: 'buka' }, park: { femi: 'stage' }, tidewater: { kunle: 'lounge' },
+    beach: { zainab: 'volley' }, club: { chiamaka: 'floor' }
+  };
   // Weekly room nights: one event per venue on a fixed weekday (0 Mon … 6 Sun), joined once inside the room.
   var ROOM_NIGHTS = {
-    beach:       { dow: 6, from: 12, to: 18, name: 'Sunday beach jam', icon: '🥁', fee: 3000, fx: { fun: 25, social: 20, stress: -10 }, crew: 'Drummers', text: 'Talking drums, sand dancing and suya by the waves.' },
-    tidewater:   { dow: 6, from: 16, to: 22, name: 'Sunday day party', icon: '🌅', fee: 15000, fx: { fun: 25, social: 25, stress: -8 }, crew: 'Guest DJ', text: 'The deck fills up and the DJ plays into the sunset.' },
-    club:        { dow: 5, from: 23, to: 27, name: 'Amapiano Saturday', icon: '🎹', fee: 15000, fx: { fun: 30, social: 22, energy: -15 }, crew: 'Log drummer', text: 'The log drum hits and the whole strip moves as one.' },
-    market:      { dow: 3, from: 9, to: 15, name: 'Thursday fabric day', icon: '🧵', fee: 0, fx: { fun: 8, social: 10 }, xp: { craft: 1, hustle: 1 }, crew: 'Lace trader', text: 'New lace arrives from the warehouse. You learn which bales are real.' },
-    park:        { dow: 4, from: 18, to: 23, name: 'Friday poetry and highlife', icon: '📜', fee: 2000, fx: { fun: 22, social: 15, stress: -10 }, xp: { charisma: 1 }, crew: 'Poet', text: 'Spoken word, then a highlife band until late.' },
-    wuse2:       { dow: 4, from: 22, to: 27, name: 'Friday jollof and afrobeats', icon: '🍛', fee: 10000, fx: { fun: 25, social: 20, hunger: 25 }, crew: 'Hype man', text: 'Party jollof at midnight and the DJ never stops.' },
-    wuse_mkt:    { dow: 1, from: 9, to: 15, name: 'Tuesday grain day', icon: '🌾', fee: 0, fx: { social: 10 }, xp: { hustle: 1 }, crew: 'Grain trader', text: 'Lorries from the north unload. Prices move by the hour.' },
-    millennium:  { dow: 6, from: 10, to: 17, name: 'Picnic Sunday', icon: '🧺', fee: 2000, fx: { fun: 20, social: 15, stress: -12 }, crew: 'Choir', text: 'Families, picnic mats and a choir by the river.' },
-    garden_city: { dow: 5, from: 23, to: 27, name: 'Garden City Saturday', icon: '🎷', fee: 12000, fx: { fun: 28, social: 22, energy: -15 }, crew: 'Saxophonist', text: 'Live sax over the beats. PH shows Lagos how it is done.' },
-    mile1:       { dow: 2, from: 7, to: 13, name: 'Wednesday fish market', icon: '🐟', fee: 0, fx: { social: 10, hunger: 10 }, xp: { hustle: 1 }, crew: 'Boat woman', text: 'The boats come in from the creeks before the sun is high.' },
-    isaac_boro:  { dow: 5, from: 15, to: 19, name: 'Saturday ogene evening', icon: '🔔', fee: 1000, fx: { fun: 20, social: 14, stress: -10 }, crew: 'Ogene band', text: 'Ogene bells and masquerade dancers under the old trees.' }
+    beach:       { spot: 'bonfire', dow: 6, from: 12, to: 18, name: 'Sunday beach jam', icon: '🥁', fee: 3000, fx: { fun: 25, social: 20, stress: -10 }, crew: 'Drummers', text: 'Talking drums, sand dancing and suya by the waves.' },
+    tidewater:   { spot: 'dj', dow: 6, from: 16, to: 22, name: 'Sunday day party', icon: '🌅', fee: 15000, fx: { fun: 25, social: 25, stress: -8 }, crew: 'Guest DJ', text: 'The deck fills up and the DJ plays into the sunset.' },
+    club:        { spot: 'dj', dow: 5, from: 23, to: 27, name: 'Amapiano Saturday', icon: '🎹', fee: 15000, fx: { fun: 30, social: 22, energy: -15 }, crew: 'Log drummer', text: 'The log drum hits and the whole strip moves as one.' },
+    market:      { spot: 'gate', dow: 3, from: 9, to: 15, name: 'Thursday fabric day', icon: '🧵', fee: 0, fx: { fun: 8, social: 10 }, xp: { craft: 1, hustle: 1 }, crew: 'Lace trader', text: 'New lace arrives from the warehouse. You learn which bales are real.' },
+    park:        { spot: 'stage', dow: 4, from: 18, to: 23, name: 'Friday poetry and highlife', icon: '📜', fee: 2000, fx: { fun: 22, social: 15, stress: -10 }, xp: { charisma: 1 }, crew: 'Poet', text: 'Spoken word, then a highlife band until late.' },
+    wuse2:       { spot: 'spray', dow: 4, from: 22, to: 27, name: 'Friday jollof and afrobeats', icon: '🍛', fee: 10000, fx: { fun: 25, social: 20, hunger: 25 }, crew: 'Hype man', text: 'Party jollof at midnight and the DJ never stops.' },
+    wuse_mkt:    { spot: 'gate', dow: 1, from: 9, to: 15, name: 'Tuesday grain day', icon: '🌾', fee: 0, fx: { social: 10 }, xp: { hustle: 1 }, crew: 'Grain trader', text: 'Lorries from the north unload. Prices move by the hour.' },
+    millennium:  { spot: 'stage', dow: 6, from: 10, to: 17, name: 'Picnic Sunday', icon: '🧺', fee: 2000, fx: { fun: 20, social: 15, stress: -12 }, crew: 'Choir', text: 'Families, picnic mats and a choir by the river.' },
+    garden_city: { spot: 'dj', dow: 5, from: 23, to: 27, name: 'Garden City Saturday', icon: '🎷', fee: 12000, fx: { fun: 28, social: 22, energy: -15 }, crew: 'Saxophonist', text: 'Live sax over the beats. PH shows Lagos how it is done.' },
+    mile1:       { spot: 'gate', dow: 2, from: 7, to: 13, name: 'Wednesday fish market', icon: '🐟', fee: 0, fx: { social: 10, hunger: 10 }, xp: { hustle: 1 }, crew: 'Boat woman', text: 'The boats come in from the creeks before the sun is high.' },
+    isaac_boro:  { spot: 'stage', dow: 5, from: 15, to: 19, name: 'Saturday ogene evening', icon: '🔔', fee: 1000, fx: { fun: 20, social: 14, stress: -10 }, crew: 'Ogene band', text: 'Ogene bells and masquerade dancers under the old trees.' }
   };
   // Lagoon Boat Cruise: board at the Ikoyi jetty, then move between spots on deck (a shared scene).
   var CRUISE = {
@@ -1539,7 +1544,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

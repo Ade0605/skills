@@ -2338,6 +2338,26 @@
     log(s, I.n.icon + ' ' + I.n.name + ' at ' + D.ROOMS[id].name + '.', 'good');
     return finish(s, ok(I.n.icon + ' ' + I.n.text));
   }
+  // Hang out with a friend who is in the room (rh): once a day per friend, no money.
+  function roomHangBlock(s, id, npc) {
+    var M = D.ROOM_NPCS[id];
+    if (!M || !M[npc] || !s.friends[npc]) return 'They are not here';
+    if (!roomIn(s, id)) return 'Go in first';
+    if (s.room.hung && s.room.hung[npc] === day(s)) return 'You already caught up today';
+    return '';
+  }
+  function roomHang(s, id, npc) {
+    var why = roomHangBlock(s, id, npc); if (why) return fail(why + '.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    s.alerts = [];
+    if (!s.room.hung) s.room.hung = {};
+    s.room.hung[npc] = day(s);
+    befriend(s, npc, 6 + skillLevel(s, 'charisma'));
+    applyFx(s, { social: 10, fun: 6 }); advance(s, 30);
+    var nm = D.NPCS[npc].name; s.room.last = 'You catch up with ' + nm + '.';
+    log(s, '👋 You hung out with ' + nm + ' at ' + D.ROOMS[id].name + '.', 'good');
+    return finish(s, ok('👋 You and ' + nm + ' are closer (' + s.friends[npc].lvl + '/100).'));
+  }
   function roomLeave(s) { if (!s.room) return fail('You are not in a room.'); s.room.until = s.t; return ok('You left.'); }
 
   /* ---------- fishing: buy a rod (fr), cast (fi), sell or cook the catch (fs, fc2) ---------- */
@@ -4582,7 +4602,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), roomNightInfo: roomNightInfo, roomNight: recorded('rn', roomNight), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), roomNightInfo: roomNightInfo, roomNight: recorded('rn', roomNight), roomHangBlock: roomHangBlock, roomHang: recorded('rh', roomHang), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,

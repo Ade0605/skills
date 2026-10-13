@@ -187,24 +187,37 @@
         return { pl: pl, x: base[0] + Math.cos(ang) * rad, y: base[1] + Math.sin(ang) * rad * 0.8 };
       }).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
       // Stagger labels that would sit on top of each other.
+      function collides(it, i) {
+        for (var j = 0; j < i; j++) { var o = list[j]; if (Math.abs(o.lx - it.lx) < (o.lw + it.lw) / 2 + 2 && Math.abs((o.ly0 - o.lift) - (it.ly0 - it.lift)) < 20) return true; }
+        for (var q = 0; q < signRects.length; q++) { var sr = signRects[q]; if (Math.abs(sr.x - it.lx) < (sr.w + it.lw) / 2 + 2 && Math.abs(sr.y - (it.ly0 - it.lift)) < (sr.h + 18) / 2 + 1) return true; }
+        return false;
+      }
       list.forEach(function (it, i) {
         var p0 = P(it.x, it.y, 0); g.font = '700 ' + Math.min(12, Math.max(9, p0.s * 0.2)) + 'px system-ui, sans-serif';
         it.lw = g.measureText(it.pl.label || '').width + 12; it.lx = p0.x; it.ly0 = p0.y - p0.s * 1.5 - 4; it.lift = 0;
-        for (var k = 0; k < 4; k++) {
-          var hit = false;
-          for (var j = 0; j < i; j++) { var o = list[j]; if (Math.abs(o.lx - it.lx) < (o.lw + it.lw) / 2 + 2 && Math.abs((o.ly0 - o.lift) - (it.ly0 - it.lift)) < 20) { hit = true; break; } }
-          if (!hit) for (var q2 = 0; q2 < signRects.length; q2++) { var sr = signRects[q2]; if (Math.abs(sr.x - it.lx) < (sr.w + it.lw) / 2 + 2 && Math.abs(sr.y - (it.ly0 - it.lift)) < (sr.h + 18) / 2 + 1) { hit = true; break; } }
-          if (!hit) break; it.lift += 20;
+        var tries = [0, 20, -20, 40, -40, 60, -60, 80, -80], topPad = scene.topPad || 14;
+        var x0 = it.lx, side = [0, -1, 1], done = false;
+        for (var sd = 0; sd < side.length && !done; sd++) {
+          it.lx = x0 + side[sd] * (it.lw / 2 + 30); it.dx = it.lx - x0;
+          for (var k = 0; k < tries.length; k++) { it.lift = tries[k]; if (it.ly0 - it.lift >= topPad && !collides(it, i)) { done = true; break; } }
         }
+        if (!done) { it.lift = 0; it.lx = x0; it.dx = 0; }
       });
       list.forEach(function (it) {
         var p = P(it.x, it.y, 0), s = p.s, fig = figure(it.pl), fh = s * 1.5, fw = fh * 180 / 260;
         var dance = !reduce && it.pl.spot === 'party' ? Math.abs(Math.sin(t / 220 + it.x * 3)) * s * 0.12 : 0;
         if (fig) g.drawImage(fig, p.x - fw / 2, p.y - fh + fh * 0.06 - dance, fw, fh);
+        if (it.pl.npc) hits.push({ by: it.pl.by, x: p.x, y: p.y - fh / 2, w: fw, h: fh + 20 });
+        if (!it.pl.me && !it.pl.crew) hits.push({ by: it.pl.by, x: p.x, y: p.y - fh / 2, w: fw, h: fh + 20 });
+      });
+      // Labels and speech bubbles after every figure, so no one stands in front of a name.
+      list.forEach(function (it) {
+        var p0 = P(it.x, it.y, 0), p = { x: p0.x + (it.dx || 0), y: p0.y, s: p0.s }, s = p.s, fh = s * 1.5;
+        var dance = !reduce && it.pl.spot === 'party' ? Math.abs(Math.sin(t / 220 + it.x * 3)) * s * 0.12 : 0;
         var label = it.pl.label || '';
         g.font = '700 ' + Math.min(12, Math.max(9, s * 0.2)) + 'px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
         var lw = g.measureText(label).width + 12, ly = p.y - fh - 4 - dance - (it.lift || 0);
-        g.fillStyle = it.pl.me ? '#f2b600' : it.pl.crew ? 'rgba(40,44,52,.85)' : '#2f6fd0';
+        g.fillStyle = it.pl.me ? '#f2b600' : it.pl.npc ? '#2e7d32' : it.pl.crew ? 'rgba(40,44,52,.85)' : '#2f6fd0';
         g.beginPath(); if (g.roundRect) g.roundRect(p.x - lw / 2, ly - 9, lw, 18, 9); else g.rect(p.x - lw / 2, ly - 9, lw, 18); g.fill();
         g.fillStyle = it.pl.me ? '#1a1500' : '#ffffff'; g.fillText(label, p.x, ly);
         var bub = scene.bubbles && scene.bubbles[it.pl.by];
@@ -214,7 +227,6 @@
           g.beginPath(); g.moveTo(p.x - 5, by + 10); g.lineTo(p.x + 5, by + 10); g.lineTo(p.x, by + 16); g.fill();
           g.fillStyle = '#17181a'; g.fillText(text, p.x, by);
         }
-        if (!it.pl.me && !it.pl.crew) hits.push({ by: it.pl.by, x: p.x, y: p.y - fh / 2, w: fw, h: fh + 20 });
       });
       // The stern rail (boat and club deck only).
       if (room === 'cruise' || room === 'tidewater') {

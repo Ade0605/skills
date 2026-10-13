@@ -100,7 +100,7 @@
     }
     if (res && res.msg) ui.toasts.push({ msg: res.msg, ok: res.ok });
     (S.alerts || []).forEach(function (a) { ui.toasts.push({ alert: a }); });
-    S.alerts = [];
+    S.alerts = []; nightReminders();
     if (ui.toasts.length > 4) ui.toasts = ui.toasts.slice(-4);
     save();
     render();
@@ -156,6 +156,18 @@
       '</div></div>';
   }
 
+  // A one-time toast when a room night starts in your city and you are not in that room.
+  function nightReminders() {
+    if (!S || !D.ROOM_NIGHTS) return; ui.nightSeen = ui.nightSeen || {};
+    var here = L.cityOf(S);
+    Object.keys(D.ROOM_NIGHTS).forEach(function (id) {
+      var I = L.roomNightInfo(S, id); if (!I.live) return;
+      var key = id + ':' + I.evDay; if (ui.nightSeen[key]) return; ui.nightSeen[key] = 1;
+      var R = D.ROOMS[id], pl = D.PLACES.filter(function (x) { return x.id === R.place; })[0];
+      if (L.districtCity(pl.district) !== here || L.roomIn(S, id)) return;
+      ui.toasts.push({ msg: I.n.icon + ' ' + I.n.name + ' is on at ' + R.name + '.', ok: true });
+    });
+  }
   function render() {
     // Live updates re-render at any moment, so keep what the viewer is typing.
     var kept = {};
@@ -1718,7 +1730,13 @@
     var pre = 'room:' + id + ':', me = { by: online.me || 'me', label: handleOf(online.me), spot: S.room.spot, me: true, look: S.look, outfit: S.outfit };
     var peers = roomPeers(id).slice(0, 16).map(function (p) { var h = 0; for (var i = 0; i < p.by.length; i++) h = (h * 31 + p.by.charCodeAt(i)) >>> 0; return { by: p.by, label: handleOf(p.by), spot: p.at.slice(pre.length), look: p.look, outfit: { top: STARTERS[h % 4], bottom: ['st_jeans', 'st_chinos', 'st_wrapper'][h % 3] } }; });
     var bubbles = {}, now = Date.now(); (online.roomChat || []).forEach(function (m) { if (m.room === id && now - m.at < 7000) bubbles[m.by] = m.text; });
-    var h0 = L.hour(S); var R0 = D.ROOMS[id], lay = R0.layout || id; var NI = L.roomNightInfo(S, id), extra = NI && NI.live ? [{ by: 'crew:night', label: NI.n.crew, spot: Object.keys(R0.spots)[0], crew: true, look: { skin: 4, hair: 3, shape: 1 }, outfit: { top: 'st_adire', bottom: 'trousers' } }] : []; return { room: id, layout: lay, sign: R0.sign, event: !!(NI && NI.live), players: (ROOM_CREW[id] || []).concat(extra, peers, [me]), spot: S.room.spot, bubbles: bubbles, night: lay === 'club' || h0 >= 19 || h0 < 6 };
+    var h0 = L.hour(S); var R0 = D.ROOMS[id], lay = R0.layout || id; var NPC_LOOKS = [{ skin: 4, hair: 2, shape: 1 }, { skin: 2, hair: 4, shape: 0 }, { skin: 5, hair: 6, shape: 2 }, { skin: 3, hair: 1, shape: 1 }, { skin: 1, hair: 3, shape: 0 }], NPC_TOPS = ['st_asooke', 'shirt', 'blazer', 'jersey', 'crop'];
+    var friends = Object.keys(D.ROOM_NPCS[id] || {}).map(function (k, i) { return { by: 'npc:' + k, label: D.NPCS[k].name, spot: D.ROOM_NPCS[id][k], crew: true, npc: true, look: NPC_LOOKS[Object.keys(D.NPCS).indexOf(k) % 5], outfit: { top: NPC_TOPS[Object.keys(D.NPCS).indexOf(k) % 5], bottom: 'trousers' } }; });
+    var NI = L.roomNightInfo(S, id), extra = NI && NI.live ? [{ by: 'crew:night', label: NI.n.crew, spot: NI.n.spot || Object.keys(R0.spots)[0], crew: true, look: { skin: 4, hair: 3, shape: 1 }, outfit: { top: 'st_adire', bottom: 'trousers' } }] : []; return { room: id, layout: lay, sign: R0.sign, topPad: 100, event: !!(NI && NI.live), players: (ROOM_CREW[id] || []).concat(extra, friends, peers, [me]), spot: S.room.spot, bubbles: bubbles, night: lay === 'club' || h0 >= 19 || h0 < 6 };
+  }
+  function roomFriendChips(id) {
+    var ks = Object.keys(D.ROOM_NPCS[id] || {}); if (!ks.length) return '';
+    return '<div class="cv-spots room-friends">' + ks.map(function (k) { var why = L.roomHangBlock(S, id, k); return '<button type="button" class="act-chip" id="rhang-' + k + '" data-roomhang="' + k + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>👋 ' + (why ? esc(D.NPCS[k].name) + ' ✓' : 'Hang out with ' + esc(D.NPCS[k].name)) + ' · ' + S.friends[k].lvl + '/100</button>'; }).join('') + '</div>';
   }
   function roomNightBar(id) {
     var I = L.roomNightInfo(S, id); if (!I || !I.live) return '';
@@ -1730,7 +1748,7 @@
     return '<div class="cv-head">' + (photoImg(online.me, 'cv-me') || '<span class="cv-me">🙂</span>') + '<div><b>📍 ' + esc(R.name) + ' <span class="muted">· ' + esc(R.where) + '</span></b><small>' + esc(S.room.last || dur(left) + ' here. Pick a spot.') + '</small></div>' +
       '<button class="btn sm ghost" id="room-photo" data-photo="room" aria-label="Take a photo">📷</button><button class="btn sm ghost" id="room-close" data-roomclose="1" aria-label="Back to the map">🗺️</button><button class="btn sm ghost" id="room-fold" data-roomfold="1" aria-label="' + (ui.roomFold ? 'Show the panel' : 'Hide the panel') + '">' + (ui.roomFold ? '⌃' : '⌄') + '</button></div>' +
       (ui.roomFold ? '' : '<div class="chat-send"><input id="room-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Say something to the ' + (peers.length + 1) + ' player' + (peers.length ? 's' : '') + ' here…" aria-label="Room chat"><button class="btn" id="room-send" data-roomsend="1" aria-label="Send">➤</button></div>' +
-      (ui.roomWhy ? '<p class="why">' + esc(ui.roomWhy) + '</p>' : '') + roomNightBar(id) +
+      (ui.roomWhy ? '<p class="why">' + esc(ui.roomWhy) + '</p>' : '') + roomNightBar(id) + roomFriendChips(id) +
       '<div class="cv-spots">' + Object.keys(R.spots).map(function (k) { var P0 = R.spots[k], on = S.room.spot === k, n = peers.filter(function (p) { return p.at.slice(('room:' + id + ':').length) === k; }).length; return '<button type="button" class="act-chip' + (on ? ' on' : '') + '" id="rspot-' + k + '" data-roomspot="' + k + '">' + P0.icon + ' ' + esc(P0.name) + (P0.cost ? ' · ' + N(L.price(S, P0.cost)) : '') + (n ? ' · 👥' + n : '') + '</button>'; }).join('') + '</div>' +
       (id === 'beach' ? fishingCard(true) : '') +
       '<div class="inline" style="justify-content:space-between"><p class="note cv-note">' + dur(left) + ' left. Tap a spot to move, or a player to chat. Chat is filtered and never stored.</p><button class="btn sm ghost" id="room-leave" data-roomleave="1">Leave</button></div>');
@@ -1745,7 +1763,7 @@
       ov = document.createElement('div'); ov.id = 'room-view'; ov.className = 'cruise-view room-view room-' + id; ov.setAttribute('data-room', id); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', D.ROOMS[id].name);
       if (!roomStage) roomStage = window.LasgidiCruise.create({
         onSpot: function (k) { if (S.room && k !== S.room.spot) run(function () { return L.roomSpot(S, S.room.id, k); }); },
-        onPlayer: function (by) { ui.roomOpen = null; clearPicks(); ui.chatWith = by; online.unread[by] = 0; ui.tab = 'map'; render(); }
+        onPlayer: function (by) { if (by.indexOf('npc:') === 0) { var nk = by.slice(4); run(function () { return L.roomHang(S, S.room.id, nk); }); return; } ui.roomOpen = null; clearPicks(); ui.chatWith = by; online.unread[by] = 0; ui.tab = 'map'; render(); }
       });
       var pn = document.createElement('div'); pn.className = 'cv-panel'; pn.id = 'room-panel'; ov.appendChild(roomStage.el); ov.appendChild(pn); document.body.appendChild(ov); roomKey = '';
     }
@@ -3083,6 +3101,23 @@
         (can ? '<button class="btn go" id="game-' + g.kind + '" data-minigame="' + g.kind + '">▶ Play</button>' : L.districtCity(g.district) !== L.cityOf(S) ? '<button class="btn ghost" id="game-go-' + g.kind + '" data-app="travel">✈️ Fly there</button>' : '<button class="btn ghost" id="game-go-' + g.kind + '" data-tripto="' + g.district + '" data-tab="map">Go there</button>') + '</div>';
     }).join('') + '</div></div>';
   }
+  // When a room night next starts (game minutes), or 0 while it is on.
+  function nightNext(id) {
+    var N = D.ROOM_NIGHTS[id], I = L.roomNightInfo(S, id); if (I.live) return 0;
+    var base = Math.floor(S.t / 1440) * 1440;
+    for (var k = 0; k <= 7; k++) { var st = base + k * 1440 + N.from * 60; if (Math.floor(st / 1440) % 7 === N.dow && st > S.t) return st - S.t; }
+    return 7 * 1440;
+  }
+  function roomNightsView() {
+    var here = L.cityOf(S), rows = Object.keys(D.ROOM_NIGHTS).map(function (id) {
+      var R = D.ROOMS[id], pl = D.PLACES.filter(function (x) { return x.id === R.place; })[0], c = L.districtCity(pl.district);
+      return { id: id, N: D.ROOM_NIGHTS[id], R: R, city: c, wait: nightNext(id) };
+    }).sort(function (a, b) { return (a.wait ? 1 : 0) - (b.wait ? 1 : 0) || (a.city === here ? 0 : 1) - (b.city === here ? 0 : 1) || a.wait - b.wait; });
+    return '<div class="section"><h3>📍 Room nights this week</h3><p class="note">One night a week in every live room. Join from inside the room.</p><div class="list">' + rows.map(function (r) {
+      var E = r.N, when = D.DAYS[E.dow] + ' ' + String(E.from).padStart(2, '0') + ':00';
+      return '<div class="item"><div><h3>' + E.icon + ' ' + esc(E.name) + '</h3><div class="meta">' + (r.wait ? '<span>' + when + ' · in ' + esc(dur(r.wait)) + '</span>' : '<span class="gain">On now</span>') + '<span>' + esc(r.R.name) + ', ' + esc(D.CITIES[r.city].name) + '</span><span>' + (E.fee ? N(L.price(S, E.fee)) : 'Free') + '</span></div></div><button class="btn sm ghost" id="rn-' + r.id + '" data-place="' + r.R.place + '" data-tab="map">Go</button></div>';
+    }).join('') + '</div></div>';
+  }
   function eventsView() {
     var rows = [];
     Object.keys(D.PLACE_ACTIONS).forEach(function (d) {
@@ -3095,7 +3130,7 @@
       var a = !x.a.when.months || x.a.when.months.indexOf(m) >= 0, b = !y.a.when.months || y.a.when.months.indexOf(m) >= 0;
       return (b ? 1 : 0) - (a ? 1 : 0) || (L.districtCity(y.d) === here ? 1 : 0) - (L.districtCity(x.d) === here ? 1 : 0) || (L.inWindow(S, y.a.when) ? 1 : 0) - (L.inWindow(S, x.a.when) ? 1 : 0);
     });
-    var html = '<div class="section"><h3>🎟️ What\'s on</h3><p class="note">Festivals, concerts and matches across Lagos, Abuja and Port Harcourt. It is ' + esc(D.MONTHS[m]) + ' in your life.</p><div class="list">';
+    var html = roomNightsView() + '<div class="section"><h3>🎟️ What\'s on</h3><p class="note">Festivals, concerts and matches across Lagos, Abuja and Port Harcourt. It is ' + esc(D.MONTHS[m]) + ' in your life.</p><div class="list">';
     html += rows.map(function (r) {
       var w = r.a.when, thisMonth = !w.months || w.months.indexOf(m) >= 0, now = thisMonth && L.inWindow(S, w), sameCity = L.districtCity(r.d) === L.cityOf(S);
       var when = (w.months ? w.months.map(function (x) { return D.MONTHS[x]; }).join('/') + ' · ' : 'Every week · ') + (w.days ? w.days.map(function (x) { return D.DAYS[x]; }).join('/') + ' ' : '') + pad(w.from) + ':00–' + pad(w.to) + ':00';
@@ -3337,7 +3372,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3672,6 +3707,7 @@
     if (ds.roomenter) { var re0 = ds.roomenter; run(function () { var r = L.roomEnter(S, re0); if (r.ok) { ui.roomOpen = re0; ui.cruiseOpen = false; ui.airportOpen = false; } return r; }); syncPresence(); return; }
     if (ds.roomopen) { ui.roomOpen = ds.roomopen; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.roomspot) { var rsp = ds.roomspot; if (S.room && S.room.spot === rsp) return; run(function () { return L.roomSpot(S, S.room.id, rsp); }); syncPresence(); return; }
+    if (ds.roomhang) { var rh0 = ds.roomhang; run(function () { return L.roomHang(S, S.room.id, rh0); }); return; }
     if (ds.roomnight) { var rn0 = ds.roomnight; run(function () { return L.roomNight(S, rn0); }); return; }
     if (ds.roomleave) { ui.roomOpen = null; run(function () { return L.roomLeave(S); }); syncPresence(); return; }
     if (ds.roomclose) { ui.roomOpen = null; render(); return; }
