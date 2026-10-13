@@ -2002,3 +2002,33 @@ test('the airport site is in Ikeja; the retired Ajah airport actions are hidden 
   const r = L.doAction(s, 'ajah_air_tour');
   assert.ok(r.ok, r.msg); assert.equal(s.cash, before - L.price(s, 1000));
 });
+
+test('airport departures: cabins scale the fare, the cab leg is included, jets, charters and choppers replay', () => {
+  const s = L.newGame({ seed: 77, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.cash += 200000000;
+  const e = L.flightQuote(s, 'abuja', 'economy', false), b = L.flightQuote(s, 'abuja', 'business', false), f = L.flightQuote(s, 'abuja', 'first', true);
+  assert.ok(Math.abs(b.fare - e.fare * 4) <= 400, 'business is about 4x economy');
+  assert.ok(f.fare > b.fare * 2 && f.insure > 0 && f.total === f.fare + f.cab + f.insure);
+  assert.equal(L.flightQuote(s, 'lagos', 'economy').disabled, 'You are already in Lagos');
+  if (s.loc !== 'ikeja') assert.ok(e.cab > 0, 'a cab to Ikeja is included');
+  const before = s.cash + s.bank, r = L.flyClass(s, 'abuja', 'first', true);
+  assert.ok(r.ok, r.msg);
+  assert.equal(s.loc, 'abj_airport'); assert.ok(s.ach.first_class);
+  assert.ok(before - (s.cash + s.bank) >= f.total - 1);
+  // No jet yet: fly private only by charter.
+  assert.match(L.jetQuote(s, 'ph').disabled, /own a jet/);
+  const c = L.flyJet(s, 'ph', true);
+  assert.ok(c.ok, c.msg); assert.equal(s.loc, 'ph_airport'); assert.ok(s.ach.private_jet);
+  // Chopper straight to a Lagos place.
+  const dest = D.PLACES.find(p => p.district === 'lekki');
+  const q = L.chopperQuote(s, dest.id);
+  assert.ok(q.cost >= L.price(s, D.AIR.chopperIntercity) && !q.disabled);
+  assert.ok(L.chopperTo(s, dest.id).ok); assert.equal(s.loc, 'lekki'); assert.ok(s.ach.chopper);
+  // A life that books economy (no test cash top-up) replays to the same seal.
+  const u = L.newGame({ seed: 78, origin: 'nepo', goal: 'freestyle' });
+  while (u.pending.length) L.resolveChoice(u, 1);
+  const g = L.flyClass(u, 'abuja', 'economy', true);
+  assert.ok(g.ok, g.msg); assert.equal(u.loc, 'abj_airport');
+  assert.equal(L.replayLife(u.replay).ledgerHash, u.ledgerHash);
+});

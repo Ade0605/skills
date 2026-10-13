@@ -443,6 +443,13 @@
       g.beginPath(); g.ellipse(sc.x, sc.y, STADIUM.rx * TW * s * 0.8, STADIUM.ry * TH * s * 0.8, 0, 0, Math.PI * 2);
       g.fillStyle = theme.dark ? '#3c6a3a' : '#6aa357'; g.fill();
       g.lineWidth = 3 * s; g.strokeStyle = theme.dark ? '#7b7f86' : '#d8d4c8'; g.stroke();
+      // Private jet hangar and a helipad at the east end of the runway.
+      poly(g, [[8.3, 1.15], [9.7, 1.1], [9.75, 1.85], [8.35, 1.9]], theme.road);
+      drawBuilding(g, { x: 8.55, y: 1.5, w: 0.8, dep: 0.35, h: 6, wall: '#e8e6df', roof: '#8a9199' }, s, 0, true);
+      var hp = toScreen(9.45, 1.55, 0);
+      g.beginPath(); g.ellipse(hp.x, hp.y, 0.22 * TW * s, 0.22 * TH * s, 0, 0, Math.PI * 2); g.fillStyle = '#3d4248'; g.fill();
+      g.lineWidth = Math.max(0.6, 0.8 * s); g.strokeStyle = '#f5c518'; g.stroke();
+      g.fillStyle = '#ffffff'; g.font = '700 ' + Math.max(6, 7 * s) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('H', hp.x, hp.y);
       drawRefinery(g, s); drawNewAirport(g, s); drawEko(g, s); drawBeach(g, s);
       }
 

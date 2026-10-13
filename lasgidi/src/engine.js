@@ -64,6 +64,9 @@
     detty:       'Survived Detty December',
     promoted:    'Promoted at work',
     traveller:   'Travelled to another city',
+    first_class: 'First class: flew in a private suite',
+    private_jet: 'Wheels up: flew private',
+    chopper:     'Straight to the door: took a VIP chopper',
     gifted:      'Received a gift from another Lagosian',
     gems:        'Found all five of a day\'s gems',
     debt_free:   'Debt free: cleared every loan',
@@ -1110,6 +1113,94 @@
     unlock(s, 'traveller');
     log(s, 'You arrived in ' + D.CITIES[city].name + ' (' + D.DISTRICTS[o.to].name + ').', 'good');
     return finish(s, ok('Welcome to ' + D.CITIES[city].name + '. ' + (msg || '')));
+  }
+
+  /* ---------- airport departures (new recorded calls; old lives never make them) ---------- */
+  function ownsJet(s) { return (s.vehicles || []).some(function (v) { return D.VEHICLES[v.id] && D.VEHICLES[v.id].kind === 'jet'; }); }
+  // A cab to the airport is included when you book from elsewhere in the same city.
+  function cabLeg(s, airport) {
+    if (s.loc === airport) return { cost: 0, mins: 0 };
+    if (districtCity(s.loc) !== districtCity(airport)) return null;
+    var o = travelOptions(s, airport).filter(function (x) { return x.mode === 'cab'; })[0];
+    return o && !o.disabled ? { cost: o.cost, mins: o.mins } : null;
+  }
+  function flightQuote(s, city, cabin, insure) {
+    var here = cityOf(s), C = D.CITIES[city], K = D.CABINS[cabin], A = D.AIR;
+    if (!C || !K) return { disabled: 'Pick a city and a cabin' };
+    if (city === here) return { disabled: 'You are already in ' + C.name };
+    var from = D.CITIES[here], h = hour(s), rush = h >= A.rushFrom && h < A.rushTo ? A.rush : 1;
+    var fare = Math.round(price(s, D.INTERCITY.flight.fare) * K.mult * rush / 100) * 100;
+    var cab = cabLeg(s, from.airport), ins = insure ? Math.round(fare * A.insure / 100) * 100 : 0;
+    var q = { city: city, cabin: cabin, fare: fare, rush: rush, cab: cab ? cab.cost : 0, insure: ins, mins: D.INTERCITY.flight.mins + (cab ? cab.mins : 0), from: from.airport, to: C.airport };
+    q.total = fare + q.cab + ins;
+    if (!cab) q.disabled = 'Get to ' + D.DISTRICTS[from.airport].name + ' first';
+    else if (s.pending.length) q.disabled = 'Decide on the open event first';
+    else if (s.over) q.disabled = 'This Weekly Lagos is over';
+    else if (!canAfford(s, q.total)) q.disabled = 'You need ' + naira(q.total);
+    return q;
+  }
+  function flyClass(s, city, cabin, insure) {
+    var q = flightQuote(s, city, cabin, !!insure);
+    if (q.disabled) return fail(q.disabled);
+    s.alerts = [];
+    var K = D.CABINS[cabin], C = D.CITIES[city];
+    if (!pay(s, q.total, K.name + ' flight to ' + C.name + (q.cab ? ' (cab included)' : '') + (q.insure ? ', insured' : ''))) return fail('Not enough for the fare.');
+    advance(s, q.mins);
+    applyFx(s, K.fx);
+    var msg = '';
+    if (rand(s) < D.AIR.lostOdds) {
+      if (insure) msg = 'The airline lost your bag. Insurance covered it.';
+      else { payPartial(s, price(s, D.AIR.lostBag), 'Replacing a lost bag'); msg = 'The airline lost your bag. You had to replace your things.'; }
+    }
+    s.loc = q.to; s.stats.trips++;
+    unlock(s, 'traveller'); if (cabin === 'first') unlock(s, 'first_class');
+    log(s, 'You flew ' + K.name + ' to ' + C.name + '.', 'good');
+    return finish(s, ok('Welcome to ' + C.name + '. ' + msg));
+  }
+  function jetQuote(s, city, charter) {
+    var here = cityOf(s), C = D.CITIES[city];
+    if (!C || city === here) return { disabled: C ? 'You are already in ' + C.name : 'Unknown city' };
+    var from = D.CITIES[here], cab = cabLeg(s, from.airport);
+    var q = { city: city, cost: price(s, charter ? D.AIR.charter : D.AIR.jetFuel) + (cab ? cab.cost : 0), mins: 110 + (cab ? cab.mins : 0), to: C.airport };
+    if (!charter && !ownsJet(s)) q.disabled = 'You do not own a jet';
+    else if (!cab) q.disabled = 'Get to ' + D.DISTRICTS[from.airport].name + ' first';
+    else if (s.pending.length) q.disabled = 'Decide on the open event first';
+    else if (s.over) q.disabled = 'This Weekly Lagos is over';
+    else if (!canAfford(s, q.cost)) q.disabled = 'You need ' + naira(q.cost);
+    return q;
+  }
+  function flyJet(s, city, charter) {
+    var q = jetQuote(s, city, !!charter);
+    if (q.disabled) return fail(q.disabled);
+    s.alerts = [];
+    if (!pay(s, q.cost, (charter ? 'Private jet charter to ' : 'Jet fuel and crew to ') + D.CITIES[city].name)) return fail('Not enough money.');
+    advance(s, q.mins); applyFx(s, { energy: 4, stress: -10, fun: 10 });
+    s.loc = q.to; s.stats.trips++;
+    unlock(s, 'traveller'); unlock(s, 'private_jet');
+    log(s, 'You flew private to ' + D.CITIES[city].name + '. No queue, no boarding.', 'good');
+    return finish(s, ok('Wheels down in ' + D.CITIES[city].name + '.'));
+  }
+  function chopperQuote(s, placeId) {
+    var pl = D.PLACES.filter(function (p) { return p.id === placeId; })[0];
+    if (!pl) return { disabled: 'Pick where to land' };
+    var cross = districtCity(pl.district) !== cityOf(s);
+    var q = { place: placeId, cost: price(s, cross ? D.AIR.chopperIntercity : D.AIR.chopperCity), mins: cross ? 100 : 25, to: pl.district };
+    if (s.loc === pl.district) q.disabled = 'You are already in ' + D.DISTRICTS[pl.district].name;
+    else if (s.pending.length) q.disabled = 'Decide on the open event first';
+    else if (s.over) q.disabled = 'This Weekly Lagos is over';
+    else if (!canAfford(s, q.cost)) q.disabled = 'You need ' + naira(q.cost);
+    return q;
+  }
+  function chopperTo(s, placeId) {
+    var q = chopperQuote(s, placeId);
+    if (q.disabled) return fail(q.disabled);
+    s.alerts = [];
+    var pl = D.PLACES.filter(function (p) { return p.id === placeId; })[0];
+    if (!pay(s, q.cost, 'VIP chopper to ' + pl.name)) return fail('Not enough money.');
+    advance(s, q.mins); applyFx(s, { stress: -6, fun: 12 });
+    s.loc = q.to; s.stats.trips++; unlock(s, 'chopper');
+    log(s, 'A chopper dropped you at ' + pl.name + '.', 'good');
+    return finish(s, ok('Straight to the door: ' + pl.name + '.'));
   }
 
   function distance(a, b) {
@@ -4097,7 +4188,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity),
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,

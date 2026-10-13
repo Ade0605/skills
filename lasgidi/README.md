@@ -145,7 +145,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Pay:** the result becomes a shift's pay, minus ₦4k owner's returns, fuel, and any fines or settlements. Takings are capped at ₦12k, so a skilled run nets a few thousand naira and a careless one loses money.
   - Serving 50 passengers unlocks "Agbero approved". My story shows your best run and total passengers, and there is a "Drive a Danfo Run" starter quest.
   - **Own a danfo:** buy a ₦18m danfo bus from the dealers (Commercial tab). Your own runs then pay no owner's returns. Or hire a driver and it brings weekly returns, with an 8% chance of a crash repair bill and a 5% chance the driver "travels to the village" with the money.
-- **Airports:** Lagos, Abuja and Port Harcourt airports each have a **premium lounge** (shower, buffet and quiet: big boosts to hygiene, hunger and stress), **plane-spotting** at the apron window, and a **🛫 Check in** button that opens flights.
+- **Airports:** Lagos, Abuja and Port Harcourt airports each have a **premium lounge** (shower, buffet and quiet: big boosts to hygiene, hunger and stress), **plane-spotting** at the apron window, and a **🛫 Departures** board with three tabs:
+  - **Air:** pick a city (LOS, ABV, PHC) and a cabin: Economy, Premium Economy (×1.8), Business (×4) or First Class (×9). Fares cost ×1.5 in the 6–9am rush. A cab to the airport is included when you book from elsewhere in the city. Optional travel insurance costs 6% of the fare; without it, a lost bag (8% chance) costs you ₦25k. A boarding pass shows every line, the total and your wallet before you book. Better cabins arrive fed and rested; First Class unlocks an achievement.
+  - **My jet:** your private hangar lists your jets. Flying one costs ₦5m in fuel and crew. No jet? Charter one for ₦12m a trip.
+  - **Chopper:** search any place in any city and land at the door: ₦1.5m within a city, ₦4m between cities.
+  - The map shows the private-jet hangar and a helipad at the east end of the Ikeja runway. All three are new recorded moves, so older lives replay unchanged.
 - **Now passing:** after each trip, a note names the landmarks you passed on the way. On the map, your danfo, cab, keke, okada, car, boat or helicopter rides from district to district ("On the way to Lekki…").
 - **House parties with real players:** when you host, you can add an **event decorator** for half the party's cost again. It turns the house festive, and guests spray 25% more.
   - For 30 real minutes, Lagosians online get a 💌 **party invite** on their Do tab.

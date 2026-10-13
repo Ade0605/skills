@@ -1312,10 +1312,63 @@
       (chips ? '<div class="act-chips">' + chips + '</div>' : '') +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
-      (pl.glyph === 'plane' ? '<div class="inline"><button class="btn" id="checkin-' + pl.id + '" data-app="travel" data-tab="phone">🛫 Check in: flights</button></div>' : '') +
+      (DEP_PLACES[pl.id] ? departuresView(pl) : '') +
       (pl.id === 'airport' && !S.challenge ? japaView() : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : rideRow(pl.district));
+  }
+  /* ---------- airport departures: Air (cabins, insurance, boarding pass), My jet / charter, Chopper ---------- */
+  var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1 };
+  function departuresView(pl) {
+    var tab = ui.depTab || 'air', here = L.cityOf(S), cities = Object.keys(D.CITIES).filter(function (c) { return c !== here; });
+    var city = cities.indexOf(ui.depCity) >= 0 ? ui.depCity : cities[0], code = D.CITY_CODES;
+    var tabs = '<div class="dep-tabs" role="tablist">' + [['air', '✈️ Air'], ['jet', '🛩️ My jet'], ['chopper', '🚁 Chopper']].map(function (x) {
+      return '<button type="button" role="tab" aria-selected="' + (tab === x[0]) + '" class="dep-tab' + (tab === x[0] ? ' on' : '') + '" id="dep-' + x[0] + '" data-deptab="' + x[0] + '">' + x[1] + '</button>';
+    }).join('') + '</div>';
+    var cityRows = function (fn) {
+      return '<div class="dep-cities">' + cities.map(function (c) {
+        var on = c === city;
+        return '<button type="button" class="dep-city' + (on ? ' sel' : '') + '" id="depc-' + c + '" data-depcity="' + c + '"><b>' + code[here] + ' → ' + code[c] + '</b><span>' + esc(D.CITIES[c].name) + '</span><span class="num">' + fn(c) + '</span></button>';
+      }).join('') + '</div>';
+    };
+    var body = '';
+    if (tab === 'air') {
+      var cabin = D.CABINS[ui.depCabin] ? ui.depCabin : 'economy', ins = !!ui.depInsure, q = L.flightQuote(S, city, cabin, ins);
+      body = cityRows(function (c) { return 'from ' + N(L.flightQuote(S, c, 'economy', false).fare || 0) + ' · ' + dur(D.INTERCITY.flight.mins); }) +
+        '<div class="cabins">' + Object.keys(D.CABINS).map(function (k) {
+          var K = D.CABINS[k], f = L.flightQuote(S, city, k, false);
+          return '<button type="button" class="cabin' + (k === cabin ? ' sel' : '') + '" id="cab-' + k + '" data-depcabin="' + k + '"><span class="cab-e">' + K.icon + '</span><b>' + esc(K.name) + '</b><span class="num">' + N(f.fare || 0) + '</span><small>' + esc(K.perk) + '</small></button>';
+        }).join('') + '</div>' +
+        '<label class="dep-ins"><input type="checkbox" id="dep-insure" data-depinsure="1"' + (ins ? ' checked' : '') + '> 🛡️ Travel insurance (' + Math.round(D.AIR.insure * 100) + '% of the fare): covers a lost bag</label>' +
+        '<div class="bpass"><div class="bp-top"><span>BOARDING PASS</span><span>' + esc(D.CABINS[cabin].name) + '</span></div>' +
+          '<div class="bp-route"><b>' + code[here] + '</b><span>✈︎ ' + dur(D.INTERCITY.flight.mins) + '</span><b>' + code[city] + '</b></div>' +
+          '<div class="bp-names"><span>' + esc(D.DISTRICTS[D.CITIES[here].airport].name) + '</span><span>' + esc(D.DISTRICTS[D.CITIES[city].airport].name) + '</span></div>' +
+          '<div class="bp-lines"><div><span>Fare' + (q.rush > 1 ? ' (morning rush ×' + q.rush + ')' : '') + '</span><span>' + N(q.fare || 0) + '</span></div>' +
+          '<div><span>🚕 Cab to the airport</span><span>' + (q.cab ? N(q.cab) : 'Included') + '</span></div>' +
+          (ins ? '<div><span>🛡️ Insurance</span><span>' + N(q.insure) + '</span></div>' : '') +
+          '<div class="bp-total"><span>Total</span><span>' + N(q.total || 0) + '</span></div><div class="muted"><span>In your wallet</span><span>' + N(S.cash + S.bank) + '</span></div></div>' +
+          (q.disabled ? '<p class="why">' + esc(q.disabled) + '</p>' : '') +
+          '<button class="btn go big-go" id="dep-book" data-flyclass="' + city + ':' + cabin + ':' + (ins ? 1 : 0) + '"' + (q.disabled ? ' disabled' : '') + '>Book · ' + N(q.total || 0) + '</button></div>';
+    } else if (tab === 'jet') {
+      var own = L.ownsJet(S), jq = L.jetQuote(S, city, false), cq = L.jetQuote(S, city, true);
+      var mine = (S.vehicles || []).filter(function (v) { return D.VEHICLES[v.id] && D.VEHICLES[v.id].kind === 'jet'; });
+      body = '<div class="hangar"><b>🛩️ Private hangar</b>' + (mine.length ? mine.map(function (v) { return '<span class="tail">' + esc(D.VEHICLES[v.id].name) + ' · ' + esc((S.name || 'Your') + "'s") + '</span>'; }).join('') : '<span class="muted">Your hangar bay is empty.</span>') + '</div>' +
+        cityRows(function (c) { return N((own ? L.jetQuote(S, c, false) : L.jetQuote(S, c, true)).cost || 0); }) +
+        (own ? '<button class="btn go big-go" id="dep-jet" data-flyjet="' + city + ':0"' + (jq.disabled ? ' disabled title="' + esc(jq.disabled) + '"' : '') + '>Fly my jet · fuel and crew ' + N(jq.cost || 0) + '</button>' + (jq.disabled ? '<p class="why">' + esc(jq.disabled) + '</p>' : '')
+          : '<p class="note">No jet yet. Lekki luxury motors sells them, or charter one for this trip.</p><div class="inline"><button class="btn sm ghost" id="dep-shop" data-place="lekki_motors">Shop jets</button></div>') +
+        '<button class="btn" id="dep-charter" data-flyjet="' + city + ':1"' + (cq.disabled ? ' disabled title="' + esc(cq.disabled) + '"' : '') + '>Charter a jet · ' + N(cq.cost || 0) + '</button>' + (cq.disabled && cq.disabled !== jq.disabled ? '<p class="why">' + esc(cq.disabled) + '</p>' : '');
+    } else {
+      var qv = (ui.chopQ || '').toLowerCase(), fc = ui.chopCity || 'all';
+      var list = D.PLACES.filter(function (p) { return !/_site$/.test(p.id) && D.DISTRICTS[p.district] && (fc === 'all' || L.districtCity(p.district) === fc) && (!qv || (p.name + ' ' + D.DISTRICTS[p.district].name).toLowerCase().indexOf(qv) >= 0); }).slice(0, 30);
+      body = '<p class="note">Straight to the door, any place in any city. Not cheap.</p>' +
+        '<input type="search" class="chop-q" id="chop-q" placeholder="Search a place" value="' + esc(ui.chopQ || '') + '" aria-label="Search a place">' +
+        '<div class="dep-tabs sm">' + ['all'].concat(Object.keys(D.CITIES)).map(function (c) { return '<button type="button" class="dep-tab' + (fc === c ? ' on' : '') + '" id="chopc-' + c + '" data-chopcity="' + c + '">' + (c === 'all' ? 'All' : esc(D.CITIES[c].name)) + '</button>'; }).join('') + '</div>' +
+        '<div class="list">' + list.map(function (p) {
+          var cq2 = L.chopperQuote(S, p.id);
+          return '<div class="item"><div><h3>' + (p.icon || '•') + ' ' + esc(p.name) + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[p.district].name) + '</span><span>' + dur(cq2.mins) + '</span><span class="cost">' + N(cq2.cost) + '</span></div></div><button class="btn sm" id="chop-' + p.id + '" data-chopper="' + p.id + '"' + (cq2.disabled ? ' disabled title="' + esc(cq2.disabled) + '"' : '') + '>Fly</button></div>';
+        }).join('') + (list.length ? '' : '<p class="muted">No place matches.</p>') + '</div>';
+    }
+    return '<section class="departures"><h3>🛫 Departures</h3>' + tabs + body + '</section>';
   }
   // The transport picker on a place sheet: one chip per way to get there, then a big Go button.
   var MODE_ICONS = { danfo: 'bus', brt: 't_brt', cab: 't_taxi', keke: 't_keke', okada: 't_okada', car: 'car', ferry: 'boat', boat: 't_speedboat', heli: 't_heli', trek: 't_walk', rail: 't_train' };
@@ -2649,7 +2702,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2940,6 +2993,13 @@
       return;
     }
     if (ds.ridemode) { ui.rideMode = ds.ridemode; render(); return; }
+    if (ds.deptab) { ui.depTab = ds.deptab; render(); return; }
+    if (ds.depcity) { ui.depCity = ds.depcity; render(); return; }
+    if (ds.depcabin) { ui.depCabin = ds.depcabin; render(); return; }
+    if (ds.chopcity) { ui.chopCity = ds.chopcity; render(); return; }
+    if (ds.flyclass) { var fq = ds.flyclass.split(':'); run(function () { var r = L.flyClass(S, fq[0], fq[1], fq[2] === '1'); if (r.ok) { ui.sel = null; ui.place = null; } return r; }, 'travel'); return; }
+    if (ds.flyjet) { var fj = ds.flyjet.split(':'); run(function () { var r = L.flyJet(S, fj[0], fj[1] === '1'); if (r.ok) { ui.sel = null; ui.place = null; } return r; }, 'travel'); return; }
+    if (ds.chopper) { var cp = ds.chopper; run(function () { var r = L.chopperTo(S, cp); if (r.ok) { ui.sel = null; ui.place = cp; } return r; }, 'travel'); return; }
     if (ds.shareplace) { var spl = D.PLACES.filter(function (p) { return p.id === ds.shareplace; })[0], stx = 'Meet me at ' + spl.name + ', ' + D.DISTRICTS[spl.district].name + ' in Lasgidi.'; try { navigator.clipboard.writeText(stx).then(function () { t.textContent = '✅ Copied'; }, function () { t.textContent = stx; }); } catch (e) { t.textContent = stx; } return; }
     if (ds.govtab) { ui.govTab = ds.govtab; online.govStatus = ''; render(); return; }
     if (ds.govmotto != null) { ui.govMotto = +ds.govmotto; render(); return; }
@@ -3008,7 +3068,14 @@
     }
   });
 
+  document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'chop-q') {
+      ui.chopQ = e.target.value.slice(0, 40); render();
+      var q = document.getElementById('chop-q'); if (q) { q.focus(); try { q.setSelectionRange(q.value.length, q.value.length); } catch (x) {} }
+    }
+  });
   document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'dep-insure') { ui.depInsure = e.target.checked; render(); return; }
     if (e.target && e.target.id === 'gov-deputy') { govWrite('govrun', { deputy: e.target.value || null }, e.target.value ? 'Offer sent to ' + nameOf(e.target.value) + '.' : 'Running mate cleared.'); return; }
     if (e.target && e.target.dataset && e.target.dataset.govappoint) {
       var gw = townWeek(), oc = (online.govcab || []).filter(function (r) { return r.id === online.me; })[0], ov = oc && G.weekVal(oc.raw, gw);
