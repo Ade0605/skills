@@ -35,7 +35,8 @@
   // 12 adds car wear and breakdowns (service at Ladipo);
   // 13 adds job interviews for the degree careers (a connect still gets you in);
   // 14 adds the full Detty December: December rates, traffic, IJGB relatives, a hustle boom.
-  var RULES = 14;
+  // 15 keeps the once-a-day room limits (catch-ups, room nights) across visits, so leaving and re-entering does not reset them.
+  var RULES = 15;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -2299,8 +2300,11 @@
     var why = roomBlock(s, id); if (why) return fail(why + '.');
     var R = D.ROOMS[id]; s.alerts = [];
     if (R.fee) pay(s, price(s, R.fee), R.name + ' entry');
-    s.room = { id: id, until: s.t + R.mins, spot: Object.keys(R.spots)[0], n: 0 };
-    applyFx(s, R.fx);
+    var M = s.rules >= 15 ? roomMarks(s) : null, today = day(s);
+    if (M) { M.moves = M.moves || {}; M.entry = M.entry || {}; }
+    s.room = { id: id, until: s.t + R.mins, spot: Object.keys(R.spots)[0], n: M && M.moves[id] && M.moves[id].d === today ? M.moves[id].n : 0 };
+    if (!M || M.entry[id] !== today) applyFx(s, R.fx);
+    if (M) M.entry[id] = today;
     log(s, '📍 You arrived at ' + R.name + '.', 'good');
     return finish(s, ok('Welcome to ' + R.name + '.' + passportStamp(s, id)));
   }
@@ -2315,6 +2319,7 @@
     s.alerts = [];
     if (cost) pay(s, cost, R.name + ': ' + P0.name);
     s.room.spot = spot; s.room.n = (s.room.n || 0) + 1;
+    if (s.rules >= 15) { var MM = roomMarks(s); MM.moves = MM.moves || {}; MM.moves[id] = { d: day(s), n: s.room.n }; }
     if (s.room.n <= 6) { applyFx(s, P0.fx); addXp(s, P0.xp); }
     advance(s, 30); s.room.last = P0.text;
     return finish(s, ok(P0.icon + ' ' + P0.text));
@@ -2323,7 +2328,7 @@
   function roomNightInfo(s, id) {
     var N = D.ROOM_NIGHTS[id]; if (!N) return null;
     var h = hour(s), d = dow(s), live = (d === N.dow && h >= N.from && h < Math.min(24, N.to)) || (N.to > 24 && d === (N.dow + 1) % 7 && h < N.to - 24);
-    var evDay = d === N.dow ? day(s) : day(s) - 1, joined = !!(live && s.room && s.room.id === id && s.room.night === evDay);
+    var evDay = d === N.dow ? day(s) : day(s) - 1, joined = !!(live && s.room && s.room.id === id && nightJoined(s, id, evDay));
     var why = !live ? D.DAYS[N.dow] + 's ' + pad2(N.from) + ':00–' + pad2(N.to % 24) + ':00' : !roomIn(s, id) ? 'Go in first' : joined ? 'You joined tonight' : (N.fee && !canAfford(s, price(s, N.fee))) ? 'Entry is ' + naira(price(s, N.fee)) : '';
     return { n: N, live: live, joined: joined, evDay: evDay, fee: N.fee ? price(s, N.fee) : 0, why: why };
   }
@@ -2333,7 +2338,7 @@
     if (I.why) return fail(I.why + '.');
     s.alerts = [];
     if (I.fee) pay(s, I.fee, D.ROOMS[id].name + ': ' + I.n.name);
-    s.room.night = I.evDay; var PP = passportOf(s); PP.nights[id] = (PP.nights[id] || 0) + 1; applyFx(s, I.n.fx); addXp(s, I.n.xp);
+    s.room.night = I.evDay; if (s.rules >= 15) roomMarks(s).night[id] = I.evDay; var PP = passportOf(s); PP.nights[id] = (PP.nights[id] || 0) + 1; applyFx(s, I.n.fx); addXp(s, I.n.xp);
     advance(s, 60); s.room.last = I.n.text;
     log(s, I.n.icon + ' ' + I.n.name + ' at ' + D.ROOMS[id].name + '.', 'good');
     return finish(s, ok(I.n.icon + ' ' + I.n.text));
@@ -2363,12 +2368,16 @@
     return { seen: seen.length, total: ids.length, rooms: P.rooms, nights: nights, hangs: P.hangs || 0,
       badges: PASSPORT_BADGES.map(function (b) { return { id: b[0], icon: b[1], name: b[2], text: b[3], got: !!got[b[0]] }; }) };
   }
+  // Rules 15: once-a-day marks live on the life, not on the current visit.
+  function roomMarks(s) { if (!s.roomMarks) s.roomMarks = { hung: {}, night: {} }; return s.roomMarks; }
+  function hungToday(s, npc) { return s.rules >= 15 ? roomMarks(s).hung[npc] === day(s) : !!(s.room.hung && s.room.hung[npc] === day(s)); }
+  function nightJoined(s, id, evDay) { return s.rules >= 15 ? roomMarks(s).night[id] === evDay : !!(s.room && s.room.id === id && s.room.night === evDay); }
   // Hang out with a friend who is in the room (rh): once a day per friend, no money.
   function roomHangBlock(s, id, npc) {
     var M = D.ROOM_NPCS[id];
     if (!M || !M[npc] || !s.friends[npc]) return 'They are not here';
     if (!roomIn(s, id)) return 'Go in first';
-    if (s.room.hung && s.room.hung[npc] === day(s)) return 'You already caught up today';
+    if (hungToday(s, npc)) return 'You already caught up today';
     return '';
   }
   function roomHang(s, id, npc) {
@@ -2376,7 +2385,7 @@
     if (s.pending.length) return fail('Decide on the open event first.');
     s.alerts = [];
     if (!s.room.hung) s.room.hung = {};
-    s.room.hung[npc] = day(s); passportOf(s).hangs++;
+    s.room.hung[npc] = day(s); if (s.rules >= 15) roomMarks(s).hung[npc] = day(s); passportOf(s).hangs++;
     befriend(s, npc, 6 + skillLevel(s, 'charisma'));
     applyFx(s, { social: 10, fun: 6 }); advance(s, 30);
     var nm = D.NPCS[npc].name; s.room.last = 'You catch up with ' + nm + '.';

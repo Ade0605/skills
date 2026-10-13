@@ -2333,3 +2333,41 @@ test('room passport: stamps rooms once, counts nights and catch-ups, and never t
   for (const k of ['cruise'].concat(Object.keys(D.ROOMS))) s.passport.rooms[k] = 1;
   const Q = L.passportInfo(s); assert.ok(['lagos', 'cities', 'all'].every(id => Q.badges.find(b => b.id === id).got));
 });
+
+test('rules 15: leaving and re-entering a room does not reset the daily catch-up or tonight\'s room night; rules 14 lives keep the old behaviour', () => {
+  const run = rules => {
+    const s = L.newGame({ seed: 96, origin: 'nepo', goal: 'freestyle', rules });
+    while (s.pending.length) L.resolveChoice(s, 1);
+    s.cash += 9000000; s.loc = 'island';
+    const base = Math.floor(s.t / 1440) * 1440 + 7 * 1440, fri = base + ((4 - (Math.floor(base / 1440) % 7)) + 7) % 7 * 1440;
+    s.t = fri + 18 * 60 + 5; assert.ok(L.roomEnter(s, 'park').ok); s.pending = [];
+    assert.ok(L.roomHang(s, 'park', 'femi').ok); s.pending = [];
+    assert.ok(L.roomNight(s, 'park').ok); s.pending = [];
+    L.roomLeave(s); assert.ok(L.roomEnter(s, 'park').ok, L.roomBlock(s, 'park')); s.pending = [];
+    return { hang: L.roomHang(s, 'park', 'femi'), night: L.roomNight(s, 'park') };
+  };
+  const now = run(L.RULES);
+  assert.equal(L.RULES, 15);
+  assert.ok(!now.hang.ok); assert.match(now.hang.msg, /already caught up/);
+  assert.ok(!now.night.ok); assert.match(now.night.msg, /joined tonight/);
+  const old = run(14);
+  assert.ok(old.hang.ok && old.night.ok, 'rules 14 replays as it was played');
+});
+
+test('rules 15: re-entering a free room the same day gives no fresh entry boost and keeps the six-move taper', () => {
+  const s = L.newGame({ seed: 97, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.loc = 'abj_maitama'; const d = Math.floor(s.t / 1440) * 1440 + 1440; s.t = d + 9 * 60;
+  s.needs.fun = 10; assert.ok(L.roomEnter(s, 'millennium').ok); s.pending = [];
+  const f1 = s.needs.fun; assert.ok(f1 > 10);
+  L.roomLeave(s); assert.ok(L.roomEnter(s, 'millennium').ok); s.pending = [];
+  assert.equal(s.needs.fun, f1, 'no second entry boost today');
+  const spots = ['stage', 'seats', 'food', 'art', 'trees', 'stage'];
+  s.cash += 100000;
+  spots.forEach((sp, i) => { if (i === 3) { L.roomLeave(s); s.pending = []; assert.ok(L.roomEnter(s, 'millennium').ok); } s.pending = []; for (const k of ['hunger', 'energy']) s.needs[k] = 90; const r = L.roomSpot(s, 'millennium', sp); assert.ok(r.ok, sp + ' ' + r.msg); });
+  L.roomLeave(s); s.pending = []; assert.ok(L.roomEnter(s, 'millennium').ok); s.pending = [];
+  const before = s.needs.fun; assert.ok(L.roomSpot(s, 'millennium', 'stage').ok);
+  assert.ok(s.needs.fun <= before, 'the seventh move today gives nothing, even on a new visit');
+  // Next day the room is fresh again.
+  s.t = d + 1440 + 9 * 60; s.pending = []; s.needs.fun = 10; assert.ok(L.roomEnter(s, 'millennium').ok); assert.ok(s.needs.fun > 10);
+});
