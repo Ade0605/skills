@@ -1187,6 +1187,7 @@
         ctx.fillStyle = pl0.me ? theme.danfo : 'rgba(18,20,24,.82)'; ctx.fill();
         ctx.fillStyle = pl0.me ? (theme.danfoInk || '#17181a') : '#ffffff'; ctx.fillText(txt, hx, ty + 0.5);
         if (pl0.unread) { ctx.beginPath(); ctx.arc(hx + tw / 2 - 1, ty - 6, 4.5, 0, Math.PI * 2); ctx.fillStyle = '#e5484d'; ctx.fill(); }
+        if (pl0.sub && cam.z >= 1.2) { ctx.font = '600 9px ' + (theme.font || 'system-ui, sans-serif'); var sw2 = ctx.measureText(pl0.sub).width + 8; ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(hx - sw2 / 2, ty - 21, sw2, 12, 6); else ctx.rect(hx - sw2 / 2, ty - 21, sw2, 12); ctx.fill(); ctx.fillStyle = '#17181a'; ctx.fillText(pl0.sub, hx, ty - 14.5); }
         if (!pl0.me) playerHits.push({ by: pl0.by, x: hx, y: ty });
       });
       // Today's hidden gems: a bobbing diamond over each place still to find.

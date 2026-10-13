@@ -381,7 +381,7 @@
         online.peers = counts; online.others = others;
         var seen = {};
         online.peerList = ch.peers.filter(function (p) { return !p.isMe && p.kind === 'viewer' && p.by && p.presence && typeof p.presence.d === 'string' && D.DISTRICTS[p.presence.d]; })
-          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look), party: cleanParty(p.presence.party), at: typeof p.presence.at === 'string' && p.presence.at.length < 80 ? p.presence.at : null }; });
+          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look), party: cleanParty(p.presence.party), at: typeof p.presence.at === 'string' && p.presence.at.length < 80 ? p.presence.at : null, act: typeof p.presence.a === 'string' && Object.prototype.hasOwnProperty.call(ACTIVITIES, p.presence.a) ? p.presence.a : null }; });
         var ids = online.peerList.map(function (p) { return p.by; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
@@ -415,7 +415,7 @@
   function syncPresence() {
     if (!online.room) return;
     var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null, pt = myParty();
-    var pres = { d: d, look: lk, party: pt, at: ui.visit || null };
+    var pres = { d: d, look: lk, party: pt, at: ui.visit || null, a: S ? myActivity() : null };
     var key = JSON.stringify(pres);
     if (key === online.sentLoc) return;
     online.sentLoc = key;
@@ -477,15 +477,34 @@
       return (faceCache[key] = c);
     } catch (e) { return null; }
   }
+  // What a player is up to, as a code from a fixed list (never free text), shown under their @handle.
+  var ACTIVITIES = { work: 'at work', study: 'studying', beach: 'at the beach', party: 'partying', club: 'at the club', eat: 'eating out', shop: 'shopping', gym: 'working out', sights: 'sightseeing', travel: 'on the move', home: 'at home' };
+  function activityFor(actId) {
+    var pl = D.PLACES.filter(function (p) { return p.acts.indexOf(actId) >= 0; })[0], a = null;
+    Object.keys(D.PLACE_ACTIONS).some(function (d) { a = D.PLACE_ACTIONS[d].filter(function (x) { return x.id === actId; })[0]; return !!a; });
+    var lab = ((a && a.label) || '').toLowerCase();
+    if (/beach|jet ski|cabana|lagoon|boat/.test(lab)) return 'beach';
+    if (/gym|jog|run|tennis|football|swim|workout|fitness/.test(lab) || (a && a.xp && a.xp.fitness)) return 'gym';
+    if (a && (a.gig || a.earn)) return 'work';
+    if (/club|rave|lounge|party|owambe/.test(lab)) return pl && pl.type === 'nightlife' ? 'club' : 'party';
+    if (!pl) return null;
+    return { nightlife: 'party', culture: 'sights', outdoors: 'sights', food: 'eat', learn: 'study', services: 'shop', transport: 'travel' }[pl.type] || null;
+  }
+  function myActivity() {
+    if (ui.visit) return 'home';
+    if (ui.trip && Date.now() - ui.trip.at < 60000) return 'travel';
+    if (ui.activity && Date.now() - ui.activityAt < 30 * 60000) return ui.activity;
+    return S && S.loc === L.homeDef(S).district ? 'home' : null;
+  }
   // Online players on the map: a little figure with their @handle floating above.
   var CH = window.LasgidiChat;
   function handleOf(id) { return CH.handle(id === online.me ? ((online.names[id] && online.names[id].name) || (S && S.name)) : (online.names[id] && online.names[id].name)); }
   function mapPlayers() {
     if (!online.room || !S) return [];
-    var city = L.cityOf(S), out = [{ by: online.me || 'me', d: S.loc, label: handleOf(online.me), me: true, look: S.look || null }];
+    var city = L.cityOf(S), out = [{ by: online.me || 'me', d: S.loc, label: handleOf(online.me), sub: ACTIVITIES[myActivity()] || '', me: true, look: S.look || null }];
     (online.peerList || []).forEach(function (p) {
       if (out.length >= 17 || L.districtCity(p.d) !== city || online.muted[p.by]) return;
-      out.push({ by: p.by, d: p.d, label: handleOf(p.by), look: p.look, unread: online.unread[p.by] || 0, face: photoImage(p.by) || (p.look ? faceCanvas(p.look, null) : null) });
+      out.push({ by: p.by, d: p.d, label: handleOf(p.by), sub: p.act ? ACTIVITIES[p.act] : '', look: p.look, unread: online.unread[p.by] || 0, face: photoImage(p.by) || (p.look ? faceCanvas(p.look, null) : null) });
     });
     return out;
   }
@@ -496,7 +515,7 @@
     var msgs = online.chats[by] || [], muted = !!online.muted[by], home = checkHome(online.homes[by]);
     var near = p.d === S.loc;
     return '<div class="sheet-grab" aria-hidden="true"></div><div class="player-card"><div class="pc-head">' + (photoImg(by, 'pc-photo') || '<span class="pc-photo pc-ph">🙂</span>') +
-      '<div><h3>' + esc(nameOf(by)) + '</h3><div class="pc-handle">' + esc(handleOf(by)) + '</div><div class="meta"><span>📍 ' + esc(D.DISTRICTS[p.d].name) + '</span>' + (home ? '<span>🏠 ' + esc(home.h.name) + '</span>' : '') + '</div></div>' +
+      '<div><h3>' + esc(nameOf(by)) + '</h3><div class="pc-handle">' + esc(handleOf(by)) + '</div><div class="meta"><span>📍 ' + esc(D.DISTRICTS[p.d].name) + '</span>' + (p.act ? '<span>' + esc(ACTIVITIES[p.act]) + '</span>' : '') + (home ? '<span>🏠 ' + esc(home.h.name) + '</span>' : '') + '</div></div>' +
       '<button class="btn sm ghost" id="close-chat" data-closechat="1">Close</button></div>' +
       '<div class="inline"><button class="btn sm ghost" id="pwave-' + esc(by) + '" data-wave="' + esc(by) + '">👋 Wave</button>' + (home ? '<button class="btn sm ghost" id="pvisit-' + esc(by) + '" data-visit2="' + esc(by) + '">🏠 Visit</button>' : '') +
         (near ? '' : '<button class="btn sm ghost" id="pgo-' + esc(by) + '" data-go="' + p.d + '">🧭 Go to them</button>') +
@@ -3232,7 +3251,7 @@
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
     if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; if (ui.tab === 'map' && !ui.place) ui.tab = 'do'; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
-    if (ds.act) { run(function () { return L.doAction(S, ds.act); }); return; }
+    if (ds.act) { var aid0 = ds.act; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { ui.activity = activityFor(aid0); ui.activityAt = Date.now(); } return r; }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
     if (ds.interview !== undefined) { ui.interview = ds.interview || null; render(); return; }
