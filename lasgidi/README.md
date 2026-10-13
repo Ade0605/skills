@@ -285,7 +285,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 
 - **Profile photos:** add a photo of yourself on the Me tab so other players can recognise you on the map, in their district and in the Hall of Fame. An editor approves each photo before anyone else sees it, and you can hide yours at any time.
 - **Prime homes:** buy a home in Lagos's top addresses: a detached duplex in Nicon Town (Lekki Phase 1) for ₦250m, a luxury apartment in Victoria Island for ₦400m, a penthouse in Eko Atlantic for ₦900m, a mansion in Parkview, Ikoyi for ₦1.5bn, or a waterfront mansion on Banana Island for ₦4bn. You can live in it or let it out, and either way you pay a weekly estate service charge. Each one adds status, and Banana Island unlocks an achievement.
-- **Ibeju-Lekki construction sites:** east of Ajah, the map shows an oil refinery (tank farm, distillation columns, flare stacks, a cooling tower, cranes and a tanker jetty) and a new international airport (runway, glass terminal, red steel frame, hangars and a car park), both marked "coming soon". Contractors take day labourers at the gate before 9am for ₦4,500 a day, and the viewing points cost ₦1,000.
+- **Construction sites:** east of Ajah in Ibeju-Lekki, an oil refinery rises (tank farm, distillation columns, flare stacks, a cooling tower, cranes and a tanker jetty). In Ikeja, beside Murtala Muhammed, a new international airport goes up (runway, glass terminal, red steel frame, hangars and a car park). Both are marked "coming soon". Contractors take day labourers at the gate before 9am for ₦4,500 a day, and the viewing points cost ₦1,000.
 - **Governor of Lasgidi:** players run for governor in the Town Hall, each picking one of a fixed set of slogans. You need 20 status points to run. Every player gets one vote a week, and last week's winner is governor for the whole week, with their name and slogan on a green banner over the map. Chips beside the banner show how many players are online, the Sea Plots and how many homes are on the map. The race never touches money.
 - **Victoria Island skyline:** towers along Ozumba Mbadiwe stand apart with streets between them. Each is drawn in full 3D: a ground shadow, shaded glass faces with a mullion grid and a sky reflection, edge highlights, a set-back crown and a mast with a red light, in mixed glass and stone tints.
 - **Look:** Plus Jakarta Sans for text, pill buttons that press in when tapped, colour-coded need bars, an emoji on every action row, and soft shadowed cards. On phones the game opens on the map.
@@ -307,7 +307,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (106 tests)
+  test/engine.test.js   node:test suite (107 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

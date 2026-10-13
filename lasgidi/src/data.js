@@ -530,6 +530,8 @@
       { id: 'suru_owambe', label: 'Attend an owambe', mins: 240, cost: 3000, fx: { fun: 40, social: 40, hunger: 60, energy: -20 }, xp: { charisma: 2 }, special: 'owambe', when: { days: [5], from: 12, to: 19 } }
     ],
     ikeja: [
+      { id: 'ikeja_newair_labour', label: 'Day labour on the new international airport site', mins: 540, earn: 4500, fx: { energy: -45, hygiene: -30, stress: 10 }, xp: { hustle: 2 }, gig: true, when: { days: [1,2,3,4,5,6], from: 7, to: 9 } },
+      { id: 'ikeja_newair_tour', label: 'Watch the new international airport go up from the viewing point', mins: 90, cost: 1000, fx: { fun: 10, stress: -5 }, when: { from: 9, to: 17 } },
       { id: 'ikeja_kalakuta', label: 'Kalakuta Republic Museum: Fela\'s home and the story of Afrobeat', mins: 90, cost: 2000, fx: { fun: 25, stress: -8 }, xp: { music: 2 }, sight: true, when: { from: 10, to: 18 } },
       { id: 'ikeja_jjt', label: 'Unwind at Johnson Jakande Tinubu (JJT) Park', mins: 60, fx: { fun: 12, stress: -12 }, sight: true, when: { from: 9, to: 19 } },
       { id: 'ikeja_tabletennis', label: 'Table tennis at the community centre', mins: 60, cost: 500, fx: { fun: 20, social: 15, energy: -8 }, xp: { fitness: 2 }, sport: 'tabletennis', when: { from: 10, to: 20 } },
@@ -640,8 +642,9 @@
       { id: 'ajah_spot', label: 'Eat at a local spot', mins: 30, cost: 1500, fx: { hunger: 45 } },
       { id: 'ajah_ref_labour', label: 'Day labour on the refinery construction site', mins: 540, earn: 4500, fx: { energy: -45, hygiene: -30, stress: 10 }, xp: { hustle: 2 }, gig: true, when: { days: [1,2,3,4,5,6], from: 7, to: 9 } },
       { id: 'ajah_ref_tour', label: 'Watch the refinery go up from the viewing point', mins: 90, cost: 1000, fx: { fun: 10, stress: -5 }, when: { from: 9, to: 17 } },
-      { id: 'ajah_air_labour', label: 'Day labour on the new airport site', mins: 540, earn: 4500, fx: { energy: -45, hygiene: -30, stress: 10 }, xp: { hustle: 2 }, gig: true, when: { days: [1,2,3,4,5,6], from: 7, to: 9 } },
-      { id: 'ajah_air_tour', label: 'Watch the new airport go up from the viewing point', mins: 90, cost: 1000, fx: { fun: 10, stress: -5 }, when: { from: 9, to: 17 } },
+      // The airport site moved to Ikeja; these stay (hidden) so lives that used them still replay.
+      { id: 'ajah_air_labour', retired: true, label: 'Day labour on the new airport site', mins: 540, earn: 4500, fx: { energy: -45, hygiene: -30, stress: 10 }, xp: { hustle: 2 }, gig: true, when: { days: [1,2,3,4,5,6], from: 7, to: 9 } },
+      { id: 'ajah_air_tour', retired: true, label: 'Watch the new airport go up from the viewing point', mins: 90, cost: 1000, fx: { fun: 10, stress: -5 }, when: { from: 9, to: 17 } },
       { id: 'ajah_shop', label: "Help at a cousin's shop", mins: 180, earn: 2400, fx: { energy: -12 }, xp: { hustle: 3 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 19 } }
     ],
     ikorodu: [
@@ -768,7 +771,7 @@
     { id: 'eko_convention', icon: '🎤', name: 'Eko Convention Centre', type: 'nightlife', glyph: 'note', district: 'vi', x: 18.4, y: 26.0, acts: ['vi_dec_headline', 'vi_dec_vip', 'vi_dec_afterparty'], nogem: true, text: 'The big December stage. Homecoming headliners, international guests and a crowd of thousands. Tickets climb as Christmas gets closer.' },
     { id: 'tbs', icon: '🏟️', name: 'Tafawa Balewa Square', type: 'culture', glyph: 'dome', district: 'island', x: 16.6, y: 22.7, acts: ['island_dec_tbs', 'island_dec_food'], nogem: true, text: 'The old parade ground fills with December concerts and a food village of jollof, suya and ofada.' },
     { id: 'refinery_site', icon: '🏗️', name: 'Lagos oil refinery (under construction)', type: 'services', glyph: 'tool', district: 'ajah', x: 47.6, y: 23.9, acts: ['ajah_ref_labour', 'ajah_ref_tour'], nogem: true, text: 'Tanks, columns and cranes rising out of the sand in Ibeju-Lekki. Coming soon. Contractors take day labourers at the gate before 9am.' },
-    { id: 'new_airport_site', icon: '🛫', name: 'New Lagos international airport (under construction)', type: 'transport', glyph: 'plane', district: 'ajah', x: 47.6, y: 27.0, acts: ['ajah_air_labour', 'ajah_air_tour'], nogem: true, text: 'A runway, a glass terminal and red steel frames going up past Ajah. Coming soon: no flights yet. Day labour at the gate before 9am.' },
+    { id: 'new_airport_site', icon: '🛫', name: 'New Lagos international airport (under construction)', type: 'transport', glyph: 'plane', district: 'ikeja', x: 4.4, y: 3.2, acts: ['ikeja_newair_labour', 'ikeja_newair_tour'], nogem: true, text: 'A second runway, a glass terminal and red steel frames going up beside Murtala Muhammed, with five gates for Abuja and Port Harcourt. Coming soon: no flights yet. Day labour at the gate before 9am.' },
     { id: 'ajah_resort', icon: '🏝️', name: 'Beach resort, Ajah coast', type: 'outdoors', glyph: 'wave', district: 'ajah', x: 38.8, y: 26.0, acts: ['ajah_dec_rave'], nogem: true, text: 'DJs from noon, swimming, lounging and a beach rave that runs into the night all December.' },
     { id: 'lagoon_jetty', icon: '🛥️', name: 'Lagoon jetty', type: 'transport', glyph: 'boat', district: 'ikoyi', x: 20.6, y: 21.8, acts: ['ikoyi_dec_cruise', 'ikoyi_dec_yacht', 'ikoyi_ilashe'], nogem: true, text: 'Boat cruises across the lagoon in December, with yacht parties for the big spenders.' },
     { id: 'link_bridge', icon: '🎆', name: 'Lekki–Ikoyi Link Bridge', type: 'outdoors', glyph: 'wave', district: 'lekki', x: 26.8, y: 23.4, acts: ['lekki_dec_nye', 'lekki_dec_pool'], nogem: true, text: 'The cable-stayed bridge where Lagos counts down to the New Year with fireworks.' },
@@ -915,7 +918,7 @@
   // Big names painted on the ground: [text, x, y, size in km].
   var AREA_LABELS = [
     ['MAINLAND', 6.5, 12.5, 1.2], ['THE ISLAND', 15.0, 25.6, 0.8], ['IKOYI', 20.6, 22.6, 0.55], ['BANANA ISLAND', 23.6, 21.2, 0.45],
-    ['LEKKI', 33.0, 24.8, 0.9], ['SEA PLOTS · ₦5,000 A PLOT', 22.6, 27.2, 0.42], ['MAINLAND ESTATE', 18.0, 3.7, 0.55], ['AIRPORT', 6.4, 1.9, 0.5], ['IBEJU-LEKKI', 47.6, 22.5, 0.6],
+    ['LEKKI', 33.0, 24.8, 0.9], ['SEA PLOTS · ₦5,000 A PLOT', 22.6, 27.2, 0.42], ['MAINLAND ESTATE', 18.0, 3.7, 0.55], ['AIRPORT', 6.4, 1.9, 0.5], ['IBEJU-LEKKI', 47.6, 22.3, 0.6],
     ['ABUJA', 19.0, 20.5, 1.2, 'abuja'], ['JABI LAKE', 6.6, 13.6, 0.45, 'abuja'], ['ASO ROCK', 22.6, 7.6, 0.5, 'abuja'], ['AIRPORT', 6.2, 25.6, 0.5, 'abuja'],
     ['PORT HARCOURT', 17.0, 6.0, 1.0, 'ph'], ['BONNY RIVER', 15.0, 23.4, 0.7, 'ph'], ['AIRPORT', 4.2, -0.2, 0.5, 'ph']
   ];

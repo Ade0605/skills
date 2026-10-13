@@ -653,11 +653,13 @@
     return roundTo(v, 50);
   }
 
-  function availableActions(s) {
+  // retired actions are hidden from players but still run, so lives that used them replay.
+  function availableActions(s, withRetired) {
     var list = [];
     var shift = shiftAction(s);
     if (shift) list.push(shift);
     (D.PLACE_ACTIONS[s.loc] || []).forEach(function (a) {
+      if (a.retired && !withRetired) return;
       if (a.needsVehicle && !(s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === a.needsVehicle; })) return;
       list.push(a);
     });
@@ -783,7 +785,7 @@
 
   function doAction(s, id) {
     s.alerts = [];
-    var a = availableActions(s).filter(function (x) { return x.id === id; })[0];
+    var a = availableActions(s, true).filter(function (x) { return x.id === id; })[0];
     if (!a) return fail('You cannot do that here.');
     if (a.disabled) return fail(a.disabled);
     if (a.special === 'shift') return workShift(s, a);

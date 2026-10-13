@@ -1991,3 +1991,14 @@ test('prime addresses: Lekki Phase 1 to Banana Island, live in it or let it, ser
   assert.equal(rent(), r0, 'no tenants while you live there'); assert.ok(charge() > c0, 'the service charge still comes');
   assert.equal(L.category('Estate service charge: x', -1), 'housing');
 });
+
+test('the airport site is in Ikeja; the retired Ajah airport actions are hidden but still run for old lives', () => {
+  const pl = D.PLACES.find(p => p.id === 'new_airport_site');
+  assert.equal(pl.district, 'ikeja');
+  const s = L.newGame({ seed: 5, goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  s.loc = 'ajah'; s.t = s.t - (s.t % 1440) + 1440 + 10 * 60;
+  assert.ok(!L.availableActions(s).some(a => a.id === 'ajah_air_tour'), 'not offered in Ajah');
+  s.cash = 50000; const before = s.cash;
+  const r = L.doAction(s, 'ajah_air_tour');
+  assert.ok(r.ok, r.msg); assert.equal(s.cash, before - L.price(s, 1000));
+});

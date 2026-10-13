@@ -16,7 +16,7 @@
   // Everything else is water: the Lagoon between them, the harbour channel,
   // and the Atlantic to the south.
   var MAINLAND = [[-2, -1], [31, -1], [34, 2.5], [32, 5.6], [24, 6.4], [17.4, 6.6], [16.6, 10], [17.2, 14], [17, 17.8], [14.2, 19.4], [11.4, 20.6], [7, 21.2], [2, 20.8], [-2, 20]];
-  var ISLAND = [[14.4, 21], [17.8, 19.9], [21.6, 19.8], [25.6, 21.4], [33, 22.4], [43, 22.6], [51.4, 22.4], [51.9, 28.4], [44.0, 28.4], [43, 27.0], [33, 26.9], [24, 26.9], [20.6, 27.1], [17.6, 26.4], [16, 24.2], [14.2, 22.6]];
+  var ISLAND = [[14.4, 21], [17.8, 19.9], [21.6, 19.8], [25.6, 21.4], [33, 22.4], [43, 22.6], [51.4, 22.4], [51.8, 25.8], [43, 26.6], [33, 26.9], [24, 26.9], [20.6, 27.1], [17.6, 26.4], [16, 24.2], [14.2, 22.6]];
   var CREEK = [[17.2, 23.1], [21.4, 22.6], [21.6, 23.3], [17.4, 23.8]]; // Five Cowries creek between the Island and VI
   // Each city in its own frame: land polygons, water carved out of them, and the drawing box.
   var GEO = {
@@ -127,6 +127,8 @@
   };
   function nearEstate(x, y) { return ESTATES.some(function (e) { return Math.hypot(e.x - x, e.y - y) < e.r + 0.2; }); }
   var E = D.ESTATE, EX1 = E.x0 + E.cols * E.gap, EY1 = E.y0 + E.rows * E.gap;
+  // The refinery (Ibeju-Lekki) and new airport (Ikeja, x 0.9–7.9, y 2.1–4.3) pads stay clear of trees and buildings.
+  function inSite(city, x, y) { return city === 'lagos' && ((x > 43.9 && y > 22.5 && y < 25.3) || (x > 0.6 && x < 8.3 && y > 1.8 && y < 4.6)); }
   function inMainlandEstate(x, y) { return CITY === 'lagos' && x > E.x0 - 0.3 && x < EX1 + 0.3 && y > E.y0 - 0.3 && y < EY1 + 0.3; }
   function plotXY(n) { return { x: E.x0 + (n % E.cols) * E.gap + E.gap / 2, y: E.y0 + Math.floor(n / E.cols) * E.gap + E.gap / 2 }; }
   function npcPlot(n) { var h = Math.imul((n + 17) * 2654435761, 1597334677) >>> 0; return (h % 100) < 38; }
@@ -173,7 +175,8 @@
     return { id: k, x: h.x, y: h.y, type: h.type, k: h.district, m: m, r: Math.max(0.45, (Math.max(m.n[0], m.n[1]) * Math.max(m.gap, m.w)) / 2 + 0.25) };
   });
   buildings = buildings.filter(function (b) { return !nearEstate(b.x, b.y) && !inMainlandEstate(b.x, b.y); });
-  trees = trees.filter(function (t) { return !nearEstate(t.x, t.y) && !inMainlandEstate(t.x, t.y) && !(city === 'lagos' && t.x > 43.9 && t.y > 22.5 && t.y < 28.2); });
+  trees = trees.filter(function (t) { return !nearEstate(t.x, t.y) && !inMainlandEstate(t.x, t.y) && !inSite(city, t.x, t.y); });
+  buildings = buildings.filter(function (b) { return !inSite(city, b.x, b.y); });
   ESTATES.forEach(function (e, ei) {
     var m = e.m, nx = m.n[0], ny = m.n[1];
     for (var i = 0; i < nx; i++) for (var j = 0; j < ny; j++) {
@@ -210,7 +213,7 @@
   var RUNWAY = [[3.2, 0.6], [9.6, 0.2], [9.8, 1.0], [3.4, 1.4]];
   var STADIUM = { x: 9.2, y: 16.6, rx: 0.9, ry: 0.7 };
   // Ibeju-Lekki construction sites, east of Ajah: a refinery and a new international airport.
-  var REFINERY = { x0: 44.2, y0: 22.8, x1: 51.0, y1: 24.9 }, NEW_AIRPORT = { x0: 44.2, y0: 25.1, x1: 51.2, y1: 27.3 }, AIRPORT_SHIFT = 0.7;
+  var REFINERY = { x0: 44.2, y0: 22.8, x1: 51.0, y1: 24.9 }, NEW_AIRPORT = { x0: 44.2, y0: 25.1, x1: 51.2, y1: 27.3 }, AIRPORT_AT = { x: 0.9, y: 2.1 };
 
   /* ---------- the playground ---------- */
 
@@ -602,8 +605,8 @@
       sign(g, s, 50.2, 24.85, 'LAGOS OIL REFINERY', 'COMING SOON');
     }
     function drawNewAirport(g, s) {
-      // Drawn at y 25.1–27.3 and shifted 0.7 km south, leaving a green gap and an access road after the refinery.
-      var o0 = toScreen(0, 0, 0), o1 = toScreen(0, AIRPORT_SHIFT, 0);
+      // Laid out in local coordinates (x 44.2–51.2, y 25.1–27.3), then moved to its real spot beside Murtala Muhammed in Ikeja.
+      var o0 = toScreen(0, 0, 0), o1 = toScreen(AIRPORT_AT.x - NEW_AIRPORT.x0, AIRPORT_AT.y - NEW_AIRPORT.y0, 0);
       g.save(); g.translate(o1.x - o0.x, o1.y - o0.y);
       var R = NEW_AIRPORT;
       sitePad(g, s, R);
