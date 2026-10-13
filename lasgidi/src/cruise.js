@@ -46,12 +46,13 @@
       poly([[x + w, y, 0], [x + w, y + d, 0], [x + w, y + d, h], [x + w, y, h]], side);
       poly([[x, y, h], [x + w, y, h], [x + w, y + d, h], [x, y + d, h]], top);
     }
+    var signRects = [];
     function sign(x, y, z, text, bg) {
       var p = P(x, y, z), s = p.s;
       g.font = '800 ' + Math.min(15, Math.max(9, s * 0.24)) + 'px system-ui, sans-serif';
       var tw = g.measureText(text).width + 16, th = Math.min(26, Math.max(16, s * 0.4));
       g.fillStyle = '#3a3d42'; g.fillRect(p.x - tw / 2 + s * 0.1, p.y, s * 0.06, s * 1.2); g.fillRect(p.x + tw / 2 - s * 0.16, p.y, s * 0.06, s * 1.2);
-      g.fillStyle = bg; g.fillRect(p.x - tw / 2, p.y - th, tw, th);
+      g.fillStyle = bg; g.fillRect(p.x - tw / 2, p.y - th, tw, th); signRects.push({ x: p.x, y: p.y - th / 2, w: tw, h: th });
       g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, p.x, p.y - th / 2);
     }
     function figure(pl) {
@@ -64,7 +65,7 @@
     }
     function frame(t) {
       size();
-      g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+      g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); signRects = [];
       var room = scene.layout || scene.room || 'cruise', SP = LAYOUTS[room] || SPOTS, bob = reduce || room !== 'cruise' ? 0 : Math.sin(t / 900) * 2;
       // Sky and lagoon.
       var sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, scene.night ? '#0d1733' : '#bfe3f7'); sky.addColorStop(0.28, scene.night ? '#1c2c55' : '#d9f0fb'); sky.addColorStop(0.3, scene.night ? '#0f2f4a' : '#2a9cc4'); sky.addColorStop(1, scene.night ? '#0a2236' : '#1d7fa3');
@@ -170,6 +171,15 @@
       var yb = P(9.9, 6.4, 0); g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(yb.x, yb.y, yb.s * 0.6, yb.s * 0.2, -0.45, 0, Math.PI * 2); g.fill(); g.fillStyle = '#9fc4dc'; g.fillRect(yb.x - yb.s * 0.15, yb.y - yb.s * 0.18, yb.s * 0.3, yb.s * 0.12);
       sign(8.4, 4.6, 1.2, 'JETTY', '#1f4f7a');
       }
+      // Event night: bunting along the back edges and falling confetti.
+      if (scene.event) {
+        var bc = ['#e53935', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'];
+        [[[0, 0], [DECK.w, 0]], [[0, 0], [0, DECK.d]]].forEach(function (e2) {
+          var a6 = P(e2[0][0], e2[0][1], 1.9), b6 = P(e2[1][0], e2[1][1], 1.9); g.strokeStyle = '#444'; g.lineWidth = 1; g.beginPath(); g.moveTo(a6.x, a6.y); g.lineTo(b6.x, b6.y); g.stroke();
+          for (var f6 = 0; f6 < 14; f6++) { var u6 = (f6 + 0.5) / 14, fx6 = a6.x + (b6.x - a6.x) * u6, fy6 = a6.y + (b6.y - a6.y) * u6; g.fillStyle = bc[f6 % 5]; g.beginPath(); g.moveTo(fx6 - 6, fy6); g.lineTo(fx6 + 6, fy6); g.lineTo(fx6, fy6 + 12); g.fill(); }
+        });
+        if (!reduce) for (var c6 = 0; c6 < 24; c6++) { var v6 = ((t / 3000 + c6 * 0.041) % 1), cp = P((c6 * 37 % 100) / 10, (c6 * 53 % 60) / 10, 2.4 - v6 * 2.4); g.fillStyle = bc[c6 % 5]; g.fillRect(cp.x, cp.y, 4, 6); }
+      }
       // Players and crew, back to front.
       hits = [];
       var placed = {}, list = (scene.players || []).map(function (pl) {
@@ -183,6 +193,7 @@
         for (var k = 0; k < 4; k++) {
           var hit = false;
           for (var j = 0; j < i; j++) { var o = list[j]; if (Math.abs(o.lx - it.lx) < (o.lw + it.lw) / 2 + 2 && Math.abs((o.ly0 - o.lift) - (it.ly0 - it.lift)) < 20) { hit = true; break; } }
+          if (!hit) for (var q2 = 0; q2 < signRects.length; q2++) { var sr = signRects[q2]; if (Math.abs(sr.x - it.lx) < (sr.w + it.lw) / 2 + 2 && Math.abs(sr.y - (it.ly0 - it.lift)) < (sr.h + 18) / 2 + 1) { hit = true; break; } }
           if (!hit) break; it.lift += 20;
         }
       });

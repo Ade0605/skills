@@ -924,6 +924,8 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .cv-head { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; }
 .cv-head small { display: block; color: var(--muted); font-size: 12px; }
 .cv-me { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; background: var(--sunk); font-size: 20px; }
+.room-night { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; margin: 4px 0 6px; border-radius: 10px; background: #fff4cc; color: #3a2c00; font-size: 13px; }
+.room-night .muted { color: #6b5a1f; }
 .cv-spots { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
 .cv-spots .act-chip { white-space: nowrap; cursor: pointer; border: 0; font: inherit; font-size: 13px; }
 .cv-spots .act-chip.on { background: #f2b600; color: #1a1500; }

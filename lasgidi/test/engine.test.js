@@ -2270,3 +2270,25 @@ test('live rooms: Abuja and PH rooms open in their own city, keep their hours, a
   }
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
 });
+
+test('room nights: join once on the right weekday and hours, past midnight too, and replay', () => {
+  const s = L.newGame({ seed: 91, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  s.cash += 5000000; s.loc = 'vi';
+  const base = Math.floor(s.t / 1440) * 1440 + 7 * 1440, sat = base + ((5 - (Math.floor(base / 1440) % 7)) + 7) % 7 * 1440;
+  s.t = sat + 22 * 60 + 30; assert.ok(L.roomEnter(s, 'club').ok); s.pending = [];
+  assert.match(L.roomNightInfo(s, 'club').why, /Sats 23:00–03:00/);
+  s.t = sat + 23 * 60 + 10; const b0 = s.cash + s.bank;
+  assert.ok(L.roomNight(s, 'club').ok); assert.equal(b0 - (s.cash + s.bank), L.price(s, 15000)); s.pending = [];
+  s.t = sat + 1440 + 60; assert.ok(L.roomIn(s, 'club')); assert.match(L.roomNight(s, 'club').msg || '', /You joined tonight/);
+  // Out of the room: blocked. Wrong day: blocked.
+  const r = L.newGame({ seed: 92, origin: 'nepo', goal: 'freestyle' }); while (r.pending.length) L.resolveChoice(r, 1);
+  assert.match(L.roomNightInfo(r, 'park').why, /Fris 18:00–23:00|Go in first/);
+  // A real life on the island that waits for Friday evening at Freedom Park replays to its seal.
+  if (r.loc !== 'island') { const o = L.travelOptions(r, 'island').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'island', o.mode).ok); }
+  while (r.pending.length) L.resolveChoice(r, 1);
+  for (let i = 0; i < 20 && !(L.roomNightInfo(r, 'park').live); i++) { L.wait(r, 60 * 6); while (r.pending.length) L.resolveChoice(r, 1); }
+  while (!L.roomNightInfo(r, 'park').live) { L.wait(r, 60); while (r.pending.length) L.resolveChoice(r, 1); }
+  assert.ok(L.roomEnter(r, 'park').ok, L.roomBlock(r, 'park')); while (r.pending.length) L.resolveChoice(r, 1); assert.ok(L.roomNight(r, 'park').ok, L.roomNightInfo(r, 'park').why);
+  assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});
