@@ -430,7 +430,8 @@
   var PLACE_ACTIONS = {
     abj_kubwa: [
       { id: 'abj_kubwa_food', label: 'Buy foodstuff at Kubwa market (7 meals)', mins: 60, cost: 4500, special: 'pantry7', when: { from: 7, to: 19 } },
-      { id: 'abj_kubwa_gig', label: 'Carry loads at Kubwa market', mins: 180, earn: 2400, fx: { energy: -20, hygiene: -12 }, xp: { hustle: 2, fitness: 1 }, gig: true, when: { from: 7, to: 18 } }
+      { id: 'abj_kubwa_gig', label: 'Carry loads at Kubwa market', mins: 180, earn: 2400, fx: { energy: -20, hygiene: -12 }, xp: { hustle: 2, fitness: 1 }, gig: true, when: { from: 7, to: 18 } },
+      { id: 'abj_zuma', label: 'Day trip to see Zuma Rock', mins: 240, cost: 6000, fx: { fun: 30, stress: -12, energy: -10 }, when: { from: 7, to: 13 } }
     ],
     abj_maitama: [
       { id: 'abj_millennium', label: 'Walk in Millennium Park', mins: 90, fx: { fun: 18, stress: -12 }, when: { from: 7, to: 19 } },
@@ -440,7 +441,8 @@
     abj_wuse: [
       { id: 'abj_suya', label: 'Eat suya in Wuse 2', mins: 45, cost: 2500, fx: { hunger: 35, fun: 10 }, when: { from: 17, to: 24 } },
       { id: 'abj_night', label: 'Night out in Wuse 2', mins: 240, cost: 15000, fx: { fun: 55, social: 40, energy: -35, hygiene: -15 }, special: 'club', when: { days: [4,5], from: 21, to: 24 } },
-      { id: 'abj_wuse_gig', label: 'Sell at Wuse Market', mins: 180, earn: 3000, fx: { energy: -15 }, xp: { hustle: 3 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } }
+      { id: 'abj_wuse_gig', label: 'Sell at Wuse Market', mins: 180, earn: 3000, fx: { energy: -15 }, xp: { hustle: 3 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
+      { id: 'abj_galleria', label: 'Catch a film at the Wuse cinema galleria', mins: 150, cost: 4500, fx: { fun: 30, social: 8 }, when: { from: 11, to: 23 } }
     ],
     abj_jabi: [
       { id: 'abj_jabi_film', label: 'Watch a film at Jabi Lake Mall', mins: 150, cost: 5000, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
@@ -449,12 +451,18 @@
     ],
     abj_asokoro: [
       { id: 'abj_aso', label: 'Watch the sun set on Aso Rock', mins: 60, fx: { fun: 15, stress: -10 }, when: { from: 16, to: 19 } },
-      { id: 'abj_asokoro_gig', label: 'Security shift at an Asokoro gate', mins: 240, earn: 4000, fx: { energy: -18, fun: -8 }, xp: { fitness: 1 }, gig: true }
+      { id: 'abj_asokoro_gig', label: 'Security shift at an Asokoro gate', mins: 240, earn: 4000, fx: { energy: -18, fun: -8 }, xp: { fitness: 1 }, gig: true },
+      { id: 'abj_threearms', label: 'Walk past the Three Arms Zone', mins: 45, fx: { fun: 8, stress: -4 }, when: { from: 8, to: 17 } }
     ],
     abj_garki: [
       { id: 'abj_carnival', label: 'Abuja Carnival at Eagle Square', mins: 240, cost: 2000, fx: { fun: 50, social: 30, energy: -20 }, event: true, when: { months: [10], days: [5,6], from: 10, to: 20 } },
       { id: 'abj_eagle', label: 'Stroll round Eagle Square', mins: 45, fx: { fun: 10, stress: -5 }, when: { from: 7, to: 19 } },
-      { id: 'abj_garki_gig', label: 'Type documents at a business centre', mins: 120, earn: 3200, fx: { energy: -8 }, xp: { tech: 2 }, gig: true, when: { days: [0,1,2,3,4], from: 8, to: 18 } }
+      { id: 'abj_garki_gig', label: 'Type documents at a business centre', mins: 120, earn: 3200, fx: { energy: -8 }, xp: { tech: 2 }, gig: true, when: { days: [0,1,2,3,4], from: 8, to: 18 } },
+      { id: 'abj_mosque', label: 'Visit the National Mosque grounds', mins: 45, fx: { stress: -10, fun: 6 }, when: { from: 8, to: 18 } },
+      { id: 'abj_ecumenical', label: 'Sit in at the National Christian Centre', mins: 60, fx: { stress: -10, social: 6 }, when: { from: 8, to: 18 } },
+      { id: 'abj_tower', label: 'Ride up the Millennium Tower', mins: 60, cost: 5000, fx: { fun: 22, stress: -6 }, when: { from: 10, to: 20 } },
+      { id: 'abj_crafts', label: 'Browse the Arts and Crafts Village', mins: 60, cost: 1500, fx: { fun: 14, social: 6 }, when: { from: 9, to: 18 } },
+      { id: 'abj_crafts_gig', label: 'Sell beads at the Crafts Village', mins: 180, earn: 3800, fx: { energy: -12 }, xp: { hustle: 2 }, gig: true, when: { days: [5, 6], from: 10, to: 17 } }
     ],
     abj_nyanya: [
       { id: 'abj_nyanya_buka', label: 'Eat at a Nyanya buka', mins: 30, cost: 1300, fx: { hunger: 45 } },
@@ -464,13 +472,17 @@
       { id: 'abj_air_lounge', label: 'Premium lounge: shower, buffet, quiet', mins: 60, cost: 25000, fx: { hunger: 40, hygiene: 25, energy: 10, stress: -12, fun: 6 } },
       { id: 'abj_air_spot', label: 'Plane-spotting at the apron window', mins: 30, fx: { fun: 6, stress: -3 } },
       { id: 'abj_air_eat', label: 'Eat at the airport', mins: 45, cost: 6000, fx: { hunger: 50 } },
-      { id: 'abj_air_gig', label: 'Help travellers with bags', mins: 120, earn: 2500, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 6, to: 22 } }
+      { id: 'abj_air_gig', label: 'Help travellers with bags', mins: 120, earn: 2500, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 6, to: 22 } },
+      { id: 'abj_gate', label: 'Take a photo at the City Gate', mins: 15, fx: { fun: 10 }, when: { from: 7, to: 18 } },
+      { id: 'abj_stadium', label: 'Watch a match at the national stadium', mins: 150, cost: 2000, fx: { fun: 32, social: 12, energy: -8 }, when: { days: [5, 6], from: 15, to: 20 } },
+      { id: 'abj_stadium_gig', label: 'Sell drinks at the stadium gates', mins: 180, earn: 3400, fx: { energy: -14 }, xp: { hustle: 2 }, gig: true, when: { days: [5, 6], from: 14, to: 20 } }
     ],
     ph_airport: [
       { id: 'ph_air_lounge', label: 'Premium lounge: shower, buffet, quiet', mins: 60, cost: 22000, fx: { hunger: 40, hygiene: 25, energy: 10, stress: -12, fun: 6 } },
       { id: 'ph_air_spot', label: 'Plane-spotting at the apron window', mins: 30, fx: { fun: 6, stress: -3 } },
       { id: 'ph_air_eat', label: 'Eat at the airport', mins: 45, cost: 5500, fx: { hunger: 50 } },
-      { id: 'ph_air_gig', label: 'Help travellers with bags', mins: 120, earn: 2400, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 6, to: 22 } }
+      { id: 'ph_air_gig', label: 'Help travellers with bags', mins: 120, earn: 2400, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 6, to: 22 } },
+      { id: 'ph_stadium', label: 'Watch a match at the stadium', mins: 150, cost: 1500, fx: { fun: 30, social: 12, energy: -8 }, when: { days: [5, 6], from: 15, to: 20 } }
     ],
     ph_choba: [
       { id: 'ph_uniport_lib', label: 'Study at the Uniport library', mins: 120, cost: 300, fx: { energy: -10, fun: -5 }, xp: { tech: 4 }, when: { from: 8, to: 20 } },
@@ -485,11 +497,15 @@
     ph_gra: [
       { id: 'ph_night', label: 'Night out in GRA', mins: 240, cost: 12000, fx: { fun: 55, social: 40, energy: -35, hygiene: -15 }, special: 'club', when: { days: [4,5], from: 21, to: 24 } },
       { id: 'ph_gra_film', label: 'Watch a film at the PH mall', mins: 150, cost: 4500, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
-      { id: 'ph_gra_gig', label: 'Valet parking in GRA', mins: 180, earn: 3500, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 17, to: 24 } }
+      { id: 'ph_gra_gig', label: 'Valet parking in GRA', mins: 180, earn: 3500, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, when: { from: 17, to: 24 } },
+      { id: 'ph_obiwali', label: 'See a show at the cultural centre', mins: 120, cost: 3000, fx: { fun: 26, social: 10 }, when: { from: 16, to: 22 } },
+      { id: 'ph_garrison', label: 'Buy roasted corn and ube at Garrison junction', mins: 30, cost: 900, fx: { hunger: 30, fun: 4 }, when: { from: 10, to: 22 } }
     ],
     ph_transamadi: [
       { id: 'ph_canteen', label: 'Eat at a yard canteen', mins: 30, cost: 1500, fx: { hunger: 45 } },
-      { id: 'ph_yard_gig', label: 'Day labour at a Trans-Amadi yard', mins: 300, earn: 4500, fx: { energy: -30, hygiene: -15 }, xp: { craft: 2, fitness: 1 }, gig: true, when: { days: [0,1,2,3,4,5], from: 6, to: 15 } }
+      { id: 'ph_yard_gig', label: 'Day labour at a Trans-Amadi yard', mins: 300, earn: 4500, fx: { energy: -30, hygiene: -15 }, xp: { craft: 2, fitness: 1 }, gig: true, when: { days: [0,1,2,3,4,5], from: 6, to: 15 } },
+      { id: 'ph_zoo', label: 'Visit the zoo', mins: 90, cost: 1500, fx: { fun: 20, stress: -6 }, when: { from: 9, to: 17 } },
+      { id: 'ph_cranes', label: 'Watch the cranes at the river port', mins: 45, fx: { fun: 8 }, when: { from: 7, to: 18 } }
     ],
     ph_dline: [
       { id: 'ph_mile1_food', label: 'Buy foodstuff at Mile 1 (7 meals)', mins: 60, cost: 6000, special: 'pantry7', when: { from: 7, to: 19 } },
@@ -499,11 +515,14 @@
       { id: 'ph_bole', label: 'Eat bole and fish', mins: 45, cost: 2500, fx: { hunger: 50, fun: 10 } },
       { id: 'ph_bolegame', label: 'Work the bole grill (mini-game)', mins: 180, fx: { energy: -18, hygiene: -12, stress: 5, hunger: 20 }, xp: { cooking: 3, hustle: 1 }, gig: true, minigame: 'bole', when: { from: 11, to: 22 } },
       { id: 'ph_isaac', label: 'Walk in Isaac Boro Park', mins: 60, fx: { fun: 12, stress: -8 }, when: { from: 7, to: 19 } },
-      { id: 'ph_oldgra_gig', label: 'Run errands in Old GRA', mins: 150, earn: 2700, fx: { energy: -12 }, xp: { hustle: 2 }, gig: true, when: { from: 8, to: 19 } }
+      { id: 'ph_oldgra_gig', label: 'Run errands in Old GRA', mins: 150, earn: 2700, fx: { energy: -12 }, xp: { hustle: 2 }, gig: true, when: { from: 8, to: 19 } },
+      { id: 'ph_govhouse', label: 'Walk past Brick House, the Government House', mins: 30, fx: { fun: 6 }, when: { from: 8, to: 17 } }
     ],
     ph_borokiri: [
       { id: 'ph_waterfront', label: 'Watch the boats at the waterfront', mins: 60, fx: { fun: 15, stress: -8 }, when: { from: 6, to: 19 } },
-      { id: 'ph_fish_gig', label: 'Help fishermen land the catch', mins: 180, earn: 2600, fx: { energy: -20, hygiene: -15 }, xp: { fitness: 1, hustle: 1 }, gig: true, when: { from: 5, to: 12 } }
+      { id: 'ph_fish_gig', label: 'Help fishermen land the catch', mins: 180, earn: 2600, fx: { energy: -20, hygiene: -15 }, xp: { fitness: 1, hustle: 1 }, gig: true, when: { from: 5, to: 12 } },
+      { id: 'ph_beach', label: 'Relax at the tourist beach', mins: 120, cost: 1000, fx: { fun: 26, stress: -14, hygiene: -6 }, when: { from: 8, to: 18 } },
+      { id: 'ph_bonny', label: 'Take the boat to Bonny Island and back', mins: 300, cost: 12000, fx: { fun: 34, stress: -10, energy: -18 }, when: { from: 7, to: 12 } }
     ],
     mushin: [
       { id: 'mushin_boxing', label: 'Train at a boxing gym', mins: 90, cost: 1500, fx: { energy: -22, hygiene: -20, stress: -12, fun: 10 }, xp: { fitness: 4 }, sport: 'boxing', when: { from: 6, to: 20 } },
@@ -782,6 +801,23 @@
     { id: 'ph_bole', icon: '🐟', name: 'Bole and fish spot', type: 'food', glyph: 'bowl', district: 'ph_oldgra', x: 13.4, y: 15.8, acts: ['ph_bole', 'ph_bolegame'], text: 'Roasted plantain and fish with pepper sauce. A PH classic. Mama lets you work the grill for a share of sales.' },
     { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
+    { id: 'abj_mosque_pl', icon: '🕌', name: 'National Mosque', type: 'culture', glyph: 'dome', district: 'abj_garki', x: 18.0, y: 13.0, acts: ['abj_mosque'], text: 'Golden dome and four minarets on the edge of the Central Area.' },
+    { id: 'abj_ecumenical_pl', icon: '⛪', name: 'National Christian Centre', type: 'culture', glyph: 'hall', district: 'abj_garki', x: 13.6, y: 14.8, acts: ['abj_ecumenical'], text: 'A white spire you can see from the expressway.' },
+    { id: 'abj_tower_pl', icon: '🗼', name: 'Millennium Tower', type: 'culture', glyph: 'frame', district: 'abj_garki', x: 16.2, y: 13.0, acts: ['abj_tower'], text: 'The tallest tower in the capital, with a view deck at the top.' },
+    { id: 'abj_crafts_pl', icon: '🎨', name: 'Arts and Crafts Village', type: 'culture', glyph: 'mask', district: 'abj_garki', x: 17.8, y: 17.0, acts: ['abj_crafts', 'abj_crafts_gig'], text: 'Bronze, beads, adire and carvings from all over the country.' },
+    { id: 'abj_galleria_pl', icon: '🎞️', name: 'Wuse cinema galleria', type: 'culture', glyph: 'film', district: 'abj_wuse', x: 12.6, y: 9.6, acts: ['abj_galleria'], text: 'Cinemas, arcade and food court under one roof.' },
+    { id: 'abj_threearms_pl', icon: '🏛️', name: 'Three Arms Zone', type: 'culture', glyph: 'dome', district: 'abj_asokoro', x: 20.2, y: 12.6, acts: ['abj_threearms'], text: 'The Presidency, the National Assembly and the Supreme Court, side by side.' },
+    { id: 'abj_gate_pl', icon: '🏟️', name: 'Abuja City Gate', type: 'outdoors', glyph: 'frame', district: 'abj_airport', x: 10.8, y: 21.6, acts: ['abj_gate'], text: 'The arch that welcomes you in from the airport road.' },
+    { id: 'abj_stadium_pl', icon: '⚽', name: 'National stadium, Abuja', type: 'outdoors', glyph: 'ball', district: 'abj_airport', x: 11.6, y: 20.4, acts: ['abj_stadium', 'abj_stadium_gig'], text: 'The big bowl off the airport road. Match days are loud.' },
+    { id: 'abj_zuma_pl', icon: '⛰️', name: 'Zuma Rock viewpoint', type: 'outdoors', glyph: 'tree', district: 'abj_kubwa', x: 1.0, y: 0.6, acts: ['abj_zuma'], text: 'The giant rock with a face, on the road out of town. Printed on the ₦100 note.' },
+    { id: 'ph_obiwali_pl', icon: '🎭', name: 'Cultural centre, GRA', type: 'culture', glyph: 'mask', district: 'ph_gra', x: 10.8, y: 12.2, acts: ['ph_obiwali'], text: 'Plays, dance troupes and concerts in a big hall.' },
+    { id: 'ph_garrison_pl', icon: '🌽', name: 'Garrison junction', type: 'food', glyph: 'bowl', district: 'ph_gra', x: 13.8, y: 9.8, acts: ['ph_garrison'], text: 'The flyover junction where traffic meets roasted corn.' },
+    { id: 'ph_govhouse_pl', icon: '🏛️', name: 'Brick House (Government House)', type: 'culture', glyph: 'dome', district: 'ph_oldgra', x: 12.6, y: 13.6, acts: ['ph_govhouse'], text: 'Rivers State Government House, behind tall gates.' },
+    { id: 'ph_beach_pl', icon: '🏖️', name: 'Port Harcourt tourist beach', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 18.6, y: 18.8, acts: ['ph_beach'], text: 'A river beach with music, fish and Sunday crowds.' },
+    { id: 'ph_bonny_pl', icon: '🚤', name: 'Bonny boat jetty', type: 'transport', glyph: 'boat', district: 'ph_borokiri', x: 14.6, y: 20.4, acts: ['ph_bonny'], text: 'Speedboats down the river to Bonny Island.' },
+    { id: 'ph_zoo_pl', icon: '🦁', name: 'Port Harcourt zoo', type: 'outdoors', glyph: 'tree', district: 'ph_transamadi', x: 19.4, y: 9.4, acts: ['ph_zoo'], text: 'Lions, monkeys and a lot of school trips.' },
+    { id: 'ph_port_pl', icon: '🏗️', name: 'River port cranes', type: 'learn', glyph: 'tool', district: 'ph_transamadi', x: 23.8, y: 12.2, acts: ['ph_cranes'], text: 'Container cranes over Amadi Creek.' },
+    { id: 'ph_stadium_pl', icon: '⚽', name: 'Stadium, Omagwa road', type: 'outdoors', glyph: 'ball', district: 'ph_airport', x: 8.6, y: 3.2, acts: ['ph_stadium'], text: 'The big stadium near the airport. Rivers fans sing all match.' },
     { id: 'ojuelegba_park', icon: '🚐', name: 'Ojuelegba danfo park', type: 'transport', glyph: 'bus', district: 'surulere', x: 12.2, y: 16.8, acts: ['suru_danfo'], nogem: true, text: 'Under the bridge, conductors shout routes and danfos fill up. Rent one from the owner for a run to Yaba and back.' },
     { id: 'tarkwa', icon: '⛱️', name: 'Tarkwa Bay', type: 'outdoors', glyph: 'boat', district: 'ikoyi', x: 20.8, y: 21.6, acts: ['ikoyi_tarkwa'], nogem: true, text: 'A sheltered beach by the harbour mouth, reachable only by boat from the VI and Ikoyi jetties. Calm water, good for a swim.' },
     { id: 'eleko', icon: '🌊', name: 'Eleko beach', type: 'outdoors', glyph: 'wave', district: 'ajah', x: 39.2, y: 25.4, acts: ['ajah_eleko'], nogem: true, text: 'A long, open stretch of sand far out on the Lekki–Epe coast. Bring a cooler; it is a full day out.' },

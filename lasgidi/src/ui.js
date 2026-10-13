@@ -1452,6 +1452,41 @@
       return { name: p.name, d: px * px + py * py, u: u };
     }).filter(function (p) { return p && p.d < 9; }).sort(function (x, y) { return x.d - y.d; }).slice(0, 2).sort(function (x, y) { return x.u - y.u; }).map(function (p) { return p.name; });
   }
+  /* ---------- the ride view: a short journey scene with "Now passing" signs ---------- */
+  // Mounted outside the app so live re-renders never restart it. Tap anywhere or Arrive to skip.
+  var RIDE_NAMES = { danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
+  function showRide(from, to, mode, t0) {
+    var old = document.getElementById('ride-view'); if (old) old.remove();
+    if (!D.DISTRICTS[from] || !D.DISTRICTS[to] || from === to) return;
+    var chauffeur = mode === 'car' && (S.staff || []).some(function (x) { return x.id === 'driver' || x === 'driver'; });
+    var name = chauffeur ? 'VIP chauffeur' : (RIDE_NAMES[mode] || 'Ride'), water = mode === 'ferry' || mode === 'boat', air = mode === 'heli' || mode === 'flight' || mode === 'jet';
+    var sights = passing(from, to).slice(0, 3);
+    if (!air && !sights.length) {
+      var pick = function (d) { var x = D.PLACES.filter(function (p) { return p.district === d && !/_site$/.test(p.id); })[0]; return x ? x.name : D.DISTRICTS[d].name; };
+      sights = [pick(from), pick(to)];
+    }
+    var h = L.hour(S), night = h < 6 || h >= 19, dusk = h >= 17 && h < 19;
+    var ic = icon3d(MODE_ICONS[mode] || (air ? 't_heli' : 'car'), name).replace('width="32" height="32"', 'width="64" height="64"');
+    var veh = ic || '<span class="rv-emoji">' + (MODE_EMOJI[mode] || (mode === 'flight' || mode === 'jet' ? '✈️' : '🚗')) + '</span>';
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, secs = reduce ? 2.5 : 5.5;
+    var el = document.createElement('div');
+    el.id = 'ride-view'; el.className = 'ride-view' + (night ? ' night' : dusk ? ' dusk' : '') + (water ? ' water' : '') + (air ? ' air' : '') + (reduce ? ' still' : '');
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', name + ' to ' + D.DISTRICTS[to].name);
+    el.style.setProperty('--rv-secs', secs + 's');
+    el.innerHTML = '<div class="rv-card"><div class="rv-top"><span class="rv-mode">' + esc(name) + '</span><b>' + esc(D.DISTRICTS[from].name) + ' → ' + esc(D.DISTRICTS[to].name) + '</b><span class="rv-time">' + dur(Math.max(1, S.t - (t0 || S.t))) + ' · arrive ' + esc(L.clockLabel(S)) + '</span></div>' +
+      '<div class="rv-scene" aria-hidden="true"><div class="rv-sky"><i class="rv-sun"></i><i class="rv-cloud c1"></i><i class="rv-cloud c2"></i></div><div class="rv-far"></div><div class="rv-near"></div>' +
+      '<div class="rv-road"><div class="rv-lines"></div></div>' +
+      sights.map(function (s, i) { return '<div class="rv-sign" style="animation-delay:' + (secs * (0.12 + i * 0.8 / Math.max(1, sights.length))).toFixed(2) + 's"><small>Now passing</small><b>' + esc(s) + '</b></div>'; }).join('') +
+      '<div class="rv-veh' + (chauffeur ? ' vip' : '') + '">' + veh + '</div></div>' +
+      '<div class="rv-bar"><i></i></div>' +
+      '<div class="rv-foot"><span>' + (sights.length ? '📍 ' + esc(sights.join(' · ')) : '☁️ Above the city') + '</span><button class="btn go" id="rv-arrive" type="button">Arrive</button></div></div>';
+    var done = function () { if (el.parentNode) el.remove(); };
+    el.addEventListener('click', function (e) { if (e.target === el || (e.target.closest && e.target.closest('#rv-arrive'))) done(); });
+    el.addEventListener('keydown', function (e) { if (e.key === 'Escape') done(); });
+    document.body.appendChild(el);
+    var b = document.getElementById('rv-arrive'); if (b) b.focus();
+    setTimeout(done, secs * 1000 + 400);
+  }
   function japaView() {
     var html = '<div class="section"><h3>🌍 International departures: Japa</h3><p class="note">IELTS ' + (S.edu.ieltsPassed ? '✓ passed' : '✗ not yet') + ' · funds ' + N(S.cash + S.bank) + ' of ' + N(L.price(S, 15000000)) + ' proof plus visa and ticket' + (L.debts(S) > 0 ? ' · ✗ clear your debts' : '') + '. Japa ends this life: you can post it to the Hall of Fame and start a new one.</p><div class="list">';
     html += Object.keys(D.JAPA_DESTS).map(function (k) {
@@ -3007,7 +3042,7 @@
       return;
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
-    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; if (ui.tab === 'map' && !ui.place) ui.tab = 'do'; var ps = passing(from0, S.loc); if (ps.length) ui.toasts.push({ msg: '🚗 Now passing: ' + ps.join(' · '), ok: true }); } return r; }, 'travel'); return; }
+    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; if (ui.tab === 'map' && !ui.place) ui.tab = 'do'; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
     if (ds.act) { run(function () { return L.doAction(S, ds.act); }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
@@ -3056,9 +3091,9 @@
     if (ds.depcity) { ui.depCity = ds.depcity; render(); return; }
     if (ds.depcabin) { ui.depCabin = ds.depcabin; render(); return; }
     if (ds.chopcity) { ui.chopCity = ds.chopcity; render(); return; }
-    if (ds.flyclass) { var fq = ds.flyclass.split(':'); run(function () { var r = L.flyClass(S, fq[0], fq[1], fq[2] === '1'); if (r.ok) { ui.sel = null; ui.place = null; } return r; }, 'travel'); return; }
-    if (ds.flyjet) { var fj = ds.flyjet.split(':'); run(function () { var r = L.flyJet(S, fj[0], fj[1] === '1'); if (r.ok) { ui.sel = null; ui.place = null; } return r; }, 'travel'); return; }
-    if (ds.chopper) { var cp = ds.chopper; run(function () { var r = L.chopperTo(S, cp); if (r.ok) { ui.sel = null; ui.place = cp; } return r; }, 'travel'); return; }
+    if (ds.flyclass) { var fq = ds.flyclass.split(':'); var f0 = S.loc, t0 = S.t; run(function () { var r = L.flyClass(S, fq[0], fq[1], fq[2] === '1'); if (r.ok) { ui.sel = null; ui.place = null; showRide(f0, S.loc, 'flight', t0); } return r; }, 'travel'); return; }
+    if (ds.flyjet) { var fj = ds.flyjet.split(':'); var f1 = S.loc, t1 = S.t; run(function () { var r = L.flyJet(S, fj[0], fj[1] === '1'); if (r.ok) { ui.sel = null; ui.place = null; showRide(f1, S.loc, 'jet', t1); } return r; }, 'travel'); return; }
+    if (ds.chopper) { var cp = ds.chopper; var f2 = S.loc, t2 = S.t; run(function () { var r = L.chopperTo(S, cp); if (r.ok) { ui.sel = null; ui.place = cp; showRide(f2, S.loc, 'heli', t2); } return r; }, 'travel'); return; }
     if (ds.shareplace) { var spl = D.PLACES.filter(function (p) { return p.id === ds.shareplace; })[0], stx = 'Meet me at ' + spl.name + ', ' + D.DISTRICTS[spl.district].name + ' in Lasgidi.'; try { navigator.clipboard.writeText(stx).then(function () { t.textContent = '✅ Copied'; }, function () { t.textContent = stx; }); } catch (e) { t.textContent = stx; } return; }
     if (ds.govtab) { ui.govTab = ds.govtab; online.govStatus = ''; render(); return; }
     if (ds.govmotto != null) { ui.govMotto = +ds.govmotto; render(); return; }

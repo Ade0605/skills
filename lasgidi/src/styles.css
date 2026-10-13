@@ -751,3 +751,55 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .chat-quick .act-chip { white-space: nowrap; cursor: pointer; border: 0; font: inherit; font-size: 12px; }
 .chat-send { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .chat-send input { min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 15px var(--font-body); min-width: 0; }
+
+/* Ride view: a short journey scene */
+.ride-view { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(8, 10, 14, .55); animation: rv-in .25s ease-out; }
+.rv-card { width: min(560px, 100%); border-radius: 22px; overflow: hidden; background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.rv-top { display: grid; gap: 2px; padding: 14px 16px 10px; }
+.rv-mode { font: 700 11px var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.rv-top b { font-size: 18px; }
+.rv-time { font-size: 13px; color: var(--muted); }
+.rv-scene { position: relative; height: 210px; overflow: hidden; --sky1: #7cc8f2; --sky2: #d9f1ff; --far: #9fb6c9; --near: #6c7d8c; --ground: #6aa357; }
+.ride-view.dusk .rv-scene { --sky1: #f08a4b; --sky2: #ffd59a; --far: #8b6f80; --near: #5d4f5f; }
+.ride-view.night .rv-scene { --sky1: #0c1630; --sky2: #24345e; --far: #2a3550; --near: #1c2539; --ground: #2b3d2a; }
+.rv-sky { position: absolute; inset: 0; background: linear-gradient(180deg, var(--sky1), var(--sky2)); }
+.rv-sun { position: absolute; top: 22px; right: 40px; width: 34px; height: 34px; border-radius: 50%; background: #ffe27a; box-shadow: 0 0 30px #ffe27a; }
+.ride-view.night .rv-sun { background: #e8ecf5; box-shadow: 0 0 18px #c9d2e6; width: 24px; height: 24px; }
+.rv-cloud { position: absolute; width: 90px; height: 24px; border-radius: 20px; background: rgba(255,255,255,.75); animation: rv-drift calc(var(--rv-secs) * 2.2) linear infinite; }
+.rv-cloud.c1 { top: 30px; left: 100%; } .rv-cloud.c2 { top: 64px; left: 100%; width: 60px; animation-delay: calc(var(--rv-secs) * -1); }
+.ride-view.night .rv-cloud { opacity: .2; }
+.rv-far, .rv-near { position: absolute; left: 0; right: 0; background-repeat: repeat-x; }
+.rv-far { bottom: 60px; height: 84px; background-image: linear-gradient(90deg, var(--far) 0 26px, transparent 26px), linear-gradient(90deg, var(--far) 0 18px, transparent 18px), linear-gradient(90deg, var(--far) 0 30px, transparent 30px), linear-gradient(90deg, var(--far) 0 22px, transparent 22px);
+  background-size: 170px 70px, 170px 46px, 170px 58px, 170px 84px; background-position: 0 100%, 40px 100%, 80px 100%, 130px 100%; animation: rv-far calc(var(--rv-secs) * 1.6) linear infinite; }
+.rv-near { bottom: 60px; height: 70px; background-image: linear-gradient(90deg, var(--near) 0 34px, transparent 34px), radial-gradient(circle at 12px 10px, #2e8b57 0 11px, transparent 12px), linear-gradient(90deg, var(--near) 0 22px, transparent 22px);
+  background-size: 120px 52px, 120px 30px, 120px 64px; background-position: 10px 100%, 60px 100%, 84px 100%; animation: rv-near calc(var(--rv-secs) * .7) linear infinite; }
+.ride-view.night .rv-far { background-image: linear-gradient(90deg, var(--far) 0 26px, transparent 26px), linear-gradient(90deg, var(--far) 0 18px, transparent 18px), linear-gradient(90deg, var(--far) 0 30px, transparent 30px), linear-gradient(90deg, var(--far) 0 22px, transparent 22px); }
+.ride-view.night .rv-near { background-image: repeating-linear-gradient(180deg, transparent 0 8px, rgba(255,210,122,.55) 8px 11px), radial-gradient(circle at 12px 10px, #1f4a30 0 11px, transparent 12px), linear-gradient(90deg, var(--near) 0 22px, transparent 22px); }
+.rv-road { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; background: linear-gradient(180deg, var(--ground) 0 8px, #3b3f45 8px); }
+.rv-lines { position: absolute; left: 0; right: 0; top: 32px; height: 4px; background: repeating-linear-gradient(90deg, #f5f1e6 0 28px, transparent 28px 56px); animation: rv-lines calc(var(--rv-secs) * .25) linear infinite; }
+.ride-view.water .rv-road { background: linear-gradient(180deg, #1f7a9a, #0d4d6b); }
+.ride-view.water .rv-lines { background: repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 18px, transparent 18px 46px); height: 2px; }
+.ride-view.air .rv-road, .ride-view.air .rv-near { transform: translateY(40px); opacity: .6; }
+.ride-view.air .rv-veh { bottom: 110px; }
+.rv-veh { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); animation: rv-bob .5s ease-in-out infinite alternate; filter: drop-shadow(0 6px 4px rgba(0,0,0,.35)); }
+.rv-veh .ic3d { width: 72px; height: 72px; }
+.rv-veh.vip::after { content: '🧢 VIP'; position: absolute; top: -10px; right: -26px; font: 800 10px var(--font-body); background: #111; color: #f5c518; padding: 2px 6px; border-radius: 8px; }
+.rv-emoji { font-size: 54px; display: block; transform: scaleX(-1); }
+.rv-sign { position: absolute; bottom: 118px; left: 100%; display: grid; gap: 1px; padding: 6px 10px; min-width: 120px; border-radius: 8px; background: #0b6b3a; color: #fff; border: 2px solid #fff; box-shadow: 0 3px 0 #064326; opacity: 0; animation: rv-sign calc(var(--rv-secs) * .45) linear forwards; }
+.rv-sign::after { content: ''; position: absolute; left: 50%; top: 100%; width: 4px; height: 58px; background: #8a9199; }
+.rv-sign small { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+.rv-sign b { font-size: 13px; white-space: nowrap; }
+.rv-bar { height: 6px; background: var(--sunk); }
+.rv-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #2fd27a, #16a35a); animation: rv-bar var(--rv-secs) linear forwards; }
+.rv-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 16px; font-size: 13px; }
+@keyframes rv-in { from { opacity: 0; } }
+.rv-lines { animation-name: rv-lines; } @keyframes rv-lines { to { background-position-x: -56px; } }
+@keyframes rv-far { to { background-position: -170px 100%, -130px 100%, -90px 100%, -40px 100%; } }
+@keyframes rv-near { to { background-position: -110px 100%, -60px 100%, -36px 100%; } }
+@keyframes rv-drift { to { transform: translateX(-760px); } }
+@keyframes rv-bob { to { transform: translateX(-50%) translateY(-3px); } }
+@keyframes rv-sign { 0% { opacity: 1; transform: translateX(0); } 100% { opacity: 1; transform: translateX(-760px); } }
+@keyframes rv-bar { to { width: 100%; } }
+.ride-view.still *, .ride-view.still { animation: none !important; }
+.ride-view.still .rv-sign { left: 16px; opacity: 1; position: relative; display: inline-grid; margin: 4px; bottom: auto; }
+.ride-view.still .rv-bar i { width: 100%; }

@@ -25,7 +25,7 @@
   // Each city in its own frame: land polygons, water carved out of them, and the drawing box.
   var GEO = {
     lagos: { box: [-2, 52, -1, 31], land: [MAINLAND, ISLAND, EKO, BEACH], water: [CREEK], label: [] },
-    abuja: { box: [-2, 34, -2, 28], land: [[[-2, -2], [34, -2], [34, 28], [-2, 28]]],
+    abuja: { box: [-3, 35, -3, 28], land: [[[-3, -3], [35, -3], [35, 28], [-3, 28]]],
       water: [[[4.6, 12.8], [6.4, 12.4], [8.8, 12.9], [9.4, 14.0], [8.2, 15.0], [5.6, 14.9], [4.4, 14.0]]], label: [['Jabi Lake', 6.9, 13.8]] },
     ph: { box: [-2, 32, -2, 26], land: [[[-2, -2], [32, -2], [32, 8], [28, 12.5], [25, 17.5], [20.5, 21], [16.5, 21.6], [12, 21.2], [6, 19.8], [-2, 19]]],
       water: [[[22.4, 13.6], [27.2, 12.6], [27.6, 13.4], [22.8, 14.6]]], label: [['Bonny River', 18, 24], ['Amadi Creek', 25.4, 14.6]] }
@@ -132,7 +132,15 @@
   function nearEstate(x, y) { return ESTATES.some(function (e) { return Math.hypot(e.x - x, e.y - y) < e.r + 0.2; }); }
   var E = D.ESTATE, EX1 = E.x0 + E.cols * E.gap, EY1 = E.y0 + E.rows * E.gap;
   // The refinery (Ibeju-Lekki) and new airport (Ikeja, x 0.9–7.9, y 2.1–4.3) pads stay clear of trees and buildings.
-  function inSite(city, x, y) { return city === 'lagos' && ((x > 43.9 && y > 22.5 && y < 25.3) || (x > 0.6 && x < 8.3 && y > 1.8 && y < 4.6)); }
+  // Landmarks in Abuja and Port Harcourt keep a clear footprint so generated blocks don't cover them.
+  var LANDMARKS = {
+    abuja: [[23.2, 7.4, 2.2], [0.6, -0.6, 1.6], [18.0, 13.0, 0.8], [13.6, 14.8, 0.6], [16.2, 13.0, 0.5], [10.8, 21.6, 0.6], [11.6, 20.4, 1.0], [20.2, 12.6, 0.7], [17.8, 17.0, 0.5]],
+    ph: [[8.6, 3.2, 1.0], [23.8, 12.2, 0.8], [12.6, 13.6, 0.6], [18.6, 18.8, 0.9], [14.6, 20.4, 0.5], [19.4, 9.4, 0.7], [13.8, 9.8, 0.5], [10.8, 12.2, 0.5]]
+  };
+  function inSite(city, x, y) {
+    if (LANDMARKS[city]) return LANDMARKS[city].some(function (m) { return Math.hypot(x - m[0], y - m[1]) < m[2]; });
+    return city === 'lagos' && ((x > 43.9 && y > 22.5 && y < 25.3) || (x > 0.6 && x < 8.3 && y > 1.8 && y < 4.6));
+  }
   function inMainlandEstate(x, y) { return CITY === 'lagos' && x > E.x0 - 0.3 && x < EX1 + 0.3 && y > E.y0 - 0.3 && y < EY1 + 0.3; }
   function plotXY(n) { return { x: E.x0 + (n % E.cols) * E.gap + E.gap / 2, y: E.y0 + Math.floor(n / E.cols) * E.gap + E.gap / 2 }; }
   function npcPlot(n) { var h = Math.imul((n + 17) * 2654435761, 1597334677) >>> 0; return (h % 100) < 38; }
@@ -452,6 +460,8 @@
       g.fillStyle = '#ffffff'; g.font = '700 ' + Math.max(6, 7 * s) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('H', hp.x, hp.y);
       drawRefinery(g, s); drawNewAirport(g, s); drawEko(g, s); drawBeach(g, s);
       }
+      if (CITY === 'abuja') drawAbuja(g, s);
+      if (CITY === 'ph') drawPH(g, s);
 
       // Estate plots: a paved pad, lawns for duplexes and the mansion, a pool.
       ESTATES.forEach(function (e) {
@@ -625,6 +635,57 @@
       g.fillStyle = '#17181a'; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.font = '800 ' + Math.max(5, 2.6 * s) + 'px sans-serif'; g.fillText(l1, c.x, c.y - h - 4 * s + h * 0.33);
       g.font = '900 ' + Math.max(5, 2.9 * s) + 'px sans-serif'; g.fillText(l2, c.x, c.y - h - 4 * s + h * 0.72);
+    }
+    // A rock massif: a lumpy mound with a lit face and a shadow face.
+    function rock(g, s, x, y, rx, h, col) {
+      var c = toScreen(x, y, 0), w = rx * TW * s * 0.5, up = h * s;
+      var gr = g.createLinearGradient(c.x - w, 0, c.x + w, 0); gr.addColorStop(0, shade(col, 0.15)); gr.addColorStop(0.55, col); gr.addColorStop(1, shade(col, -0.35));
+      g.beginPath(); g.moveTo(c.x - w, c.y);
+      g.bezierCurveTo(c.x - w * 0.95, c.y - up * 0.7, c.x - w * 0.45, c.y - up * 1.05, c.x - w * 0.05, c.y - up);
+      g.bezierCurveTo(c.x + w * 0.4, c.y - up * 0.98, c.x + w * 0.9, c.y - up * 0.6, c.x + w, c.y);
+      g.closePath(); g.fillStyle = gr; g.fill();
+      g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = Math.max(0.5, 0.6 * s);
+      for (var k = 1; k < 4; k++) { g.beginPath(); g.moveTo(c.x - w * (0.6 - k * 0.15), c.y - up * (0.9 - k * 0.1)); g.quadraticCurveTo(c.x - w * (0.4 - k * 0.2), c.y - up * 0.4, c.x - w * (0.5 - k * 0.25), c.y - 2 * s); g.stroke(); }
+    }
+    function bowl(g, s, x, y, rx, ry, pitch) {
+      var sc = toScreen(x, y, 0);
+      g.beginPath(); g.ellipse(sc.x, sc.y, rx * TW * s * 0.5, ry * TH * s * 0.5, 0, 0, Math.PI * 2); g.fillStyle = theme.dark ? '#7b7f86' : '#d8d4c8'; g.fill();
+      g.beginPath(); g.ellipse(sc.x, sc.y - 1.5 * s, rx * TW * s * 0.36, ry * TH * s * 0.36, 0, 0, Math.PI * 2); g.fillStyle = pitch || (theme.dark ? '#3c6a3a' : '#6aa357'); g.fill();
+      g.lineWidth = Math.max(1, 2.4 * s); g.strokeStyle = theme.dark ? '#9aa0a6' : '#b8b2a2'; g.beginPath(); g.ellipse(sc.x, sc.y - 2 * s, rx * TW * s * 0.5, ry * TH * s * 0.5, 0, Math.PI, Math.PI * 2); g.stroke();
+    }
+    function spire(g, s, x, y, h, col) { var c = toScreen(x, y, 0); g.beginPath(); g.moveTo(c.x - 1.2 * s, c.y); g.lineTo(c.x, c.y - h * s); g.lineTo(c.x + 1.2 * s, c.y); g.closePath(); g.fillStyle = col; g.fill(); }
+    function drawAbuja(g, s) {
+      rock(g, s, 23.2, 7.4, 3.6, 46, theme.dark ? '#5d5650' : '#8e8275'); // Aso Rock
+      rock(g, s, 0.6, -0.6, 2.4, 52, theme.dark ? '#4f4a46' : '#7d7368'); // Zuma Rock
+      // National Mosque: a white hall, a golden dome and four minarets.
+      drawBuilding(g, { x: 18.0, y: 13.0, w: 0.7, dep: 0.7, h: 7, wall: '#f2efe6', roof: '#e7e2d4' }, s, 0, true);
+      var md = toScreen(18.0, 13.0, 0); g.beginPath(); g.ellipse(md.x, md.y - 9 * s, 7 * s, 7 * s, 0, Math.PI, Math.PI * 2); var dg = g.createLinearGradient(md.x - 7 * s, 0, md.x + 7 * s, 0); dg.addColorStop(0, '#ffe58a'); dg.addColorStop(1, '#c9961b'); g.fillStyle = dg; g.fill();
+      [[17.55, 12.55], [18.45, 12.55], [17.55, 13.45], [18.45, 13.45]].forEach(function (m) { cyl(g, s, m[0], m[1], 0.07, 26, '#f4f1e8'); spire(g, s, m[0], m[1] - 0.0, 30, '#d9b347'); });
+      // National Christian Centre: a white block with a tall triangular spire.
+      drawBuilding(g, { x: 13.6, y: 14.8, w: 0.6, dep: 0.5, h: 8, wall: '#f4f2ec', roof: '#c9c2b2' }, s, 0, true);
+      spire(g, s, 13.6, 14.8, 30, '#eeeae0');
+      // Millennium Tower: a slim mast with a pod near the top.
+      cyl(g, s, 16.2, 13.0, 0.1, 70, '#d9dde2'); var mt = toScreen(16.2, 13.0, 0); g.beginPath(); g.ellipse(mt.x, mt.y - 56 * s, 5 * s, 3 * s, 0, 0, Math.PI * 2); g.fillStyle = '#5f8fb8'; g.fill();
+      // City Gate: two pillars and an arch over the airport road.
+      var ga = toScreen(10.5, 21.6, 0), gb = toScreen(11.1, 21.6, 0); g.strokeStyle = '#e8e2d2'; g.lineWidth = Math.max(1.2, 2.2 * s);
+      g.beginPath(); g.moveTo(ga.x, ga.y); g.lineTo(ga.x, ga.y - 12 * s); g.quadraticCurveTo((ga.x + gb.x) / 2, ga.y - 20 * s, gb.x, gb.y - 12 * s); g.lineTo(gb.x, gb.y); g.stroke();
+      bowl(g, s, 11.6, 20.4, 1.4, 1.1);
+      drawBuilding(g, { x: 20.2, y: 12.6, w: 0.9, dep: 0.5, h: 6, wall: '#f2ede4', roof: '#4f8a5b' }, s, 0, true); // Three Arms Zone
+      var tz = toScreen(20.2, 12.6, 0); g.beginPath(); g.ellipse(tz.x, tz.y - 8 * s, 4 * s, 4 * s, 0, Math.PI, Math.PI * 2); g.fillStyle = '#3f7f55'; g.fill();
+      [[17.6, 16.9], [17.9, 17.1], [18.1, 16.85]].forEach(function (k, i) { var c = toScreen(k[0], k[1], 0); g.beginPath(); g.moveTo(c.x - 4 * s, c.y); g.lineTo(c.x, c.y - 6 * s); g.lineTo(c.x + 4 * s, c.y); g.closePath(); g.fillStyle = ['#c0392b', '#2f6fa0', '#e67e22'][i]; g.fill(); }); // craft stall tents
+    }
+    function drawPH(g, s) {
+      bowl(g, s, 8.6, 3.2, 1.4, 1.1);
+      // River port: container stacks and three gantry cranes over the creek.
+      ['#c0392b', '#2f6fa0', '#2fa36b', '#e67e22'].forEach(function (col, i) { var c = toScreen(23.3 + i * 0.25, 12.5, 0); g.fillStyle = col; g.fillRect(c.x - 3 * s, c.y - 3 * s, 6 * s, 3 * s); });
+      [23.2, 23.8, 24.4].forEach(function (x) { var a = toScreen(x, 12.0, 0); g.strokeStyle = '#d0453a'; g.lineWidth = Math.max(0.8, 1.2 * s); g.beginPath(); g.moveTo(a.x - 3 * s, a.y); g.lineTo(a.x - 3 * s, a.y - 20 * s); g.lineTo(a.x + 9 * s, a.y - 20 * s); g.moveTo(a.x + 3 * s, a.y); g.lineTo(a.x + 3 * s, a.y - 20 * s); g.moveTo(a.x - 6 * s, a.y - 17 * s); g.lineTo(a.x + 11 * s, a.y - 17 * s); g.stroke(); });
+      drawBuilding(g, { x: 12.6, y: 13.6, w: 0.8, dep: 0.5, h: 7, wall: '#a8432f', roof: '#6b2f24' }, s, 0, true); // Brick House
+      poly(g, [[17.6, 18.3], [19.8, 18.0], [20.0, 19.2], [17.8, 19.5]], theme.sand || '#e8d6a8'); // tourist beach
+      [[18.2, 18.6], [18.8, 18.5], [19.4, 18.7]].forEach(function (k, i) { var c = toScreen(k[0], k[1], 0); g.beginPath(); g.moveTo(c.x - 4 * s, c.y - 4 * s); g.quadraticCurveTo(c.x, c.y - 8 * s, c.x + 4 * s, c.y - 4 * s); g.closePath(); g.fillStyle = ['#e5484d', '#f5c518', '#2f6fd0'][i]; g.fill(); g.strokeStyle = '#555'; g.beginPath(); g.moveTo(c.x, c.y - 6 * s); g.lineTo(c.x, c.y); g.stroke(); });
+      poly(g, [[14.45, 20.1], [14.75, 20.1], [14.75, 21.2], [14.45, 21.2]], theme.dark ? '#6b5640' : '#9a7b56'); // Bonny jetty
+      poly(g, [[13.2, 9.6], [14.4, 9.6], [14.4, 10.0], [13.2, 10.0]], theme.road); // Garrison flyover deck
+      var z = toScreen(19.4, 9.4, 0); g.beginPath(); g.ellipse(z.x, z.y, 0.9 * TW * s * 0.5, 0.7 * TH * s * 0.5, 0, 0, Math.PI * 2); g.fillStyle = theme.dark ? '#2f4a2c' : '#7fb35f'; g.fill(); // zoo grounds
+      drawBuilding(g, { x: 10.8, y: 12.2, w: 0.7, dep: 0.5, h: 6, wall: '#d9c38f', roof: '#8a6a3a' }, s, 0, true); // cultural centre
     }
     function drawRefinery(g, s) {
       var R = REFINERY;
