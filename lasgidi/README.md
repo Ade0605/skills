@@ -221,6 +221,11 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - At home, NEPA drops the stream unless you have an inverter or solar.
     - 1,000 viewers unlocks "Streamer".
   - **Appearances:** from 20k followers, VI promoters pay for club appearances.
+- **🗺️ Sightseeing (Phone → Sightseeing):** the tourist sights, grouped by area so you can plan around the traffic.
+  - **Lekki and the coast:** Lekki Conservation Centre, Nike Art Gallery, the Lekki Arts and Crafts Market, Elegushi beach and Eleko beach.
+  - **The Island:** Freedom Park, the National Museum and the J. Randle Centre (Onikan), Balogun market, Tarkwa Bay by boat, Landmark Beach and Terra Kulture.
+  - **The Mainland and beyond:** the New Afrika Shrine and the Kalakuta Republic Museum, JJT Park, Giwa Gardens water park, a respectful canoe tour of Makoko, and a day trip to Badagry (the Point of No Return).
+  - **Explorer:** visiting 8 sights unlocks "Lagos explorer" (rules 14).
 - **🏅 Sports (Phone → Sports):** 23 sports where Lagos plays them.
   - **Most popular:** football from street and five-a-side to NPFL matches, basketball, athletics, table tennis, tennis, volleyball and handball, and boxing.
   - **Widely played:** swimming, cricket, badminton, beach volleyball, and wrestling with judo and weightlifting.
@@ -295,7 +300,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (104 tests)
+  test/engine.test.js   node:test suite (105 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 

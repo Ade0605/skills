@@ -89,7 +89,8 @@
     builder:     'Builder: built your own house, block by block',
     detty_legend: 'Detty legend: six December events in one season',
     streamer:    'Streamer: 1,000 people watched you live',
-    allrounder:  'All-rounder: played 8 different sports in Lagos'
+    allrounder:  'All-rounder: played 8 different sports in Lagos',
+    explorer:    'Lagos explorer: visited 8 tourist sights'
   };
 
   /* ---------- small helpers ---------- */
@@ -800,6 +801,8 @@
       applyFx(s, a.fx);
     }
     if (a.event) s.stats.events = (s.stats.events || 0) + 1;
+    // Sights count on rules 14 only, so older lives that visited them unlock nothing new.
+    if (a.sight && s.rules >= 14) { var sg = s.stats.sights = s.stats.sights || {}; sg[a.id] = 1; if (Object.keys(sg).length >= 8) unlock(s, 'explorer'); }
     if (a.sport) { var sp = s.stats.sports = s.stats.sports || {}; sp[a.sport] = (sp[a.sport] || 0) + 1; if (Object.keys(sp).length >= 8) unlock(s, 'allrounder'); }
     if (a.dec && s.rules >= 14 && isDecember(s)) { s.stats.decEvents = (s.stats.decEvents || 0) + 1; if (s.stats.decEvents >= 6) unlock(s, 'detty_legend'); }
     addXp(s, a.xp);

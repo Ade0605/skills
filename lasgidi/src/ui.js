@@ -2083,7 +2083,7 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['jobs', '💼', 'Jobs'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
   ];
   // Every festival, match and concert in every city, with when it is on.
   var GUIDE = [
@@ -2095,6 +2095,7 @@
     ['🌊', 'Sea Plots', 'Buy a block of plots in the Atlantic and put your picture on it for every player to see, after an editor checks it.', 'sea', ''],
     ['🏠', 'Home life', 'Furnish your home, hire staff, adopt pets, take a health plan, and host parties (with a decorator) that online friends can join.', 'tab', 'home'],
     ['📸', 'Fame', 'Grow followers for brand deals, post your life to the Hall of Fame, and take chieftaincy titles.', 'app', 'creator'],
+    ['🗺️', 'Sightseeing', 'Lekki Conservation Centre, Nike Art Gallery, Tarkwa Bay, Freedom Park, the National Museum, Kalakuta, Badagry and more, grouped by area. Visit 8 to become a Lagos explorer.', 'app', 'sights'],
     ['🏅', 'Sports', 'Football from the street to the NPFL, basketball, boxing, tennis, golf, polo, e-sports, ayo olopon and more. Play 8 sports to become an All-rounder, and win tournament prizes.', 'app', 'sports'],
     ['🎖️', 'NYSC', 'After your UNILAG degree, register for the service year: three camp days in Kubwa, Abuja, then 12 weeks at your posting with CDS every Thursday and a monthly allawee.', 'app', 'nysc'],
     ['✈️', 'The end', 'Pass IELTS, save ₦15m proof of funds and japa from Ikeja airport to complete a life. Or play forever.', 'app', 'travel']
@@ -2113,6 +2114,24 @@
   function slangView() {
     return '<h3>🗣️ Lagos labels</h3><p class="note">What people call each other. Your own labels show on the Me tab and change as you play.</p><dl class="slang-dl">' +
       Object.keys(D.SLANG).map(function (k) { return '<dt>' + esc(D.SLANG[k][0]) + '</dt><dd>' + esc(D.SLANG[k][1]) + '</dd>'; }).join('') + '</dl>';
+  }
+
+  /* ---------- Sightseeing: plan by area, because the traffic is real ---------- */
+  var SIGHT_AREAS = [['Lekki and the coast', ['lekki', 'ajah']], ['The Island: Lagos Island, Ikoyi and VI', ['island', 'ikoyi', 'vi']], ['The Mainland and beyond', ['ikeja', 'yaba', 'surulere', 'mushin', 'oshodi', 'festac', 'ikorodu']]];
+  function sightsView() {
+    var seen = (S.stats && S.stats.sights) || {}, n = Object.keys(seen).length;
+    var html = '<div class="section"><h3>🗺️ Sightseeing in Lagos</h3><p class="note">Traffic is heavy, so plan by area: do Lekki one day and the Island the next.' + (S.rules >= 14 ? ' You have visited ' + n + (n < 8 ? ' sights (8 makes you a Lagos explorer).' : ' sights: Lagos explorer!') : '') + '</p>';
+    SIGHT_AREAS.forEach(function (area) {
+      var rows = [];
+      area[1].forEach(function (d) { (D.PLACE_ACTIONS[d] || []).forEach(function (a) { if (a.sight) rows.push({ a: a, d: d, pl: D.PLACES.filter(function (p) { return p.acts.indexOf(a.id) >= 0; })[0] }); }); });
+      if (!rows.length) return;
+      html += '<h4 class="dl-group">' + esc(area[0]) + '</h4><div class="list">' + rows.map(function (r) {
+        var a = r.a, here = S.loc === r.d, open = L.inWindow(S, a.when), sameCity = L.cityOf(S) === 'lagos';
+        var btn = here ? (r.pl ? '<button class="btn sm" id="sg-' + a.id + '" data-place="' + r.pl.id + '">Open</button>' : '') : sameCity ? '<button class="btn sm ghost" id="sg-go-' + a.id + '" data-tripto="' + r.d + '" data-tab="map">Go there</button>' : '<button class="btn sm ghost" id="sg-fly-' + a.id + '" data-app="travel">✈️ Lagos</button>';
+        return '<div class="item"><div><h3>' + esc(r.pl ? r.pl.icon + ' ' + r.pl.name : a.label) + (seen[a.id] ? ' <span class="gain">✓</span>' : '') + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[r.d].name) + '</span><span>' + esc(whenText(a.when)) + '</span>' + (a.cost ? '<span class="cost num">' + N(L.price(S, a.cost)) + '</span>' : '<span>Free</span>') + (here && open ? '<span class="gain">Open now</span>' : '') + '</div><div class="act-note">' + esc(a.label) + '</div></div>' + btn + '</div>';
+      }).join('') + '</div>';
+    });
+    return html + '</div>';
   }
 
   /* ---------- Sports: where to play in Lagos ---------- */
@@ -2235,6 +2254,7 @@
       else if (app === 'town') body = '<div class="panel-b">' + townView() + '</div>';
       else if (app === 'nysc') body = '<div class="panel-b">' + nyscView() + '</div>';
       else if (app === 'sports') body = '<div class="panel-b">' + sportsView() + '</div>';
+      else if (app === 'sights') body = '<div class="panel-b">' + sightsView() + '</div>';
       else if (app === 'guide') body = '<div class="panel-b">' + guideView() + '</div>';
       else if (app === 'games') body = '<div class="panel-b">' + gamesView() + '</div>';
       else if (app === 'creator') body = '<div class="panel-b">' + creatorView() + '</div>';

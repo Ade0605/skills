@@ -1953,3 +1953,20 @@ test('businesses: low, mid and high tiers; December and term-day trades pay to t
   for (let i = 0; i < 14 * 6; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; s.needs.hygiene = 80; if (L.hour(s) === 12) L.visitBusinesses && L.visitBusinesses(s); L.wait(s, 240); }
   assert.ok(s.ledger.filter(l => l.memo === 'Business payout').length >= 10, 'they pay out');
 });
+
+test('sightseeing: the tourist sights are on the map, and 8 visits make a Lagos explorer (rules 14)', () => {
+  const sights = [];
+  Object.entries(L.DATA.PLACE_ACTIONS).forEach(([d, list]) => list.forEach(a => { if (a.sight) sights.push([d, a.id]); }));
+  assert.ok(sights.length >= 17, 'sights: ' + sights.length);
+  ['ikoyi_tarkwa', 'lekki_nike', 'ikeja_kalakuta', 'festac_badagry', 'yaba_makoko', 'lekki_lcc'].forEach(id => assert.ok(sights.some(x => x[1] === id), id));
+  const s = L.newGame({ seed: 117, origin: 'nepo', goal: 'freestyle' }); s.bank += 2000000; s.opening.bank += 2000000;
+  const plan = [['lekki', 'lekki_nike', 11], ['lekki', 'lekki_crafts', 11], ['lekki', 'lekki_lcc', 11], ['ikeja', 'ikeja_kalakuta', 11], ['ikeja', 'ikeja_jjt', 11], ['vi', 'vi_terra', 12], ['yaba', 'yaba_makoko', 10], ['ikoyi', 'ikoyi_tarkwa', 10]];
+  for (const [d, id, h] of plan) {
+    while (s.pending.length) L.resolveChoice(s, 0);
+    s.loc = d; s.t = s.t - (s.t % 1440) + 1440 + h * 60; s.needs.energy = 90; s.needs.hunger = 50; s.needs.hygiene = 80;
+    const r = L.doAction(s, id); assert.ok(r.ok, id + ': ' + r.msg);
+  }
+  assert.ok(s.ach.explorer);
+  const old = L.newGame({ seed: 117, origin: 'nepo', goal: 'freestyle', rules: 13 }); old.loc = 'lekki'; old.t = old.t - (old.t % 1440) + 1440 + 11 * 60;
+  L.doAction(old, 'lekki_lcc'); assert.equal(old.stats.sights, undefined, 'older lives count nothing new');
+});

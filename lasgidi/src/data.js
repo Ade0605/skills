@@ -488,6 +488,7 @@
       { id: 'mushin_football', label: 'Street football', mins: 60, fx: { fun: 25, energy: -15, hygiene: -20, stress: -8 }, xp: { fitness: 3 }, when: { from: 6, to: 19 } }
     ],
     yaba: [
+      { id: 'yaba_makoko', label: 'Boat tour of Makoko, the floating community, with a resident guide (visit respectfully)', mins: 150, cost: 5000, fx: { fun: 15, social: 15, stress: -5 }, xp: { charisma: 1 }, sight: true, when: { from: 9, to: 16 } },
       { id: 'yaba_esports', label: 'E-sports: FIFA tournament at a gaming lounge (₦3,000 entry)', mins: 240, cost: 3000, fx: { fun: 40, social: 20, energy: -10 }, xp: { tech: 1 }, sport: 'esports', special: 'compete', compete: { skill: 'tech', prize: 25000, name: 'FIFA tournament' }, when: { days: [5], from: 14, to: 20 } },
       { id: 'yaba_chess', label: 'Chess and Scrabble club', mins: 120, fx: { fun: 15, social: 15, stress: -5 }, xp: { tech: 2, charisma: 1 }, sport: 'chess', when: { days: [2, 5], from: 16, to: 20 } },
       { id: 'yaba_scrabble', label: 'Scrabble tournament (₦1,000 entry)', mins: 180, cost: 1000, fx: { fun: 20, social: 15 }, xp: { tech: 1 }, sport: 'scrabble', special: 'compete', compete: { skill: 'tech', prize: 15000, name: 'Scrabble tournament' }, when: { days: [6], from: 11, to: 17 } },
@@ -521,6 +522,8 @@
       { id: 'suru_owambe', label: 'Attend an owambe', mins: 240, cost: 3000, fx: { fun: 40, social: 40, hunger: 60, energy: -20 }, xp: { charisma: 2 }, special: 'owambe', when: { days: [5], from: 12, to: 19 } }
     ],
     ikeja: [
+      { id: 'ikeja_kalakuta', label: 'Kalakuta Republic Museum: Fela\'s home and the story of Afrobeat', mins: 90, cost: 2000, fx: { fun: 25, stress: -8 }, xp: { music: 2 }, sight: true, when: { from: 10, to: 18 } },
+      { id: 'ikeja_jjt', label: 'Unwind at Johnson Jakande Tinubu (JJT) Park', mins: 60, fx: { fun: 12, stress: -12 }, sight: true, when: { from: 9, to: 19 } },
       { id: 'ikeja_tabletennis', label: 'Table tennis at the community centre', mins: 60, cost: 500, fx: { fun: 20, social: 15, energy: -8 }, xp: { fitness: 2 }, sport: 'tabletennis', when: { from: 10, to: 20 } },
       { id: 'ikeja_badminton', label: 'Badminton at the indoor hall', mins: 60, cost: 1500, fx: { fun: 20, energy: -12, hygiene: -10 }, xp: { fitness: 2 }, sport: 'badminton', when: { from: 9, to: 20 } },
       { id: 'ikeja_ayo', label: 'Ayo olopon, ludo and draughts with the elders', mins: 60, fx: { fun: 15, social: 25, stress: -8 }, xp: { charisma: 1 }, sport: 'ayo', when: { from: 10, to: 19 } },
@@ -533,7 +536,7 @@
       { id: 'ikeja_ielts', label: 'Sit the IELTS exam', mins: 240, cost: 320000, special: 'ielts_exam', when: { days: [5], from: 8, to: 12 } },
       { id: 'ikeja_super', label: 'Supermarket shop at the mall (7 meals)', mins: 60, cost: 7000, special: 'pantry7', when: { from: 9, to: 21 } },
       { id: 'ikeja_dubai', label: 'Weekend in Dubai on your private jet', mins: 2880, cost: 2500000, fx: { fun: 80, social: 40, stress: -40 }, needsVehicle: 'jet' },
-      { id: 'ikeja_shrine', label: 'Live Afrobeat at the New Afrika Shrine', mins: 180, cost: 2000, fx: { fun: 40, social: 25, stress: -10, energy: -15 }, when: { days: [3,4,5,6], from: 20, to: 24 } },
+      { id: 'ikeja_shrine', sight: true, label: 'Live Afrobeat at the New Afrika Shrine', mins: 180, cost: 2000, fx: { fun: 40, social: 25, stress: -10, energy: -15 }, when: { days: [3,4,5,6], from: 20, to: 24 } },
       { id: 'ikeja_park', label: 'Picnic at Ndubuisi Kanu Park', mins: 90, fx: { fun: 15, social: 10, stress: -12 }, when: { from: 7, to: 19 } },
       { id: 'ikeja_suya', label: 'Suya by the roadside', mins: 30, cost: 1500, fx: { hunger: 35, fun: 5 }, when: { from: 17, to: 24 } }
     ],
@@ -544,21 +547,23 @@
       { id: 'oshodi_bukka', label: 'Eat at a bukka', mins: 30, cost: 1000, fx: { hunger: 40 } }
     ],
     island: [
+      { id: 'island_jrandle', label: 'J. Randle Centre for Yoruba Culture and History', mins: 90, cost: 2500, fx: { fun: 22, stress: -8 }, xp: { charisma: 1 }, sight: true, when: { days: [1, 2, 3, 4, 5, 6], from: 10, to: 18 } },
       { id: 'island_cricket', label: 'Cricket at the Onikan ground', mins: 180, cost: 2000, fx: { fun: 25, social: 20, energy: -15 }, xp: { fitness: 2 }, sport: 'cricket', when: { days: [5, 6], from: 9, to: 16 } },
       { id: 'island_handball', label: 'Handball and volleyball at Mobolaji Johnson Arena', mins: 90, cost: 500, fx: { fun: 25, social: 20, energy: -18, hygiene: -15 }, xp: { fitness: 3 }, sport: 'handball', when: { from: 15, to: 20 } },
       { id: 'island_eyo', label: 'Watch the Eyo festival procession', mins: 240, fx: { fun: 45, social: 25, energy: -15 }, event: true, when: { months: [0], days: [5], from: 8, to: 16 } },
-      { id: 'island_balogun', label: 'Haggle at Balogun market', mins: 60, fx: { fun: 5, energy: -5 }, xp: { hustle: 3, charisma: 1 }, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
+      { id: 'island_balogun', sight: true, label: 'Haggle at Balogun market', mins: 60, fx: { fun: 5, energy: -5 }, xp: { hustle: 3, charisma: 1 }, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
       { id: 'island_worship', label: 'Worship at church or mosque', mins: 90, fx: { stress: -25, social: 15 } },
       { id: 'island_checkup', label: 'Check-up at General Hospital', mins: 120, cost: 8000, fx: { stress: -10, energy: 10 } },
       { id: 'island_welfare', label: 'Free meal at the church or mosque welfare', mins: 60, fx: { hunger: 40, stress: 5 }, special: 'welfare', when: { from: 7, to: 19 } },
       { id: 'island_alaaru', label: 'Carry loads at Balogun (alaaru)', mins: 180, earn: 2200, fx: { energy: -22, hygiene: -15 }, xp: { hustle: 3, fitness: 1 }, gig: true, when: { days: [0,1,2,3,4,5], from: 7, to: 18 } },
-      { id: 'island_freedom', label: 'Live music at Freedom Park', mins: 120, cost: 1000, fx: { fun: 30, social: 20, stress: -10 }, when: { from: 16, to: 23 } },
-      { id: 'island_museum', label: 'Visit the National Museum', mins: 90, cost: 500, fx: { fun: 12, stress: -5 }, xp: { charisma: 1 }, when: { days: [0,1,2,3,4,5], from: 9, to: 17 } },
+      { id: 'island_freedom', sight: true, label: 'Live music at Freedom Park', mins: 120, cost: 1000, fx: { fun: 30, social: 20, stress: -10 }, when: { from: 16, to: 23 } },
+      { id: 'island_museum', sight: true, label: 'Visit the National Museum', mins: 90, cost: 500, fx: { fun: 12, stress: -5 }, xp: { charisma: 1 }, when: { days: [0,1,2,3,4,5], from: 9, to: 17 } },
       { id: 'island_dec_tbs', label: 'Homecoming concert at Tafawa Balewa Square', mins: 300, cost: 30000, fx: { fun: 85, social: 50, energy: -35, hygiene: -15 }, xp: { music: 1 }, special: 'club', event: true, dec: true, when: { months: [11], days: [4, 5, 6], from: 18, to: 24 } },
       { id: 'island_dec_food', label: 'December food village: jollof, suya, ofada and small chops', mins: 90, cost: 7000, fx: { hunger: 70, fun: 25, social: 15 }, event: true, dec: true, when: { months: [11], from: 12, to: 22 } },
       { id: 'island_ewa', label: 'Ewa agoyin and bread', mins: 30, cost: 1300, fx: { hunger: 45 } }
     ],
     vi: [
+      { id: 'vi_terra', label: 'Terra Kulture: an exhibition, a play and Nigerian food', mins: 180, cost: 9000, fx: { fun: 35, hunger: 45, social: 15 }, xp: { charisma: 1 }, sight: true, when: { from: 11, to: 22 } },
       { id: 'vi_beachvolley', label: 'Beach volleyball on Bar Beach', mins: 90, fx: { fun: 30, social: 20, energy: -15, hygiene: -15 }, xp: { fitness: 2 }, sport: 'beachvolley', when: { from: 15, to: 19 } },
       { id: 'vi_darts', label: 'Darts and the match on the big screen at a sports bar', mins: 120, cost: 4000, fx: { fun: 30, social: 25 }, sport: 'darts', when: { from: 17, to: 24 } },
       { id: 'vi_club_late', label: 'Club after midnight: Amapiano till 5 a.m.', mins: 240, cost: 15000, fx: { fun: 60, social: 40, energy: -45, hygiene: -20 }, special: 'club', when: { days: [5, 6], from: 0, to: 4 } },
@@ -567,7 +572,7 @@
       { id: 'vi_appearance', label: 'Paid appearance at a club night (creators with 20k+ followers)', mins: 180, fx: { social: 35, fun: 25, energy: -25 }, xp: { charisma: 2 }, special: 'appearance', when: { days: [4, 5], from: 21, to: 24 } },
       { id: 'vi_brunch', label: 'Brunch and day drinks', mins: 180, cost: 18000, fx: { hunger: 55, fun: 30, social: 30 }, when: { days: [5, 6], from: 11, to: 16 } },
       { id: 'vi_suya', label: 'Late-night suya by the roadside', mins: 30, cost: 3000, fx: { hunger: 40, fun: 10 }, when: { from: 20, to: 24 } },
-      { id: 'vi_landmark', label: 'Beach day at Landmark Beach, Oniru: cabana and seafood grill', mins: 300, cost: 20000, fx: { fun: 50, social: 30, hunger: 45, stress: -20, hygiene: -10 }, when: { from: 11, to: 19 } },
+      { id: 'vi_landmark', sight: true, label: 'Beach day at Landmark Beach, Oniru: cabana and seafood grill', mins: 300, cost: 20000, fx: { fun: 50, social: 30, hunger: 45, stress: -20, hygiene: -10 }, when: { from: 11, to: 19 } },
       { id: 'vi_jetski', label: 'Jet ski ride off Oniru', mins: 60, cost: 25000, fx: { fun: 40, stress: -10, energy: -10 }, xp: { fitness: 1 }, when: { from: 11, to: 18 } },
       { id: 'vi_fashion', label: 'Fashion pop-up and art market', mins: 120, cost: 5000, fx: { fun: 25, social: 25 }, xp: { charisma: 1 }, when: { days: [5], from: 12, to: 19 } },
       { id: 'vi_dec_headline', label: 'Headline Afrobeats concert at Eko Convention Centre', mins: 300, cost: 60000, fx: { fun: 90, social: 55, energy: -40, hygiene: -15 }, xp: { music: 1 }, special: 'club', event: true, dec: true, when: { months: [11], days: [4, 5, 6], from: 19, to: 24 } },
@@ -584,6 +589,7 @@
       { id: 'vi_quilox_door', label: 'Queue at the Quilox door', mins: 120, cost: 20000, fx: { fun: 30, social: 20, energy: -20 }, special: 'club', when: { days: [4,5], from: 22, to: 24 } },
     ],
     ikoyi: [
+      { id: 'ikoyi_tarkwa', label: 'Boat to Tarkwa Bay: a calm beach reachable only by water', mins: 360, cost: 8000, fx: { fun: 50, stress: -25, social: 15, hygiene: -10 }, sight: true, when: { from: 9, to: 14 } },
       { id: 'ikoyi_tennis', label: 'Tennis at the Ikoyi club courts', mins: 90, cost: 8000, fx: { fun: 20, social: 15, energy: -15, hygiene: -15 }, xp: { fitness: 3, charisma: 1 }, sport: 'tennis', when: { from: 7, to: 19 } },
       { id: 'ikoyi_swim', label: 'Swim laps at the club pool', mins: 60, cost: 5000, fx: { fun: 15, stress: -12, energy: -12, hygiene: 10 }, xp: { fitness: 3 }, sport: 'swimming', when: { from: 7, to: 19 } },
       { id: 'ikoyi_golf', label: 'A round of golf at Ikoyi', mins: 300, cost: 35000, fx: { fun: 25, social: 25, stress: -15, energy: -15 }, xp: { charisma: 3 }, sport: 'golf', when: { from: 7, to: 14 } },
@@ -597,6 +603,8 @@
       { id: 'ikoyi_dine', label: 'Fine dining', mins: 90, cost: 25000, fx: { hunger: 70, fun: 25, social: 10 }, when: { from: 12, to: 23 } }
     ],
     lekki: [
+      { id: 'lekki_nike', label: 'Nike Art Gallery: five floors of Nigerian paintings, textiles and sculpture', mins: 120, fx: { fun: 25, stress: -10 }, xp: { charisma: 1 }, sight: true, when: { from: 10, to: 18 } },
+      { id: 'lekki_crafts', label: 'Souvenirs at the Lekki Arts and Crafts Market', mins: 90, cost: 3000, fx: { fun: 20, social: 10 }, sight: true, when: { from: 9, to: 18 } },
       { id: 'lekki_flagfootball', label: 'Flag football league game', mins: 150, cost: 3000, fx: { fun: 35, social: 25, energy: -22, hygiene: -20 }, xp: { fitness: 4 }, sport: 'flagfootball', when: { days: [5], from: 9, to: 13 } },
       { id: 'lekki_cycling', label: 'Weekend ride down the Lekki–Epe expressway', mins: 150, fx: { fun: 20, stress: -15, energy: -25, hygiene: -20 }, xp: { fitness: 4 }, sport: 'cycling', when: { days: [6], from: 6, to: 10 } },
       { id: 'lekki_shisha', label: 'Shisha lounge and Amapiano', mins: 180, cost: 12000, fx: { fun: 40, social: 35, energy: -15 }, when: { from: 19, to: 24 } },
@@ -610,25 +618,28 @@
       { id: 'lekki_palms_film', label: 'Watch a film at The Palms', mins: 150, cost: 5000, fx: { fun: 40, social: 10, stress: -10 }, when: { from: 11, to: 23 } },
       { id: 'lekki_palms_shop', label: 'Window shop and eat at The Palms', mins: 90, cost: 6000, fx: { hunger: 40, fun: 20, stress: -8 }, when: { from: 10, to: 21 } },
       { id: 'lekki_island', label: 'Day on a private island (by your own boat)', mins: 480, cost: 5000000, fx: { fun: 90, social: 40, stress: -50, energy: -10 }, needsVehicle: 'boat', when: { from: 7, to: 15 } },
-      { id: 'lekki_elegushi', label: 'Beach party at Elegushi', mins: 240, cost: 5000, fx: { fun: 55, social: 35, stress: -15, hygiene: -15, energy: -15 }, when: { days: [5,6], from: 12, to: 22 } },
-      { id: 'lekki_lcc', label: 'Canopy walk at the Conservation Centre', mins: 150, cost: 3000, fx: { fun: 35, stress: -15, energy: -10 }, xp: { fitness: 1 }, when: { from: 8, to: 17 } },
+      { id: 'lekki_elegushi', sight: true, label: 'Beach party at Elegushi', mins: 240, cost: 5000, fx: { fun: 55, social: 35, stress: -15, hygiene: -15, energy: -15 }, when: { days: [5,6], from: 12, to: 22 } },
+      { id: 'lekki_lcc', sight: true, label: 'Canopy walk at the Conservation Centre', mins: 150, cost: 3000, fx: { fun: 35, stress: -15, energy: -10 }, xp: { fitness: 1 }, when: { from: 8, to: 17 } },
       { id: 'lekki_gym', label: 'Gym class', mins: 90, cost: 3000, fx: { energy: -18, hygiene: -20, stress: -10 }, xp: { fitness: 6 }, when: { from: 6, to: 21 } },
       { id: 'lekki_content', label: 'Shoot content', mins: 120, fx: { fun: 10, energy: -8 }, xp: { charisma: 3, music: 1 }, special: 'content', when: { from: 8, to: 20 } },
       { id: 'lekki_super', label: 'Supermarket shop (7 meals)', mins: 45, cost: 7500, special: 'pantry7', when: { from: 8, to: 21 } },
       { id: 'lekki_cafe', label: 'Brunch at a café', mins: 60, cost: 6000, fx: { hunger: 50, fun: 10 } }
     ],
     ajah: [
+      { id: 'ajah_eleko', label: 'Beach day at Eleko beach, out on the Lekki–Epe coast', mins: 420, cost: 4000, fx: { fun: 45, stress: -25, energy: -15, hygiene: -15 }, sight: true, when: { from: 8, to: 14 } },
       { id: 'ajah_dec_rave', label: 'Beach rave at a beach resort (day into night)', mins: 360, cost: 15000, fx: { fun: 75, social: 50, energy: -35, hygiene: -25, stress: -10 }, special: 'club', event: true, dec: true, when: { months: [11], from: 12, to: 23 } },
       { id: 'ajah_market', label: 'Buy foodstuff at Ajah market (7 meals)', mins: 45, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
       { id: 'ajah_spot', label: 'Eat at a local spot', mins: 30, cost: 1500, fx: { hunger: 45 } },
       { id: 'ajah_shop', label: "Help at a cousin's shop", mins: 180, earn: 2400, fx: { energy: -12 }, xp: { hustle: 3 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 19 } }
     ],
     ikorodu: [
+      { id: 'iko_giwa', label: 'Water slides and pools at Giwa Gardens water park', mins: 300, cost: 10000, fx: { fun: 55, social: 20, energy: -20, stress: -15 }, sight: true, when: { days: [4, 5, 6], from: 10, to: 17 } },
       { id: 'iko_market', label: 'Buy farm foodstuff (7 meals)', mins: 60, cost: 3500, special: 'pantry7' },
       { id: 'iko_sawmill', label: 'Help at the sawmill', mins: 180, earn: 2400, fx: { energy: -22, hygiene: -20 }, xp: { craft: 4 }, gig: true, when: { days: [0,1,2,3,4,5], from: 7, to: 17 } },
       { id: 'iko_eat', label: 'Eat at a canteen', mins: 30, cost: 1000, fx: { hunger: 40 } }
     ],
     festac: [
+      { id: 'festac_badagry', label: 'Day trip to Badagry: the Point of No Return, the slave trade museums and Nigeria\'s first storey building', mins: 600, cost: 15000, fx: { fun: 15, stress: -5, energy: -20 }, xp: { charisma: 2 }, sight: true, when: { from: 7, to: 10 } },
       { id: 'festac_park', label: 'Hang out at the park', mins: 90, fx: { social: 20, fun: 15, stress: -8 } },
       { id: 'festac_tailor', label: "Tailor's apprentice", mins: 180, earn: 2200, fx: { energy: -10 }, xp: { craft: 4 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 18 } },
       { id: 'festac_market', label: 'Buy foodstuff at the market (7 meals)', mins: 45, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
@@ -728,6 +739,17 @@
     { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
     { id: 'ojuelegba_park', icon: '🚐', name: 'Ojuelegba danfo park', type: 'transport', glyph: 'bus', district: 'surulere', x: 12.2, y: 16.8, acts: ['suru_danfo'], nogem: true, text: 'Under the bridge, conductors shout routes and danfos fill up. Rent one from the owner for a run to Yaba and back.' },
+    { id: 'tarkwa', icon: '⛱️', name: 'Tarkwa Bay', type: 'outdoors', glyph: 'boat', district: 'ikoyi', x: 20.8, y: 21.6, acts: ['ikoyi_tarkwa'], nogem: true, text: 'A sheltered beach by the harbour mouth, reachable only by boat from the VI and Ikoyi jetties. Calm water, good for a swim.' },
+    { id: 'eleko', icon: '🌊', name: 'Eleko beach', type: 'outdoors', glyph: 'wave', district: 'ajah', x: 39.2, y: 25.4, acts: ['ajah_eleko'], nogem: true, text: 'A long, open stretch of sand far out on the Lekki–Epe coast. Bring a cooler; it is a full day out.' },
+    { id: 'giwa', icon: '💦', name: 'Giwa Gardens', type: 'outdoors', glyph: 'wave', district: 'ikorodu', x: 28.2, y: 3.4, acts: ['iko_giwa'], nogem: true, text: 'A big water park with slides, pools and gardens, busiest on weekends.' },
+    { id: 'nike', icon: '🖼️', name: 'Nike Art Gallery', type: 'culture', glyph: 'frame', district: 'lekki', x: 26.4, y: 23.8, acts: ['lekki_nike'], nogem: true, text: 'One of the largest private art galleries in Africa: Nigerian paintings, adire and other textiles, sculpture and crafts, five floors of it.' },
+    { id: 'crafts', icon: '🪘', name: 'Lekki Arts and Crafts Market', type: 'food', glyph: 'basket', district: 'lekki', x: 27.6, y: 24.3, acts: ['lekki_crafts'], nogem: true, text: 'Carvings, beads, talking drums and fabric. Haggle with a smile.' },
+    { id: 'kalakuta', icon: '🎺', name: 'Kalakuta Republic Museum', type: 'culture', glyph: 'note', district: 'ikeja', x: 11.2, y: 4.2, acts: ['ikeja_kalakuta'], nogem: true, text: 'Fela Kuti\'s former home, now a museum of his life, music and politics. Close to the Shrine.' },
+    { id: 'jjt', icon: '🌳', name: 'JJT Park, Alausa', type: 'outdoors', glyph: 'tree', district: 'ikeja', x: 9.6, y: 3.0, acts: ['ikeja_jjt'], nogem: true, text: 'Johnson Jakande Tinubu Park: lawns, a lake and shade in the middle of the state secretariat.' },
+    { id: 'jrandle', icon: '🗿', name: 'J. Randle Centre, Onikan', type: 'culture', glyph: 'mask', district: 'island', x: 16.6, y: 21.9, acts: ['island_jrandle'], nogem: true, text: 'A modern centre for Yoruba history, art and culture, by the old Onikan swimming pool.' },
+    { id: 'terra', icon: '🎭', name: 'Terra Kulture', type: 'culture', glyph: 'mask', district: 'vi', x: 19.4, y: 24.8, acts: ['vi_terra'], nogem: true, text: 'Exhibitions, theatre and a restaurant serving Nigerian food, all under one roof.' },
+    { id: 'badagry', icon: '⛓️', name: 'Badagry day trips', type: 'culture', glyph: 'mask', district: 'festac', x: 2.2, y: 17.0, acts: ['festac_badagry'], nogem: true, text: 'An hour or more west of Lagos: the Point of No Return, slave trade museums and the first storey building in Nigeria. A sobering, important trip.' },
+    { id: 'makoko', icon: '🛶', name: 'Makoko', type: 'culture', glyph: 'boat', district: 'yaba', x: 14.9, y: 15.8, acts: ['yaba_makoko'], nogem: true, text: 'A floating community on the lagoon. Tours are by canoe with a resident guide; it is people\'s home, so visit respectfully.' },
     { id: 'landmark_beach', icon: '🏖️', name: 'Landmark Beach, Oniru', type: 'outdoors', glyph: 'wave', district: 'vi', x: 20.6, y: 26.3, acts: ['vi_landmark', 'vi_jetski'], nogem: true, text: 'Cabanas, seafood grilled on the sand, jet skis off the shore, and beach parties that start in the afternoon and go late.' },
     { id: 'vi_strip', icon: '🍾', name: 'The VI club strip', type: 'nightlife', glyph: 'glass', district: 'vi', x: 18.9, y: 24.4, acts: ['vi_club_late', 'vi_spray', 'vi_flex', 'vi_appearance'], nogem: true, text: 'Peak time is after midnight. Bottle service, money spraying, Amapiano till 5 a.m., and a car park where G-Wagons line up to be seen.' },
     { id: 'lekki_lounges', icon: '💨', name: 'Lekki lounges and rooftops', type: 'nightlife', glyph: 'glass', district: 'lekki', x: 28.9, y: 23.6, acts: ['lekki_shisha', 'lekki_rooftop', 'lekki_glam'], nogem: true, text: 'Shisha, DJs and rooftop views, and a glam studio downstairs to get you "outside" ready.' },
