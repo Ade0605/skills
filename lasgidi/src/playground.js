@@ -18,11 +18,13 @@
   var MAINLAND = [[-2, -1], [31, -1], [34, 2.5], [32, 5.6], [24, 6.4], [17.4, 6.6], [16.6, 10], [17.2, 14], [17, 17.8], [14.2, 19.4], [11.4, 20.6], [7, 21.2], [2, 20.8], [-2, 20]];
   // Eko Atlantic: reclaimed land off Bar Beach, south of VI, joined to it by a bridge.
   var EKO = [[13.6, 27.9], [19.4, 27.9], [19.8, 28.4], [19.8, 30.6], [13.4, 30.6], [13.2, 28.4]];
+  // A white-sand beach on the Ibeju-Lekki coast, south of Ajah and east of the Sea Plots.
+  var BEACH = [[40.9, 27.0], [43, 26.5], [49.6, 26.0], [50.4, 26.8], [50.2, 29.6], [41.2, 29.7], [40.8, 28.4]];
   var ISLAND = [[14.4, 21], [17.8, 19.9], [21.6, 19.8], [25.6, 21.4], [33, 22.4], [43, 22.6], [51.4, 22.4], [51.8, 25.8], [43, 26.6], [33, 26.9], [24, 26.9], [20.6, 27.1], [17.6, 26.4], [16, 24.2], [14.2, 22.6]];
   var CREEK = [[17.2, 23.1], [21.4, 22.6], [21.6, 23.3], [17.4, 23.8]]; // Five Cowries creek between the Island and VI
   // Each city in its own frame: land polygons, water carved out of them, and the drawing box.
   var GEO = {
-    lagos: { box: [-2, 52, -1, 31], land: [MAINLAND, ISLAND, EKO], water: [CREEK], label: [] },
+    lagos: { box: [-2, 52, -1, 31], land: [MAINLAND, ISLAND, EKO, BEACH], water: [CREEK], label: [] },
     abuja: { box: [-2, 34, -2, 28], land: [[[-2, -2], [34, -2], [34, 28], [-2, 28]]],
       water: [[[4.6, 12.8], [6.4, 12.4], [8.8, 12.9], [9.4, 14.0], [8.2, 15.0], [5.6, 14.9], [4.4, 14.0]]], label: [['Jabi Lake', 6.9, 13.8]] },
     ph: { box: [-2, 32, -2, 26], land: [[[-2, -2], [32, -2], [32, 8], [28, 12.5], [25, 17.5], [20.5, 21], [16.5, 21.6], [12, 21.2], [6, 19.8], [-2, 19]]],
@@ -146,7 +148,7 @@
       var cx = tx + 0.5, cy = ty + 0.5;
       if (isWater(cx, cy)) continue;
       var nd = nearestDistrict(cx, cy);
-      tiles.push({ x: tx, y: ty, k: nd.d < 6 ? nd.k : null, d: nd.d, edgeR: isWater(cx + 1, cy), edgeL: isWater(cx, cy + 1), v: hash(tx, ty, 1) });
+      tiles.push({ x: tx, y: ty, k: nd.d < 6 ? nd.k : null, d: nd.d, edgeR: isWater(cx + 1, cy), edgeL: isWater(cx, cy + 1), v: hash(tx, ty, 1), sand: city === 'lagos' && inPoly(cx, cy, BEACH) && !inPoly(cx, cy, ISLAND) });
     }
   }
   // Buildings sit on a finer 0.5 km grid. SPACING thins every district and FOOT trims footprints, so streets and yards show between blocks.
@@ -173,14 +175,25 @@
         wall: tower ? '#8fa2b3' : st.spaced ? TOWER_TINTS[Math.floor(hash(ix, iy, 19) * TOWER_TINTS.length)] : st.wall, glass: st.glass || tower, tall: st.spaced || tower, seed: hash(ix, iy, 17) });
     }
   }
-  ESTATES = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && D.HOMES[k].x != null && cityOfDistrict(D.HOMES[k].district) === city; }).map(function (k) {
+  ESTATES = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && !D.HOMES[k].beach && D.HOMES[k].x != null && cityOfDistrict(D.HOMES[k].district) === city; }).map(function (k) {
     var h = D.HOMES[k], m = MODELS[h.type] || MODELS.room;
     return { id: k, x: h.x, y: h.y, type: h.type, k: h.district, m: m, r: Math.max(0.45, (Math.max(m.n[0], m.n[1]) * Math.max(m.gap, m.w)) / 2 + 0.25) };
   });
   buildings = buildings.filter(function (b) { return !nearEstate(b.x, b.y) && !inMainlandEstate(b.x, b.y); });
   trees = trees.filter(function (t) { return !nearEstate(t.x, t.y) && !inMainlandEstate(t.x, t.y) && !inSite(city, t.x, t.y); });
   buildings = buildings.filter(function (b) { return !inSite(city, b.x, b.y) && !(city === 'lagos' && inPoly(b.x, b.y, EKO)); });
-  trees = trees.filter(function (t) { return !(city === 'lagos' && inPoly(t.x, t.y, EKO)); });
+  trees = trees.filter(function (t) { return !(city === 'lagos' && (inPoly(t.x, t.y, EKO) || inPoly(t.x, t.y, BEACH))); });
+  buildings = buildings.filter(function (b) { return !(city === 'lagos' && inPoly(b.x, b.y, BEACH)); });
+  if (city === 'lagos') {
+    // Ten beach houses facing the sea, with palms between them.
+    var bh = ['#2fa3a3', '#c0603f', '#3f78b0', '#d9a520', '#2f8f5a'];
+    for (var hi = 0; hi < 10; hi++) {
+      var hx = 41.9 + hi * 0.83;
+      buildings.push({ x: hx, y: 27.35, w: 0.46, dep: 0.4, h: 7 + (hi % 3), k: 'ajah', roof: bh[hi % bh.length], wall: '#fbfaf6', seed: hash(hi, 9, 31) });
+      trees.push({ x: hx + 0.42, y: 27.75, s: 1, palm: true });
+    }
+    for (var pi = 0; pi < 8; pi++) trees.push({ x: 41.6 + pi * 1.1, y: 29.3, s: 0.9, palm: true });
+  }
   if (city === 'lagos') {
     // Eko Atlantic: a row of glass towers on the waterfront, the boulevard, then streets of villas, all spaced out.
     var tints = ['#5f8fb8', '#4f9a9a', '#e4e6e8', '#3d6e8f', '#7aa7c7', '#c9b99a'];
@@ -193,7 +206,7 @@
         buildings.push({ x: vx, y: vy, w: 0.4, dep: 0.34, h: 3.5 + hash(vc, vr, 23) * 1.5, k: 'vi', roof: vroofs[Math.floor(hash(vc, vr, 24) * vroofs.length)], wall: '#f2efe8', pitch: true, rise: 3.5, seed: hash(vc, vr, 25) });
       }
     }
-    for (var px2 = 13.95; px2 < 19.6; px2 += 0.7) trees.push({ x: px2, y: 29.18, s: 0.9 });
+    for (var px2 = 13.95; px2 < 19.6; px2 += 0.7) trees.push({ x: px2, y: 29.18, s: 0.9, palm: true });
   }
   ESTATES.forEach(function (e, ei) {
     var m = e.m, nx = m.n[0], ny = m.n[1];
@@ -298,7 +311,7 @@
       return {
         dark: dark, paper: paper, ink: get('--ink', '#17181a'), danfo: get('--danfo', '#f2b600'), danfoInk: get('--danfo-ink', '#1a1500'),
         lagoon: get('--lagoon', '#0f6f78'), surface: get('--surface', '#ffffff'), muted: get('--muted', '#5d5f63'),
-        water: dark ? '#13353a' : '#9fd0d0', waterDeep: dark ? '#0e2a2e' : '#86c1c3',
+        water: dark ? '#0f3a63' : '#4fb4ec', waterDeep: dark ? '#0b2e52' : '#2f95d6', waterTop: dark ? '#14467a' : '#6cc6f2', sand: dark ? '#8f8873' : '#f7f1de',
         land: dark ? '#2d3a2b' : '#c9d6a9', land2: dark ? '#344331' : '#bfcf9b', soil: dark ? '#3b3a30' : '#d9cfb0',
         side: dark ? '#1c231a' : '#8c9a6c', road: dark ? '#4a4d52' : '#6b6f75', roadLine: dark ? '#8a8d91' : '#e8e6dc',
         tree: dark ? '#2f5a33' : '#4f8a46'
@@ -374,8 +387,9 @@
       var s = base.s * cam.z;
 
       // Water.
-      g.fillStyle = theme.water; g.fillRect(0, 0, W, H);
-      g.fillStyle = theme.waterDeep;
+      var wg = g.createLinearGradient(0, 0, 0, H); wg.addColorStop(0, theme.waterTop); wg.addColorStop(1, theme.waterDeep);
+      g.fillStyle = wg; g.fillRect(0, 0, W, H);
+      g.fillStyle = 'rgba(255,255,255,' + (theme.dark ? 0.12 : 0.28) + ')';
       for (var i = 0; i < 40; i++) {
         var wx = hash(i, 1, 41) * W, wy = hash(i, 2, 41) * H;
         g.fillRect(wx, wy, 10 + hash(i, 3, 41) * 30, 1);
@@ -390,7 +404,7 @@
       var cliff = 5;
       tiles.forEach(function (t) {
         var pts = diamond(t.x, t.y, 0);
-        var fill = t.k ? (t.d < (STYLE[t.k].r - 0.6) ? theme.soil : theme.land) : theme.land2;
+        var fill = t.sand ? theme.sand : t.k ? (t.d < (STYLE[t.k].r - 0.6) ? theme.soil : theme.land) : theme.land2;
         if (scene.flood && t.k && D.DISTRICTS[t.k].side === 'island' && t.v < 0.55) fill = theme.water;
         g.fillStyle = t.v < 0.5 ? fill : shade(fill.charAt(0) === '#' ? fill : '#888888', theme.dark ? 0.03 : -0.03);
         g.fill();
@@ -418,7 +432,7 @@
       g.beginPath(); g.ellipse(sc.x, sc.y, STADIUM.rx * TW * s * 0.8, STADIUM.ry * TH * s * 0.8, 0, 0, Math.PI * 2);
       g.fillStyle = theme.dark ? '#3c6a3a' : '#6aa357'; g.fill();
       g.lineWidth = 3 * s; g.strokeStyle = theme.dark ? '#7b7f86' : '#d8d4c8'; g.stroke();
-      drawRefinery(g, s); drawNewAirport(g, s); drawEko(g, s);
+      drawRefinery(g, s); drawNewAirport(g, s); drawEko(g, s); drawBeach(g, s);
       }
 
       // Estate plots: a paved pad, lawns for duplexes and the mansion, a pool.
@@ -622,6 +636,60 @@
       g.strokeStyle = theme.dark ? '#77756d' : '#b9b4a6'; g.lineWidth = Math.max(2, 3 * s); g.beginPath(); g.moveTo(j0.x, j0.y); g.lineTo(j1.x, j1.y); g.stroke();
       sign(g, s, 50.2, 24.85, 'LAGOS OIL REFINERY', 'COMING SOON');
     }
+    function drawBeach(g, s) {
+      // Clear shallows: a turquoise band off the sand.
+      var sh = toScreen(45.6, 30.1, 0), sg = g.createRadialGradient(sh.x, sh.y, 4 * s, sh.x, sh.y, 70 * s);
+      sg.addColorStop(0, 'rgba(120,235,235,.75)'); sg.addColorStop(1, 'rgba(120,235,235,0)');
+      poly(g, [[40.8, 29.75], [50.4, 29.6], [50.9, 31.2], [40.6, 31.4]], null); g.fillStyle = sg; g.fill();
+      g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = Math.max(0.8, 1.2 * s);  // surf line
+      var w0 = toScreen(41.2, 29.85, 0), w1 = toScreen(50.2, 29.72, 0); g.beginPath(); g.moveTo(w0.x, w0.y); g.lineTo(w1.x, w1.y); g.stroke();
+      // Decks and pools in front of each house.
+      for (var hi = 0; hi < 10; hi++) {
+        var hx = 41.9 + hi * 0.83;
+        poly(g, [[hx - 0.3, 27.58], [hx + 0.3, 27.58], [hx + 0.3, 27.95], [hx - 0.3, 27.95]], theme.dark ? '#6b5236' : '#c99a62');
+        poly(g, [[hx - 0.2, 27.64], [hx + 0.14, 27.64], [hx + 0.14, 27.88], [hx - 0.2, 27.88]], '#39c5e6');
+        var lo = toScreen(hx + 0.22, 27.9, 0); g.fillStyle = '#ffffff'; g.fillRect(lo.x - 1.5 * s, lo.y - 1 * s, 3 * s, 1 * s);
+      }
+      // Umbrellas and loungers on the sand.
+      var um = ['#ff4d8d', '#ffd23f', '#2f80ed', '#16a35a', '#ff8a3d'];
+      for (var ui2 = 0; ui2 < 12; ui2++) {
+        var u = toScreen(41.7 + ui2 * 0.72, 28.95 + (ui2 % 2) * 0.18, 0);
+        g.strokeStyle = '#7a5a3a'; g.lineWidth = Math.max(0.5, 0.6 * s); g.beginPath(); g.moveTo(u.x, u.y); g.lineTo(u.x, u.y - 5 * s); g.stroke();
+        g.beginPath(); g.ellipse(u.x, u.y - 5 * s, 3.2 * s, 1.4 * s, 0, Math.PI, 0); g.fillStyle = um[ui2 % um.length]; g.fill();
+        g.fillStyle = '#ffffff'; g.fillRect(u.x + 1.5 * s, u.y - 0.6 * s, 2.6 * s, 0.9 * s);
+      }
+      // Horses on the beach.
+      [[43.0, 28.45, '#7a4a2a'], [43.45, 28.62, '#2b1d14'], [43.9, 28.4, '#c8a882']].forEach(function (h) {
+        var c = toScreen(h[0], h[1], 0), k = s;
+        g.fillStyle = h[2];
+        g.beginPath(); g.ellipse(c.x, c.y - 3.6 * k, 2.6 * k, 1.3 * k, 0, 0, Math.PI * 2); g.fill();      // body
+        g.fillRect(c.x - 2 * k, c.y - 3 * k, 0.5 * k, 3 * k); g.fillRect(c.x - 1 * k, c.y - 3 * k, 0.5 * k, 3 * k);
+        g.fillRect(c.x + 1 * k, c.y - 3 * k, 0.5 * k, 3 * k); g.fillRect(c.x + 1.9 * k, c.y - 3 * k, 0.5 * k, 3 * k);
+        g.beginPath(); g.moveTo(c.x + 2 * k, c.y - 4.2 * k); g.lineTo(c.x + 3.4 * k, c.y - 6.6 * k); g.lineTo(c.x + 4.4 * k, c.y - 6 * k); g.lineTo(c.x + 2.8 * k, c.y - 3.6 * k); g.closePath(); g.fill(); // neck and head
+        g.strokeStyle = h[2]; g.lineWidth = Math.max(0.5, 0.6 * k); g.beginPath(); g.moveTo(c.x - 2.5 * k, c.y - 3.8 * k); g.lineTo(c.x - 3.4 * k, c.y - 2 * k); g.stroke(); // tail
+      });
+      // Quad bikes.
+      [[45.3, 28.5, '#e5484d'], [45.75, 28.35, '#f2b600'], [46.2, 28.55, '#2f80ed']].forEach(function (q) {
+        var c = toScreen(q[0], q[1], 0);
+        g.fillStyle = '#1f2125'; [[-2, 0], [2, 0], [-1.2, -0.8], [2.8, -0.8]].forEach(function (w) { g.beginPath(); g.arc(c.x + w[0] * s, c.y + w[1] * s - 1 * s, 1 * s, 0, Math.PI * 2); g.fill(); });
+        g.fillStyle = q[2]; g.fillRect(c.x - 2.2 * s, c.y - 3.2 * s, 4.6 * s, 1.8 * s);
+        g.fillStyle = '#1f2125'; g.fillRect(c.x - 0.5 * s, c.y - 4 * s, 1.6 * s, 0.9 * s);
+      });
+      // Water sports: jet skis with wakes, a banana boat, a parasail and kayaks.
+      [[47.2, 30.5], [48.4, 30.8], [44.6, 30.9]].forEach(function (j, i) {
+        var c = toScreen(j[0], j[1], 0);
+        g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = Math.max(0.6, 0.8 * s);
+        g.beginPath(); g.moveTo(c.x - 2 * s, c.y); g.quadraticCurveTo(c.x - 8 * s, c.y + 2 * s, c.x - 14 * s, c.y + 1 * s); g.stroke();
+        g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(c.x, c.y, 2.8 * s, 1.1 * s, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = ['#e5484d', '#7c3aed', '#16a35a'][i]; g.fillRect(c.x - 0.8 * s, c.y - 2.2 * s, 1.6 * s, 1.6 * s);
+      });
+      var bb = toScreen(46.0, 31.1, 0); g.fillStyle = '#ffd23f'; g.beginPath(); g.ellipse(bb.x, bb.y, 5 * s, 1.2 * s, 0, 0, Math.PI * 2); g.fill();
+      ['#e5484d', '#2f80ed', '#16a35a'].forEach(function (c, i) { g.fillStyle = c; g.beginPath(); g.arc(bb.x - 3 * s + i * 3 * s, bb.y - 1.6 * s, 0.9 * s, 0, Math.PI * 2); g.fill(); });
+      var ps = toScreen(48.0, 31.4, 0); g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = Math.max(0.4, 0.4 * s);
+      g.beginPath(); g.moveTo(ps.x, ps.y); g.lineTo(ps.x - 6 * s, ps.y - 22 * s); g.stroke();
+      g.beginPath(); g.ellipse(ps.x - 6 * s, ps.y - 24 * s, 5 * s, 2.4 * s, 0, Math.PI, 0); g.fillStyle = '#ff4d8d'; g.fill();
+      [[42.4, 30.4, '#ff8a3d'], [42.9, 30.6, '#ffd23f']].forEach(function (k) { var c = toScreen(k[0], k[1], 0); g.fillStyle = k[2]; g.beginPath(); g.ellipse(c.x, c.y, 2.6 * s, 0.7 * s, -0.3, 0, Math.PI * 2); g.fill(); });
+    }
     function drawEko(g, s) {
       // The boulevard and cross streets, the sea wall promenade, then the bridge to VI.
       poly(g, [[13.4, 28.95], [19.8, 28.95], [19.8, 29.3], [13.4, 29.3]], theme.road);
@@ -677,6 +745,16 @@
 
     function drawTree(g, t, s) {
       var p = toScreen(t.x, t.y, 0), r = 2.6 * t.s * s;
+      if (t.palm) {
+        // A palm: a leaning trunk and six fronds.
+        var th = 9 * t.s * s, tx = p.x + 1.6 * s, ty = p.y - th;
+        g.strokeStyle = theme.dark ? '#5a4632' : '#9a7448'; g.lineWidth = Math.max(0.8, 1.1 * s);
+        g.beginPath(); g.moveTo(p.x, p.y); g.quadraticCurveTo(p.x + 0.2 * s, p.y - th * 0.6, tx, ty); g.stroke();
+        g.strokeStyle = theme.dark ? '#3f7a3a' : '#2f9a4a'; g.lineWidth = Math.max(0.8, 1.3 * s);
+        for (var f = 0; f < 6; f++) { var a = f / 6 * Math.PI * 2, ex = tx + Math.cos(a) * 4.5 * s, ey = ty + Math.sin(a) * 2 * s + 1.5 * s;
+          g.beginPath(); g.moveTo(tx, ty); g.quadraticCurveTo(tx + Math.cos(a) * 3 * s, ty - 1.5 * s, ex, ey); g.stroke(); }
+        return;
+      }
       g.fillStyle = theme.dark ? '#3a2d22' : '#7a5a3a';
       g.fillRect(p.x - 0.5 * s, p.y - 3 * s, 1 * s, 3 * s);
       g.beginPath(); g.arc(p.x, p.y - 4.5 * s, r, 0, Math.PI * 2); g.fillStyle = theme.tree; g.fill();
