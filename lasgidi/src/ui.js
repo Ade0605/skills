@@ -2896,7 +2896,7 @@
   /* ---------- new-player setup: Profile, Look, Personality, Dream, Birth lottery, Home ---------- */
   // Your identity is your claude.ai account: there is no password or email field anywhere in the game.
   var ONB_STEPS = ['Profile', 'Look', 'Personality', 'Dream', 'Birth lottery', 'Home'];
-  function onb() { return ui.onb || (ui.onb = { step: 0, name: ui.draftName || 'Ade', adult: false, look: { skin: 2, hair: 0, shape: 1 }, traits: [], goal: null, home: null }); }
+  function onb() { return ui.onb || (ui.onb = { step: 0, name: ui.draftName || 'Ade', adult: false, look: { skin: 2, hair: 0, shape: 1 }, outfit: { top: 'st_tee', bottom: 'st_jeans' }, traits: [], goal: null, home: null }); }
   function onbValid(o, step) {
     if (step === 0) return o.name.trim().length > 0 && o.adult;
     if (step === 2) return o.traits.length === 2;
@@ -2915,7 +2915,8 @@
       '<span class="label">Skin tone</span><div class="pick">' + D.LOOKS.skin.map(function (c, i) { return '<button type="button" class="pick-c' + (o.look.skin === i ? ' on' : '') + '" id="onb-sk-' + i + '" data-onbskin="' + i + '" aria-label="Skin tone ' + (i + 1) + '" aria-pressed="' + (o.look.skin === i) + '" style="background:' + c + '"></button>'; }).join('') + '</div>' +
       '<span class="label">Hairstyle</span><div class="pick">' + D.LOOKS.hair.map(function (h, i) { return '<button type="button" class="pg-chip' + (o.look.hair === i ? ' sel' : '') + '" id="onb-hr-' + i + '" data-onbhair="' + i + '">' + esc(h) + '</button>'; }).join('') + '</div>' +
       '<span class="label">Body</span><div class="pick">' + D.LOOKS.shape.map(function (h, i) { return '<button type="button" class="pg-chip' + (o.look.shape === i ? ' sel' : '') + '" id="onb-sh-' + i + '" data-onbshape="' + i + '">' + esc(h) + '</button>'; }).join('') + '</div>' +
-      '<button type="button" class="btn sm ghost" id="onb-shuffle" data-onb="shuffle">🎲 Shuffle</button><p class="note">Outfits, fabrics and colours come later from the markets and boutiques.</p></div></div>';
+      ['top', 'bottom'].map(function (slot) { return '<span class="label">' + (slot === 'top' ? 'Top (fabric and colour)' : 'Bottoms') + '</span><div class="pick">' + Object.keys(D.CLOTHES).filter(function (k) { return D.CLOTHES[k].starter && D.CLOTHES[k].slot === slot; }).map(function (k) { var C = D.CLOTHES[k], on = o.outfit[slot] === k; return '<button type="button" class="pg-chip onb-cloth' + (on ? ' sel' : '') + '" id="onb-cl-' + k + '" data-onbcloth="' + slot + ':' + k + '" aria-pressed="' + on + '"><i style="background:' + (C.alt ? 'linear-gradient(135deg,' + C.color + ' 55%,' + C.alt + ' 55%)' : C.color) + '"></i>' + esc(C.name.replace(/ \(starter\)/, '')) + '</button>'; }).join('') + '</div>'; }).join('') +
+      '<button type="button" class="btn sm ghost" id="onb-shuffle" data-onb="shuffle">🎲 Shuffle</button><p class="note">Your first outfit is free. Lace, agbada, office wear and more come later from the markets and boutiques.</p></div></div>';
     else if (st === 2) body = '<h2>Your personality</h2><p class="note">Pick exactly two. Each gives a small head start.</p><div class="onb-grid">' + Object.keys(D.TRAITS).map(function (k) {
       var T = D.TRAITS[k], on = o.traits.indexOf(k) >= 0, full = o.traits.length >= 2 && !on;
       return '<button type="button" class="onb-card' + (on ? ' sel' : '') + '" id="onb-tr-' + k + '" data-onbtrait="' + k + '" aria-pressed="' + on + '"' + (full ? ' disabled' : '') + '><span class="onb-e">' + T.icon + '</span><b>' + esc(T.name) + '</b><small>' + esc(T.text) + '</small></button>';
@@ -2940,7 +2941,7 @@
   }
   function bindIntro() {
     var av = document.getElementById('onb-av');
-    if (av && window.LasgidiAvatar) { try { window.LasgidiAvatar.draw(av, onb().look, {}); } catch (e) {} }
+    if (av && window.LasgidiAvatar) { try { window.LasgidiAvatar.draw(av, onb().look, onb().outfit); } catch (e) {} }
     var name = document.getElementById('pname');
     if (name && ui.draftName != null) name.value = ui.draftName;
     if (ui.draftGoal) { var g = document.getElementById('goal-' + ui.draftGoal); if (g) g.checked = true; }
@@ -2959,7 +2960,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -2971,13 +2972,14 @@
       var o0 = onb(); introState();
       if (ds.onb === 'next' && onbValid(o0, o0.step)) o0.step = Math.min(ONB_STEPS.length - 1, o0.step + 1);
       else if (ds.onb === 'back') o0.step = Math.max(0, o0.step - 1);
-      else if (ds.onb === 'shuffle') { var rr = function (n) { return Math.floor(Math.random() * n); }; o0.look = { skin: rr(D.LOOKS.skin.length), hair: rr(D.LOOKS.hair.length), shape: rr(D.LOOKS.shape.length) }; }
+      else if (ds.onb === 'shuffle') { var rr = function (n) { return Math.floor(Math.random() * n); }; o0.look = { skin: rr(D.LOOKS.skin.length), hair: rr(D.LOOKS.hair.length), shape: rr(D.LOOKS.shape.length) }; var sts = function (sl) { return Object.keys(D.CLOTHES).filter(function (k) { return D.CLOTHES[k].starter && D.CLOTHES[k].slot === sl; }); }, tp = sts('top'), bt = sts('bottom'); o0.outfit = { top: tp[rr(tp.length)], bottom: bt[rr(bt.length)] }; }
       render(); var nx = document.getElementById(ds.onb === 'back' ? 'onb-back' : 'onb-next') || document.getElementById('start'); if (nx && ds.onb !== 'shuffle') nx.focus(); return;
     }
     if (ds.onbskin != null && t.hasAttribute('data-onbskin')) { onb().look.skin = +ds.onbskin; render(); return; }
     if (ds.onbhair != null && t.hasAttribute('data-onbhair')) { onb().look.hair = +ds.onbhair; render(); return; }
     if (ds.onbshape != null && t.hasAttribute('data-onbshape')) { onb().look.shape = +ds.onbshape; render(); return; }
     if (ds.onbtrait) { var tr0 = onb().traits, ti0 = tr0.indexOf(ds.onbtrait); if (ti0 >= 0) tr0.splice(ti0, 1); else if (tr0.length < 2) tr0.push(ds.onbtrait); render(); return; }
+    if (ds.onbcloth) { var oc = ds.onbcloth.split(':'); onb().outfit[oc[0]] = oc[1]; render(); return; }
     if (ds.onbgoal) { onb().goal = ds.onbgoal; render(); return; }
     if (ds.onbhome) { onb().home = ds.onbhome; render(); return; }
     if (ds.roll) {
@@ -3000,7 +3002,7 @@
     if (ds.start) {
       introState();
       var ob = onb();
-      S = L.newGame({ name: ui.draftName.trim() || 'Ade', goal: ui.draftGoal, seed: ui.seed, traits: ob.traits.length === 2 ? ob.traits : undefined, startHome: ob.home || undefined, look: ob.look });
+      S = L.newGame({ name: ui.draftName.trim() || 'Ade', goal: ui.draftGoal, seed: ui.seed, traits: ob.traits.length === 2 ? ob.traits : undefined, startHome: ob.home || undefined, look: ob.look, outfit: ob.outfit });
       ui.tab = 'do'; ui.sel = null; ui.draftOrigin = null; ui.onb = null;
       releaseOldSea();
       save(); render(); return;

@@ -26,6 +26,9 @@
     } else if (c.fabric === 'lace') {
       g.fillStyle = c.alt || shade(c.color, 0.4);
       [[3, 3], [11, 3], [7, 8], [3, 13], [11, 13]].forEach(function (p) { g.beginPath(); g.arc(p[0], p[1], 1.6, 0, Math.PI * 2); g.fill(); });
+    } else if (c.fabric === 'adire') { // indigo tie-dye: pale rings and dots
+      g.strokeStyle = c.alt; g.lineWidth = 1.4; g.beginPath(); g.arc(8, 8, 5, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = c.alt; g.beginPath(); g.arc(8, 8, 1.6, 0, Math.PI * 2); g.fill(); g.fillRect(0, 0, 2, 2); g.fillRect(14, 14, 2, 2);
     } else if (c.fabric === 'denim') {
       g.strokeStyle = shade(c.color, 0.15); g.lineWidth = 1;
       for (var i = -16; i < 32; i += 4) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 16, 16); g.stroke(); }

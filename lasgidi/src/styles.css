@@ -910,3 +910,4 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .ww-tot { font-weight: 800; border-top: 1px solid var(--line); padding-top: 4px; }
 .ww-count { display: grid; gap: 2px; padding: 12px; border-radius: 14px; background: linear-gradient(135deg, #fff7e6, #fde7f0); color: #3a2a1a; }
 .ww-count b { font: 800 26px var(--font-body); }
+.onb-cloth i { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; vertical-align: -2px; border: 1px solid rgba(0,0,0,.2); }

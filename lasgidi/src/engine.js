@@ -312,6 +312,11 @@
     if (!Array.isArray(t) || t.length !== 2 || t[0] === t[1] || !D.TRAITS[t[0]] || !D.TRAITS[t[1]]) return null;
     return [String(t[0]), String(t[1])];
   }
+  function cleanStarter(o) {
+    if (!o || typeof o !== 'object') return null;
+    var C = D.CLOTHES, t = C[o.top], b = C[o.bottom];
+    return t && b && t.starter && b.starter && t.slot === 'top' && b.slot === 'bottom' ? { top: o.top, bottom: o.bottom } : null;
+  }
   function cleanLook0(l) {
     if (!l || typeof l !== 'object') return null;
     var okn = function (v, arr) { return typeof v === 'number' && v >= 0 && v < arr.length && Math.round(v) === v; };
@@ -380,6 +385,8 @@
       traits.forEach(function (k) { var T = D.TRAITS[k]; addXp(s, T.xp); if (T.needs) Object.keys(T.needs).forEach(function (n) { s.needs[n] = clamp(s.needs[n] + T.needs[n], 0, 100); }); });
     }
     var look = cleanLook0(opts.look); if (look) s.look = look;
+    var outfit = cleanStarter(opts.outfit);
+    if (outfit) { ['top', 'bottom'].forEach(function (k) { s.wardrobe.push({ id: outfit[k] }); s.outfit[k] = outfit[k]; }); }
     if (o.allowance) { s.allowance = o.allowance; s.allowanceWeeks = o.allowanceWeeks; }
     if (originId === 'nepo') s.friends.kunle.lvl = 60; // Daddy's banker friend
     rollPower(s);
@@ -392,6 +399,7 @@
     if (traits) s.replay.traits = traits;
     if (startHome) s.replay.home = startHome;
     if (look) s.replay.look = look;
+    if (outfit) s.replay.outfit = outfit;
     log(s, o.text, 'story');
     if (startHome) log(s, 'You chose to start in ' + D.HOMES[startHome].name + '.', 'story');
     if (heir) log(s, 'You are ' + s.name + ', child of ' + heir.parent + '. Your share of the estate: ' + naira(heir.inherit) + '.' + (heir.school === 'intl' ? ' Your international school education counts as a degree.' : ''), 'story');
@@ -3155,7 +3163,7 @@
     if (rp.challenge != null && !CHALLENGE_ID.test(rp.challenge)) return null;
     if (rp.origin === 'heir' && !cleanHeir(rp.heir)) return null;
     if (rp.traits != null && !cleanTraits(rp.traits)) return null;
-    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined, heir: rp.heir, traits: rp.traits, startHome: rp.home, look: rp.look });
+    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined, heir: rp.heir, traits: rp.traits, startHome: rp.home, look: rp.look, outfit: rp.outfit });
     for (var i = 0; i < rp.acts.length; i++) {
       var a = rp.acts[i];
       if (!Array.isArray(a) || !RECORDED[a[0]]) return null;

@@ -305,7 +305,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Bottom bar:** on phones, a bar at the bottom switches between **Home**, **Buy** (a launcher for cars, jets and yachts, houses, clothes, furniture, shares and businesses), **Map** and **Phone**.
 - **New-player setup, step by step:**
   1. **Profile:** your name in the game (others see an @handle) and an 18+ check. Identity is your claude.ai account, so **there is no password or email field anywhere**.
-  2. **Look:** skin tone, hairstyle and body, with a live avatar preview and a Shuffle button.
+  2. **Look:** skin tone, hairstyle, body and a free first outfit: a top in plain, Ankara, Adire or Aso-oke, and jeans, chinos or a wrapper. There's a live avatar preview and a Shuffle button.
   3. **Personality:** pick exactly two of ten traits, each a small head start (a skill boost or calmer needs).
   4. **Dream:** pick exactly one goal.
   5. **Birth lottery:** one random roll per life.

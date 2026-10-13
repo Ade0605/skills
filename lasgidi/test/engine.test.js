@@ -2075,7 +2075,9 @@ test('Lekki Hyde Park: buy ready-built, or buy a plot and build in three stages 
 
 test('new-player setup: exactly two traits, a start home the origin allows, and a look, all replay to the same seal', () => {
   const o = L.newGame({ seed: 4242 }).origin, home = D.START_HOMES[o][1];
-  const s = L.newGame({ seed: 4242, goal: 'freestyle', traits: ['techie', 'cool'], startHome: home, look: { skin: 4, hair: 5, shape: 0 } });
+  const s = L.newGame({ seed: 4242, goal: 'freestyle', traits: ['techie', 'cool'], startHome: home, look: { skin: 4, hair: 5, shape: 0 }, outfit: { top: 'st_adire', bottom: 'st_wrapper' } });
+  assert.deepEqual(s.outfit, { top: 'st_adire', bottom: 'st_wrapper' });
+  assert.equal(L.newGame({ seed: 1, outfit: { top: 'agbada', bottom: 'jeans' } }).wardrobe.length, 0, 'only starter clothes, free');
   assert.deepEqual(s.traits, ['techie', 'cool']);
   assert.equal(s.home, home); assert.equal(s.loc, D.HOMES[home].district);
   assert.ok(s.skills.tech >= 12);
@@ -2090,6 +2092,7 @@ test('new-player setup: exactly two traits, a start home the origin allows, and 
   L.wait(s, 60);
   const r = L.replayLife(s.replay);
   assert.equal(r.ledgerHash, s.ledgerHash); assert.equal(r.home, s.home); assert.deepEqual(r.traits, s.traits);
+  assert.deepEqual(r.outfit, s.outfit);
   assert.equal(L.replayLife(Object.assign({}, s.replay, { traits: ['nope', 'cool'] })), null);
 });
 

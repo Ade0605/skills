@@ -940,6 +940,14 @@
   // fabric: plain | ankara | asooke | lace | denim. tags change what an outfit
   // does: owambe, club, office, gym. Effects only apply while worn.
   var CLOTHES = {
+    // Starter clothes: free, picked once during new-player setup, never sold.
+    st_tee:     { name: 'Plain tee', slot: 'top', fabric: 'plain', color: '#f4f3ec', price: 0, tags: [], gift: true, starter: true },
+    st_ankara:  { name: 'Ankara shirt (starter)', slot: 'top', fabric: 'ankara', color: '#2f6fa0', alt: '#f2b600', price: 0, tags: [], gift: true, starter: true },
+    st_adire:   { name: 'Adire top', slot: 'top', fabric: 'adire', color: '#1f3a6b', alt: '#cfe0f0', price: 0, tags: [], gift: true, starter: true },
+    st_asooke:  { name: 'Aso-oke top', slot: 'top', fabric: 'asooke', color: '#7a1f2b', alt: '#d4af37', price: 0, tags: [], gift: true, starter: true },
+    st_jeans:   { name: 'Jeans (starter)', slot: 'bottom', fabric: 'denim', color: '#3d5a80', price: 0, tags: [], gift: true, starter: true },
+    st_chinos:  { name: 'Khaki chinos', slot: 'bottom', fabric: 'plain', color: '#b59a6a', price: 0, tags: [], gift: true, starter: true },
+    st_wrapper: { name: 'Ankara wrapper (starter)', slot: 'bottom', fabric: 'ankara', color: '#c0392b', alt: '#f2b600', price: 0, tags: [], gift: true, starter: true },
     tee:        { name: 'Plain T-shirt', slot: 'top', fabric: 'plain', color: '#f4f3ec', price: 4000, tags: [] },
     jersey:     { name: 'Super Eagles jersey', slot: 'top', fabric: 'plain', color: '#1d7a43', price: 15000, tags: ['gym'] },
     ankara_sh:  { name: 'Ankara shirt', slot: 'top', fabric: 'ankara', color: '#d9822b', alt: '#2f6fa0', price: 25000, tags: ['owambe'] },
