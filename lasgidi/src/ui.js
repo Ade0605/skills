@@ -2360,13 +2360,15 @@
       var a = APPS.filter(function (x) { return x[0] === app; })[0];
       return '<div class="phone-top"><button class="btn sm ghost" id="app-back" data-app="">‹ Apps</button><b>' + (a ? a[1] + ' ' + esc(a[2]) : '') + '</b></div>' + body;
     }
+    // 3D app tiles: each app gets its own gradient, like a real phone home screen.
+    var APP_TINTS = [['#ffd23f', '#f59e0b'], ['#4ade80', '#16a34a'], ['#f472b6', '#db2777'], ['#60a5fa', '#2563eb'], ['#a78bfa', '#7c3aed'], ['#fb923c', '#ea580c'], ['#2dd4bf', '#0d9488'], ['#f87171', '#dc2626']];
     var unread = unreadCount(), id = gemToday(), found = L.gemsFound(S, id).length;
     var onNow = 0;
     Object.keys(D.PLACE_ACTIONS).forEach(function (d) { D.PLACE_ACTIONS[d].forEach(function (a) { if (a.event && L.districtCity(d) === L.cityOf(S) && (!a.when.months || a.when.months.indexOf(L.monthIndex(S)) >= 0) && L.inWindow(S, a.when)) onNow++; }); });
     var badge = { quests: L.activeQuests(S, 99).filter(function (q) { return q.done; }).length, messages: unread, gems: L.GEM_COUNT - found, events: onNow };
-    return '<div class="panel-h"><h2>📱 Phone</h2><span class="muted">' + esc(L.clockLabel(S)) + '</span></div><div class="panel-b"><div class="apps">' + APPS.map(function (x) {
+    return '<div class="panel-h"><h2>📱 Phone</h2><span class="muted">' + esc(L.clockLabel(S)) + '</span></div><div class="panel-b"><div class="apps">' + APPS.map(function (x, i) {
       var n = badge[x[0]];
-      return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';
+      return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic" style="--a1:' + APP_TINTS[i % APP_TINTS.length][0] + ';--a2:' + APP_TINTS[i % APP_TINTS.length][1] + '">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';
     }).join('') + '</div></div>';
   }
 

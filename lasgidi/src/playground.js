@@ -147,7 +147,8 @@
       tiles.push({ x: tx, y: ty, k: nd.d < 6 ? nd.k : null, d: nd.d, edgeR: isWater(cx + 1, cy), edgeL: isWater(cx, cy + 1), v: hash(tx, ty, 1) });
     }
   }
-  // Buildings sit on a finer 0.5 km grid so the core reads as a dense city.
+  // Buildings sit on a finer 0.5 km grid. SPACING thins every district and FOOT trims footprints, so streets and yards show between blocks.
+  var SPACING = 0.72, FOOT = 0.82;
   var SUB = 0.5;
   for (var by = Y0; by < Y1; by += SUB) {
     for (var bx = X0; bx < X1; bx += SUB) {
@@ -157,14 +158,14 @@
       var fall = Math.max(0, 1 - n2.d / st.r);
       if (fall <= 0) { if (hash(ix, iy, 9) < 0.07) trees.push({ x: px, y: py, s: 0.8 + hash(ix, iy, 4) * 0.6 }); continue; }
       if (st.trees && hash(ix, iy, 7) < st.trees * 0.5) { trees.push({ x: px, y: py, s: 0.8 + hash(ix, iy, 8) * 0.4 }); continue; }
-      if (hash(ix, iy, 5) > st.dens * Math.min(1, fall * 1.8)) continue;
+      if (hash(ix, iy, 5) > st.dens * SPACING * Math.min(1, fall * 1.8)) continue;
       if (n2.d < 0.75) continue; // keep the centre clear for the district pin
       // Spaced districts (VI's towers) take one plot in four, so each tower stands clear with street between.
       if (st.spaced && ((ix & 1) || (iy & 1))) continue;
       var tower = st.towers && hash(ix, iy, 11) < st.towers;
       var core = Math.pow(fall, 0.8);
       var h = tower ? 30 + hash(ix, iy, 12) * 26 : st.h[0] + (st.h[1] - st.h[0]) * Math.pow(hash(ix, iy, 6), 1.4) * (0.45 + core * 0.55);
-      var f = (st.rows ? st.foot[0] : st.foot[0] + (st.foot[1] - st.foot[0]) * hash(ix, iy, 13)) * SUB * (st.spaced ? 1.5 : 1);
+      var f = (st.rows ? st.foot[0] : st.foot[0] + (st.foot[1] - st.foot[0]) * hash(ix, iy, 13)) * SUB * (st.spaced ? 1.5 : FOOT);
       buildings.push({ x: px, y: py, w: f, dep: st.market ? f : f * (0.8 + hash(ix, iy, 14) * 0.4), h: h, k: n2.k,
         roof: st.market && hash(ix, iy, 15) < 0.6 ? ['#c44b3a', '#2f6fa0', '#d9a520', '#3f8f55'][Math.floor(hash(ix, iy, 16) * 4)] : (hash(ix, iy, 18) < 0.25 ? shadeHex(st.roof, 0.12) : st.roof),
         wall: tower ? '#8fa2b3' : st.spaced ? TOWER_TINTS[Math.floor(hash(ix, iy, 19) * TOWER_TINTS.length)] : st.wall, glass: st.glass || tower, tall: st.spaced || tower, seed: hash(ix, iy, 17) });
@@ -779,15 +780,8 @@
       ESTATES.forEach(function (e) {
         var mine = e.id === scene.homeId, sel = e.id === scene.homeSel;
         if (!(mine || sel || scene.showHomes || cam.z >= 1.6)) return;
-        var p = toScreen(e.x, e.y, 0), cy = p.y - (MODELS[e.type].h[1] + 6) * s - er;
-        ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y - MODELS[e.type].h[1] * s * 0.5); ctx.lineTo(p.x, cy + er); ctx.stroke();
-        ctx.beginPath(); ctx.arc(p.x, cy, mine ? er + 2 : er, 0, Math.PI * 2); ctx.fillStyle = mine ? theme.danfo : '#ffffff'; ctx.fill();
-        ctx.lineWidth = sel ? 3 : 2; ctx.strokeStyle = sel ? theme.lagoon : (mine ? theme.danfoInk : '#5d5f63'); ctx.stroke();
-        var icon = HOME_ICON[e.type] || '🏠';
-        if (emojiOk) {
-          ctx.font = Math.round(er * 1.15) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(icon, p.x, cy + er * 0.08);
-        } else { glyph(ctx, 'dome', p.x, cy, er * 0.6); }
+        var p = toScreen(e.x, e.y, 0), icon = HOME_ICON[e.type] || '🏠';
+        var cy = pin3d(ctx, p.x, p.y, mine ? er + 2 : er, mine ? theme.danfo : '#6b7280', icon, { sel: sel, lift: (MODELS[e.type].h[1] + 6) * s, bob: mine && !reduce, glyph: 'dome', bead: mine ? '#fff3c4' : null });
         var n = scene.residents && scene.residents[e.id];
         if (n) {
           ctx.beginPath(); ctx.arc(p.x + er, cy - er * 0.6, 7, 0, Math.PI * 2); ctx.fillStyle = theme.lagoon; ctx.fill();
@@ -847,25 +841,10 @@
 
       // Key places: a coloured badge per category with a small vector glyph.
       placeHits = [];
-      var pr = Math.max(6.5, Math.min(12, 6.5 * Math.sqrt(cam.z) * Math.min(1.3, Math.max(0.85, base.s))));
+      var pr = Math.max(7.5, Math.min(13, 7.2 * Math.sqrt(cam.z) * Math.min(1.3, Math.max(0.85, base.s))));
       (scene.places || []).forEach(function (pl) {
         var p = toScreen(pl.x, pl.y, 0), sel = pl.id === scene.place;
-        var cy = p.y - pr - 2;
-        if (sel) { ctx.beginPath(); ctx.arc(p.x, cy, pr + 5, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fill(); }
-        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - pr * 0.45, cy + pr * 0.6); ctx.lineTo(p.x + pr * 0.45, cy + pr * 0.6); ctx.closePath();
-        ctx.fillStyle = D.PLACE_TYPES[pl.type].color; ctx.fill();
-        ctx.beginPath(); ctx.arc(p.x, cy, pr, 0, Math.PI * 2); ctx.fill();
-        if (emojiOk && pl.icon) {
-          // Real icons: the emoji on a white badge, ringed in the category colour.
-          ctx.beginPath(); ctx.arc(p.x, cy, pr, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
-          ctx.lineWidth = sel ? 3 : 2; ctx.strokeStyle = sel ? theme.danfo : D.PLACE_TYPES[pl.type].color; ctx.stroke();
-          ctx.font = Math.round(pr * 1.15) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(pl.icon, p.x, cy + pr * 0.08);
-        } else {
-          ctx.lineWidth = sel ? 2.5 : 1.5; ctx.strokeStyle = sel ? theme.danfo : '#ffffff'; ctx.stroke();
-          glyph(ctx, pl.glyph, p.x, cy, pr * 0.62);
-        }
+        var cy = pin3d(ctx, p.x, p.y, pr, D.PLACE_TYPES[pl.type].color, pl.icon, { sel: sel, bob: sel && !reduce, glyph: pl.glyph });
         placeHits.push({ id: pl.id, x: p.x, y: cy });
         if (sel || cam.z >= 1.9) labels.push({ place: pl, top: { x: p.x, y: cy + 4 }, pri: sel ? 1 : 4, sel: sel });
       });
@@ -888,9 +867,13 @@
           ctx.beginPath(); ctx.arc(top.x, top.y, 7 + pulse * 12, 0, Math.PI * 2);
           ctx.strokeStyle = 'rgba(242,182,0,' + (1 - pulse).toFixed(2) + ')'; ctx.lineWidth = 2; ctx.stroke();
         }
-        ctx.beginPath(); ctx.arc(top.x, top.y, here ? 7 : 5.5, 0, Math.PI * 2);
-        ctx.fillStyle = here ? theme.danfo : theme.surface; ctx.fill();
-        ctx.lineWidth = sel ? 3 : 2; ctx.strokeStyle = sel ? theme.lagoon : (here ? theme.danfoInk : theme.ink); ctx.stroke();
+        var pr0 = here ? 7.5 : 6, pcol = here ? theme.danfo : (sel ? theme.lagoon : (theme.dark ? '#d9dce1' : '#ffffff'));
+        ctx.beginPath(); ctx.ellipse(p.x, p.y, 4, 1.6, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fill();
+        var sg = ctx.createRadialGradient(top.x - pr0 * 0.4, top.y - pr0 * 0.4, pr0 * 0.1, top.x, top.y, pr0);
+        sg.addColorStop(0, shade(pcol, 0.4)); sg.addColorStop(1, shade(pcol, -0.3));
+        ctx.beginPath(); ctx.arc(top.x, top.y, pr0, 0, Math.PI * 2); ctx.fillStyle = sg; ctx.fill();
+        ctx.lineWidth = sel ? 2.5 : 1.5; ctx.strokeStyle = sel ? theme.lagoon : (here ? theme.danfoInk : theme.ink); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(top.x - pr0 * 0.35, top.y - pr0 * 0.45, pr0 * 0.35, pr0 * 0.2, -0.6, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fill();
 
         labels.push({ k: k, here: here, sel: sel, top: top, pri: here ? 0 : sel ? 1 : (k === scene.home || k === scene.work) ? 2 : 3 });
         var faces = scene.faces || {};
@@ -1086,6 +1069,39 @@
         default: C(0, 0, 0.35, true);
       }
       g.restore();
+    }
+
+    // A 3D map pin: a glossy teardrop in the category colour, floating over a ground shadow,
+    // with the emoji on a white bead. Used for places, homes and districts.
+    function pin3d(g, x, gy, r, col, icon, o) {
+      o = o || {};
+      var lift = o.lift != null ? o.lift : r * 1.25, bob = o.bob ? Math.sin(clock / 380) * 2 : 0;
+      var cy = gy - lift - r + bob;
+      // Ground shadow.
+      g.beginPath(); g.ellipse(x, gy, r * 0.75, r * 0.32, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(0,0,0,' + (theme.dark ? 0.45 : 0.22) + ')'; g.fill();
+      if (o.sel) { g.beginPath(); g.ellipse(x, gy, r * 1.3, r * 0.55, 0, 0, Math.PI * 2); g.strokeStyle = theme.danfo; g.lineWidth = 2; g.stroke(); }
+      // Teardrop body with a radial gradient: light from the top left.
+      g.beginPath(); g.moveTo(x, gy - 1);
+      g.bezierCurveTo(x - r * 0.35, gy - lift * 0.55, x - r * 1.02, cy + r * 0.55, x - r, cy);
+      g.arc(x, cy, r, Math.PI, 0);
+      g.bezierCurveTo(x + r * 1.02, cy + r * 0.55, x + r * 0.35, gy - lift * 0.55, x, gy - 1);
+      g.closePath();
+      var gr = g.createRadialGradient(x - r * 0.4, cy - r * 0.45, r * 0.15, x, cy + r * 0.3, r * 1.6);
+      gr.addColorStop(0, shade(col, 0.35)); gr.addColorStop(0.55, col); gr.addColorStop(1, shade(col, -0.4));
+      g.fillStyle = gr; g.fill();
+      g.lineWidth = o.sel ? 2.5 : 1; g.strokeStyle = o.sel ? theme.danfo : shade(col, -0.45); g.stroke();
+      // White bead with a soft inner shade, the emoji, then a gloss highlight.
+      var br = r * 0.74;
+      var bg = g.createRadialGradient(x - br * 0.3, cy - br * 0.35, br * 0.1, x, cy, br);
+      bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, o.bead || '#e9ecef');
+      g.beginPath(); g.arc(x, cy, br, 0, Math.PI * 2); g.fillStyle = bg; g.fill();
+      if (icon && emojiOk) {
+        g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 2; g.shadowOffsetY = 1;
+        g.font = Math.round(br * 1.35) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#000'; g.fillText(icon, x, cy + br * 0.1); g.restore();
+      } else if (o.glyph) { g.save(); g.beginPath(); g.arc(x, cy, br, 0, Math.PI * 2); g.fillStyle = col; g.fill(); g.restore(); glyph(g, o.glyph, x, cy, br * 0.8); }
+      g.beginPath(); g.ellipse(x - r * 0.38, cy - r * 0.55, r * 0.38, r * 0.2, -0.6, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,.55)'; g.fill();
+      return cy;
     }
 
     function roundRect(g, x, y, w, h, r) {

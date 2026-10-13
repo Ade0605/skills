@@ -668,3 +668,10 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .need.n-stress .bar i:not(.mid):not(.low) { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
 .gov-chip.live { cursor: default; display: inline-flex; align-items: center; gap: 6px; color: var(--mint); }
 .gov-banner { box-shadow: 0 4px 14px rgb(22 163 90 / .35); }
+
+/* 3D app tiles */
+.app-ic { border: 0; background: linear-gradient(160deg, var(--a1, #e5e7eb), var(--a2, #9ca3af)); box-shadow: 0 6px 12px rgb(0 0 0 / .18), inset 0 -4px 0 rgb(0 0 0 / .18), inset 0 2px 0 rgb(255 255 255 / .45); transition: transform .12s ease; text-shadow: 0 3px 3px rgb(0 0 0 / .3); font-size: 30px; }
+.app-ic::before { content: ''; position: absolute; inset: 4px 6px auto 6px; height: 45%; border-radius: 12px 12px 18px 18px / 10px 10px 20px 20px; background: linear-gradient(180deg, rgb(255 255 255 / .5), rgb(255 255 255 / 0)); pointer-events: none; }
+.app:hover .app-ic, .app:focus-visible .app-ic { transform: translateY(-2px) scale(1.04); }
+.app:active .app-ic { transform: translateY(1px) scale(.97); box-shadow: 0 2px 4px rgb(0 0 0 / .2), inset 0 -2px 0 rgb(0 0 0 / .18); }
+.act-ic { background: linear-gradient(160deg, #ffffff, var(--sunk)); box-shadow: 0 3px 6px rgb(0 0 0 / .12), inset 0 -2px 0 rgb(0 0 0 / .08); text-shadow: 0 2px 2px rgb(0 0 0 / .25); }
