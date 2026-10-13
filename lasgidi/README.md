@@ -291,6 +291,13 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 
 - **Profile photos:** add a photo of yourself on the Me tab so other players can recognise you on the map, in their district and in the Hall of Fame. An editor approves each photo before anyone else sees it, and you can hide yours at any time.
 - **Prime homes:** buy a home in Lagos's top addresses: a detached duplex in Nicon Town (Lekki Phase 1) for ₦250m, a luxury apartment in Victoria Island for ₦400m, a penthouse in Eko Atlantic for ₦900m, a mansion in Parkview, Ikoyi for ₦1.5bn, or a waterfront mansion on Banana Island for ₦4bn. You can live in it or let it out, and either way you pay a weekly estate service charge. Each one adds status, and Banana Island unlocks an achievement.
+- **Phone and bottom bar:** the Phone tab is a phone in a frame, with a status bar (time, 4G or E when the light is off, battery from your energy), a lock-screen clock and date, a scrolling news ticker from your story, and a wallpaper that turns to night after 7pm. New apps:
+  - **Home:** your interior and needs;
+  - **Careers:** jobs and work;
+  - **Money**;
+  - **Assets:** net worth, broken down with bars;
+  - **Houses:** where you live, what you own, Lekki Hyde Park, rentals and prime homes.
+  - **Bottom bar:** on phones, a bar at the bottom switches between **Home**, **Buy** (a launcher for cars, jets and yachts, houses, clothes, furniture, shares and businesses), **Map** and **Phone**.
 - **New-player setup, step by step:**
   1. **Profile:** your name in the game (others see an @handle) and an 18+ check. Identity is your claude.ai account, so **there is no password or email field anywhere**.
   2. **Look:** skin tone, hairstyle and body, with a live avatar preview and a Shuffle button.
