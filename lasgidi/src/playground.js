@@ -16,11 +16,11 @@
   // Everything else is water: the Lagoon between them, the harbour channel,
   // and the Atlantic to the south.
   var MAINLAND = [[-2, -1], [31, -1], [34, 2.5], [32, 5.6], [24, 6.4], [17.4, 6.6], [16.6, 10], [17.2, 14], [17, 17.8], [14.2, 19.4], [11.4, 20.6], [7, 21.2], [2, 20.8], [-2, 20]];
-  var ISLAND = [[14.4, 21], [17.8, 19.9], [21.6, 19.8], [25.6, 21.4], [33, 22.4], [43, 22.6], [43, 26.6], [33, 26.9], [24, 26.9], [20.6, 27.1], [17.6, 26.4], [16, 24.2], [14.2, 22.6]];
+  var ISLAND = [[14.4, 21], [17.8, 19.9], [21.6, 19.8], [25.6, 21.4], [33, 22.4], [43, 22.6], [51.4, 22.4], [51.9, 28.4], [44.0, 28.4], [43, 27.0], [33, 26.9], [24, 26.9], [20.6, 27.1], [17.6, 26.4], [16, 24.2], [14.2, 22.6]];
   var CREEK = [[17.2, 23.1], [21.4, 22.6], [21.6, 23.3], [17.4, 23.8]]; // Five Cowries creek between the Island and VI
   // Each city in its own frame: land polygons, water carved out of them, and the drawing box.
   var GEO = {
-    lagos: { box: [-2, 43, -1, 30], land: [MAINLAND, ISLAND], water: [CREEK], label: [] },
+    lagos: { box: [-2, 52, -1, 30], land: [MAINLAND, ISLAND], water: [CREEK], label: [] },
     abuja: { box: [-2, 34, -2, 28], land: [[[-2, -2], [34, -2], [34, 28], [-2, 28]]],
       water: [[[4.6, 12.8], [6.4, 12.4], [8.8, 12.9], [9.4, 14.0], [8.2, 15.0], [5.6, 14.9], [4.4, 14.0]]], label: [['Jabi Lake', 6.9, 13.8]] },
     ph: { box: [-2, 32, -2, 26], land: [[[-2, -2], [32, -2], [32, 8], [28, 12.5], [25, 17.5], [20.5, 21], [16.5, 21.6], [12, 21.2], [6, 19.8], [-2, 19]]],
@@ -169,7 +169,7 @@
     return { id: k, x: h.x, y: h.y, type: h.type, k: h.district, m: m, r: Math.max(0.45, (Math.max(m.n[0], m.n[1]) * Math.max(m.gap, m.w)) / 2 + 0.25) };
   });
   buildings = buildings.filter(function (b) { return !nearEstate(b.x, b.y) && !inMainlandEstate(b.x, b.y); });
-  trees = trees.filter(function (t) { return !nearEstate(t.x, t.y) && !inMainlandEstate(t.x, t.y); });
+  trees = trees.filter(function (t) { return !nearEstate(t.x, t.y) && !inMainlandEstate(t.x, t.y) && !(city === 'lagos' && t.x > 43.9 && t.y > 22.5 && t.y < 28.2); });
   ESTATES.forEach(function (e, ei) {
     var m = e.m, nx = m.n[0], ny = m.n[1];
     for (var i = 0; i < nx; i++) for (var j = 0; j < ny; j++) {
@@ -205,6 +205,8 @@
   // Landmarks drawn into the static layer.
   var RUNWAY = [[3.2, 0.6], [9.6, 0.2], [9.8, 1.0], [3.4, 1.4]];
   var STADIUM = { x: 9.2, y: 16.6, rx: 0.9, ry: 0.7 };
+  // Ibeju-Lekki construction sites, east of Ajah: a refinery and a new international airport.
+  var REFINERY = { x0: 44.2, y0: 22.8, x1: 51.0, y1: 24.9 }, NEW_AIRPORT = { x0: 44.2, y0: 25.1, x1: 51.2, y1: 27.3 }, AIRPORT_SHIFT = 0.7;
 
   /* ---------- the playground ---------- */
 
@@ -391,6 +393,7 @@
       g.beginPath(); g.ellipse(sc.x, sc.y, STADIUM.rx * TW * s * 0.8, STADIUM.ry * TH * s * 0.8, 0, 0, Math.PI * 2);
       g.fillStyle = theme.dark ? '#3c6a3a' : '#6aa357'; g.fill();
       g.lineWidth = 3 * s; g.strokeStyle = theme.dark ? '#7b7f86' : '#d8d4c8'; g.stroke();
+      drawRefinery(g, s); drawNewAirport(g, s);
       }
 
       // Estate plots: a paved pad, lawns for duplexes and the mansion, a pool.
@@ -517,6 +520,112 @@
       g.textAlign = 'center'; g.textBaseline = 'middle';
       if (halo) { g.lineWidth = size * 0.25; g.strokeStyle = theme.dark ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.75)'; g.strokeText(text, 0, 0); }
       g.fillStyle = color; g.fillText(text, 0, 0);
+      g.restore();
+    }
+
+    /* ---------- construction sites (drawn from simple shapes, no images) ---------- */
+    function poly(g, pts, fill, stroke, lw) {
+      g.beginPath(); pts.forEach(function (c, i) { var q = toScreen(c[0], c[1], c[2] || 0); if (i) g.lineTo(q.x, q.y); else g.moveTo(q.x, q.y); }); g.closePath();
+      if (fill) { g.fillStyle = fill; g.fill(); }
+      if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 1; g.stroke(); }
+    }
+    function sitePad(g, s, R) {
+      var sand = theme.dark ? '#4a4538' : '#d9cfb4';
+      poly(g, [[R.x0, R.y0], [R.x1, R.y0], [R.x1, R.y1], [R.x0, R.y1]], sand);
+      g.setLineDash([2 * s, 2 * s]); poly(g, [[R.x0, R.y0], [R.x1, R.y0], [R.x1, R.y1], [R.x0, R.y1]], null, '#e2652b', Math.max(1, 1.2 * s)); g.setLineDash([]);
+    }
+    // A vertical cylinder at (x, y): radius in km, height in px (scaled). frame = only rings and struts (under construction).
+    function cyl(g, s, x, y, r, h, col, frame, rings) {
+      var c = toScreen(x, y, 0), rx = r * TW * s * 0.5, ry = r * TH * s * 0.5, up = h * s;
+      if (!frame) {
+        g.fillStyle = shade(col, -0.18); g.fillRect(c.x - rx, c.y - up, rx * 2, up);
+        g.beginPath(); g.ellipse(c.x, c.y, rx, ry, 0, 0, Math.PI); g.fill();
+        g.beginPath(); g.ellipse(c.x, c.y - up, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = col; g.fill();
+        g.strokeStyle = shade(col, -0.35); g.lineWidth = Math.max(0.5, 0.6 * s); g.stroke();
+      } else {
+        g.strokeStyle = theme.dark ? '#9aa0a6' : '#7b8087'; g.lineWidth = Math.max(0.5, 0.5 * s);
+        for (var k = 0; k <= 3; k++) { g.beginPath(); g.ellipse(c.x, c.y - up * k / 3, rx, ry, 0, 0, Math.PI * 2); g.stroke(); }
+        for (var a = 0; a < 8; a++) { var dx = Math.cos(a * Math.PI / 4) * rx, dy = Math.sin(a * Math.PI / 4) * ry; g.beginPath(); g.moveTo(c.x + dx, c.y + dy); g.lineTo(c.x + dx, c.y + dy - up); g.stroke(); }
+      }
+      if (rings) { g.strokeStyle = rings; g.lineWidth = Math.max(0.8, 1 * s); for (var i = 1; i < 6; i++) { g.beginPath(); g.ellipse(c.x, c.y - up * i / 6, rx * 1.15, ry * 1.15, 0, 0, Math.PI * 2); g.stroke(); } }
+    }
+    function crane(g, s, x, y, h, jib) {
+      var b = toScreen(x, y, 0), top = { x: b.x, y: b.y - h * s }, end = toScreen(x + jib, y - jib * 0.3, 0);
+      g.strokeStyle = '#e8b416'; g.lineWidth = Math.max(1.2, 1.6 * s);
+      g.beginPath(); g.moveTo(b.x, b.y); g.lineTo(top.x, top.y); g.stroke();
+      g.beginPath(); g.moveTo(top.x - 6 * s, top.y + 2 * s); g.lineTo(end.x, end.y - h * s); g.stroke();
+      g.strokeStyle = theme.dark ? '#ccc' : '#444'; g.lineWidth = Math.max(0.5, 0.5 * s);
+      g.beginPath(); g.moveTo(end.x - 2 * s, end.y - h * s); g.lineTo(end.x - 2 * s, end.y - h * s * 0.45); g.stroke();
+      g.fillStyle = '#c0392b'; g.fillRect(end.x - 4 * s, end.y - h * s * 0.45, 4 * s, 1.5 * s);
+    }
+    function truck(g, s, x, y, col) {
+      var c = toScreen(x, y, 0); g.fillStyle = col; g.fillRect(c.x - 3 * s, c.y - 3 * s, 4.5 * s, 2.5 * s); g.fillStyle = '#e8e8e8'; g.fillRect(c.x + 1.5 * s, c.y - 2.6 * s, 1.8 * s, 2.1 * s);
+    }
+    function sign(g, s, x, y, l1, l2) {
+      var c = toScreen(x, y, 0), w = 34 * s, h = 7.5 * s;
+      g.fillStyle = '#17181a'; g.fillRect(c.x - w / 2 + 1 * s, c.y - h - 3 * s, 0.8 * s, h + 3 * s); g.fillRect(c.x + w / 2 - 2 * s, c.y - h - 3 * s, 0.8 * s, h + 3 * s);
+      g.fillStyle = '#f2c200'; g.fillRect(c.x - w / 2, c.y - h - 4 * s, w, h);
+      g.fillStyle = '#17181a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '800 ' + Math.max(5, 2.6 * s) + 'px sans-serif'; g.fillText(l1, c.x, c.y - h - 4 * s + h * 0.33);
+      g.font = '900 ' + Math.max(5, 2.9 * s) + 'px sans-serif'; g.fillText(l2, c.x, c.y - h - 4 * s + h * 0.72);
+    }
+    function drawRefinery(g, s) {
+      var R = REFINERY;
+      sitePad(g, s, R);
+      // Tank farm: finished tanks with a green band, half-built frames, and bare foundations.
+      poly(g, [[44.5, 23.0], [47.0, 23.0], [47.0, 24.3], [44.5, 24.3]], theme.dark ? '#57534a' : '#c8c3b5');
+      var tanks = [[44.95, 23.3, 0], [45.6, 23.3, 0], [46.25, 23.3, 1], [44.95, 23.95, 0], [45.6, 23.95, 1], [46.25, 23.95, 1]];
+      tanks.forEach(function (k) { cyl(g, s, k[0], k[1], 0.55, 9, '#dfe2e5', k[2] === 1); if (!k[2]) { var c = toScreen(k[0], k[1], 0); g.strokeStyle = '#1f8a4c'; g.lineWidth = Math.max(0.8, 1 * s); g.beginPath(); g.ellipse(c.x, c.y - 6 * s, 0.55 * TW * s * 0.5, 0.55 * TH * s * 0.5, 0, 0, Math.PI); g.stroke(); } });
+      [[46.75, 23.3], [46.75, 23.95]].forEach(function (k) { var c = toScreen(k[0], k[1], 0); g.beginPath(); g.ellipse(c.x, c.y, 0.55 * TW * s * 0.5, 0.55 * TH * s * 0.5, 0, 0, Math.PI * 2); g.fillStyle = theme.dark ? '#6a665c' : '#e9e5da'; g.fill(); });
+      // Pipe rack across the site.
+      var a = toScreen(44.6, 24.55, 0), b = toScreen(50.6, 24.45, 0);
+      g.strokeStyle = '#7c8794'; g.lineWidth = Math.max(1, 1.6 * s); g.beginPath(); g.moveTo(a.x, a.y - 3 * s); g.lineTo(b.x, b.y - 3 * s); g.stroke();
+      g.strokeStyle = '#e8b416'; g.lineWidth = Math.max(0.6, 0.8 * s); g.beginPath(); g.moveTo(a.x, a.y - 4.2 * s); g.lineTo(b.x, b.y - 4.2 * s); g.stroke();
+      for (var i = 0; i <= 10; i++) { var q = toScreen(44.6 + i * 0.6, 24.55 - i * 0.01, 0); g.strokeStyle = '#7c8794'; g.lineWidth = Math.max(0.5, 0.6 * s); g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x, q.y - 3 * s); g.stroke(); }
+      // Distillation columns with yellow ladders, a control building, a cooling tower, flare stacks.
+      cyl(g, s, 47.9, 23.3, 0.32, 20, '#9aa2ab', false, '#e8b416'); cyl(g, s, 48.5, 23.6, 0.3, 16, '#9aa2ab', false, '#e8b416');
+      drawBuilding(g, { x: 49.5, y: 23.3, w: 0.7, dep: 0.6, h: 7, wall: '#c9ced3', roof: '#b6bcc2' }, s, 0, true);
+      var ct = toScreen(50.25, 23.95, 0), crx = 0.55 * TW * s * 0.5, cry = 0.55 * TH * s * 0.5, cup = 13 * s;
+      g.beginPath(); g.moveTo(ct.x - crx, ct.y); g.quadraticCurveTo(ct.x - crx * 0.55, ct.y - cup * 0.6, ct.x - crx * 0.7, ct.y - cup); g.lineTo(ct.x + crx * 0.7, ct.y - cup); g.quadraticCurveTo(ct.x + crx * 0.55, ct.y - cup * 0.6, ct.x + crx, ct.y); g.closePath();
+      g.fillStyle = theme.dark ? '#8d9196' : '#c9cdd1'; g.fill();
+      g.beginPath(); g.ellipse(ct.x, ct.y - cup, crx * 0.7, cry * 0.7, 0, 0, Math.PI * 2); g.fillStyle = theme.dark ? '#5d6166' : '#9ea3a8'; g.fill();
+      [[50.6, 23.0], [50.85, 23.2]].forEach(function (k) { var c = toScreen(k[0], k[1], 0); for (var j = 0; j < 6; j++) { g.fillStyle = j % 2 ? '#ffffff' : '#c0392b'; g.fillRect(c.x - 0.7 * s, c.y - (j + 1) * 3 * s, 1.4 * s, 3 * s); } });
+      crane(g, s, 46.0, 22.95, 26, 1.2); crane(g, s, 48.9, 24.2, 22, 1.0);
+      truck(g, s, 45.2, 24.75, '#e2652b'); truck(g, s, 47.6, 24.8, '#e8b416');
+      // A jetty for tankers into the lagoon, and the sign.
+      var j0 = toScreen(45.4, 22.8, 0), j1 = toScreen(45.4, 22.0, 0);
+      g.strokeStyle = theme.dark ? '#77756d' : '#b9b4a6'; g.lineWidth = Math.max(2, 3 * s); g.beginPath(); g.moveTo(j0.x, j0.y); g.lineTo(j1.x, j1.y); g.stroke();
+      sign(g, s, 50.2, 24.85, 'LAGOS OIL REFINERY', 'COMING SOON');
+    }
+    function drawNewAirport(g, s) {
+      // Drawn at y 25.1–27.3 and shifted 0.7 km south, leaving a green gap and an access road after the refinery.
+      var o0 = toScreen(0, 0, 0), o1 = toScreen(0, AIRPORT_SHIFT, 0);
+      g.save(); g.translate(o1.x - o0.x, o1.y - o0.y);
+      var R = NEW_AIRPORT;
+      sitePad(g, s, R);
+      // Runway with a threshold and centre line, and a taxiway.
+      poly(g, [[44.5, 25.25], [48.6, 25.25], [48.6, 25.6], [44.5, 25.6]], theme.road);
+      g.strokeStyle = '#ffffff'; g.lineWidth = Math.max(0.5, 0.7 * s); g.setLineDash([3 * s, 3 * s]);
+      var r0 = toScreen(44.8, 25.42, 0), r1 = toScreen(48.4, 25.42, 0); g.beginPath(); g.moveTo(r0.x, r0.y); g.lineTo(r1.x, r1.y); g.stroke(); g.setLineDash([]);
+      poly(g, [[45.4, 25.6], [45.7, 25.6], [45.7, 26.0], [45.4, 26.0]], theme.road);
+      poly(g, [[48.6, 25.25], [51.0, 25.25], [51.0, 25.6], [48.6, 25.6]], theme.dark ? '#5a4a36' : '#b89a72'); // graded earth for the runway extension
+      // Terminal: a glass block, the next bay as a red steel frame, then bare columns.
+      drawBuilding(g, { x: 46.4, y: 26.15, w: 1.6, dep: 0.45, h: 9, wall: '#4f82b0', roof: '#d6d9dc', glass: true }, s, 0, true);
+      var f0 = toScreen(47.4, 25.95, 0), f1 = toScreen(48.3, 25.95, 0);
+      g.strokeStyle = '#b8322b'; g.lineWidth = Math.max(0.8, 1 * s);
+      for (var k = 0; k <= 3; k++) { var x = f0.x + (f1.x - f0.x) * k / 3, y = f0.y + (f1.y - f0.y) * k / 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 9 * s); g.stroke(); }
+      g.beginPath(); g.moveTo(f0.x, f0.y - 9 * s); g.lineTo(f1.x, f1.y - 9 * s); g.moveTo(f0.x, f0.y - 4.5 * s); g.lineTo(f1.x, f1.y - 4.5 * s); g.stroke();
+      for (var c2 = 0; c2 < 5; c2++) { var q = toScreen(48.5 + c2 * 0.18, 26.05, 0); g.strokeStyle = '#56595e'; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x, q.y - 5 * s); g.stroke(); }
+      // Hangar arches, a water tower, fuel tanks, the car park and the access road.
+      for (var hgi = 0; hgi < 4; hgi++) { var hc = toScreen(44.75, 25.85 + hgi * 0.22, 0); g.strokeStyle = '#a8322b'; g.lineWidth = Math.max(0.8, 1.2 * s); g.beginPath(); g.ellipse(hc.x, hc.y, 4 * s, 5 * s, 0, Math.PI, 0); g.stroke(); }
+      cyl(g, s, 50.2, 25.95, 0.28, 15, '#9aa2ab', true); cyl(g, s, 50.2, 25.95, 0.42, 4, '#a6adb5'); // tower legs, then the tank on top would hide them; keep it simple
+      [[50.5, 26.55], [50.75, 26.55], [51.0, 26.55]].forEach(function (k) { cyl(g, s, k[0], k[1], 0.2, 3, '#d7dadd'); });
+      poly(g, [[46.3, 26.55], [47.6, 26.55], [47.6, 26.95], [46.3, 26.95]], theme.road);
+      ['#c0392b', '#2f6fa0', '#ffffff', '#2fa36b'].forEach(function (col, i) { var c = toScreen(46.55 + i * 0.3, 26.75, 0); g.fillStyle = col; g.fillRect(c.x - 1.5 * s, c.y - 1 * s, 3 * s, 2 * s); });
+      poly(g, [[44.3, 27.05], [51.1, 27.05], [51.1, 27.22], [44.3, 27.22]], theme.road);
+      crane(g, s, 45.9, 25.8, 22, 1.0); crane(g, s, 48.0, 25.75, 20, 0.9); crane(g, s, 49.7, 25.7, 24, 1.1);
+      truck(g, s, 46.9, 26.4, '#e2652b'); truck(g, s, 49.2, 26.45, '#e2652b');
+      sign(g, s, 49.6, 27.0, 'LAGOS INTERNATIONAL AIRPORT', 'COMING SOON');
       g.restore();
     }
 
@@ -1074,6 +1183,7 @@
       el: wrap,
       // Screen point of the centre of a sea plot (for tests and keyboard help).
       // Fly the camera to the Sea Plots grid.
+      focusAt: function (x, y, z) { cam.z = z || 3; cam.px = 0; cam.py = 0; var p = toScreen(x, y, 0); cam.px = W / 2 - p.x; cam.py = H / 2 - p.y; clampCam(); staticKey = ''; kick(); },
       focusSea: function () { var S = D.SEA; cam.z = Math.max(cam.z, W < 600 ? 3 : 2.4); cam.px = 0; cam.py = 0; var p = toScreen(S.x0 + S.cols * S.gap / 2, S.y0 + S.rows * S.gap / 2, 0); cam.px = W / 2 - p.x; cam.py = H / 2 - p.y; clampCam(); staticKey = ''; kick(); },
       seaPoint: function (c, r) { var S = D.SEA, p = toScreen(S.x0 + (c + 0.5) * S.gap, S.y0 + (r + 0.5) * S.gap, 0); return { x: p.x, y: p.y }; },
       update: function (next) {

@@ -46,6 +46,9 @@
   };
 
   // Town Hall: one question a real-world week, voted on by every player. Social only.
+  // Governor race: players run with one of these slogans (no free text, so nothing needs checking).
+  var GOV_MOTTOS = ['Light for every street, 24/7', 'No more go-slow on Third Mainland', 'Eko o ni baje!', 'Money speaks, but work speaks louder', 'Jobs for every graduate', 'Clean gutters, no more flood', 'Owambe every Saturday, on the state', 'Fix the roads, then we talk', 'Hustle hard, Lagos go pay', 'More BRT, less danfo wahala', 'Detty December all year', 'Island and Mainland, one Lagos'];
+  var GOV_MIN_STATUS = 20;
   var TOWNHALL = [
     { q: 'Should okadas be allowed back on the bridges?', a: ['Yes, we need them', 'Only with helmets', 'No, keep the ban'] },
     { q: 'What should the next BRT line serve?', a: ['Lekki–Ajah', 'Ikorodu–Ojota', 'Badagry Road'] },
@@ -341,6 +344,11 @@
     ph_dline_selfcon:  { name: 'Self-con, D-Line', district: 'ph_dline', rent: 7000, power: 0.5, sleep: 0.9, type: 'selfcon', x: 8.2, y: 16.0 },
     ph_gra_flat:       { name: '3-bed flat, GRA Phase 2', district: 'ph_gra', rent: 40000, power: 0.75, sleep: 1.05, type: 'flat3', x: 12.4, y: 9.8 },
     ph_oldgra_duplex:  { name: 'Duplex, Old GRA', district: 'ph_oldgra', rent: 90000, power: 0.85, sleep: 1.1, type: 'duplex', x: 14.6, y: 16.2, daily: { stress: -3 } },
+    lekki_nicon_own:  { name: 'Your duplex, Nicon Town', district: 'lekki', rent: 0, power: 0.92, sleep: 1.15, type: 'duplex', owned: true, ownedBy: 'lekki_nicon', daily: { stress: -4 }, perk: 'A gated estate popular with young professionals and families: upscale, but not the Ikoyi axis.' },
+    vi_luxapt_own:    { name: 'Your luxury apartment, VI', district: 'vi', rent: 0, power: 0.98, sleep: 1.15, type: 'luxury', owned: true, ownedBy: 'vi_luxapt', daily: { stress: -4, social: 2 }, perk: 'High floors, a concierge and the city\'s offices, lounges and nightlife on your doorstep.' },
+    eko_atlantic_own: { name: 'Your penthouse, Eko Atlantic', district: 'vi', rent: 0, power: 1, sleep: 1.2, type: 'luxury', owned: true, ownedBy: 'eko_atlantic', daily: { stress: -6, fun: 2 }, perk: 'The new master-planned city on reclaimed land: steady power, wide roads and an ocean view.' },
+    ikoyi_parkview_own: { name: 'Your mansion, Parkview Estate', district: 'ikoyi', rent: 0, power: 0.99, sleep: 1.2, type: 'mansion', owned: true, ownedBy: 'ikoyi_parkview', daily: { stress: -7 }, perk: 'Old money and leafy streets: diplomats, executives and long-standing families, quieter than VI.' },
+    banana_island_own: { name: 'Your waterfront mansion, Banana Island', district: 'ikoyi', rent: 0, power: 1, sleep: 1.25, type: 'mansion', owned: true, ownedBy: 'banana_island', daily: { stress: -10, fun: 3 }, perk: 'Number one in Nigeria: a gated island off Ikoyi with private power, extreme security and billionaire neighbours.' },
     built_own:    { name: 'Your own house, Ikorodu', district: 'ikorodu', rent: 0, power: 0.55, sleep: 1.05, type: 'flat3', owned: true, ownedBy: 'built_house', perk: 'You built it, block by block: no rent, no landlord, and the C of O is real.' },
     estate_own:   { name: 'Your house, Mainland Estate', district: 'ikeja', rent: 0, power: 0.65, sleep: 1.05, type: 'duplex', owned: true, perk: 'Your own house: no rent, no landlord, an estate transformer.' },
     banana:       { name: 'Mansion, Banana Island', district: 'ikoyi', rent: 600000, power: 0.99, sleep: 1.2, type: 'mansion', x: 22.4, y: 20.6, daily: { stress: -6, fun: 4 }, perk: 'Pool, staff quarters and 24-hour power on Lagos\'s most exclusive island.' }
@@ -630,6 +638,10 @@
       { id: 'ajah_dec_rave', label: 'Beach rave at a beach resort (day into night)', mins: 360, cost: 15000, fx: { fun: 75, social: 50, energy: -35, hygiene: -25, stress: -10 }, special: 'club', event: true, dec: true, when: { months: [11], from: 12, to: 23 } },
       { id: 'ajah_market', label: 'Buy foodstuff at Ajah market (7 meals)', mins: 45, cost: 5000, special: 'pantry7', when: { from: 7, to: 19 } },
       { id: 'ajah_spot', label: 'Eat at a local spot', mins: 30, cost: 1500, fx: { hunger: 45 } },
+      { id: 'ajah_ref_labour', label: 'Day labour on the refinery construction site', mins: 540, earn: 4500, fx: { energy: -45, hygiene: -30, stress: 10 }, xp: { hustle: 2 }, gig: true, when: { days: [1,2,3,4,5,6], from: 7, to: 9 } },
+      { id: 'ajah_ref_tour', label: 'Watch the refinery go up from the viewing point', mins: 90, cost: 1000, fx: { fun: 10, stress: -5 }, when: { from: 9, to: 17 } },
+      { id: 'ajah_air_labour', label: 'Day labour on the new airport site', mins: 540, earn: 4500, fx: { energy: -45, hygiene: -30, stress: 10 }, xp: { hustle: 2 }, gig: true, when: { days: [1,2,3,4,5,6], from: 7, to: 9 } },
+      { id: 'ajah_air_tour', label: 'Watch the new airport go up from the viewing point', mins: 90, cost: 1000, fx: { fun: 10, stress: -5 }, when: { from: 9, to: 17 } },
       { id: 'ajah_shop', label: "Help at a cousin's shop", mins: 180, earn: 2400, fx: { energy: -12 }, xp: { hustle: 3 }, gig: true, when: { days: [0,1,2,3,4,5], from: 8, to: 19 } }
     ],
     ikorodu: [
@@ -755,6 +767,8 @@
     { id: 'lekki_lounges', icon: '💨', name: 'Lekki lounges and rooftops', type: 'nightlife', glyph: 'glass', district: 'lekki', x: 28.9, y: 23.6, acts: ['lekki_shisha', 'lekki_rooftop', 'lekki_glam'], nogem: true, text: 'Shisha, DJs and rooftop views, and a glam studio downstairs to get you "outside" ready.' },
     { id: 'eko_convention', icon: '🎤', name: 'Eko Convention Centre', type: 'nightlife', glyph: 'note', district: 'vi', x: 18.4, y: 26.0, acts: ['vi_dec_headline', 'vi_dec_vip', 'vi_dec_afterparty'], nogem: true, text: 'The big December stage. Homecoming headliners, international guests and a crowd of thousands. Tickets climb as Christmas gets closer.' },
     { id: 'tbs', icon: '🏟️', name: 'Tafawa Balewa Square', type: 'culture', glyph: 'dome', district: 'island', x: 16.6, y: 22.7, acts: ['island_dec_tbs', 'island_dec_food'], nogem: true, text: 'The old parade ground fills with December concerts and a food village of jollof, suya and ofada.' },
+    { id: 'refinery_site', icon: '🏗️', name: 'Lagos oil refinery (under construction)', type: 'services', glyph: 'tool', district: 'ajah', x: 47.6, y: 23.9, acts: ['ajah_ref_labour', 'ajah_ref_tour'], nogem: true, text: 'Tanks, columns and cranes rising out of the sand in Ibeju-Lekki. Coming soon. Contractors take day labourers at the gate before 9am.' },
+    { id: 'new_airport_site', icon: '🛫', name: 'New Lagos international airport (under construction)', type: 'transport', glyph: 'plane', district: 'ajah', x: 47.6, y: 27.0, acts: ['ajah_air_labour', 'ajah_air_tour'], nogem: true, text: 'A runway, a glass terminal and red steel frames going up past Ajah. Coming soon: no flights yet. Day labour at the gate before 9am.' },
     { id: 'ajah_resort', icon: '🏝️', name: 'Beach resort, Ajah coast', type: 'outdoors', glyph: 'wave', district: 'ajah', x: 38.8, y: 26.0, acts: ['ajah_dec_rave'], nogem: true, text: 'DJs from noon, swimming, lounging and a beach rave that runs into the night all December.' },
     { id: 'lagoon_jetty', icon: '🛥️', name: 'Lagoon jetty', type: 'transport', glyph: 'boat', district: 'ikoyi', x: 20.6, y: 21.8, acts: ['ikoyi_dec_cruise', 'ikoyi_dec_yacht', 'ikoyi_ilashe'], nogem: true, text: 'Boat cruises across the lagoon in December, with yacht parties for the big spenders.' },
     { id: 'link_bridge', icon: '🎆', name: 'Lekki–Ikoyi Link Bridge', type: 'outdoors', glyph: 'wave', district: 'lekki', x: 26.8, y: 23.4, acts: ['lekki_dec_nye', 'lekki_dec_pool'], nogem: true, text: 'The cable-stayed bridge where Lagos counts down to the New Year with fireworks.' },
@@ -901,7 +915,7 @@
   // Big names painted on the ground: [text, x, y, size in km].
   var AREA_LABELS = [
     ['MAINLAND', 6.5, 12.5, 1.2], ['THE ISLAND', 15.0, 25.6, 0.8], ['IKOYI', 20.6, 22.6, 0.55], ['BANANA ISLAND', 23.6, 21.2, 0.45],
-    ['LEKKI', 33.0, 24.8, 0.9], ['SEA PLOTS · ₦5,000 A PLOT', 22.6, 27.2, 0.42], ['MAINLAND ESTATE', 18.0, 3.7, 0.55], ['AIRPORT', 6.4, 1.9, 0.5],
+    ['LEKKI', 33.0, 24.8, 0.9], ['SEA PLOTS · ₦5,000 A PLOT', 22.6, 27.2, 0.42], ['MAINLAND ESTATE', 18.0, 3.7, 0.55], ['AIRPORT', 6.4, 1.9, 0.5], ['IBEJU-LEKKI', 47.6, 22.5, 0.6],
     ['ABUJA', 19.0, 20.5, 1.2, 'abuja'], ['JABI LAKE', 6.6, 13.6, 0.45, 'abuja'], ['ASO ROCK', 22.6, 7.6, 0.5, 'abuja'], ['AIRPORT', 6.2, 25.6, 0.5, 'abuja'],
     ['PORT HARCOURT', 17.0, 6.0, 1.0, 'ph'], ['BONNY RIVER', 15.0, 23.4, 0.7, 'ph'], ['AIRPORT', 4.2, -0.2, 0.5, 'ph']
   ];
@@ -1057,6 +1071,13 @@
     lekki_terrace: { name: 'Terrace, Lekki', price: 150000000, weekly: 450000, house: true },
     estate_house: { name: 'House in Mainland Estate', price: 12000000, weekly: 0, house: true, plot: true },
     // Built by you on your Ikorodu plot (never sold). Tenants pay only while you live elsewhere.
+    // Prime Lagos addresses, from accessible-upscale to the very top. Live in one (no rent) or let it.
+    // charge: the estate's weekly service charge (security, power, water), paid whatever you do.
+    lekki_nicon:  { name: 'Detached duplex, Nicon Town, Lekki Phase 1', price: 250000000, weekly: 700000, charge: 60000, house: true, home: 'lekki_nicon_own', status: 15, prime: 5 },
+    vi_luxapt:    { name: 'Luxury apartment, Victoria Island', price: 400000000, weekly: 1100000, charge: 90000, house: true, home: 'vi_luxapt_own', status: 20, prime: 4 },
+    eko_atlantic: { name: 'Penthouse, Eko Atlantic', price: 900000000, weekly: 2200000, charge: 180000, house: true, home: 'eko_atlantic_own', status: 35, prime: 3 },
+    ikoyi_parkview: { name: 'Mansion, Parkview Estate, Ikoyi', price: 1500000000, weekly: 3500000, charge: 250000, house: true, home: 'ikoyi_parkview_own', status: 50, prime: 2 },
+    banana_island: { name: 'Waterfront mansion, Banana Island', price: 4000000000, weekly: 8000000, charge: 600000, house: true, home: 'banana_island_own', status: 100, prime: 1 },
     built_house: { name: 'Your own house, Ikorodu', price: 0, weekly: 70000, house: true, hidden: true, home: 'built_own' }
   };
   // Building on your Ikorodu plot, one stage at a time (days each).
@@ -1120,7 +1141,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, BUILD: BUILD, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, PROPERTIES: PROPERTIES, BUILD: BUILD, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 

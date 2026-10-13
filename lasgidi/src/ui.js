@@ -4,7 +4,7 @@
   var L = window.Lasgidi, D = L.DATA, N = L.naira;
   var SAVE_KEY = 'lasgidi.save.v1', WEEKLY_KEY = 'lasgidi.weekly.v1';
   var app = document.getElementById('app');
-  var ui = { tab: 'do', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0, plan: 'day' }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
+  var ui = { tab: window.matchMedia && window.matchMedia('(max-width: 899px)').matches ? 'map' : 'do', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0, plan: 'day' }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
   var S = null;
 
   /* ---------- storage (best effort) ---------- */
@@ -189,7 +189,7 @@
    * Both light up only inside claude.ai; the game is complete without them.
    * No chat and no free text travel between players: presence carries a
    * district key, the board carries numbers. */
-  var online = { votes: [], sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
+  var online = { govrun: [], govvote: [], photos: {}, photoOff: {}, photoreview: [], myPhotoReview: null, votes: [], sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
 
   // Each player's row is a small summary at fame/<id>; the replay log lives
   // beside it at fame/<id>/proof/log. Load every summary (no ordering: a
@@ -248,6 +248,7 @@
       if (!db || myReviewOn) return; myReviewOn = true;
       try { db.doc('adreview/' + online.me).onSnapshot(function (d) { online.myReview = d && d.exists ? d.data() : null; scheduleRender(); }, function () { online.myReview = null; }); } catch (e) { online.myReview = null; }
       try { db.doc('seareview/' + online.me).onSnapshot(function (d) { online.mySeaReview = d && d.exists ? d.data() : null; scheduleRender(); }, function () { online.mySeaReview = null; }); } catch (e) { online.mySeaReview = null; }
+      try { db.doc('photoreview/' + online.me).onSnapshot(function (d) { online.myPhotoReview = d && d.exists ? d.data() : null; scheduleRender(); }, function () { online.myPhotoReview = null; }); } catch (e) { online.myPhotoReview = null; }
     });
   }
   function subscribeReviews() {
@@ -264,6 +265,12 @@
         online.seareview = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }).filter(function (r) { return r.raw && !r.raw.status; });
         scheduleRender();
       }, function () { online.seareview = []; }); } catch (e) { online.seareview = []; }
+      try { db.collection('photoreview').limit(100).onSnapshot(function (snap) {
+        online.photoreview = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }).filter(function (r) { return r.raw && !r.raw.status && okImg(r.raw.img); });
+        var ids = online.photoreview.map(function (r) { return r.id; });
+        if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+        scheduleRender();
+      }, function () { online.photoreview = []; }); } catch (e) { online.photoreview = []; }
     });
   }
 
@@ -315,8 +322,18 @@
           if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
           scheduleRender();
         }, function () { online.sea = []; });
+        db.collection('govrun').limit(500).onSnapshot(function (snap) {
+          online.govrun = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
+          var ids = online.govrun.map(function (d) { return d.id; }).filter(function (i) { return !online.names[i]; });
+          if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+          scheduleRender();
+        }, function () { online.govrun = []; });
+        db.collection('govvote').limit(1000).onSnapshot(function (snap) { online.govvote = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); scheduleRender(); }, function () { online.govvote = []; });
         db.collection('votes').limit(1000).onSnapshot(function (snap) { online.votes = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); scheduleRender(); }, function () { online.votes = []; });
         db.collection('seaimg').limit(500).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.seaimg = m; scheduleRender(); }, function () { online.seaimg = {}; });
+        // Profile photos: only editor-approved pictures are stored here; a player can switch theirs off.
+        db.collection('photo').limit(500).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { var v = d.data(); if (v && okImg(v.img)) m[d.id] = v.img; }); online.photos = m; scheduleRender(); }, function () { online.photos = {}; });
+        db.collection('photooff').limit(500).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { var v = d.data(); m[d.id] = !!(v && v.off); }); online.photoOff = m; scheduleRender(); }, function () { online.photoOff = {}; });
       } catch (e) { online.sea = []; online.seaimg = {}; }
       try {
         db.collection('homes').limit(300).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.homes = m; scheduleRender(); }, function () { online.homes = {}; });
@@ -406,8 +423,8 @@
   // Faces of everyone at a host's party, as small round images.
   function guestFaces(host, withMe) {
     var list = (online.peerList || []).filter(function (p) { return p.at === host && p.look; }).slice(0, 8), out = '';
-    if (withMe && S) { var me = faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit); if (me) out += '<img class="gface me" alt="You" src="' + me.toDataURL() + '">'; }
-    list.forEach(function (p) { var f = faceCanvas(p.look, null); if (f) out += '<img class="gface" alt="' + esc(nameOf(p.by)) + '" title="' + esc(nameOf(p.by)) + '" src="' + f.toDataURL() + '">'; });
+    if (withMe && S) { var mp = photoOf(online.me), me = mp ? null : faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit); if (mp || me) out += '<img class="gface me" alt="You" src="' + (mp || me.toDataURL()) + '">'; }
+    list.forEach(function (p) { var ph = photoOf(p.by), f = ph ? null : faceCanvas(p.look, null); if (ph || f) out += '<img class="gface" alt="' + esc(nameOf(p.by)) + '" title="' + esc(nameOf(p.by)) + '" src="' + (ph || f.toDataURL()) + '">'; });
     return out ? '<div class="gfaces">' + out + '</div>' : '';
   }
   function partyInvites() {
@@ -443,10 +460,10 @@
     } catch (e) { return null; }
   }
   function mapFaces() {
-    var out = { me: faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit), peers: {} }, n = 0;
+    var out = { me: photoImage(online.me) || faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit), peers: {} }, n = 0;
     (online.peerList || []).forEach(function (p) {
       if (!p.look || n >= 6 || L.districtCity(p.d) !== L.cityOf(S)) return;
-      var f = faceCanvas(p.look, null); if (!f) return;
+      var f = photoImage(p.by) || faceCanvas(p.look, null); if (!f) return;
       (out.peers[p.d] = out.peers[p.d] || []).push(f); n++;
     });
     return out;
@@ -637,9 +654,9 @@
     if (!rows.length) html += '<p class="note">' + (city && all.length ? 'No verified lives from ' + esc(D.CITIES[city].name) + ' yet. Live there and post yours.' : 'No one has posted yet. Post your life to be first.') + '</p>';
     else html += '<div class="stmt-wrap"><table class="stmt lives"><thead><tr><th>#</th><th>Lagosian</th><th>Ended as</th><th class="n">Weeks</th><th class="n">Net worth</th><th class="n">Score</th></tr></thead><tbody>' + rows.map(function (r, i) {
       var p = online.names[r.id], mine = r.id === online.me;
-      var who = mine ? 'You' : (p && p.name) || 'Someone';
+      var who = mine ? 'You' : (p && p.name) || 'Someone', face = photoImg(r.id, 'pphoto sm');
       var title = r.career ? D.CAREERS[r.career].titles[r.level] : 'Jobless';
-      return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + esc(who) + ' <span class="muted">· ' + esc(D.ORIGINS[r.origin].name) + '</span>' + (r.gen > 1 ? '<span class="gen-chip">Gen ' + r.gen + '</span>' : '') + ' <span class="ver" title="Replayed and verified">✓ replayed</span>' + (r.won ? ' <span class="gain">✓ ' + esc(D.GOALS[r.goal].name) + '</span>' : '') + '</td><td>' + esc(title) + '</td><td class="n num">' + r.weeks + '</td><td class="n num">' + N(r.worth) + '</td><td class="n num"><b>' + r.score + '</b></td></tr>';
+      return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + face + esc(who) + ' <span class="muted">· ' + esc(D.ORIGINS[r.origin].name) + '</span>' + (r.gen > 1 ? '<span class="gen-chip">Gen ' + r.gen + '</span>' : '') + ' <span class="ver" title="Replayed and verified">✓ replayed</span>' + (r.won ? ' <span class="gain">✓ ' + esc(D.GOALS[r.goal].name) + '</span>' : '') + '</td><td>' + esc(title) + '</td><td class="n num">' + r.weeks + '</td><td class="n num">' + N(r.worth) + '</td><td class="n num"><b>' + r.score + '</b></td></tr>';
     }).join('') + '</tbody></table></div>';
     if (S && !S.replay) html += '<p class="note">This life began before verified scores, so it cannot be posted. Your next life can.</p>';
     else if (S && online.me && online.canWrite !== false) html += '<div class="inline"><button class="btn sm" id="post-fame" data-postfame="1">Post this life (' + L.fameEntry(S).score + ')</button><span class="note">' + esc(online.status) + '</span></div>';
@@ -689,7 +706,7 @@
     return '<section class="needs hud" aria-label="Needs"><button type="button" class="hud-face" id="hud-face" data-tab="me" aria-label="Your Lagosian"><canvas id="hud-avatar" width="56" height="56"></canvas></button>' + ['hunger', 'energy', 'fun', 'social', 'hygiene', 'stress'].map(function (k) {
       var v = Math.round(k === 'stress' ? 100 - S.needs.stress : S.needs[k]);
       var cls = v < 25 ? 'low' : v < 50 ? 'mid' : '';
-      return '<div class="need"><div class="row"><span><span class="need-ic" aria-hidden="true">' + icons[k] + '</span> ' + labels[k] + '</span><span class="num">' + v + '</span></div>' +
+      return '<div class="need n-' + k + '"><div class="row"><span><span class="need-ic" aria-hidden="true">' + icons[k] + '</span> ' + labels[k] + '</span><span class="num">' + v + '</span></div>' +
         '<div class="bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '" aria-label="' + labels[k] + '"><i class="' + cls + '" style="width:' + v + '%"></i></div></div>';
     }).join('') + '</section>';
   }
@@ -767,6 +784,16 @@
   }
 
   /* ---------- multiplayer life: who is here, waves, home visits, gifts ---------- */
+  // A player's approved photo, unless they switched it off.
+  function photoOf(id) { return id && !online.photoOff[id] && online.photos[id] ? online.photos[id] : null; }
+  function photoImg(id, cls, alt) { var p = photoOf(id); return p ? '<img class="' + (cls || 'pphoto') + '" alt="' + esc(alt || nameOf(id)) + '" src="' + p + '">' : ''; }
+  var photoCache = {};
+  function photoImage(id) {
+    var src = photoOf(id); if (!src) return null;
+    var im = photoCache[id];
+    if (!im || im.src !== src) { im = photoCache[id] = new Image(); im.onload = function () { scheduleRender(); }; im.src = src; }
+    return im.complete && im.naturalWidth ? im : null;
+  }
   function nameOf(id) { return (online.names[id] && online.names[id].name) || 'A Lagosian'; }
   // A small public snapshot of your home for visitors; only written when it changes.
   function homeSnapshot() {
@@ -803,7 +830,7 @@
     var gifts = Object.keys(D.GIFTS);
     return '<div class="section people"><h3>👥 Lagosians here <span class="muted">· ' + here.length + ' in ' + esc(D.DISTRICTS[S.loc].name) + '</span></h3><div class="list">' + here.slice(0, 12).map(function (p) {
       var home = checkHome(online.homes[p.by]), waved = online.waved[p.by] && Date.now() - online.waved[p.by] < 30000;
-      return '<div class="item person"><div><h3>' + esc(nameOf(p.by)) + '</h3>' + (home ? '<div class="meta"><span>Lives in ' + esc(home.h.name) + '</span></div>' : '') + '</div><div class="inline">' +
+      return '<div class="item person">' + photoImg(p.by) + '<div><h3>' + esc(nameOf(p.by)) + '</h3>' + (home ? '<div class="meta"><span>Lives in ' + esc(home.h.name) + '</span></div>' : '') + '</div><div class="inline">' +
         '<button class="btn sm ghost" id="wave-' + esc(p.by) + '" data-wave="' + esc(p.by) + '"' + (waved ? ' disabled' : '') + '>👋 ' + (waved ? 'Waved' : 'Wave') + '</button>' +
         (home ? '<button class="btn sm ghost" id="visit-' + esc(p.by) + '" data-visit2="' + esc(p.by) + '">🏠 Visit</button>' : '') +
         '<select id="giftsel-' + esc(p.by) + '" aria-label="Gift">' + gifts.map(function (g) { return '<option value="' + g + '">' + D.GIFTS[g].icon + ' ' + esc(D.GIFTS[g].name) + ' · ' + N(L.price(S, D.GIFTS[g].price)) + '</option>'; }).join('') + '</select>' +
@@ -1482,7 +1509,7 @@
         (online.peers[k] ? ' <span class="num">· ' + online.peers[k] + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     return '<div class="panel-h"><h2>' + esc(d.name) + '</h2><span class="label">' + (d.side === 'island' ? 'Island' : 'Mainland') + '</span></div>' +
-      '<div class="pg-wrap">' + questChips() + '<div class="pg-slot"></div></div>' + placeFilters() + chips +
+      '<div class="pg-wrap">' + questChips() + '<div class="pg-slot"></div></div>' + govChips() + placeFilters() + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
       '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
         : ui.seaOpen ? seaView() : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : ui.homeSel ? homeView(ui.homeSel) : ui.plotSel != null ? plotView(ui.plotSel)
@@ -1610,6 +1637,11 @@
   function refocusPlay(kind) { var b = document.querySelector('[data-minigame="' + kind + '"]:not([disabled])') || document.getElementById('tab-do'); if (b) b.focus(); }
 
   /* ---------- Do tab ---------- */
+  // A friendly emoji for each action row, read off its label (display only).
+  var ACT_ICONS = [[/clock in|shift|work at/i, '💼'], [/sleep|nap|rest/i, '😴'], [/eat|food|suya|amala|bole|pepper ?soup|brunch|meal|buka|jollof/i, '🍲'], [/beach|jet ?ski|boat|yacht|swim/i, '🏖️'], [/club|rave|party|owambe|spray|concert|show|lounge|rooftop|shisha/i, '🪩'],
+    [/skit|film|shoot/i, '🎬'], [/live|stream/i, '🔴'], [/gym|football|basket|tennis|box|run|sport|match|golf|polo|squash|tournament/i, '⚽'], [/church|mosque|pray|service/i, '🙏'], [/market|buy|shop|haggle/i, '🛍️'], [/bath|shower|wash|barb|salon|glam|hair|nails/i, '🫧'],
+    [/study|class|course|read|lesson|exam|ielts/i, '📚'], [/watch|museum|park|gallery|shrine|sight|tour|visit|landmark|art/i, '📸'], [/help|cousin|hustle|hawk|sell|danfo|okada|keke|gig|labour/i, '🛠️'], [/friend|date|call|hang|gist|family|kid|wife|husband/i, '💬']];
+  function actIcon(a) { if (a.minigame) return '🎮'; if (a.isWork) return '💼'; for (var i = 0; i < ACT_ICONS.length; i++) if (ACT_ICONS[i][0].test(a.label)) return ACT_ICONS[i][1]; return '✨'; }
   function actionRow(a) {
     var meta = ['<span>' + dur(a.mins) + '</span>'];
     if (a.price) meta.push('<span class="cost">' + N(a.price) + (a.gen ? ' incl. gen' : '') + '</span>');
@@ -1618,7 +1650,7 @@
     if (a.whenLabel) meta.push('<span>' + esc(a.whenLabel) + '</span>');
     if (a.late) meta.push('<span class="cost">Late: 30% docked</span>');
     if (a.collapseRisk && !a.disabled) meta.push('<span class="cost">' + esc(a.collapseRisk) + '</span>');
-    return '<div class="item' + (a.isWork ? ' work' : '') + '"><div><h3>' + esc(a.label) + '</h3><div class="meta">' + meta.join('') + '</div>' +
+    return '<div class="item act' + (a.isWork ? ' work' : '') + '"><span class="act-ic" aria-hidden="true">' + actIcon(a) + '</span><div><h3>' + esc(a.label) + '</h3><div class="meta">' + meta.join('') + '</div>' +
       (a.note ? '<div class="act-note">' + esc(a.note) + '</div>' : '') + (a.disabled ? '<div class="why">' + esc(a.disabled) + '</div>' : '') + '</div>' +
       (a.minigame ? '<button class="btn go" id="act-' + a.id + '" data-minigame="' + a.minigame + '"' + (a.disabled ? ' disabled' : '') + '>▶ Play</button></div>'
         : '<button class="btn' + (a.isWork ? ' go' : '') + '" id="act-' + a.id + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled' : '') + '>' + (a.isWork ? 'Clock in' : 'Do') + '</button></div>');
@@ -1927,7 +1959,7 @@
   }
   function meView() {
     var gp = L.goalProgress(S), g = D.GOALS[S.goal];
-    var html = '<div class="panel-h"><h2>' + esc(L.titledName(S)) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">' + labelChips(L.lagosLabels(S));
+    var html = '<div class="panel-h"><h2>' + esc(L.titledName(S)) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">' + labelChips(L.lagosLabels(S)) + photoView();
     html += '<div class="section" style="padding-top:0"><h3>Goal: ' + esc(g.name) + (S.won ? ' · done' : '') + '</h3><p class="note">' + esc(g.text) + '</p>' +
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
@@ -2106,6 +2138,25 @@
       return '<div class="item"><div><h3>' + g[0] + ' ' + esc(g[1]) + '</h3><div class="act-note">' + esc(g[2]) + '</div></div>' + btn + '</div>';
     }).join('') + '</div><p class="note">Number keys switch tabs; A does the top suggestion. Your game saves in this browser. Copy the save code on the Me tab to move devices.</p>' + slangView() + '</div>';
   }
+  // Your profile photo: uploaded for review, shown to others only once an editor approves it.
+  function photoView() {
+    if (!online.db || !online.me) return '<div class="section"><h3>📷 Your photo</h3><p class="note">Add a photo so other players can recognise you. Photos are shared through the game\'s board, so they work when Lasgidi is opened on claude.ai.</p></div>';
+    var mine = online.photos[online.me], off = !!online.photoOff[online.me], rv = online.myPhotoReview;
+    var status = rv && !rv.status ? '⏳ Your new photo is waiting for an editor.' : rv && rv.status === 'rejected' ? '❌ Your last photo was not approved. Try another.' : mine ? (off ? '🙈 Your photo is hidden from other players.' : '✅ Other players see this photo.') : 'No photo yet: other players see your avatar.';
+    var html = '<div class="section photo-sec"><h3>📷 Your photo</h3><div class="photo-row">' + (mine ? '<img class="pphoto lg" alt="Your photo" src="' + mine + '">' : '<div class="pphoto lg ph-empty" aria-hidden="true">🙂</div>') +
+      '<div><p class="note">' + status + ' Use a clear photo of your own face: no other people, no contact details. An editor checks every photo before anyone else sees it.</p>' +
+      '<div class="inline"><label class="btn sm" for="photo-file">📷 ' + (mine ? 'Change photo' : 'Add a photo') + '</label><input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" hidden>' +
+      (mine ? '<button class="btn sm ghost" id="photo-off" data-photooff="' + (off ? '0' : '1') + '">' + (off ? 'Show my photo' : 'Hide my photo') + '</button>' : '') + '</div>' +
+      (online.photoStatus ? '<p class="note">' + esc(online.photoStatus) + '</p>' : '') + '</div></div></div>';
+    if (online.canEdit) {
+      var q = online.photoreview || [];
+      html += '<div class="section"><h3>Review player photos <span class="muted">· ' + q.length + ' waiting</span></h3>' + (q.length ? '<div class="list">' + q.slice(0, 10).map(function (r) {
+        return '<div class="item review"><img class="pphoto lg" alt="" src="' + r.raw.img + '"><div><h3>' + esc(nameOf(r.id)) + '</h3><div class="meta"><span>Submitted ' + new Date(r.raw.at || 0).toLocaleString() + '</span></div></div>' +
+          '<div class="inline"><button class="btn sm go" id="phok-' + esc(r.id) + '" data-phok="' + esc(r.id) + '">Approve</button><button class="btn sm ghost" id="phno-' + esc(r.id) + '" data-phno="' + esc(r.id) + '">Reject</button></div></div>';
+      }).join('') + '</div>' : '<p class="note">Nothing to review.</p>') + '</div>';
+    }
+    return html;
+  }
   // Lagos slang labels as chips, each explained on hover/tap (title) and in the Guide.
   function labelChips(ids) {
     if (!ids || !ids.length) return '';
@@ -2197,6 +2248,42 @@
     });
     return { q: q, counts: counts, total: counts.reduce(function (a, b) { return a + b; }, 0), mine: mine, wk: wk };
   }
+  /* ---------- Governor: players run each week; last week's winner holds the seat ---------- */
+  // Each doc keeps this week's entry and the one before it ({week, ..., prev: {week, ...}}).
+  function weekVal(raw, wk) { if (!raw) return null; if (raw.week === wk) return raw; if (raw.prev && raw.prev.week === wk) return raw.prev; return null; }
+  function lastWeek() { return L.challengeId(new Date(Date.now() - 7 * 86400000)); }
+  function govTally(wk) {
+    var cands = {};
+    (online.govrun || []).forEach(function (r) { var v = weekVal(r.raw, wk); if (v && typeof v.motto === 'number' && D.GOV_MOTTOS[v.motto]) cands[r.id] = { id: r.id, motto: v.motto, at: +v.at || 0, votes: 0 }; });
+    var mine = null;
+    (online.govvote || []).forEach(function (r) { var v = weekVal(r.raw, wk); if (v && cands[v.cand]) { cands[v.cand].votes++; if (r.id === online.me) mine = v.cand; } });
+    var list = Object.keys(cands).map(function (k) { return cands[k]; }).sort(function (a, b) { return b.votes - a.votes || a.at - b.at; });
+    return { list: list, mine: mine };
+  }
+  function governor() { var t = govTally(lastWeek()), w = t.list[0]; return w && w.votes > 0 ? w : null; }
+  function govChips() {
+    if (L.cityOf(S) !== 'lagos') return '';
+    var g = governor(), homes = Object.keys(online.homes || {}).length;
+    return '<div class="gov-row">' + (online.room ? '<span class="gov-chip live"><i class="pg-live"></i> ' + (online.others + 1) + ' online</span>' : '') + '<button type="button" class="gov-chip" id="gov-chip" data-app="town">🏛️ ' + (g ? 'Gov ' + esc(nameOf(g.id)) : 'Seat open') + '</button>' +
+      '<button type="button" class="gov-chip" id="gov-sea" data-seaopen="1">🌊 Sea Plots</button>' +
+      '<button type="button" class="gov-chip" id="gov-homes" data-placecat="homes">🏘️ ' + homes + ' home' + (homes === 1 ? '' : 's') + '</button></div>' +
+      '<button type="button" class="gov-banner" id="gov-banner" data-app="town">🏛️ ' + (g ? 'Gov ' + esc(nameOf(g.id)) + ': ' + esc(D.GOV_MOTTOS[g.motto]) : 'No governor yet. Run for the seat in the Town Hall') + '</button>';
+  }
+  function govView() {
+    var wk = townWeek(), T = govTally(wk), g = governor(), pts = L.statusPoints(S), mineRun = T.list.filter(function (c) { return c.id === online.me; })[0];
+    var can = online.db && online.me, sel = ui.govMotto != null ? ui.govMotto : mineRun ? mineRun.motto : 0;
+    var html = '<div class="section"><h3>👑 Governor of Lasgidi</h3>' +
+      (g ? '<div class="gov-now">' + photoImg(g.id, 'pphoto') + '<div><b>Gov ' + esc(nameOf(g.id)) + '</b><p>“' + esc(D.GOV_MOTTOS[g.motto]) + '”</p><span class="muted">Won ' + esc(lastWeek()) + ' with ' + g.votes + ' vote' + (g.votes === 1 ? '' : 's') + '</span></div></div>' : '<p class="note">The seat is open. Whoever wins this week\'s vote is governor all next week, and their slogan flies over the map.</p>') +
+      '<h3 class="th-q">Race for ' + esc(wk) + '</h3>' +
+      (T.list.length ? '<div class="th-opts">' + T.list.map(function (c) {
+        var on = T.mine === c.id, tot = T.list.reduce(function (a, b) { return a + b.votes; }, 0), pct = tot ? Math.round(c.votes / tot * 100) : 0;
+        return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="govv-' + esc(c.id) + '" data-govvote="' + esc(c.id) + '"' + (can ? '' : ' disabled') + '><span class="th-bar" style="width:' + pct + '%"></span><span class="th-t">' + (on ? '✓ ' : '') + esc(nameOf(c.id)) + (c.id === online.me ? ' (you)' : '') + '<small> · ' + esc(D.GOV_MOTTOS[c.motto]) + '</small></span><b class="num">' + c.votes + '</b></button>';
+      }).join('') + '</div>' : '<p class="note">No one is running yet this week.</p>') +
+      '<div class="label">' + (mineRun ? 'Change your slogan' : 'Run for governor') + '</div><div class="pg-chips" style="padding:0">' + D.GOV_MOTTOS.map(function (m, i) { return '<button type="button" class="pg-chip' + (i === sel ? ' sel' : '') + '" id="govm-' + i + '" data-govmotto="' + i + '">' + esc(m) + '</button>'; }).join('') + '</div>' +
+      '<div class="inline"><button class="btn go" id="gov-run" data-govrun="' + sel + '"' + (can && pts >= D.GOV_MIN_STATUS ? '' : ' disabled') + '>🗳️ ' + (mineRun ? 'Update campaign' : 'Declare for governor') + '</button></div>' +
+      '<p class="note">' + (pts < D.GOV_MIN_STATUS ? 'You need ' + D.GOV_MIN_STATUS + ' status points to run (you have ' + pts + '). Property, cars and titles add status. ' : '') + 'Campaigning is free and touches nothing in your life. One vote per player a week.' + (online.govStatus ? ' ' + esc(online.govStatus) : '') + '</p></div>';
+    return html;
+  }
   function townView() {
     var T = townTally();
     var html = '<div class="section" style="padding-top:0"><h3>🗳️ Town Hall · ' + esc(T.wk) + '</h3><p class="note">One question a week for every Lasgidi player. Your vote is shared, and you can change it until the week ends. Nothing here touches your money.</p>' +
@@ -2204,7 +2291,7 @@
         var pct = T.total ? Math.round(T.counts[i] / T.total * 100) : 0, on = T.mine === i;
         return '<button type="button" class="th-opt' + (on ? ' sel' : '') + '" id="vote-' + i + '" data-vote="' + i + '"' + (online.db && online.me ? '' : ' disabled') + '><span class="th-bar" style="width:' + pct + '%"></span><span class="th-t">' + (on ? '✓ ' : '') + esc(a) + '</span><b class="num">' + pct + '%</b></button>';
       }).join('') + '</div><p class="note">' + T.total + ' vote' + (T.total === 1 ? '' : 's') + ' so far.' + (online.db ? '' : ' Voting works when the game is opened on claude.ai.') + (online.voteStatus ? ' ' + esc(online.voteStatus) : '') + '</p></div>';
-    return html;
+    return html + govView();
   }
 
   function gamesView() {
@@ -2388,7 +2475,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.roll) {
@@ -2522,6 +2609,14 @@
       return;
     }
     if (ds.searelease) { run(function () { var r = L.releaseSeaPlots(S); if (r.ok && online.db && online.me) online.db.doc('sea/' + online.me).set({ x: 0, y: 0, w: 0, h: 0, at: Date.now() }).catch(function () {}); return r; }); return; }
+    if (ds.photooff && online.db && online.me) { online.db.doc('photooff/' + online.me).set({ off: ds.photooff === '1', at: Date.now() }).catch(function () { online.photoStatus = 'That could not be saved. Try again.'; render(); }); return; }
+    if ((ds.phok || ds.phno) && online.db && online.canEdit) {
+      var pid = ds.phok || ds.phno, pr = (online.photoreview || []).filter(function (x) { return x.id === pid; })[0];
+      if (!pr) return;
+      if (ds.phno) { online.db.doc('photoreview/' + pid).update({ status: 'rejected' }).then(function () { render(); }, function () {}); return; }
+      online.db.doc('photo/' + pid).set({ img: pr.raw.img, approvedAt: Date.now() }).then(function () { return online.db.doc('photoreview/' + pid).update({ status: 'approved' }); }).then(function () { render(); }, function () {});
+      return;
+    }
     if (ds.srok || ds.srno) {
       var rid = ds.srok || ds.srno, rr = (online.seareview || []).filter(function (x) { return x.id === rid; })[0];
       if (!rr || !online.db) return;
@@ -2670,6 +2765,16 @@
       postFame(L.fameEntry(S)).then(function (msg) { online.status = msg || ''; render(); });
       return;
     }
+    if (ds.govmotto != null) { ui.govMotto = +ds.govmotto; render(); return; }
+    if (ds.govvote || ds.govrun != null) {
+      if (!online.db || !online.me) return;
+      var gwk = townWeek(), gcol = ds.govvote ? 'govvote' : 'govrun', old = (online[gcol] || []).filter(function (r) { return r.id === online.me; })[0];
+      var prev = old && old.raw ? (old.raw.week === gwk ? old.raw.prev || null : { week: old.raw.week, cand: old.raw.cand, motto: old.raw.motto, at: old.raw.at }) : null;
+      var doc = ds.govvote ? { week: gwk, cand: ds.govvote, at: Date.now() } : { week: gwk, motto: +ds.govrun, at: old && old.raw && old.raw.week === gwk ? old.raw.at : Date.now() };
+      if (prev) { Object.keys(prev).forEach(function (k) { if (prev[k] === undefined) delete prev[k]; }); doc.prev = prev; }
+      online.db.doc(gcol + '/' + online.me).set(doc).then(function () { online.govStatus = ds.govvote ? 'Vote cast.' : 'You are on the ballot!'; render(); }, function () { online.govStatus = 'That could not be saved.'; render(); });
+      return;
+    }
     if (ds.vote != null && t.hasAttribute('data-vote')) {
       if (!online.db || !online.me) return;
       var ch = +ds.vote;
@@ -2719,6 +2824,14 @@
     if (e.target && e.target.id === 'ad-file') {
       var f = e.target.files && e.target.files[0];
       preparePicture(f).then(function (d) { ui.picDraft = d; online.picStatus = ''; render(); }, function (err) { ui.picDraft = null; online.picStatus = err.message; render(); });
+    }
+    if (e.target && e.target.id === 'photo-file' && online.db && online.me) {
+      var pf = e.target.files && e.target.files[0];
+      online.photoStatus = 'Preparing your photo…'; render();
+      preparePicture(pf, 1).then(function (img) {
+        return online.db.doc('photoreview/' + online.me).set({ img: img, at: Date.now() });
+      }).then(function () { online.photoStatus = 'Sent for review. Other players see it once an editor approves it.'; render(); }, function (err) { online.photoStatus = (err && err.message) || picWriteError(err); render(); });
+      return;
     }
     if (e.target && e.target.id === 'sea-file' && S && S.sea && online.db && online.me) {
       var sf = e.target.files && e.target.files[0], m = S.sea;

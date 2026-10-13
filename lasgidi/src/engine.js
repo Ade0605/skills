@@ -90,7 +90,8 @@
     detty_legend: 'Detty legend: six December events in one season',
     streamer:    'Streamer: 1,000 people watched you live',
     allrounder:  'All-rounder: played 8 different sports in Lagos',
-    explorer:    'Lagos explorer: visited 8 tourist sights'
+    explorer:    'Lagos explorer: visited 8 tourist sights',
+    banana:      'Banana Island: bought a waterfront mansion'
   };
 
   /* ---------- small helpers ---------- */
@@ -205,7 +206,7 @@
     if (m === 'Family outing') return 'family';
     if (/^Chemist/.test(m)) return 'health';
     if (/^(Ladipo|Roadside mechanic)/.test(m)) return 'transport';
-    if (/^(Building: |Omo-onile)/.test(m)) return 'housing';
+    if (/^(Building: |Omo-onile|Estate service charge)/.test(m)) return 'housing';
     if (/^IJGB gift/.test(m)) return 'family';
     if (/^Ground money/.test(m)) return 'losses';
     if (/^(Live stream gifts|Event appearance fee|Prize: )/.test(m)) return 'gigs';
@@ -1752,7 +1753,8 @@
     s.properties.push({ id: id, value: cost });
     log(s, 'Omo! You now own a ' + p.name + '. Make sure the C of O is real.', 'good');
     if (p.house) unlock(s, 'landlord');
-    return finish(s, ok('Property bought.'));
+    if (id === 'banana_island') unlock(s, 'banana');
+    return finish(s, ok('Property bought.' + (p.home ? ' Move in from the homes list (no rent), or let it and collect ' + naira(roundTo(p.weekly * s.econ.infl, 50)) + ' a week.' : '')));
   }
 
   /* ---------- building your own house on the Ikorodu plot ---------- */
@@ -1816,6 +1818,7 @@
       var def = D.PROPERTIES[p.id];
       p.value = roundTo(p.value * (def.house ? 1.006 : 1.012), 1000);
       if (def.weekly && !(def.home && s.home === def.home)) earn(s, roundTo(def.weekly * s.econ.infl, 50), 'Tenant rent: ' + def.name);
+      if (def.charge) { var ch = roundTo(def.charge * s.econ.infl, 50); pay(s, ch, 'Estate service charge: ' + def.name) || addDebt(s, ch, 'Estate service charge'); }
     });
   }
 
@@ -2094,6 +2097,7 @@
     (s.items || []).forEach(function (it) { t += D.FURNITURE[it.id].status || 0; });
     (s.vehicles || []).forEach(function (v) { t += D.VEHICLES[v.id].status || 0; });
     if (s.phone) t += D.PHONES[s.phone].status;
+    (s.properties || []).forEach(function (p) { t += (D.PROPERTIES[p.id] && D.PROPERTIES[p.id].status) || 0; });
     var ti = titleDef(s); if (ti) t += ti.status;
     return t;
   }

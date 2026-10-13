@@ -1970,3 +1970,24 @@ test('sightseeing: the tourist sights are on the map, and 8 visits make a Lagos 
   const old = L.newGame({ seed: 117, origin: 'nepo', goal: 'freestyle', rules: 13 }); old.loc = 'lekki'; old.t = old.t - (old.t % 1440) + 1440 + 11 * 60;
   L.doAction(old, 'lekki_lcc'); assert.equal(old.stats.sights, undefined, 'older lives count nothing new');
 });
+
+test('prime addresses: Lekki Phase 1 to Banana Island, live in it or let it, service charges, status', () => {
+  const ids = ['lekki_nicon', 'vi_luxapt', 'eko_atlantic', 'ikoyi_parkview', 'banana_island'];
+  const P = L.DATA.PROPERTIES;
+  for (let i = 1; i < ids.length; i++) assert.ok(P[ids[i]].price > P[ids[i - 1]].price, 'ranked by price');
+  ids.forEach(id => { const h = L.DATA.HOMES[P[id].home]; assert.ok(h && h.owned && h.ownedBy === id, id); });
+  const s = L.newGame({ seed: 118, origin: 'nepo', goal: 'freestyle' }); s.bank += 5000000000; s.opening.bank += 5000000000;
+  const st0 = L.statusPoints ? L.statusPoints(s) : 0;
+  assert.ok(L.buyProperty(s, 'banana_island').ok);
+  assert.ok(s.ach.banana && s.ach.landlord);
+  if (L.statusPoints) assert.equal(L.statusPoints(s) - st0, 100);
+  const rent = () => s.ledger.filter(l => /^Tenant rent: Waterfront/.test(l.memo)).length, charge = () => s.ledger.filter(l => /^Estate service charge/.test(l.memo)).length;
+  for (let i = 0; i < 50; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; L.wait(s, 240); }
+  assert.ok(rent() >= 1 && charge() >= 1, 'tenants pay and the estate charges');
+  while (s.pending.length) L.resolveChoice(s, 0);
+  const m = L.moveHouse(s, 'banana_island_own'); assert.ok(m.ok, m.msg); assert.equal(s.rentRate, 0);
+  const r0 = rent(), c0 = charge();
+  for (let i = 0; i < 50; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 90; s.needs.hunger = 80; L.wait(s, 240); }
+  assert.equal(rent(), r0, 'no tenants while you live there'); assert.ok(charge() > c0, 'the service charge still comes');
+  assert.equal(L.category('Estate service charge: x', -1), 'housing');
+});

@@ -16,7 +16,7 @@
   --debit: #b0372b;
   --warn: #9a6400;
   --font-display: 'Bungee', 'Arial Black', Impact, sans-serif;
-  --font-body: 'Atkinson Hyperlegible', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-body: 'Plus Jakarta Sans', 'Atkinson Hyperlegible', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-data: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --r: 10px;
   --gap: 16px;
@@ -628,3 +628,43 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .slang { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #6b3fa0 18%, transparent); color: inherit; cursor: help; }
 .slang-dl dt { font-weight: 800; margin-top: 8px; }
 .slang-dl dd { margin: 2px 0 0; color: var(--muted); font-size: 13.5px; }
+
+/* Player photos */
+.pphoto { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid var(--line); margin-right: 8px; vertical-align: middle; }
+.pphoto.sm { width: 22px; height: 22px; margin-right: 6px; border-width: 1px; }
+.pphoto.lg { width: 72px; height: 72px; }
+.ph-empty { display: grid; place-items: center; font-size: 32px; background: color-mix(in srgb, var(--line) 40%, transparent); }
+.photo-row { display: flex; gap: 12px; align-items: flex-start; }
+.item.person { align-items: center; }
+
+/* Governor */
+.gov-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 6px 0 4px; }
+.gov-chip { border: 0; border-radius: 999px; padding: 6px 12px; background: var(--surface); color: var(--ink); font: 700 13px var(--font-body, sans-serif); box-shadow: 0 2px 8px rgba(0,0,0,.12); cursor: pointer; }
+.gov-banner { display: block; width: 100%; border: 0; border-radius: 999px; padding: 9px 14px; margin: 2px 0 6px; background: linear-gradient(90deg, #0f8a4b, #16a35a); color: #fff; font: 800 14px var(--font-body, sans-serif); text-align: center; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gov-now { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 12px; background: var(--surface); border: 2px solid #16a35a; margin-bottom: 8px; }
+.gov-now p { margin: 2px 0; font-style: italic; }
+.th-t small { font-weight: 500; opacity: .75; }
+
+/* ---------- Gen Z glow-up: rounder, softer, more colour ---------- */
+:root { --r: 18px; --pop: #7c3aed; --mint: #16a35a; --hot: #ff4d8d; --sky: #2f80ed; --shadow: 0 6px 20px rgb(20 20 30 / .08), 0 1px 3px rgb(20 20 30 / .06); }
+.panel { border: 0; box-shadow: var(--shadow); }
+.btn { border-radius: 999px; padding: 8px 18px; box-shadow: 0 3px 0 rgb(0 0 0 / .18); transition: transform .08s ease; }
+.btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgb(0 0 0 / .18); }
+.btn.go { background: linear-gradient(180deg, #ffd23f, var(--danfo)); }
+.tab { border-radius: 999px; }
+.tab[aria-selected="true"] { background: linear-gradient(135deg, var(--pop), #a855f7); color: #fff; }
+.chip { background: rgb(255 255 255 / .55); border-color: transparent; padding: 3px 10px; }
+.pg-chip { background: var(--surface); border-color: transparent; box-shadow: 0 1px 4px rgb(0 0 0 / .1); padding: 5px 12px; }
+.pg-chip.sel { box-shadow: inset 0 0 0 2px var(--pop); border-color: transparent; }
+.item.act { grid-template-columns: auto minmax(0, 1fr) auto; }
+.act-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 14px; background: var(--sunk); font-size: 20px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.item.work .act-ic { background: var(--danfo); }
+.bar { height: 10px; }
+.need.n-hunger .bar i:not(.mid):not(.low) { background: linear-gradient(90deg, #ff9f43, #ff6b6b); }
+.need.n-energy .bar i:not(.mid):not(.low) { background: linear-gradient(90deg, #ffd23f, #f7b500); }
+.need.n-fun .bar i:not(.mid):not(.low) { background: linear-gradient(90deg, #ff4d8d, #c13cff); }
+.need.n-social .bar i:not(.mid):not(.low) { background: linear-gradient(90deg, #2f80ed, #56ccf2); }
+.need.n-hygiene .bar i:not(.mid):not(.low) { background: linear-gradient(90deg, #21d4b4, #16a35a); }
+.need.n-stress .bar i:not(.mid):not(.low) { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
+.gov-chip.live { cursor: default; display: inline-flex; align-items: center; gap: 6px; color: var(--mint); }
+.gov-banner { box-shadow: 0 4px 14px rgb(22 163 90 / .35); }

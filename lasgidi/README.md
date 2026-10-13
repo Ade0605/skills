@@ -283,6 +283,12 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Gifts:** send a gift such as suya, flowers, a cake or aso-ebi fabric. Gifts lift the receiver's mood but never move money, so a second account can't feed cash into a Hall of Fame life.
 - **Lagos online (inside claude.ai):** a shared **Hall of Fame** of everyone's best lives, plus live presence showing how many other players are online and which district they're in. There's no chat and no free text between players. Every life records its seed and every move, so other players' browsers **replay each entry move by move** and rank only lives that reproduce the same ledger seal and score. To fake a top score, you'd have to actually play it. Outside claude.ai, the game runs single-player as before.
 
+- **Profile photos:** add a photo of yourself on the Me tab so other players can recognise you on the map, in their district and in the Hall of Fame. An editor approves each photo before anyone else sees it, and you can hide yours at any time.
+- **Prime homes:** buy a home in Lagos's top addresses: a detached duplex in Nicon Town (Lekki Phase 1) for ₦250m, a luxury apartment in Victoria Island for ₦400m, a penthouse in Eko Atlantic for ₦900m, a mansion in Parkview, Ikoyi for ₦1.5bn, or a waterfront mansion on Banana Island for ₦4bn. You can live in it or let it out, and either way you pay a weekly estate service charge. Each one adds status, and Banana Island unlocks an achievement.
+- **Ibeju-Lekki construction sites:** east of Ajah, the map shows an oil refinery (tank farm, distillation columns, flare stacks, a cooling tower, cranes and a tanker jetty) and a new international airport (runway, glass terminal, red steel frame, hangars and a car park), both marked "coming soon". Contractors take day labourers at the gate before 9am for ₦4,500 a day, and the viewing points cost ₦1,000.
+- **Governor of Lasgidi:** players run for governor in the Town Hall, each picking one of a fixed set of slogans. You need 20 status points to run. Every player gets one vote a week, and last week's winner is governor for the whole week, with their name and slogan on a green banner over the map. Chips beside the banner show how many players are online, the Sea Plots and how many homes are on the map. The race never touches money.
+- **Look:** Plus Jakarta Sans for text, pill buttons that press in when tapped, colour-coded need bars, an emoji on every action row, and soft shadowed cards. On phones the game opens on the map.
+
 ## Pictures
 
 Place, home, vehicle and business cards can show AI-generated illustrations (Higgsfield, `gpt_image_2_5`). They are not photographs of the real venues. `img/manifest.json` lists all 93 images, and `node tools/fetch-images.js` downloads them, converts them to 640×400 WebP in `img/` and writes `src/images.js`. Any card without a picture falls back to its emoji.
@@ -300,7 +306,7 @@ lasgidi/
   src/styles.css        design tokens, light and dark themes
   sw.js, manifest.webmanifest, icon.svg   offline PWA
   tools/build-single.js bundle to one HTML file
-  test/engine.test.js   node:test suite (105 tests)
+  test/engine.test.js   node:test suite (106 tests)
   docs/REVIEW.md        Lagos Life deep review and the case against it
 ```
 
