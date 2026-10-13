@@ -2406,3 +2406,14 @@ test('local friends: catch up once a day in Abuja and PH rooms, perks at 40 unde
   assert.ok(L.roomHang(r, 'mile1', 'ibiere').ok, L.roomHangBlock(r, 'mile1', 'ibiere'));
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
 });
+
+test('no real business or maker names on places, place activities or vehicles', () => {
+  const banned = /\b(Rolls-Royce|Bentley|Ferrari|Lamborghini|Aston Martin|McLaren|Bugatti|Mercedes|Maybach|BMW|Audi|Porsche|Range Rover|Lexus|Cadillac|Embraer|Cessna|Pilatus|Gulfstream|Bombardier|Dassault|Boeing|Airbus|Azimut|Ferretti|Sunseeker|Pershing|Benetti|Heesen|Sanlorenzo|Feadship|Lürssen|Oceanco|Royal Huisman|Perini|Quilox|The Palms|Terra Kulture|Landmark Beach|Jabi Lake Mall|Amala Shitta|CcHub|Nike Art|Corolla|Instagram)\b/;
+  const texts = [];
+  D.PLACES.forEach(p => texts.push(p.name, p.text || ''));
+  Object.values(D.PLACE_ACTIONS).forEach(list => list.forEach(a => texts.push(a.label || '', a.text || '')));
+  Object.values(D.VEHICLES).forEach(v => texts.push(v.name, v.text || ''));
+  texts.push(D.CAR.name);
+  const bad = texts.filter(t => banned.test(t));
+  assert.deepEqual(bad, []);
+});

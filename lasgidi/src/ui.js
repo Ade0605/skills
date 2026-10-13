@@ -2714,7 +2714,7 @@
   function shopView() {
     var sh = S.shop;
     if (!sh) {
-      return '<div class="section" style="padding-top:0"><h3>🛍️ Start an online shop</h3><p class="note">Post on WhatsApp and Instagram, buy stock wholesale, and dispatch riders deliver. You pay ' + N(L.price(S, 10000)) + ' to set up. Sales land every week. The app takes 5%, riders cost ' + N(L.price(S, 500)) + ' an order, and some customers send things back.</p><div class="list">' +
+      return '<div class="section" style="padding-top:0"><h3>🛍️ Start an online shop</h3><p class="note">Post on chat apps and social media, buy stock wholesale, and dispatch riders deliver. You pay ' + N(L.price(S, 10000)) + ' to set up. Sales land every week. The app takes 5%, riders cost ' + N(L.price(S, 500)) + ' an order, and some customers send things back.</p><div class="list">' +
         Object.keys(D.SHOP_NICHES).map(function (k) {
           var Nn = D.SHOP_NICHES[k];
           return '<div class="item"><div><h3>' + Nn.icon + ' ' + esc(Nn.name) + '</h3><div class="meta"><span>Buy ' + N(L.price(S, Nn.cost)) + '</span><span>Sell ' + N(L.price(S, Nn.price)) + '</span><span>~' + Nn.demand + ' orders/wk without ads</span></div><div class="act-note">' + esc(Nn.text) + '</div></div><button class="btn" id="shop-open-' + k + '" data-shopopen="' + k + '">Open</button></div>';
@@ -2787,7 +2787,7 @@
     ['🌊', 'Sea Plots', 'Buy a block of plots in the Atlantic and put your picture on it for every player to see, after an editor checks it.', 'sea', ''],
     ['🏠', 'Home life', 'Furnish your home, hire staff, adopt pets, take a health plan, and host parties (with a decorator) that online friends can join.', 'tab', 'home'],
     ['📸', 'Fame', 'Grow followers for brand deals, post your life to the Hall of Fame, and take chieftaincy titles.', 'app', 'creator'],
-    ['🗺️', 'Sightseeing', 'Lekki Conservation Centre, Nike Art Gallery, Tarkwa Bay, Freedom Park, the National Museum, Kalakuta, Badagry and more, grouped by area. Visit 8 to become a Lagos explorer.', 'app', 'sights'],
+    ['🗺️', 'Sightseeing', 'Lekki Conservation Centre, the Lekki art gallery, Tarkwa Bay, Freedom Park, the National Museum, Kalakuta, Badagry and more, grouped by area. Visit 8 to become a Lagos explorer.', 'app', 'sights'],
     ['🏅', 'Sports', 'Football from the street to the NPFL, basketball, boxing, tennis, golf, polo, e-sports, ayo olopon and more. Play 8 sports to become an All-rounder, and win tournament prizes.', 'app', 'sports'],
     ['🎖️', 'NYSC', 'After your UNILAG degree, register for the service year: three camp days in Kubwa, Abuja, then 12 weeks at your posting with CDS every Thursday and a monthly allawee.', 'app', 'nysc'],
     ['✈️', 'The end', 'Pass IELTS, save ₦15m proof of funds and japa from Ikeja airport to complete a life. Or play forever.', 'app', 'travel']

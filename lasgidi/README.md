@@ -45,7 +45,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - Listings show how many other players live there.
   - **Mainland Estate** has 108 plots north of the Lagoon. Buy one, your house appears for everyone, and you live rent-free. It counts toward the Landlord goal.
 - **Roads and streets:** named roads such as the Third Mainland Bridge, Ikorodu Road, Agege Motor Road, the Lekki–Ikoyi Link Bridge and the Lekki–Epe Expressway. Street names (Allen Avenue, Adeola Odeku, Admiralty Way, Bode Thomas and more) appear when you zoom in. Area names (MAINLAND, THE ISLAND, IKOYI, BANANA ISLAND, LEKKI, AIRPORT) are painted on the ground.
-- **Key places:** 56 real Lagos landmarks and venues on the map as emoji badges, colour-coded by category. They include the New Afrika Shrine, Quilox, Amala Shitta, CcHub, The Palms, Elegushi beach, the Adeola Odeku club strip, the Ikeja cinema, the National Theatre, Freedom Park, the National Museum, Ndubuisi Kanu and Muri Okunola parks, Bar Beach and Lekki beach, the Lekki Conservation Centre, Balogun and Tejuosho markets, Computer Village, UNILAG, General Hospital, the jetties and the airport. Filter them by category, and tap one to see its hours, prices and activities. You can do them on the spot, or plan a trip there.
+- **Key places:** 56 real Lagos landmarks and venues on the map as emoji badges, colour-coded by category. They include the New Afrika Shrine, the Surulere amala joint, the Yaba tech hub, the Lekki shopping mall, Elegushi beach, the Adeola Odeku club strip, the Ikeja cinema, the National Theatre, Freedom Park, the National Museum, Ndubuisi Kanu and Muri Okunola parks, Bar Beach and Lekki beach, the Lekki Conservation Centre, Balogun and Tejuosho markets, Computer Village, UNILAG, General Hospital, the jetties and the airport. Filter them by category, and tap one to see its hours, prices and activities. You can do them on the spot, or plan a trip there.
 - **Billboards:** 10 ad boards at high-traffic spots, from the Third Mainland Bridge to the Lekki toll gate. Rent one for 1, 3 or 7 real days, paid in in-game naira. Busier boards cost more (Third Mainland Bridge costs ×1.8, Festac ×0.8), and longer runs are cheaper per day. Tick **Subscribe** and the ad renews itself the next time you open the game after it ends. Your ad rotates with up to 2 others.
   - **Picture ads:** you can also upload your own picture: a flyer, a product or your business. The game crops it to the board's shape and re-encodes it in your browser. Every player's picture waits for the owner's approval, and you pay only once it is approved. Editors can approve pictures, or post one straight away as a sponsored ad. Ads are built from an emoji, a Lagos slogan (or your own business) and a colour. There is no free text, so nobody can post phone numbers, scam links or abuse. Empty boards show public-service messages such as "Your bank will never ask for your OTP". The owner can fill clearly labelled sponsored slots.
 - **Daily gem hunt:** each real-world day hides the same five gems for everyone, at places around Lagos, shown as blue pins on the map. Go to the place and pick a gem up. Prizes grow through the day, from ₦3,000 to ₦20,000. You can hunt one day's gems per game day, so you can't farm old dates.
@@ -90,7 +90,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - Lives started under rules 5–8 keep a clear sky and replay unchanged.
 - **Online shop:** a 🛍️ Shop app on the phone. Pick a niche: okrika thrift clothes, phone accessories, hair and wigs, or small chops trays.
   - Buy stock wholesale, up to 500 at a time.
-  - Pick a weekly ad plan, from none through WhatsApp status and an Instagram boost to an influencer shout-out.
+  - Pick a weekly ad plan, from none through a chat-app status post and a social media boost to an influencer shout-out.
   - Sales land every week. The app takes 5%, dispatch riders cost ₦500 an order, and about 6% of orders come back.
   - Unsold small chops spoil each week.
   - The shop shows next week's expected profit once the stock is paid for. Over-spending on ads loses money.
@@ -222,7 +222,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - Six December events in one season unlocks "Detty legend".
 - **🌴 Island life all year (VI, Oniru, Ikoyi, Lekki):**
   - **Clubs:** club nights after midnight (Amapiano till 5 a.m.), money spraying with bottle service, and car-meet flexing outside the club. Flexing needs a car worth ₦40m or more and gets creators followers.
-  - **Days out:** brunch and day drinks; Landmark Beach in Oniru with cabanas, a seafood grill and jet skis; boat day trips to Ilashe.
+  - **Days out:** brunch and day drinks; the Oniru beach club with cabanas, a seafood grill and jet skis; boat day trips to Ilashe.
   - **Lekki:** shisha lounges, rooftop DJ sessions, and a glam studio. Getting "outside" ready with hair, make-up and nails makes your next night out or owambe land better.
   - **Food and markets:** late-night suya, pepper soup and asun, and a fashion pop-up and art market.
   - **Area boys (rules 14):** they collect "ground money" when you drive to busy spots such as Oshodi, the Island, VI, Lekki, Surulere and Ikeja.
@@ -236,8 +236,8 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - 1,000 viewers unlocks "Streamer".
   - **Appearances:** from 20k followers, VI promoters pay for club appearances.
 - **🗺️ Sightseeing (Phone → Sightseeing):** the tourist sights, grouped by area so you can plan around the traffic.
-  - **Lekki and the coast:** Lekki Conservation Centre, Nike Art Gallery, the Lekki Arts and Crafts Market, Elegushi beach and Eleko beach.
-  - **The Island:** Freedom Park, the National Museum and the J. Randle Centre (Onikan), Balogun market, Tarkwa Bay by boat, Landmark Beach and Terra Kulture.
+  - **Lekki and the coast:** Lekki Conservation Centre, the Lekki art gallery, the Lekki Arts and Crafts Market, Elegushi beach and Eleko beach.
+  - **The Island:** Freedom Park, the National Museum and the J. Randle Centre (Onikan), Balogun market, Tarkwa Bay by boat, the Oniru beach club and the VI arts centre.
   - **The Mainland and beyond:** the New Afrika Shrine and the Kalakuta Republic Museum, JJT Park, Giwa Gardens water park, a respectful canoe tour of Makoko, and a day trip to Badagry (the Point of No Return).
   - **Explorer:** visiting 8 sights unlocks "Lagos explorer" (rules 14).
 - **🏅 Sports (Phone → Sports):** 23 sports where Lagos plays them.
@@ -329,19 +329,19 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **The Islet:** a super-luxury private island reached by a bridge (₦8bn).
   - **Buy or build:** buy ready-built, or buy the zone's plot (30%) and build it yourself in three stages (foundation and piling, structure and roof, finishing and landscaping). That costs about 72% of the price on top of the plot, and you must visit the site to start each stage.
   - **Running costs:** every home and plot pays a weekly estate service charge. Each home adds status and can be let out.
-- **Luxury catalogue** at Lekki luxury motors, grouped by tier. Makes and models are named only to describe the item; there's no affiliation with any maker. Weekly upkeep covers insurance, servicing and the hangar, berth and crew, and each one adds status.
-  - **Cars, ultra-luxury:** Rolls-Royce Phantom, Cullinan and Ghost; Bentley Bentayga and Continental GT; Ferrari SF90, Roma and Purosangue; Lamborghini Urus and Revuelto; Aston Martin DBX; McLaren 750S; Bugatti Chiron.
-  - **Cars, premium:** Mercedes S-Class, G 63 and Maybach S 680; BMW 7 Series and X7; Audi A8 and Q8; Porsche 911 and Cayenne; Range Rover Autobiography; Lexus LX 600; Cadillac Escalade.
+- **Luxury catalogue** at Lekki luxury motors, grouped by tier. Every make and model has an original name (no real makers), and weekly upkeep covers insurance, servicing and the hangar, berth and crew. Each one adds status.
+  - **Cars, ultra-luxury:** the Sovereign Grand Saloon, Highland SUV and Silver Saloon; Wingate Estate SUV and Grand Tourer; Corsa Hybrid hypercar, Coupé and four-door; Toro Super SUV and V12 supercar; Albion luxury SUV; Velocita 750 supercar; Hyperion W16 hypercar.
+  - **Cars, premium:** Kaiser executive saloon, Boxer 4x4 and grand limousine; Isar Seven saloon and X SUV; Ringstar A saloon and Q SUV; Zuffen flat-six coupé and sport SUV; Highlander Autograph SUV; Kyoto grand SUV; Detroit full-size SUV.
   - **Jets:**
-    - light: Phenom 300E, Citation Latitude, PC-24;
-    - midsize: Praetor 600;
-    - heavy: G650ER, Global 6500;
-    - ultra-long-range: G700, G800, Global 7500 and 8000, Falcon 6X, 8X and 10X;
-    - VIP airliners: BBJ, ACJ.
+    - light: Swift 300, Meridian midsize, Alpine 24;
+    - midsize: Swift 600;
+    - heavy: Longreach 650, Horizon 6500;
+    - ultra-long-range: Longreach 700 and 800, Horizon 7500 and 8000, Kestrel 6, 8 and 10;
+    - VIP airliners: a narrowbody and a corporate airliner.
   - **Yachts:**
-    - motor yachts: Riva, Azimut, Ferretti, Sunseeker, Princess, Pershing;
-    - superyachts: Benetti, Heesen, Sanlorenzo, Feadship, Lürssen, Oceanco;
-    - sailing yachts: Royal Huisman, Perini Navi.
+    - motor yachts: a mahogany runabout, Adriatica 30 and 780, Solent 76, Plymouth 85, Arrow GTX;
+    - superyachts: Tuscan, Dutch-built, Ligurian, North Sea, Bremen and an ocean giga-yacht;
+    - sailing yachts: Frisian and Mediterranean.
 - **More live rooms:** eleven venues use the cruise's deck renderer, with their own layouts, crews and spots, plus the same filtered room chat, 📷, fold and Leave.
   - **White Sand Beach (₦3,000, 7am–7pm):** beach bar, volleyball, loungers under umbrellas, a jet-ski dock, and a bonfire after 5pm. You can also fish here.
   - **Tidewater House (members only, 4pm–midnight):** a DJ booth, a wood-fired pizza oven, the jetty, the lounge and the bar.

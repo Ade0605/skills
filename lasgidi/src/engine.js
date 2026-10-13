@@ -3697,7 +3697,7 @@
     var f = (s.creator && s.creator.followers) || 0;
     var reach = 1 + Math.min(2, f / 20000), look = outfitTags(s).club || outfitTags(s).owambe ? 1.2 : 1;
     var g = Math.round(40 * phoneCam(s) * (1 + skillLevel(s, 'charisma') * 0.15) * reach * look);
-    if (s.rules >= 14 && isDecember(s)) g = Math.round(g * 1.5); // Detty December is all over Instagram and TikTok
+    if (s.rules >= 14 && isDecember(s)) g = Math.round(g * 1.5); // Detty December is all over social media
     return viral ? g * 4 + 2000 : g;
   }
   /* ---------- skits and live streaming ---------- */
