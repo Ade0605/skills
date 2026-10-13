@@ -177,6 +177,7 @@
     mountPlayground();
     mountVisit();
     mountCruise();
+    mountAirport();
     Array.prototype.forEach.call(document.querySelectorAll('canvas.ww-hall'), drawHall);
     drawHudAvatar();
     mountInterior();
@@ -1645,6 +1646,42 @@
     }).join('') + '</div></section>';
     return html;
   }
+  /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
+  var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
+  var DOMESTIC = ['Abuja', 'Port Harcourt', 'Kano', 'Enugu', 'Benin City', 'Owerri', 'Uyo', 'Ilorin'], ABROAD = ['London', 'Dubai', 'Accra', 'Johannesburg', 'Atlanta', 'Nairobi', 'Paris', 'Istanbul', 'Doha', 'Toronto'];
+  // A deterministic board for this game day: one flight about every 25 minutes, statuses from the clock.
+  function fids(kind) {
+    var dayN = Math.floor(S.t / 1440), now = S.t % 1440, here = D.CITIES[L.cityOf(S)].name, out = [];
+    for (var i = 0; i < 9; i++) {
+      var slot = Math.floor(now / 25) - 2 + i, mins = slot * 25 + (kind === 'arr' ? 10 : 0); if (mins < 300 || mins > 1410) continue;
+      var h = Math.imul(dayN * 131 + slot * 17 + (kind === 'arr' ? 7 : 0), 2654435761) >>> 0, al = AIRLINES[h % AIRLINES.length];
+      var pool = h % 3 === 0 ? ABROAD : DOMESTIC.filter(function (c) { return c !== here; }), city = pool[(h >>> 3) % pool.length], late = (h >>> 9) % 7 === 0 ? 40 : 0, diff = mins + late - now;
+      var status = kind === 'dep' ? (diff < -10 ? 'Departed' : diff < 15 ? 'Boarding' : diff < 45 ? 'Gate open' : late ? 'Delayed' : 'On time') : (diff < -5 ? 'Landed' : diff < 20 ? 'Approaching' : late ? 'Delayed' : 'Expected');
+      out.push({ at: mins + late, time: pad(Math.floor((mins + late) / 60) % 24) + ':' + pad((mins + late) % 60), code: al[0] + ' ' + (100 + (h % 800)), airline: al[1], city: city, gate: 1 + (h >>> 5) % 5, status: status });
+    }
+    return out.sort(function (x, y) { return x.at - y.at; }).slice(0, 6);
+  }
+  var airportStage = null, airportKey = '';
+  function airportPanel() {
+    var tab = ui.fidsTab || 'dep', rows = fids(tab), cls = { Boarding: 'st-go', 'Gate open': 'st-go', Departed: 'st-off', Landed: 'st-off', Approaching: 'st-go', Delayed: 'st-late' };
+    return '<div class="ap-head"><b>🛬 ' + esc(ui.airportName || 'Airport') + '</b><span class="muted">' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="ap-photo" data-photo="airport" aria-label="Take a photo">📷</button><button class="btn sm ghost" id="ap-close" data-airportclose="1" aria-label="Close the airport view">✕</button></div>' +
+      '<div class="dep-tabs sm" role="tablist"><button type="button" role="tab" class="dep-tab' + (tab === 'dep' ? ' on' : '') + '" id="fids-dep" data-fidstab="dep" aria-selected="' + (tab === 'dep') + '">🛫 Departures</button><button type="button" role="tab" class="dep-tab' + (tab === 'arr' ? ' on' : '') + '" id="fids-arr" data-fidstab="arr" aria-selected="' + (tab === 'arr') + '">🛬 Arrivals</button></div>' +
+      '<div class="fids-wrap"><table class="fids"><thead><tr><th>Time</th><th>Flight</th><th>' + (tab === 'dep' ? 'To' : 'From') + '</th><th>Gate</th><th>Status</th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td class="num">' + r.time + '</td><td class="num">' + esc(r.code) + '</td><td>' + esc(r.city) + '</td><td class="num">' + r.gate + '</td><td class="' + (cls[r.status] || '') + '">' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      '<div class="inline"><button class="btn sm go" id="ap-book" data-airportgo="air">✈️ Book a flight</button><button class="btn sm" id="ap-jet" data-airportgo="jet">🛩️ My jet</button><button class="btn sm" id="ap-chop" data-airportgo="chopper">🚁 Chopper</button></div>' +
+      '<p class="note">Tap the gates, the private jets or the helipads to book. Airlines are fictional. International flights are for show; japa from the airport card.</p>';
+  }
+  function mountAirport() {
+    var ov = document.getElementById('airport-view');
+    if (!ui.airportOpen || !S) { if (ov) ov.remove(); return; }
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'airport-view'; ov.className = 'cruise-view airport-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Live airport view');
+      if (!airportStage) airportStage = window.LasgidiAirport.create({ onTap: function (k) { if (k === 'parking') return; airportGo(k === 'departures' ? 'air' : k); } });
+      var pn = document.createElement('div'); pn.className = 'cv-panel ap-panel'; pn.id = 'ap-panel'; ov.appendChild(airportStage.el); ov.appendChild(pn); document.body.appendChild(ov); airportKey = '';
+    }
+    var html = airportPanel(); if (html !== airportKey) { document.getElementById('ap-panel').innerHTML = html; airportKey = html; }
+    var h0 = L.hour(S); airportStage.update({ name: ui.airportName, night: h0 >= 19 || h0 < 6 }); airportStage.start();
+  }
+  function airportGo(tab) { ui.airportOpen = false; ui.depTab = tab; clearPicks(); ui.place = ui.airportPlace || 'airport'; ui.tab = 'map'; render(); }
   /* ---------- airport departures: Air (cabins, insurance, boarding pass), My jet / charter, Chopper ---------- */
   var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1 };
   function departuresView(pl) {
@@ -1696,7 +1733,7 @@
           return '<div class="item"><div><h3>' + (p.icon || '•') + ' ' + esc(p.name) + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[p.district].name) + '</span><span>' + dur(cq2.mins) + '</span><span class="cost">' + N(cq2.cost) + '</span></div></div><button class="btn sm" id="chop-' + p.id + '" data-chopper="' + p.id + '"' + (cq2.disabled ? ' disabled title="' + esc(cq2.disabled) + '"' : '') + '>Fly</button></div>';
         }).join('') + (list.length ? '' : '<p class="muted">No place matches.</p>') + '</div>';
     }
-    return '<section class="departures"><h3>' + (icon3d('jet', '') || '🛫') + ' Departures</h3>' + tabs + body + '</section>';
+    return '<section class="departures"><div class="inline" style="justify-content:space-between"><h3>' + (icon3d('jet', '') || '🛫') + ' Departures</h3><button class="btn sm ghost" id="airport-live" data-airportopen="' + pl.id + '">🛬 Live airport view</button></div>' + tabs + body + '</section>';
   }
   // The transport picker on a place sheet: one chip per way to get there, then a big Go button.
   var MODE_ICONS = { danfo: 'bus', brt: 't_brt', cab: 't_taxi', keke: 't_keke', okada: 't_okada', car: 'car', ferry: 'boat', boat: 't_speedboat', heli: 't_heli', trek: 't_walk', rail: 't_train' };
@@ -3183,7 +3220,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3505,11 +3542,15 @@
     if (ds.fishcast) { run(function () { var r = L.fish(S); if (r.ok && S.cruise && L.cruiseAboard(S)) S.cruise.last = r.msg; return r; }); return; }
     if (ds.fishsell) { run(function () { return L.sellFish(S); }); return; }
     if (ds.fishcook) { run(function () { return L.cookFish(S); }); return; }
-    if (ds.photo) { ui.photoFrom = ds.photo; if (ds.photo === 'cruise') takePhoto(document.querySelector('.cruise-canvas'), 'Lagoon Boat Cruise'); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); return; }
+    if (ds.photo) { ui.photoFrom = ds.photo; if (ds.photo === 'cruise') takePhoto(document.querySelector('.cruise-canvas'), 'Lagoon Boat Cruise'); else if (ds.photo === 'airport') takePhoto(document.querySelector('.airport-canvas'), ui.airportName || 'Airport'); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); return; }
     if (ds.photoretake) { var pv = document.getElementById('photo-view'); if (pv) pv.remove(); setTimeout(function () { if (ui.photoFrom === 'cruise') takePhoto(document.querySelector('.cruise-canvas'), 'Lagoon Boat Cruise'); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); }, 80); return; }
     if (ds.photoclose) { ui.photo = null; var pv2 = document.getElementById('photo-view'); if (pv2) pv2.remove(); return; }
     if (ds.photosave) { savePhoto(); return; }
     if (ds.cruisefold) { ui.cruiseFold = !ui.cruiseFold; mountCruise(); return; }
+    if (ds.airportopen) { var apl = D.PLACES.filter(function (p) { return p.id === ds.airportopen; })[0]; ui.airportPlace = ds.airportopen; ui.airportName = apl ? apl.name : 'Airport'; ui.airportOpen = true; render(); return; }
+    if (ds.airportclose) { ui.airportOpen = false; render(); return; }
+    if (ds.airportgo) { airportGo(ds.airportgo); return; }
+    if (ds.fidstab) { ui.fidsTab = ds.fidstab; mountAirport(); return; }
     if (ds.hpbuild) { var hz = ds.hpbuild; run(function () { return L.hpBuild(S, hz); }); return; }
     if (ds.joinclub) { var jc = ds.joinclub.split(':'); run(function () { return L.joinClub(S, jc[0], jc[1]); }); return; }
     if (ds.clubact) { var ca = ds.clubact.split(':'); run(function () { return L.clubAct(S, ca[0], ca[1]); }); return; }

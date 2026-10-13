@@ -149,6 +149,14 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Air:** pick a city (LOS, ABV, PHC) and a cabin: Economy, Premium Economy (×1.8), Business (×4) or First Class (×9). Fares cost ×1.5 in the 6–9am rush. A cab to the airport is included when you book from elsewhere in the city. Optional travel insurance costs 6% of the fare; without it, a lost bag (8% chance) costs you ₦25k. A boarding pass shows every line, the total and your wallet before you book. Better cabins arrive fed and rested; First Class unlocks an achievement.
   - **My jet:** your private hangar lists your jets. Flying one costs ₦5m in fuel and crew. No jet? Charter one for ₦12m a trip.
   - **Chopper:** search any place in any city and land at the door: ₦1.5m within a city, ₦4m between cities.
+  - **🛬 Live airport view:** an animated scene with:
+    - the runway (09/27), with a plane landing and another taking off;
+    - five gates with airliners on the apron;
+    - a private-jet apron, two helipads with parked choppers, the hangar, fuel tanks and the control tower;
+    - the terminal, car parks full of cars, traffic moving round the kerb and the access road, an airport bus, and passengers walking in.
+    - **Boards:** Departures and Arrivals (fictional airlines, a flight about every 25 minutes, with statuses from the game clock).
+    - **Taps:** the gates open Air booking, the jets open My jet, the helipads open Chopper.
+    - **Photo:** the 📷 button snaps the scene.
   - The map shows the private-jet hangar and a helipad at the east end of the Ikeja runway. All three are new recorded moves, so older lives replay unchanged.
 - **Now passing:** after each trip, a note names the landmarks you passed on the way. On the map, your danfo, cab, keke, okada, car, boat or helicopter rides from district to district ("On the way to Lekki…").
 - **House parties with real players:** when you host, you can add an **event decorator** for half the party's cost again. It turns the house festive, and guests spray 25% more.

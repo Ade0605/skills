@@ -958,3 +958,15 @@ body:has(#cruise-view) .toasts { top: 12px; bottom: auto; }
 .pv-top { display: flex; justify-content: space-between; align-items: center; }
 .pv-img { max-width: 100%; max-height: 100%; margin: auto; border-radius: 22px; box-shadow: 0 16px 50px rgba(0,0,0,.5); object-fit: contain; min-height: 0; }
 .pv-bar { display: grid; gap: 8px; padding: 12px; border-radius: 20px; background: var(--surface); color: var(--ink); width: min(680px, 100%); margin: 0 auto; }
+
+/* Live airport */
+.airport-view { background: #3a9fcc; }
+.airport-stage { position: relative; min-height: 0; }
+.airport-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; }
+.ap-head { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; }
+.fids { width: 100%; border-collapse: collapse; font: 600 12px var(--font-body); background: #0d1420; color: #ffd23f; border-radius: 12px; overflow: hidden; }
+.fids th { text-align: left; padding: 6px 8px; color: #8fa2b3; font-weight: 700; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.fids td { padding: 5px 8px; border-top: 1px solid rgba(255,255,255,.06); white-space: nowrap; }
+.fids .st-go { color: #4be08a; } .fids .st-off { color: #8fa2b3; } .fids .st-late { color: #ff6b6b; }
+.ap-panel { max-height: 42vh; overflow-y: auto; }
+.fids-wrap { border-radius: 12px; overflow: hidden; } .fids-wrap .fids { border-radius: 0; }
