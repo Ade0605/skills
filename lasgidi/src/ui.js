@@ -615,6 +615,8 @@
     var cityOrder = [here].concat(Object.keys(D.CITIES).filter(function (c) { return c !== here; }));
     var passHtml = '<div class="passport"><b>🛂 Passport ' + PP.seen + '/' + PP.total + ' rooms</b> · ' + PP.nights + ' night' + (PP.nights === 1 ? '' : 's') + ' · ' + PP.hangs + ' catch-up' + (PP.hangs === 1 ? '' : 's') +
       '<div class="pp-badges">' + PP.badges.map(function (b) { return '<span class="pp-badge' + (b.got ? ' got' : '') + '" title="' + esc(b.text) + '">' + b.icon + ' ' + esc(b.name) + '</span>'; }).join('') + '</div></div>';
+    var LO = L.localsInfo(S);
+    passHtml += '<div class="passport"><b>🤝 Friends in Abuja and Port Harcourt</b><div class="pp-badges">' + LO.map(function (f) { return '<span class="pp-badge' + (f.lvl ? ' got' : '') + '" title="' + esc(D.LOCALS[f.id].text) + '">' + esc(f.name) + ' · ' + esc(D.ROOMS[f.room].name) + ' · ' + f.lvl + '/100</span>'; }).join('') + '</div></div>';
     var roomsHtml = '<div class="section"><h3>📍 Live rooms</h3>' + passHtml + cityOrder.map(function (c) {
       var rs = rooms.filter(function (r) { return cityOfPlace(r[2]) === c; }); if (!rs.length) return '';
       return '<p class="note"><b>' + esc(D.CITIES[c].name) + '</b>' + (c === here ? ' · you are here' : ' · travel there first') + '</p><div class="list">' + rs.map(roomRow).join('') + '</div>';
@@ -1720,9 +1722,9 @@
     var rd = D.PLACES.filter(function (x) { return x.id === R.place; })[0].district, rc = L.districtCity(rd);
     if (why && rc !== L.cityOf(S)) why = 'Travel to ' + D.CITIES[rc].name + ' first, then ' + D.DISTRICTS[rd].name;
     var firstVisit = L.passportInfo(S).rooms[id] == null;
-    return '<section class="cruise-card room-card"><div class="cc-top"><span>📍 LIVE ROOM · ' + esc(R.name.toUpperCase()) + (firstVisit ? ' · 🛂 FIRST VISIT' : '') + '</span><span>' + (R.fee ? N(L.price(S, R.fee)) : R.club ? 'Members' : 'Free') + '</span></div>' +
+    return '<section class="cruise-card room-card"><div class="cc-top"><span>📍 LIVE ROOM · ' + esc(R.name.toUpperCase()) + (firstVisit ? ' · 🛂 FIRST VISIT' : '') + '</span><span>' + (L.roomFee(S, id) ? N(L.roomFee(S, id)) : R.club ? 'Members' : R.fee ? 'Free with a friend' : 'Free') + '</span></div>' +
       '<p class="note">' + (n ? n + ' player' + (n === 1 ? ' is' : 's are') + ' here now. ' : '') + 'Step in, move between spots and chat with everyone there. ' + (D.ROOM_NIGHTS[id] ? (function (I) { return I.n.icon + ' ' + (I.live ? 'On now: ' : 'Every ') + esc(I.live ? I.n.name : I.n.name + ' (' + I.why + ')') + '. '; })(L.roomNightInfo(S, id)) : '') + 'Open ' + R.from + ':00–' + (R.to === 24 ? 'midnight' : (R.to % 24) + ':00') + '.</p>' +
-      (inRoom ? '<button class="btn go big-go" id="room-open" data-roomopen="' + id + '">Back in</button>' : '<button class="btn go big-go" id="room-enter" data-roomenter="' + id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>Go in' + (R.fee ? ' · ' + N(L.price(S, R.fee)) : '') + '</button>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '')) + '</section>';
+      (inRoom ? '<button class="btn go big-go" id="room-open" data-roomopen="' + id + '">Back in</button>' : '<button class="btn go big-go" id="room-enter" data-roomenter="' + id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>Go in' + (L.roomFee(S, id) ? ' · ' + N(L.roomFee(S, id)) : '') + '</button>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '')) + '</section>';
   }
   function roomPeers(id) {
     var pre = 'room:' + id + ':';
@@ -1735,12 +1737,18 @@
     var peers = roomPeers(id).slice(0, 16).map(function (p) { var h = 0; for (var i = 0; i < p.by.length; i++) h = (h * 31 + p.by.charCodeAt(i)) >>> 0; return { by: p.by, label: handleOf(p.by), spot: p.at.slice(pre.length), look: p.look, outfit: { top: STARTERS[h % 4], bottom: ['st_jeans', 'st_chinos', 'st_wrapper'][h % 3] } }; });
     var bubbles = {}, now = Date.now(); (online.roomChat || []).forEach(function (m) { if (m.room === id && now - m.at < 7000) bubbles[m.by] = m.text; });
     var h0 = L.hour(S); var R0 = D.ROOMS[id], lay = R0.layout || id; var NPC_LOOKS = [{ skin: 4, hair: 2, shape: 1 }, { skin: 2, hair: 4, shape: 0 }, { skin: 5, hair: 6, shape: 2 }, { skin: 3, hair: 1, shape: 1 }, { skin: 1, hair: 3, shape: 0 }], NPC_TOPS = ['st_asooke', 'shirt', 'blazer', 'jersey', 'crop'];
-    var friends = Object.keys(D.ROOM_NPCS[id] || {}).map(function (k, i) { return { by: 'npc:' + k, label: D.NPCS[k].name, spot: D.ROOM_NPCS[id][k], crew: true, npc: true, look: NPC_LOOKS[Object.keys(D.NPCS).indexOf(k) % 5], outfit: { top: NPC_TOPS[Object.keys(D.NPCS).indexOf(k) % 5], bottom: 'trousers' } }; });
+    var friends = roomFriends(id).map(function (f, i) { var h = f.id.length + f.id.charCodeAt(0); return { by: 'npc:' + f.id, label: f.name, spot: f.spot, crew: true, npc: true, look: NPC_LOOKS[h % 5], outfit: { top: NPC_TOPS[h % 5], bottom: f.local ? 'st_wrapper' : 'trousers' } }; });
     var NI = L.roomNightInfo(S, id), extra = NI && NI.live ? [{ by: 'crew:night', label: NI.n.crew, spot: NI.n.spot || Object.keys(R0.spots)[0], crew: true, look: { skin: 4, hair: 3, shape: 1 }, outfit: { top: 'st_adire', bottom: 'trousers' } }] : []; return { room: id, layout: lay, sign: R0.sign, topPad: 100, event: !!(NI && NI.live), players: (ROOM_CREW[id] || []).concat(extra, friends, peers, [me]), spot: S.room.spot, bubbles: bubbles, night: lay === 'club' || h0 >= 19 || h0 < 6 };
   }
+  // Friends in a room: Lagos NPC friends plus local friends in Abuja and PH.
+  function roomFriends(id) {
+    var out = Object.keys(D.ROOM_NPCS[id] || {}).map(function (k) { return { id: k, name: D.NPCS[k].name, spot: D.ROOM_NPCS[id][k], lvl: S.friends[k].lvl }; });
+    L.localsInfo(S).forEach(function (f) { if (f.room === id) out.push({ id: f.id, name: f.name, spot: D.LOCALS[f.id].spot, lvl: f.lvl, local: true, perk: f.perk }); });
+    return out;
+  }
   function roomFriendChips(id) {
-    var ks = Object.keys(D.ROOM_NPCS[id] || {}); if (!ks.length) return '';
-    return '<div class="cv-spots room-friends">' + ks.map(function (k) { var why = L.roomHangBlock(S, id, k); return '<button type="button" class="act-chip" id="rhang-' + k + '" data-roomhang="' + k + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>👋 ' + (why ? esc(D.NPCS[k].name) + ' ✓' : 'Hang out with ' + esc(D.NPCS[k].name)) + ' · ' + S.friends[k].lvl + '/100</button>'; }).join('') + '</div>';
+    var fs = roomFriends(id); if (!fs.length) return '';
+    return '<div class="cv-spots room-friends">' + fs.map(function (f) { var why = L.roomHangBlock(S, id, f.id); return '<button type="button" class="act-chip" id="rhang-' + f.id + '" data-roomhang="' + f.id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>👋 ' + (why ? esc(f.name) + ' ✓' : 'Hang out with ' + esc(f.name)) + ' · ' + f.lvl + '/100' + (f.local && S.rules >= 15 ? (f.lvl >= 40 ? (f.perk.entry ? ' · 🎟️ free entry' : ' · 🍛 free plate') : ' · perk at 40') : '') + '</button>'; }).join('') + '</div>';
   }
   function roomNightBar(id) {
     var I = L.roomNightInfo(S, id); if (!I || !I.live) return '';

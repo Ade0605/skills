@@ -2371,3 +2371,38 @@ test('rules 15: re-entering a free room the same day gives no fresh entry boost 
   // Next day the room is fresh again.
   s.t = d + 1440 + 9 * 60; s.pending = []; s.needs.fun = 10; assert.ok(L.roomEnter(s, 'millennium').ok); assert.ok(s.needs.fun > 10);
 });
+
+test('local friends: catch up once a day in Abuja and PH rooms, perks at 40 under rules 15 only, and replay', () => {
+  const setup = rules => { const s = L.newGame({ seed: 98, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 1); s.cash += 9000000; return s; };
+  const s = setup();
+  assert.equal(D.LOCALS.tamuno.room, 'garden_city');
+  s.loc = 'ph_gra'; const d = Math.floor(s.t / 1440) * 1440 + 1440;
+  for (let i = 0; i < 8; i++) {
+    s.t = d + i * 1440 + 22 * 60 + 30; s.pending = []; for (const k of Object.keys(s.needs)) s.needs[k] = k === 'stress' ? 0 : 90;
+    const b0 = s.cash + s.bank; assert.ok(L.roomEnter(s, 'garden_city').ok); s.pending = [];
+    const paid = b0 - (s.cash + s.bank);
+    if (i === 0) assert.equal(paid, L.price(s, 8000));
+    if (i === 7) assert.equal(paid, 0, 'Tamuno gets you in free at 40+');
+    assert.ok(L.roomHang(s, 'garden_city', 'tamuno').ok); s.pending = [];
+    assert.match(L.roomHang(s, 'garden_city', 'tamuno').msg, /already caught up/);
+    L.roomLeave(s);
+  }
+  assert.ok(s.locals.tamuno >= 40); assert.ok(!s.friends.tamuno, 'locals never join the NPC friends list');
+  assert.match(L.roomHang(s, 'garden_city', 'hauwa').msg, /not here/);
+  // A rules 14 life gets the friendship but no perk.
+  const o = setup(14); o.loc = 'ph_gra'; o.locals = { tamuno: 60 }; o.t = d + 22 * 60 + 30;
+  assert.equal(L.roomFee(o, 'garden_city'), L.price(o, 8000));
+  // Free plate once a day at Wuse Market with Hauwa at 40+.
+  const w = setup(); w.loc = 'abj_wuse'; w.locals = { hauwa: 45 }; w.t = d + 11 * 60; assert.ok(L.roomEnter(w, 'wuse_mkt').ok); w.pending = [];
+  let b = w.cash + w.bank; assert.match(L.roomSpot(w, 'wuse_mkt', 'buka').msg, /Hauwa is treating you/); assert.equal(b - (w.cash + w.bank), 0);
+  w.pending = []; assert.ok(L.roomSpot(w, 'wuse_mkt', 'phones').ok); w.pending = []; b = w.cash + w.bank; assert.ok(L.roomSpot(w, 'wuse_mkt', 'buka').ok); assert.equal(b - (w.cash + w.bank), L.price(w, 1500));
+  // A real life: fly to Port Harcourt, ride to D-Line, catch up with Ibiere at Mile 1; it replays to its seal.
+  const r = L.newGame({ seed: 99, origin: 'nepo', goal: 'freestyle' }); while (r.pending.length) L.resolveChoice(r, 1);
+  const go = L.travelOptions(r, 'ikeja').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; if (r.loc !== 'ikeja') assert.ok(L.travel(r, 'ikeja', go.mode).ok); while (r.pending.length) L.resolveChoice(r, 1);
+  assert.ok(L.intercity(r, 'ph', 'flight').ok); while (r.pending.length) L.resolveChoice(r, 1);
+  const t = L.travelOptions(r, 'ph_dline').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'ph_dline', t.mode).ok); while (r.pending.length) L.resolveChoice(r, 1);
+  while (L.roomBlock(r, 'mile1')) { L.wait(r, 60); while (r.pending.length) L.resolveChoice(r, 1); }
+  assert.ok(L.roomEnter(r, 'mile1').ok); while (r.pending.length) L.resolveChoice(r, 1);
+  assert.ok(L.roomHang(r, 'mile1', 'ibiere').ok, L.roomHangBlock(r, 'mile1', 'ibiere'));
+  assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});

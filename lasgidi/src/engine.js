@@ -2292,14 +2292,14 @@
     if (R.club && !clubMember(s, R.club)) return 'Members only';
     var h = hour(s), openNow = R.to > 24 ? (h >= R.from || h < R.to - 24) : (h >= R.from && h < R.to);
     if (!openNow) return 'Open ' + pad2(R.from) + ':00–' + (R.to === 24 ? 'midnight' : pad2(R.to % 24) + ':00');
-    if (R.fee && !canAfford(s, price(s, R.fee))) return 'Entry is ' + naira(price(s, R.fee));
+    if (roomFee(s, id) && !canAfford(s, roomFee(s, id))) return 'Entry is ' + naira(roomFee(s, id));
     return busyBlock(s) || '';
   }
   function pad2(n) { return String(n).padStart(2, '0'); }
   function roomEnter(s, id) {
     var why = roomBlock(s, id); if (why) return fail(why + '.');
     var R = D.ROOMS[id]; s.alerts = [];
-    if (R.fee) pay(s, price(s, R.fee), R.name + ' entry');
+    var fee = roomFee(s, id); if (fee) pay(s, fee, R.name + ' entry');
     var M = s.rules >= 15 ? roomMarks(s) : null, today = day(s);
     if (M) { M.moves = M.moves || {}; M.entry = M.entry || {}; }
     s.room = { id: id, until: s.t + R.mins, spot: Object.keys(R.spots)[0], n: M && M.moves[id] && M.moves[id].d === today ? M.moves[id].n : 0 };
@@ -2313,16 +2313,19 @@
     if (!P0) return fail('No such spot.');
     if (!roomIn(s, id)) return fail('You are not there.');
     if (s.pending.length) return fail('Decide on the open event first.');
-    var cost = price(s, P0.cost);
+    var cost = price(s, P0.cost), LP = localPerk(s, id), MK = s.rules >= 15 ? roomMarks(s) : null;
+    var treat = !!(cost && LP && LP.perk.spot === spot && MK && (MK.treat || {})[id] !== day(s));
+    if (treat) cost = 0;
     if (cost && !canAfford(s, cost)) return fail(P0.name + ' costs ' + naira(cost) + '.');
     if (spot === 'bonfire' && hour(s) < 17) return fail('The bonfire is lit in the evening.');
     s.alerts = [];
     if (cost) pay(s, cost, R.name + ': ' + P0.name);
+    if (treat) { MK.treat = MK.treat || {}; MK.treat[id] = day(s); }
     s.room.spot = spot; s.room.n = (s.room.n || 0) + 1;
     if (s.rules >= 15) { var MM = roomMarks(s); MM.moves = MM.moves || {}; MM.moves[id] = { d: day(s), n: s.room.n }; }
     if (s.room.n <= 6) { applyFx(s, P0.fx); addXp(s, P0.xp); }
     advance(s, 30); s.room.last = P0.text;
-    return finish(s, ok(P0.icon + ' ' + P0.text));
+    return finish(s, ok(P0.icon + ' ' + P0.text + (treat ? ' ' + D.LOCALS[LP.id].name + ' is treating you.' : '')));
   }
   // Weekly room nights (rn): once per day, inside the room, on its weekday and hours. Windows may run past midnight (to > 24).
   function roomNightInfo(s, id) {
@@ -2373,9 +2376,21 @@
   function hungToday(s, npc) { return s.rules >= 15 ? roomMarks(s).hung[npc] === day(s) : !!(s.room.hung && s.room.hung[npc] === day(s)); }
   function nightJoined(s, id, evDay) { return s.rules >= 15 ? roomMarks(s).night[id] === evDay : !!(s.room && s.room.id === id && s.room.night === evDay); }
   // Hang out with a friend who is in the room (rh): once a day per friend, no money.
+  // Local friends (Abuja and PH): their own levels in s.locals, never in s.friends or a random pool.
+  function localOf(id, npc) { var Lc = D.LOCALS[npc]; return Lc && Lc.room === id ? Lc : null; }
+  function localLvl(s, npc) { return (s.locals && s.locals[npc]) || 0; }
+  function localPerk(s, id) { // the local whose perk applies in this room, if earned (rules 15 only: it changes money)
+    if (s.rules < 15) return null;
+    var k = Object.keys(D.LOCALS).filter(function (n) { return D.LOCALS[n].room === id && localLvl(s, n) >= 40; })[0];
+    return k ? { id: k, perk: D.LOCALS[k].perk } : null;
+  }
+  function roomFee(s, id) { var R = D.ROOMS[id], P = localPerk(s, id); return !R.fee || (P && P.perk.entry) ? 0 : price(s, R.fee); }
+  function localsInfo(s) {
+    return Object.keys(D.LOCALS).map(function (k) { var Lc = D.LOCALS[k]; return { id: k, name: Lc.name, role: Lc.role, room: Lc.room, lvl: localLvl(s, k), perk: Lc.perk }; });
+  }
   function roomHangBlock(s, id, npc) {
-    var M = D.ROOM_NPCS[id];
-    if (!M || !M[npc] || !s.friends[npc]) return 'They are not here';
+    var M = D.ROOM_NPCS[id], Lc = localOf(id, npc);
+    if (!Lc && (!M || !M[npc] || !s.friends[npc])) return 'They are not here';
     if (!roomIn(s, id)) return 'Go in first';
     if (hungToday(s, npc)) return 'You already caught up today';
     return '';
@@ -2386,11 +2401,13 @@
     s.alerts = [];
     if (!s.room.hung) s.room.hung = {};
     s.room.hung[npc] = day(s); if (s.rules >= 15) roomMarks(s).hung[npc] = day(s); passportOf(s).hangs++;
-    befriend(s, npc, 6 + skillLevel(s, 'charisma'));
+    var Lc = localOf(id, npc), gain = 6 + skillLevel(s, 'charisma'), lvl;
+    if (Lc) { if (!s.locals) s.locals = {}; lvl = s.locals[npc] = Math.min(100, localLvl(s, npc) + gain); }
+    else { befriend(s, npc, gain); lvl = s.friends[npc].lvl; }
     applyFx(s, { social: 10, fun: 6 }); advance(s, 30);
-    var nm = D.NPCS[npc].name; s.room.last = 'You catch up with ' + nm + '.';
+    var nm = Lc ? Lc.name : D.NPCS[npc].name; s.room.last = 'You catch up with ' + nm + '.';
     log(s, '👋 You hung out with ' + nm + ' at ' + D.ROOMS[id].name + '.', 'good');
-    return finish(s, ok('👋 You and ' + nm + ' are closer (' + s.friends[npc].lvl + '/100).'));
+    return finish(s, ok('👋 You and ' + nm + ' are closer (' + lvl + '/100).' + (Lc && lvl >= 40 && lvl - gain < 40 && s.rules >= 15 ? ' ' + nm + (Lc.perk.entry ? ' gets you in free from now on.' : ' will sort your ' + D.ROOMS[id].spots[Lc.perk.spot].name.toLowerCase() + ' once a day.') : '')));
   }
   function roomLeave(s) { if (!s.room) return fail('You are not in a room.'); s.room.until = s.t; return ok('You left.'); }
 
@@ -4636,7 +4653,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), roomNightInfo: roomNightInfo, roomNight: recorded('rn', roomNight), roomHangBlock: roomHangBlock, passportInfo: passportInfo, roomHang: recorded('rh', roomHang), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), roomNightInfo: roomNightInfo, roomNight: recorded('rn', roomNight), roomHangBlock: roomHangBlock, passportInfo: passportInfo, localsInfo: localsInfo, roomFee: roomFee, roomHang: recorded('rh', roomHang), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
