@@ -2140,3 +2140,23 @@ test('regressions: no registry wedding over a booked white wedding; one Hyde Par
   assert.ok(L.buyProperty(h, 'hp_semi').ok);
   assert.equal(L.buyProperty(h, 'hp_semi').ok, false, 'one home per zone');
 });
+
+test('lagoon cruise: board in Ikoyi, spots only while aboard, the deck tires, December fare, replays', () => {
+  const s = L.newGame({ seed: 91, origin: 'nepo', goal: 'freestyle' });
+  while (s.pending.length) L.resolveChoice(s, 1);
+  assert.equal(L.cruiseSpot(s, 'party').ok, false, 'not aboard');
+  if (s.loc !== 'ikoyi') { const o = L.travelOptions(s, 'ikoyi').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(s, 'ikoyi', o.mode).ok); }
+  while (s.pending.length) L.resolveChoice(s, 1);
+  if (L.hour(s) < 9) L.wait(s, (9 - L.hour(s)) * 60);
+  while (s.pending.length) L.resolveChoice(s, 1);
+  const before = s.cash + s.bank, r = L.cruiseBoard(s);
+  assert.ok(r.ok, r.msg);
+  assert.equal(before - (s.cash + s.bank), L.price(s, D.CRUISE.fare));
+  assert.ok(L.cruiseAboard(s) && s.ach.cruise);
+  assert.match(L.cruiseBlock(s), /already aboard/);
+  const b2 = s.cash + s.bank; assert.ok(L.cruiseSpot(s, 'bar').ok); assert.equal(b2 - (s.cash + s.bank), L.price(s, 2500));
+  assert.ok(L.cruiseSpot(s, 'rail').ok); assert.ok(D.CRUISE.sights.some(x => s.cruise.last.indexOf(x) === 0));
+  assert.equal(L.cruiseSpot(s, 'nope').ok, false);
+  assert.ok(L.cruiseLeave(s).ok); assert.equal(L.cruiseAboard(s), false);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

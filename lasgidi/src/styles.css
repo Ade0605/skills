@@ -912,3 +912,22 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .ww-count b { font: 800 26px var(--font-body); }
 .onb-cloth i { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; vertical-align: -2px; border: 1px solid rgba(0,0,0,.2); }
 .departures > h3 .ic3d, .ww h3 .ic3d, .ww > summary .ic3d { width: 28px; height: 28px; vertical-align: middle; }
+
+/* Lagoon Boat Cruise */
+.cruise-card { margin-top: 10px; padding: 14px; border-radius: 18px; background: linear-gradient(135deg, #0f4c75, #1d7fa3); color: #fff; display: grid; gap: 8px; }
+.cruise-card .cc-top { display: flex; justify-content: space-between; font: 800 11px var(--font-body); letter-spacing: .14em; }
+.cruise-card .note { color: rgba(255,255,255,.88); margin: 0; }
+.cruise-view { position: fixed; inset: 0; z-index: 45; display: grid; grid-template-rows: 1fr auto; background: #1d7fa3; }
+.cruise-stage { position: relative; min-height: 0; }
+.cruise-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; }
+.cv-panel { margin: 0 auto 12px; width: min(680px, calc(100% - 24px)); padding: 12px; border-radius: 22px; background: var(--surface); color: var(--ink); box-shadow: 0 12px 40px rgba(0,0,0,.3); display: grid; gap: 8px; }
+.cv-head { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; }
+.cv-head small { display: block; color: var(--muted); font-size: 12px; }
+.cv-me { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; background: var(--sunk); font-size: 20px; }
+.cv-spots { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.cv-spots .act-chip { white-space: nowrap; cursor: pointer; border: 0; font: inherit; font-size: 13px; }
+.cv-spots .act-chip.on { background: #f2b600; color: #1a1500; }
+.cv-note { margin: 0; font-size: 12px; }
+@media (max-width: 520px) { .cv-head { grid-template-columns: auto 1fr auto; } .cv-head #cruise-leave { grid-column: 1 / -1; } }
+.toasts { z-index: 48; }
+body:has(#cruise-view) .toasts { top: 12px; bottom: auto; }

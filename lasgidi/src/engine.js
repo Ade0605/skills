@@ -70,6 +70,7 @@
     members_club: 'Members only: joined a waterfront club',
     hyde_park:   'Lagoon living: a home in Lekki Hyde Park',
     white_wedding: 'White wedding: church, reception and after-party',
+    cruise:      'All aboard: took the Lagoon Boat Cruise',
     gifted:      'Received a gift from another Lagosian',
     gems:        'Found all five of a day\'s gems',
     debt_free:   'Debt free: cleared every loan',
@@ -2258,6 +2259,49 @@
     return finish(s, ok('Congratulations! You married ' + p.name + '.'));
   }
 
+  /* ---------- Lagoon Boat Cruise: board (cb), then spots on deck (cs) ---------- */
+  function cruiseAboard(s) { return !!(s.cruise && s.t < s.cruise.until); }
+  function cruiseFare(s) { var C = D.CRUISE; return price(s, isDecember(s) ? C.decFare : C.fare); }
+  function cruiseBlock(s) {
+    if (cruiseAboard(s)) return 'You are already aboard';
+    if (s.loc !== D.CRUISE.district) return 'The boat leaves from ' + D.DISTRICTS[D.CRUISE.district].name;
+    if (hour(s) < 9 || hour(s) >= 21) return 'Boats sail from 9am to 9pm';
+    if (!canAfford(s, cruiseFare(s))) return 'The ticket is ' + naira(cruiseFare(s));
+    return busyBlock(s) || '';
+  }
+  function cruiseBoard(s) {
+    var why = cruiseBlock(s); if (why) return fail(why + '.');
+    s.alerts = [];
+    var C = D.CRUISE, fare = cruiseFare(s);
+    if (!pay(s, fare, 'Lagoon Boat Cruise ticket')) return fail('Not enough money.');
+    s.cruise = { until: s.t + C.mins, spot: 'rail', n: 0 };
+    applyFx(s, C.fx); unlock(s, 'cruise');
+    log(s, '🛳️ You boarded the Lagoon Boat Cruise at Five Cowries Creek.', 'good');
+    return finish(s, ok('All aboard! Move around the deck.'));
+  }
+  function cruiseSpot(s, spot) {
+    var C = D.CRUISE, P = C.spots[spot];
+    if (!P) return fail('No such spot.');
+    if (!cruiseAboard(s)) return fail('Board the boat first.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var cost = price(s, P.cost);
+    if (cost && !canAfford(s, cost)) return fail(P.name + ' costs ' + naira(cost) + '.');
+    s.alerts = [];
+    if (cost) pay(s, cost, 'Deck bar');
+    s.cruise.spot = spot; s.cruise.n = (s.cruise.n || 0) + 1;
+    if (s.cruise.n <= 6) applyFx(s, P.fx); // the deck stops giving after a while
+    advance(s, 30);
+    var line = P.text;
+    if (spot === 'rail') line = C.sights[Math.floor(rand(s) * C.sights.length)] + '.';
+    s.cruise.last = line;
+    return finish(s, ok(P.icon + ' ' + line));
+  }
+  function cruiseLeave(s) {
+    if (!s.cruise) return fail('You are not on a boat.');
+    s.cruise.until = s.t;
+    return ok('Back on the jetty.');
+  }
+
   /* ---------- white wedding: plan (ww), then hold it on the day (wh) ---------- */
   function cleanWWPlan(p) {
     var W = D.WHITE_WEDDING; if (!p || typeof p !== 'object') return null;
@@ -4406,7 +4450,7 @@
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
-    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
+    districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
     challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,

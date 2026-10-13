@@ -176,6 +176,7 @@
     });
     mountPlayground();
     mountVisit();
+    mountCruise();
     Array.prototype.forEach.call(document.querySelectorAll('canvas.ww-hall'), drawHall);
     drawHudAvatar();
     mountInterior();
@@ -392,6 +393,13 @@
           var nm = (online.names[msg.by] && online.names[msg.by].name) || 'A Lagosian';
           ui.toasts.push({ msg: msg.data.bell ? '🔔 ' + nm + ' rang your bell. They are at your party!' : '👋 ' + nm + ' waved at you.', ok: true }); scheduleRender();
         });
+        room.on('deck', function (msg) {
+          if (!msg || !msg.by || !msg.data || msg.by === online.me || online.muted[msg.by] || !S || !S.cruise || !L.cruiseAboard(S)) return;
+          if (!deckPeers().some(function (p) { return p.by === msg.by; })) return; // only people actually on deck
+          var r = CH.clean(msg.data.text); if (!r.ok) return;
+          online.deck = (online.deck || []).concat([{ by: msg.by, text: r.text, at: Date.now() }]).slice(-20);
+          mountCruise(); setTimeout(mountCruise, 7200);
+        });
         room.on('chat', function (msg) {
           if (!msg || !msg.by || !msg.data || msg.data.to !== online.me || online.muted[msg.by] || msg.by === online.me) return;
           var r = CH.clean(msg.data.text); if (!r.ok) return; // the sender's filter is not trusted
@@ -415,7 +423,7 @@
   function syncPresence() {
     if (!online.room) return;
     var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null, pt = myParty();
-    var pres = { d: d, look: lk, party: pt, at: ui.visit || null, a: S ? myActivity() : null };
+    var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : ui.visit || null, a: S ? myActivity() : null };
     var key = JSON.stringify(pres);
     if (key === online.sentLoc) return;
     online.sentLoc = key;
@@ -1385,10 +1393,76 @@
       (chips ? '<div class="act-chips">' + chips + '</div>' : '') +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
-      (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.hydepark ? hydeParkView() : '') +
+      (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.cruise ? cruiseCard() : '') + (pl.hydepark ? hydeParkView() : '') +
       (pl.id === 'airport' && !S.challenge ? japaView() : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : rideRow(pl.district));
+  }
+  /* ---------- Lagoon Boat Cruise: a ticket card on the place sheet, then a full-screen deck ---------- */
+  function cruiseCard() {
+    var C = D.CRUISE, aboard = L.cruiseAboard(S), why = L.cruiseBlock(S), n = deckPeers().length;
+    return '<section class="cruise-card"><div class="cc-top"><span>🛳️ LAGOON BOAT CRUISE</span><span>' + N(L.cruiseFare(S)) + '</span></div>' +
+      '<p class="note">Two hours on the water from Five Cowries Creek: the deck bar, the sun deck, the party deck, the captain\'s helm and the rail. ' + (n ? n + ' player' + (n === 1 ? ' is' : 's are') + ' aboard now.' : 'Board and see who else is on deck.') + '</p>' +
+      (aboard ? '<button class="btn go big-go" id="cruise-open" data-cruiseopen="1">Back on deck</button>'
+        : '<button class="btn go big-go" id="cruise-board" data-cruiseboard="1"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>Board · ' + N(L.cruiseFare(S)) + '</button>' + (why ? '<p class="why">' + esc(why) + '.</p>' : '')) + '</section>';
+  }
+  function deckPeers() {
+    return (online.peerList || []).filter(function (p) { return p.at && p.at.indexOf('cruise:') === 0 && D.CRUISE.spots[p.at.slice(7)] && !online.muted[p.by]; });
+  }
+  var cruiseStage = null, cruisePanelKey = '';
+  var CREW = [{ by: 'crew:captain', label: 'Captain', spot: 'helm', crew: true, look: { skin: 4, hair: 6, shape: 2 }, outfit: { top: 'shirt', bottom: 'trousers' } },
+    { by: 'crew:bar', label: 'Bartender', spot: 'bar', crew: true, look: { skin: 3, hair: 2, shape: 1 }, outfit: { top: 'st_ankara', bottom: 'st_jeans' } },
+    { by: 'crew:dj', label: 'DJ', spot: 'party', crew: true, look: { skin: 5, hair: 5, shape: 1 }, outfit: { top: 'crop', bottom: 'joggers' } }];
+  var STARTERS = ['st_tee', 'st_ankara', 'st_adire', 'st_asooke'];
+  function deckScene() {
+    var me = { by: online.me || 'me', label: handleOf(online.me), spot: S.cruise.spot, me: true, look: S.look, outfit: S.outfit };
+    var peers = deckPeers().slice(0, 16).map(function (p) { var h = 0; for (var i = 0; i < p.by.length; i++) h = (h * 31 + p.by.charCodeAt(i)) >>> 0; return { by: p.by, label: handleOf(p.by), spot: p.at.slice(7), look: p.look, outfit: { top: STARTERS[h % 4], bottom: ['st_jeans', 'st_chinos', 'st_wrapper'][h % 3] } }; });
+    var bubbles = {}, now = Date.now();
+    (online.deck || []).forEach(function (m) { if (now - m.at < 7000) bubbles[m.by] = m.text; });
+    var h0 = L.hour(S);
+    return { players: CREW.concat(peers, [me]), spot: S.cruise.spot, bubbles: bubbles, night: h0 >= 19 || h0 < 6 };
+  }
+  function cruisePanel() {
+    var C = D.CRUISE, peers = deckPeers(), left = Math.max(0, S.cruise.until - S.t);
+    return '<div class="cv-head">' + (photoImg(online.me, 'cv-me') || '<span class="cv-me">🙂</span>') + '<div><b>🛳️ Lagoon Boat Cruise <span class="muted">· Five Cowries Creek</span></b><small>' + esc(S.cruise.last || 'The captain sounds the horn. ' + dur(left) + ' on the water.') + '</small></div>' +
+      '<button class="btn sm ghost" id="cruise-close" data-cruiseclose="1" aria-label="Back to the map">🗺️</button><button class="btn sm ghost" id="cruise-leave" data-cruiseleave="1">Leave the boat</button></div>' +
+      '<div class="chat-send"><input id="deck-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Say something to the ' + (peers.length + 1) + ' player' + (peers.length ? 's' : '') + ' here…" aria-label="Deck chat"><button class="btn" id="deck-send" data-decksend="1" aria-label="Send">➤</button></div>' +
+      (ui.deckWhy ? '<p class="why">' + esc(ui.deckWhy) + '</p>' : '') +
+      '<div class="cv-spots">' + Object.keys(C.spots).map(function (k) { var P0 = C.spots[k], on = S.cruise.spot === k, n = peers.filter(function (p) { return p.at.slice(7) === k; }).length; return '<button type="button" class="act-chip' + (on ? ' on' : '') + '" id="spot-' + k + '" data-cruisespot="' + k + '">' + P0.icon + ' ' + esc(P0.name) + (P0.cost ? ' · ' + N(L.price(S, P0.cost)) : '') + (n ? ' · 👥' + n : '') + '</button>'; }).join('') + '</div>' +
+      '<p class="note cv-note">' + dur(left) + ' left on board. Tap a spot to move, or a player to chat. Chat is filtered and never stored.</p>';
+  }
+  function mountCruise() {
+    var ov = document.getElementById('cruise-view');
+    var want = S && S.cruise && L.cruiseAboard(S) && ui.cruiseOpen;
+    if (!want) { if (ov) ov.remove(); return; }
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'cruise-view'; ov.className = 'cruise-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Lagoon Boat Cruise');
+      if (!cruiseStage) cruiseStage = window.LasgidiCruise.create({
+        onSpot: function (k) { if (k !== S.cruise.spot) run(function () { return L.cruiseSpot(S, k); }); },
+        onPlayer: function (by) { ui.cruiseOpen = false; clearPicks(); ui.chatWith = by; online.unread[by] = 0; ui.tab = 'map'; render(); }
+      });
+      var panel = document.createElement('div'); panel.className = 'cv-panel'; panel.id = 'cv-panel';
+      ov.appendChild(cruiseStage.el); ov.appendChild(panel); document.body.appendChild(ov); cruisePanelKey = '';
+    }
+    var html = cruisePanel(), pn = document.getElementById('cv-panel');
+    if (html !== cruisePanelKey) {
+      var inp = document.getElementById('deck-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'deck-in';
+      pn.innerHTML = html; cruisePanelKey = html;
+      var ni = document.getElementById('deck-in'); if (ni) { ni.value = val; if (foc) ni.focus(); }
+    }
+    cruiseStage.update(deckScene()); cruiseStage.start();
+  }
+  function sendDeck(text) {
+    var r = CH.clean(text);
+    if (!r.ok) { ui.deckWhy = r.why; mountCruise(); return; }
+    var wait = CH.canSend(online.sentTimes, Date.now());
+    if (wait) { ui.deckWhy = wait; mountCruise(); return; }
+    ui.deckWhy = '';
+    online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
+    online.deck = (online.deck || []).concat([{ by: online.me || 'me', text: r.text, at: Date.now() }]).slice(-20);
+    var ni = document.getElementById('deck-in'); if (ni) ni.value = '';
+    if (online.room) online.room.emit('deck', { text: r.text }).catch(function () {});
+    mountCruise();
   }
   /* ---------- white wedding planner: venue, planner, aso-ebi, vendors, theme, decor, extras, after-party ---------- */
   function wwDraft() { return ui.ww || (ui.ww = { venue: 'ikeja_centre', planner: 'standard', asoebi: 'family', vendors: 'classic', theme: 'gold_white', decor: 'elegant', extras: ['arch'], after: 'lounge' }); }
@@ -2979,7 +3053,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-joinclub],[data-clubact],[data-hpbuild],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3291,6 +3365,12 @@
     }
     if (ds.ridemode) { ui.rideMode = ds.ridemode; render(); return; }
     if (ds.chatopen) { clearPicks(); ui.chatWith = ds.chatopen; online.unread[ds.chatopen] = 0; ui.tab = 'map'; render(); return; }
+    if (ds.cruiseboard) { run(function () { var r = L.cruiseBoard(S); if (r.ok) ui.cruiseOpen = true; return r; }); syncPresence(); return; }
+    if (ds.cruiseopen) { ui.cruiseOpen = true; render(); return; }
+    if (ds.cruisespot) { var csp = ds.cruisespot; if (S.cruise && S.cruise.spot === csp) return; run(function () { return L.cruiseSpot(S, csp); }); syncPresence(); return; }
+    if (ds.cruiseleave) { ui.cruiseOpen = false; run(function () { return L.cruiseLeave(S); }); syncPresence(); return; }
+    if (ds.cruiseclose) { ui.cruiseOpen = false; render(); return; }
+    if (ds.decksend) { var di = document.getElementById('deck-in'); sendDeck(di ? di.value : ''); return; }
     if (ds.hpbuild) { var hz = ds.hpbuild; run(function () { return L.hpBuild(S, hz); }); return; }
     if (ds.joinclub) { var jc = ds.joinclub.split(':'); run(function () { return L.joinClub(S, jc[0], jc[1]); }); return; }
     if (ds.clubact) { var ca = ds.clubact.split(':'); run(function () { return L.clubAct(S, ca[0], ca[1]); }); return; }
@@ -3417,6 +3497,7 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target && e.target.id === 'deck-in') { e.preventDefault(); sendDeck(e.target.value); return; }
     if (e.key === 'Enter' && e.target && e.target.id === 'chat-in' && ui.chatWith) { e.preventDefault(); sendChat(ui.chatWith, e.target.value); return; }
     if (S && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target.matches && e.target.matches('input, textarea, select'))) {
       var tabs = ['do', 'map', 'home', 'work', 'money', 'me', 'gist'];

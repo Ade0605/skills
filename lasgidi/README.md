@@ -332,6 +332,12 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - motor yachts: Riva, Azimut, Ferretti, Sunseeker, Princess, Pershing;
     - superyachts: Benetti, Heesen, Sanlorenzo, Feadship, Lürssen, Oceanco;
     - sailing yachts: Royal Huisman, Perini Navi.
+- **Lagoon Boat Cruise:** board at Five Cowries Creek in Ikoyi (₦8,000, or ₦20,000 in December, 9am–9pm) and step onto a full-screen deck.
+  - **The deck:** a wooden boat on the lagoon with a deck bar, the captain's wheelhouse under a "LAGOON CRUISE" sign, sun-deck loungers, a colour-changing dance floor, speakers and a stern rail.
+  - **Who's there:** online players aboard stand at their spot with their @handle, with a crew of captain, bartender and DJ.
+  - **Moving around:** tap a spot (Captain's helm, Sun deck, Deck bar, Party deck, The rail) to move there, or tap a player to chat.
+  - **Deck chat:** say something to everyone aboard. It shows as speech bubbles, uses the same filter as player chat, and only accepts messages from people actually on deck.
+  - **Recording:** new recorded calls `cb`, `cs` and `cl`. The deck's mood boosts taper off after six moves.
 - **Members-only waterfront clubs:** four clubs by the water, each with a gold membership card, a joining fee and a **weekly** membership. There are two ways in: **high net worth** (₦80m–₦500m depending on the club), or a **referral**, where a member vouches for you once your status points or Charisma are high enough. Once you're a member, the club's own activities open up. Renewing costs just the week; let it lapse and the doors close.
   - **Tidewater House:** by the water on Ademola Street, Ikoyi. House music, wood-fired pizza, boats tying up at the jetty, the pregame before the clubs, and a Sunday day party on the deck.
   - **Five Cowries Jet Ski Club:** in Ikoyi. Club skis on the lagoon and a Saturday race night.

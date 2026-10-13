@@ -838,6 +838,7 @@
     { id: 'ph_bole', icon: '🐟', name: 'Bole and fish spot', type: 'food', glyph: 'bowl', district: 'ph_oldgra', x: 13.4, y: 15.8, acts: ['ph_bole', 'ph_bolegame'], text: 'Roasted plantain and fish with pepper sauce. A PH classic. Mama lets you work the grill for a share of sales.' },
     { id: 'ph_isaac', icon: '🌳', name: 'Isaac Boro Park', type: 'outdoors', glyph: 'tree', district: 'ph_oldgra', x: 15.0, y: 14.0, acts: ['ph_isaac', 'ph_oldgra_gig'], text: 'Old trees and quiet paths in the old town.' },
     { id: 'lekki_hyde_park', icon: '🏡', name: 'Lekki Hyde Park', type: 'outdoors', glyph: 'estate', district: 'lekki', x: 31.6, y: 23.85, acts: ['lekki_hp_walk', 'lekki_hp_tennis'], hydepark: true, nogem: true, text: 'A gated estate by the lagoon, off the Lekki–Epe Expressway: terraces, semis, Celebrity Row, Billionaire Row and a private islet. Buy ready-built or build your own.' },
+    { id: 'lagoon_cruise', icon: '🛳️', name: 'Lagoon Boat Cruise', type: 'outdoors', glyph: 'yacht', district: 'ikoyi', x: 20.2, y: 21.05, acts: [], cruise: true, nogem: true, text: 'A party boat out of Five Cowries Creek: a deck bar, a sun deck, a dance floor and the captain at the helm. Board, then move around the deck with other players.' },
     { id: 'club_tidewater', icon: '🍕', name: 'Tidewater House (members only)', type: 'nightlife', glyph: 'club', district: 'ikoyi', x: 21.4, y: 20.6, acts: [], club: 'tidewater', nogem: true, text: 'Members only, by the water on Ademola Street.' },
     { id: 'club_jetski', icon: '🌊', name: 'Five Cowries Jet Ski Club', type: 'outdoors', glyph: 'club', district: 'ikoyi', x: 19.9, y: 20.7, acts: [], club: 'jetski', nogem: true, text: 'A members\' pontoon on the lagoon.' },
     { id: 'club_yacht', icon: '🛥️', name: 'Atlantic Marina Yacht Club', type: 'outdoors', glyph: 'yacht', district: 'vi', x: 14.2, y: 29.4, acts: [], club: 'yacht', nogem: true, text: 'Members only, at the Eko Atlantic marina.' },
@@ -1351,6 +1352,18 @@
     freestyle:{ name: 'Freestyle', text: 'No goal. Just survive Lagos.' }
   };
 
+  // Lagoon Boat Cruise: board at the Ikoyi jetty, then move between spots on deck (a shared scene).
+  var CRUISE = {
+    place: 'lagoon_cruise', district: 'ikoyi', fare: 8000, decFare: 20000, mins: 120, fx: { fun: 30, social: 20, stress: -12 },
+    spots: {
+      helm: { name: "Captain's helm", icon: '☸️', cost: 0, fx: { fun: 10 }, text: 'The captain lets you hold the wheel for a minute.' },
+      sun: { name: 'Sun deck', icon: '☀️', cost: 0, fx: { stress: -8, energy: 5 }, text: 'You stretch out on a lounger in the breeze.' },
+      bar: { name: 'Deck bar', icon: '🍹', cost: 2500, fx: { hunger: 15, fun: 8 }, text: 'Chapman with plenty of ice.' },
+      party: { name: 'Party deck', icon: '🪩', cost: 0, fx: { fun: 18, social: 12, energy: -10 }, text: 'Afrobeats on the speakers, everyone dancing.' },
+      rail: { name: 'The rail', icon: '🌊', cost: 0, fx: { stress: -5, fun: 5 }, text: 'The skyline slides past over the water.' }
+    },
+    sights: ['A superyacht just sailed past', 'Fishermen wave from a canoe', 'The Third Mainland Bridge glows in the distance', 'A jet ski races the boat', 'Banana Island mansions line the shore']
+  };
   // A Lagos white wedding: plan it (book a Saturday at least four weeks out, pay 30%), then hold it on the day.
   var WHITE_WEDDING = {
     leadDays: 28, deposit: 0.3,
@@ -1405,7 +1418,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
   };
 
