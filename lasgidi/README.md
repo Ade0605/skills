@@ -291,6 +291,19 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 
 - **Profile photos:** add a photo of yourself on the Me tab so other players can recognise you on the map, in their district and in the Hall of Fame. An editor approves each photo before anyone else sees it, and you can hide yours at any time.
 - **Prime homes:** buy a home in Lagos's top addresses: a detached duplex in Nicon Town (Lekki Phase 1) for ₦250m, a luxury apartment in Victoria Island for ₦400m, a penthouse in Eko Atlantic for ₦900m, a mansion in Parkview, Ikoyi for ₦1.5bn, or a waterfront mansion on Banana Island for ₦4bn. You can live in it or let it out, and either way you pay a weekly estate service charge. Each one adds status, and Banana Island unlocks an achievement.
+- **Luxury catalogue** at Lekki luxury motors, grouped by tier. Makes and models are named only to describe the item; there's no affiliation with any maker. Weekly upkeep covers insurance, servicing and the hangar, berth and crew, and each one adds status.
+  - **Cars, ultra-luxury:** Rolls-Royce Phantom, Cullinan and Ghost; Bentley Bentayga and Continental GT; Ferrari SF90, Roma and Purosangue; Lamborghini Urus and Revuelto; Aston Martin DBX; McLaren 750S; Bugatti Chiron.
+  - **Cars, premium:** Mercedes S-Class, G 63 and Maybach S 680; BMW 7 Series and X7; Audi A8 and Q8; Porsche 911 and Cayenne; Range Rover Autobiography; Lexus LX 600; Cadillac Escalade.
+  - **Jets:**
+    - light: Phenom 300E, Citation Latitude, PC-24;
+    - midsize: Praetor 600;
+    - heavy: G650ER, Global 6500;
+    - ultra-long-range: G700, G800, Global 7500 and 8000, Falcon 6X, 8X and 10X;
+    - VIP airliners: BBJ, ACJ.
+  - **Yachts:**
+    - motor yachts: Riva, Azimut, Ferretti, Sunseeker, Princess, Pershing;
+    - superyachts: Benetti, Heesen, Sanlorenzo, Feadship, Lürssen, Oceanco;
+    - sailing yachts: Royal Huisman, Perini Navi.
 - **Members-only waterfront clubs:** four clubs by the water, each with a gold membership card, a joining fee and a **weekly** membership. There are two ways in: **high net worth** (₦80m–₦500m depending on the club), or a **referral**, where a member vouches for you once your status points or Charisma are high enough. Once you're a member, the club's own activities open up. Renewing costs just the week; let it lapse and the doors close.
   - **Tidewater House:** by the water on Ademola Street, Ikoyi. House music, wood-fired pizza, boats tying up at the jetty, the pregame before the clubs, and a Sunday day party on the deck.
   - **Five Cowries Jet Ski Club:** in Ikoyi. Club skis on the lagoon and a Saturday race night.

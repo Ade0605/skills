@@ -1263,12 +1263,12 @@
     var kinds = [['car', '🚗 Cars'], ['bus', '🚐 Commercial'], ['boat', '🚤 Boats'], ['heli', '🚁 Helicopters'], ['jet', '🛩️ Jets']];
     var kind = ui.vehKind || 'car';
     html += (note ? '<p class="note">' + esc(note) + '</p>' : '') + '<div class="pg-chips" style="padding:0">' + kinds.map(function (k) { return '<button type="button" class="pg-chip' + (k[0] === kind ? ' sel' : '') + '" id="vk-' + k[0] + '" data-vehkind="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div><div class="list">' +
-      Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind; }).map(function (k) {
-        var V = D.VEHICLES[k], p = L.price(S, V.price), own = S.vehicles.filter(function (v) { return v.id === k; }).length;
-        var what = V.kind === 'car' ? 'Top speed ' + V.speed + ' km/h on clear roads' : V.kind === 'boat' ? 'Use the jetties without waiting' : V.kind === 'heli' ? 'Anywhere in Lagos in about 30 minutes, ' + N(L.price(S, V.trip)) + ' a trip' : V.kind === 'bus' ? 'Danfo Runs with no owner\'s returns, or a driver for weekly returns (and risks)' : 'Weekends abroad from the airport';
-        return '<div class="item dl-car">' + vehPic(k) + '<div><h3>' + esc(V.name) + (own ? ' <span class="muted">· own ' + own + '</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(what) + '</span><span>Upkeep ' + N(L.vehicleUpkeep(S, k)) + '/wk</span><span>+' + V.status + ' status</span></div></div>' +
+      (function () { var TO = Object.keys(D.VEHICLE_TIERS), last = null; return Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind; }).sort(function (a, b) { var A = D.VEHICLES[a], B = D.VEHICLES[b]; return (A.tier ? TO.indexOf(A.tier) + 1 : 0) - (B.tier ? TO.indexOf(B.tier) + 1 : 0) || A.price - B.price; }).map(function (k) { var tr = D.VEHICLES[k].tier || '', h = tr !== last ? '<div class="dl-tier">' + esc(tr ? D.VEHICLE_TIERS[tr] : 'Classic range') + '</div>' : ''; last = tr; return [k, h]; }); })().map(function (kh) {
+        var k = kh[0], V = D.VEHICLES[k], p = L.price(S, V.price), own = S.vehicles.filter(function (v) { return v.id === k; }).length;
+        var what = V.kind === 'car' ? 'Top speed ' + V.speed + ' km/h on clear roads' : V.kind === 'boat' ? 'Use the jetties without waiting' : V.kind === 'heli' ? 'Anywhere in Lagos in about 30 minutes, ' + N(L.price(S, V.trip)) + ' a trip' : V.kind === 'bus' ? 'Danfo Runs with no owner\'s returns, or a driver for weekly returns (and risks)' : 'Fly it from any airport\'s Departures board; upkeep covers the hangar and crew';
+        return kh[1] + '<div class="item dl-car">' + vehPic(k) + '<div><h3>' + esc(V.name) + (own ? ' <span class="muted">· own ' + own + '</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(what) + '</span><span>Upkeep ' + N(L.vehicleUpkeep(S, k)) + '/wk</span><span>+' + V.status + ' status</span></div></div>' +
           '<button class="btn sm" id="buyv-' + k + '" data-buyveh="' + k + '"' + (wallet >= p && S.vehicles.length < 12 ? '' : ' disabled') + '>Buy</button></div>';
-      }).join('') + '</div>';
+      }).join('') + '</div>' + (kind === 'car' || kind === 'jet' || kind === 'boat' ? '<p class="note">Makes and models are named only to describe what you buy. Lasgidi is not affiliated with any maker. Upkeep covers insurance, servicing' + (kind === 'jet' ? ', the hangar and crew' : kind === 'boat' ? ', the marina berth and crew' : '') + '.</p>' : '');
     return html;
   }
 

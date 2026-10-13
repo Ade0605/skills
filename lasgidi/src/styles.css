@@ -819,3 +819,4 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .club-way { min-width: 0; }
 .club-way .btn { white-space: normal; height: auto; min-height: 36px; line-height: 1.2; padding: 6px 10px; }
 @media (max-width: 420px) { .club-ways { grid-template-columns: 1fr; } }
+.dl-tier { margin: 12px 0 2px; font: 800 11px var(--font-body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
