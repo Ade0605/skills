@@ -16,11 +16,13 @@
   // Everything else is water: the Lagoon between them, the harbour channel,
   // and the Atlantic to the south.
   var MAINLAND = [[-2, -1], [31, -1], [34, 2.5], [32, 5.6], [24, 6.4], [17.4, 6.6], [16.6, 10], [17.2, 14], [17, 17.8], [14.2, 19.4], [11.4, 20.6], [7, 21.2], [2, 20.8], [-2, 20]];
+  // Eko Atlantic: reclaimed land off Bar Beach, south of VI, joined to it by a bridge.
+  var EKO = [[13.6, 27.9], [19.4, 27.9], [19.8, 28.4], [19.8, 30.6], [13.4, 30.6], [13.2, 28.4]];
   var ISLAND = [[14.4, 21], [17.8, 19.9], [21.6, 19.8], [25.6, 21.4], [33, 22.4], [43, 22.6], [51.4, 22.4], [51.8, 25.8], [43, 26.6], [33, 26.9], [24, 26.9], [20.6, 27.1], [17.6, 26.4], [16, 24.2], [14.2, 22.6]];
   var CREEK = [[17.2, 23.1], [21.4, 22.6], [21.6, 23.3], [17.4, 23.8]]; // Five Cowries creek between the Island and VI
   // Each city in its own frame: land polygons, water carved out of them, and the drawing box.
   var GEO = {
-    lagos: { box: [-2, 52, -1, 30], land: [MAINLAND, ISLAND], water: [CREEK], label: [] },
+    lagos: { box: [-2, 52, -1, 31], land: [MAINLAND, ISLAND, EKO], water: [CREEK], label: [] },
     abuja: { box: [-2, 34, -2, 28], land: [[[-2, -2], [34, -2], [34, 28], [-2, 28]]],
       water: [[[4.6, 12.8], [6.4, 12.4], [8.8, 12.9], [9.4, 14.0], [8.2, 15.0], [5.6, 14.9], [4.4, 14.0]]], label: [['Jabi Lake', 6.9, 13.8]] },
     ph: { box: [-2, 32, -2, 26], land: [[[-2, -2], [32, -2], [32, 8], [28, 12.5], [25, 17.5], [20.5, 21], [16.5, 21.6], [12, 21.2], [6, 19.8], [-2, 19]]],
@@ -177,7 +179,22 @@
   });
   buildings = buildings.filter(function (b) { return !nearEstate(b.x, b.y) && !inMainlandEstate(b.x, b.y); });
   trees = trees.filter(function (t) { return !nearEstate(t.x, t.y) && !inMainlandEstate(t.x, t.y) && !inSite(city, t.x, t.y); });
-  buildings = buildings.filter(function (b) { return !inSite(city, b.x, b.y); });
+  buildings = buildings.filter(function (b) { return !inSite(city, b.x, b.y) && !(city === 'lagos' && inPoly(b.x, b.y, EKO)); });
+  trees = trees.filter(function (t) { return !(city === 'lagos' && inPoly(t.x, t.y, EKO)); });
+  if (city === 'lagos') {
+    // Eko Atlantic: a row of glass towers on the waterfront, the boulevard, then streets of villas, all spaced out.
+    var tints = ['#5f8fb8', '#4f9a9a', '#e4e6e8', '#3d6e8f', '#7aa7c7', '#c9b99a'];
+    for (var ex = 14.3, ei = 0; ex < 19.4; ex += 1.25, ei++) {
+      buildings.push({ x: ex, y: 28.45, w: 0.5, dep: 0.45, h: 34 + hash(ei, 3, 21) * 26, k: 'vi', roof: '#9fb3c4', wall: tints[ei % tints.length], glass: true, tall: true, seed: hash(ei, 3, 22) });
+    }
+    var vroofs = ['#b9643f', '#3f6f8f', '#7a8f3f', '#8f3f5a', '#c9a227'];
+    for (var vy = 29.7, vr = 0; vy < 30.45; vy += 0.6, vr++) {
+      for (var vx = 13.95, vc = 0; vx < 19.6; vx += 0.62, vc++) {
+        buildings.push({ x: vx, y: vy, w: 0.4, dep: 0.34, h: 3.5 + hash(vc, vr, 23) * 1.5, k: 'vi', roof: vroofs[Math.floor(hash(vc, vr, 24) * vroofs.length)], wall: '#f2efe8', pitch: true, rise: 3.5, seed: hash(vc, vr, 25) });
+      }
+    }
+    for (var px2 = 13.95; px2 < 19.6; px2 += 0.7) trees.push({ x: px2, y: 29.18, s: 0.9 });
+  }
   ESTATES.forEach(function (e, ei) {
     var m = e.m, nx = m.n[0], ny = m.n[1];
     for (var i = 0; i < nx; i++) for (var j = 0; j < ny; j++) {
@@ -401,7 +418,7 @@
       g.beginPath(); g.ellipse(sc.x, sc.y, STADIUM.rx * TW * s * 0.8, STADIUM.ry * TH * s * 0.8, 0, 0, Math.PI * 2);
       g.fillStyle = theme.dark ? '#3c6a3a' : '#6aa357'; g.fill();
       g.lineWidth = 3 * s; g.strokeStyle = theme.dark ? '#7b7f86' : '#d8d4c8'; g.stroke();
-      drawRefinery(g, s); drawNewAirport(g, s);
+      drawRefinery(g, s); drawNewAirport(g, s); drawEko(g, s);
       }
 
       // Estate plots: a paved pad, lawns for duplexes and the mansion, a pool.
@@ -605,6 +622,27 @@
       g.strokeStyle = theme.dark ? '#77756d' : '#b9b4a6'; g.lineWidth = Math.max(2, 3 * s); g.beginPath(); g.moveTo(j0.x, j0.y); g.lineTo(j1.x, j1.y); g.stroke();
       sign(g, s, 50.2, 24.85, 'LAGOS OIL REFINERY', 'COMING SOON');
     }
+    function drawEko(g, s) {
+      // The boulevard and cross streets, the sea wall promenade, then the bridge to VI.
+      poly(g, [[13.4, 28.95], [19.8, 28.95], [19.8, 29.3], [13.4, 29.3]], theme.road);
+      for (var cx = 14.6; cx < 19.6; cx += 1.7) poly(g, [[cx, 28.0], [cx + 0.16, 28.0], [cx + 0.16, 30.55], [cx, 30.55]], theme.road);
+      g.strokeStyle = '#ffffff'; g.lineWidth = Math.max(0.5, 0.6 * s); g.setLineDash([3 * s, 3 * s]);
+      var b0 = toScreen(13.5, 29.12, 0), b1 = toScreen(19.7, 29.12, 0); g.beginPath(); g.moveTo(b0.x, b0.y); g.lineTo(b1.x, b1.y); g.stroke(); g.setLineDash([]);
+      poly(g, [[13.4, 30.45], [19.8, 30.45], [19.8, 30.6], [13.4, 30.6]], theme.dark ? '#6d6a60' : '#e6dcc2'); // the Great Wall promenade
+      // Bridge: deck, railings and two cable-stayed pylons.
+      var x0 = 18.25, x1 = 18.75, y0 = 26.75, y1 = 28.05;
+      poly(g, [[x0 - 0.05, y0], [x1 + 0.05, y0], [x1 + 0.05, y1], [x0 - 0.05, y1]], theme.dark ? '#3b3e44' : '#c8ccd2');
+      poly(g, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], theme.road);
+      g.strokeStyle = '#ffffff'; g.lineWidth = Math.max(0.5, 0.6 * s); g.setLineDash([2 * s, 2 * s]);
+      var m0 = toScreen(18.5, y0, 0), m1 = toScreen(18.5, y1, 0); g.beginPath(); g.moveTo(m0.x, m0.y); g.lineTo(m1.x, m1.y); g.stroke(); g.setLineDash([]);
+      [x0 - 0.05, x1 + 0.05].forEach(function (rx) { var r0 = toScreen(rx, y0, 0), r1 = toScreen(rx, y1, 0); g.strokeStyle = theme.dark ? '#aeb4bb' : '#6b7280'; g.lineWidth = Math.max(0.8, 1 * s); g.beginPath(); g.moveTo(r0.x, r0.y - 1.5 * s); g.lineTo(r1.x, r1.y - 1.5 * s); g.stroke(); });
+      [[x0 - 0.05, 27.4], [x1 + 0.05, 27.4]].forEach(function (pp) {
+        var b = toScreen(pp[0], pp[1], 0), ph = 22 * s;
+        g.strokeStyle = '#e8eef3'; g.lineWidth = Math.max(1.5, 2.2 * s); g.beginPath(); g.moveTo(b.x, b.y); g.lineTo(b.x, b.y - ph); g.stroke();
+        g.strokeStyle = 'rgba(232,238,243,.8)'; g.lineWidth = Math.max(0.4, 0.45 * s);
+        for (var k = 1; k <= 4; k++) { [pp[1] - k * 0.14, pp[1] + k * 0.14].forEach(function (cy) { var c = toScreen(pp[0], cy, 0); g.beginPath(); g.moveTo(b.x, b.y - ph * (0.5 + k * 0.12)); g.lineTo(c.x, c.y - 1.5 * s); g.stroke(); }); }
+      });
+    }
     function drawNewAirport(g, s) {
       // Laid out in local coordinates (x 44.2–51.2, y 25.1–27.3), then moved to its real spot beside Murtala Muhammed in Ikeja.
       var o0 = toScreen(0, 0, 0), o1 = toScreen(AIRPORT_AT.x - NEW_AIRPORT.x0, AIRPORT_AT.y - NEW_AIRPORT.y0, 0);
@@ -704,7 +742,7 @@
       g.fillStyle = shade(b.wall, -0.1); g.fill();
       if (b.pitch) {
         // A gabled roof: ridge along x, two slopes and a gable end.
-        var rise = Math.max(3, b.dep * 30) * s;
+        var rise = (b.rise || Math.max(3, b.dep * 30)) * s;
         var mL = { x: (f.p0.x + f.p3.x) / 2, y: (f.p0.y + f.p3.y) / 2 - up - rise }, mR = { x: (f.p1.x + f.p2.x) / 2, y: (f.p1.y + f.p2.y) / 2 - up - rise };
         g.beginPath(); g.moveTo(f.p0.x, f.p0.y - up); g.lineTo(f.p1.x, f.p1.y - up); g.lineTo(mR.x, mR.y); g.lineTo(mL.x, mL.y); g.closePath();
         g.fillStyle = shade(b.roof, -0.18); g.fill();

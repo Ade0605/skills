@@ -334,6 +334,7 @@
     ikeja_duplex: { name: 'Duplex, Ikeja GRA', district: 'ikeja', rent: 80000, power: 0.85, sleep: 1.1, type: 'duplex', x: 8.6, y: 2.6, daily: { stress: -3 }, perk: 'A quiet compound with its own generator.' },
     lekki_duplex: { name: '4-bed duplex, Lekki', district: 'lekki', rent: 110000, power: 0.85, sleep: 1.1, type: 'duplex', x: 31.2, y: 24.4, daily: { stress: -3 }, perk: 'Gated estate with security and an inverter.' },
     ikoyi_apt:    { name: 'Serviced flat, Ikoyi', district: 'ikoyi', rent: 150000, power: 0.95, sleep: 1.1, type: 'luxury', x: 19.2, y: 20.6 },
+    eko_apartment: { name: 'Apartment, Eko Atlantic', district: 'vi', rent: 320000, power: 1, sleep: 1.15, type: 'luxury', x: 15.6, y: 29.7, daily: { stress: -5, fun: 2 }, perk: 'Steady power, wide streets that don\'t flood, and the sea wall promenade at your door.' },
     vi_penthouse: { name: 'Penthouse, Victoria Island', district: 'vi', rent: 260000, power: 0.98, sleep: 1.15, type: 'luxury', x: 20.8, y: 25.4, daily: { stress: -4, fun: 3 }, perk: '24-hour power, a gym and a view of the Atlantic.' },
     abj_kubwa_selfcon: { name: 'Self-con, Kubwa', district: 'abj_kubwa', rent: 6000, power: 0.55, sleep: 0.9, type: 'selfcon', x: 5.2, y: 2.6 },
     abj_nyanya_room:   { name: 'Room in Nyanya', district: 'abj_nyanya', rent: 3000, power: 0.45, sleep: 0.85, type: 'room', x: 27.2, y: 17.0 },
@@ -573,6 +574,8 @@
       { id: 'island_ewa', label: 'Ewa agoyin and bread', mins: 30, cost: 1300, fx: { hunger: 45 } }
     ],
     vi: [
+      { id: 'vi_eko_walk', label: 'Walk the Eko Atlantic sea wall at sunset', mins: 90, cost: 0, fx: { fun: 18, stress: -14, energy: -6 }, sight: true, when: { from: 16, to: 19 } },
+      { id: 'vi_eko_brunch', label: 'Brunch on the Eko Atlantic boulevard', mins: 120, cost: 25000, fx: { fun: 22, social: 25, hunger: 50 }, when: { days: [5, 6], from: 11, to: 15 } },
       { id: 'vi_terra', label: 'Terra Kulture: an exhibition, a play and Nigerian food', mins: 180, cost: 9000, fx: { fun: 35, hunger: 45, social: 15 }, xp: { charisma: 1 }, sight: true, when: { from: 11, to: 22 } },
       { id: 'vi_beachvolley', label: 'Beach volleyball on Bar Beach', mins: 90, fx: { fun: 30, social: 20, energy: -15, hygiene: -15 }, xp: { fitness: 2 }, sport: 'beachvolley', when: { from: 15, to: 19 } },
       { id: 'vi_darts', label: 'Darts and the match on the big screen at a sports bar', mins: 120, cost: 4000, fx: { fun: 30, social: 25 }, sport: 'darts', when: { from: 17, to: 24 } },
@@ -772,6 +775,7 @@
     { id: 'tbs', icon: '🏟️', name: 'Tafawa Balewa Square', type: 'culture', glyph: 'dome', district: 'island', x: 16.6, y: 22.7, acts: ['island_dec_tbs', 'island_dec_food'], nogem: true, text: 'The old parade ground fills with December concerts and a food village of jollof, suya and ofada.' },
     { id: 'refinery_site', icon: '🏗️', name: 'Lagos oil refinery (under construction)', type: 'services', glyph: 'tool', district: 'ajah', x: 47.6, y: 23.9, acts: ['ajah_ref_labour', 'ajah_ref_tour'], nogem: true, text: 'Tanks, columns and cranes rising out of the sand in Ibeju-Lekki. Coming soon. Contractors take day labourers at the gate before 9am.' },
     { id: 'new_airport_site', icon: '🛫', name: 'New Lagos international airport (under construction)', type: 'transport', glyph: 'plane', district: 'ikeja', x: 4.4, y: 3.2, acts: ['ikeja_newair_labour', 'ikeja_newair_tour'], nogem: true, text: 'A second runway, a glass terminal and red steel frames going up beside Murtala Muhammed, with five gates for Abuja and Port Harcourt. Coming soon: no flights yet. Day labour at the gate before 9am.' },
+    { id: 'eko_atlantic_city', icon: '🌆', name: 'Eko Atlantic City', type: 'outdoors', glyph: 'wave', district: 'vi', x: 16.9, y: 30.2, acts: ['vi_eko_walk', 'vi_eko_brunch'], nogem: true, text: 'The new city on land won back from the Atlantic: glass towers on the waterfront, villas behind, and the sea wall promenade. Cross the bridge from VI.' },
     { id: 'ajah_resort', icon: '🏝️', name: 'Beach resort, Ajah coast', type: 'outdoors', glyph: 'wave', district: 'ajah', x: 38.8, y: 26.0, acts: ['ajah_dec_rave'], nogem: true, text: 'DJs from noon, swimming, lounging and a beach rave that runs into the night all December.' },
     { id: 'lagoon_jetty', icon: '🛥️', name: 'Lagoon jetty', type: 'transport', glyph: 'boat', district: 'ikoyi', x: 20.6, y: 21.8, acts: ['ikoyi_dec_cruise', 'ikoyi_dec_yacht', 'ikoyi_ilashe'], nogem: true, text: 'Boat cruises across the lagoon in December, with yacht parties for the big spenders.' },
     { id: 'link_bridge', icon: '🎆', name: 'Lekki–Ikoyi Link Bridge', type: 'outdoors', glyph: 'wave', district: 'lekki', x: 26.8, y: 23.4, acts: ['lekki_dec_nye', 'lekki_dec_pool'], nogem: true, text: 'The cable-stayed bridge where Lagos counts down to the New Year with fireworks.' },
@@ -893,7 +897,7 @@
   // taken by hash() are lived in already; the rest are for sale, one per player.
   // Sea Plots: a grid of small plots in the water off Lagos Island. Players buy
   // a block and fill it with a picture (after review), like a million-naira homepage.
-  var SEA = { name: 'Sea Plots', x0: 13, y0: 27.6, cols: 64, rows: 18, gap: 0.3, price: 5000, maxSide: 12 };
+  var SEA = { name: 'Sea Plots', x0: 21.2, y0: 27.6, cols: 64, rows: 18, gap: 0.3, price: 5000, maxSide: 12 };
   var ESTATE = { name: 'Mainland Estate', district: 'ikeja', x0: 13.6, y0: 0.4, cols: 18, rows: 6, gap: 0.5, home: 'estate_own', property: 'estate_house' };
 
   // Named roads (by district pair) and streets inside districts.
@@ -918,7 +922,7 @@
   // Big names painted on the ground: [text, x, y, size in km].
   var AREA_LABELS = [
     ['MAINLAND', 6.5, 12.5, 1.2], ['THE ISLAND', 15.0, 25.6, 0.8], ['IKOYI', 20.6, 22.6, 0.55], ['BANANA ISLAND', 23.6, 21.2, 0.45],
-    ['LEKKI', 33.0, 24.8, 0.9], ['SEA PLOTS · ₦5,000 A PLOT', 22.6, 27.2, 0.42], ['MAINLAND ESTATE', 18.0, 3.7, 0.55], ['AIRPORT', 6.4, 1.9, 0.5], ['IBEJU-LEKKI', 47.6, 22.3, 0.6],
+    ['LEKKI', 33.0, 24.8, 0.9], ['SEA PLOTS · ₦5,000 A PLOT', 30.8, 27.25, 0.42], ['EKO ATLANTIC', 16.6, 31.2, 0.7], ['MAINLAND ESTATE', 18.0, 3.7, 0.55], ['AIRPORT', 6.4, 1.9, 0.5], ['IBEJU-LEKKI', 47.6, 22.3, 0.6],
     ['ABUJA', 19.0, 20.5, 1.2, 'abuja'], ['JABI LAKE', 6.6, 13.6, 0.45, 'abuja'], ['ASO ROCK', 22.6, 7.6, 0.5, 'abuja'], ['AIRPORT', 6.2, 25.6, 0.5, 'abuja'],
     ['PORT HARCOURT', 17.0, 6.0, 1.0, 'ph'], ['BONNY RIVER', 15.0, 23.4, 0.7, 'ph'], ['AIRPORT', 4.2, -0.2, 0.5, 'ph']
   ];
@@ -934,7 +938,16 @@
     { id: 'marina', traffic: 1.2, name: 'Marina, Lagos Island', district: 'island', x: 16.1, y: 23.5 },
     { id: 'ozumba', traffic: 1.6, name: 'Ozumba Mbadiwe, VI', district: 'vi', x: 20.4, y: 24.2 },
     { id: 'lekki_toll', traffic: 1.7, name: 'Lekki toll gate', district: 'lekki', x: 25.6, y: 22.9 },
-    { id: 'ajah_rb', traffic: 0.9, name: 'Ajah roundabout', district: 'ajah', x: 36.7, y: 24.3 }
+    { id: 'ajah_rb', traffic: 0.9, name: 'Ajah roundabout', district: 'ajah', x: 36.7, y: 24.3 },
+    { id: 'eko_blvd', traffic: 1.6, name: 'Eko Atlantic boulevard', district: 'vi', x: 16.4, y: 28.75 },
+    { id: 'eko_bridge', traffic: 1.5, name: 'Eko Atlantic bridge, VI end', district: 'vi', x: 17.9, y: 26.4 },
+    { id: 'obalende', traffic: 1.3, name: 'Obalende motor park', district: 'island', x: 17.2, y: 21.4 },
+    { id: 'ikoyi_link', traffic: 1.4, name: 'Ikoyi Link Bridge', district: 'ikoyi', x: 21.6, y: 21.4 },
+    { id: 'admiralty', traffic: 1.5, name: 'Admiralty Way, Lekki Phase 1', district: 'lekki', x: 27.0, y: 23.4 },
+    { id: 'stadium_rd', traffic: 1.0, name: 'National Stadium, Surulere', district: 'surulere', x: 10.4, y: 17.0 },
+    { id: 'sabo', traffic: 1.1, name: 'Sabo, Yaba', district: 'yaba', x: 14.6, y: 14.2 },
+    { id: 'airport_rd', traffic: 1.2, name: 'Airport Road, Ikeja', district: 'ikeja', x: 9.0, y: 6.0 },
+    { id: 'idi_araba', traffic: 0.9, name: 'Idi-Araba, Mushin', district: 'mushin', x: 11.8, y: 12.2 }
   ];
   // How long an ad runs and the price multiple (longer runs are cheaper per day).
   var AD_PLANS = {
