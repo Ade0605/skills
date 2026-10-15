@@ -99,10 +99,13 @@
     return '#' + c(r) + c(g) + c(b);
   }
   function iso(x, y) { return { x: (x - y) * TW / 2, y: (x + y) * TH / 2 }; }
-  // Spin: the view turns in 90° steps about the city's centre. World coordinates never change; only the view does.
-  var ROT = 0, RCX = 0, RCY = 0;
-  function rot(x, y, r) { var dx = x - RCX, dy = y - RCY; for (var i = 0; i < (r == null ? ROT : r); i++) { var t = dx; dx = dy; dy = -t; } return { x: RCX + dx, y: RCY + dy }; }
-  function unrot(x, y) { return rot(x, y, (4 - ROT) % 4); }
+  // Spin and spread. The view turns by any angle about the city's centre, and the land is drawn SPREAD times
+  // bigger while buildings, trees and pins keep their size, so places stand further apart. World coordinates, and so
+  // every distance, fare and travel time in the game, never change: only the drawing does.
+  var ANG = 0, SPREAD = 2, RCX = 0, RCY = 0;
+  function rotV(dx, dy) { var c = Math.cos(ANG), s = Math.sin(ANG); return { x: dx * c + dy * s, y: -dx * s + dy * c }; }
+  function rot(x, y) { var v = rotV(x - RCX, y - RCY); return { x: SPREAD * (RCX + v.x), y: SPREAD * (RCY + v.y) }; }
+  function unrot(vx, vy) { var dx = vx / SPREAD - RCX, dy = vy / SPREAD - RCY, c = Math.cos(ANG), s = Math.sin(ANG); return { x: RCX + dx * c - dy * s, y: RCY + dx * s + dy * c }; }
   function isoR(x, y) { var q = rot(x, y); return iso(q.x, q.y); }
   function depth(x, y) { var q = rot(x, y); return q.x + q.y; }
   function landBox() {
@@ -115,18 +118,17 @@
       });
     });
   }
-  // Which world neighbour sits on a tile's view-front edges (+x and +y in the view) for the current spin.
-  var DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-  function frontDirs() {
-    var out = [];
-    [[1, 0], [0, 1]].forEach(function (v) { var dx = v[0], dy = v[1]; for (var i = 0; i < (4 - ROT) % 4; i++) { var t = dx; dx = dy; dy = -t; } for (var k = 0; k < 4; k++) if (DIRS[k][0] === dx && DIRS[k][1] === dy) out.push(k); });
-    return out;
+  // The corner of every tile nearest the camera, for the current angle (all tiles share it).
+  function frontCorner() {
+    var cs = [[0, 0], [1, 0], [1, 1], [0, 1]], best = 0, bd = -1e9;
+    cs.forEach(function (c, i) { var v = rotV(c[0], c[1]); if (v.x + v.y > bd + 1e-9) { bd = v.x + v.y; best = i; } });
+    return best;
   }
-  function sortWorld() {
+  function sortWorld(fast) {
     tiles.sort(function (a, b) { return depth(a.x + 0.5, a.y + 0.5) - depth(b.x + 0.5, b.y + 0.5); });
     buildings.sort(function (a, b) { return depth(a.x, a.y) - depth(b.x, b.y); });
     trees.sort(function (a, b) { return depth(a.x, a.y) - depth(b.x, b.y); });
-    landBox();
+    if (!fast) landBox();
   }
   function shade(hex, f) {
     var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
@@ -326,8 +328,8 @@
     })();
     var scene = null, theme = null, staticLayer = null, staticKey = '';
     var W = 0, H = 0, dpr = 1, cam = { z: 1, px: 0, py: 0 }, base = { s: 1, ox: 0, oy: 0 };
-    try { var sp0 = +(root.localStorage && root.localStorage.getItem('lasgidi.spin.v1')); if (sp0 >= 1 && sp0 <= 3) { ROT = sp0; sortWorld(); } } catch (e) {}
-    var opened = false, OPEN_ZOOM = 2.4;
+    try { var sp0 = parseFloat(root.localStorage && root.localStorage.getItem('lasgidi.spin.v2')); if (isFinite(sp0) && sp0) { ANG = sp0; sortWorld(); } } catch (e) {}
+    var opened = false, OPEN_ZOOM = 4;
     // 3D icon pictures (src/icons.js), drawn inside the pins when they have loaded.
     var ICON_IMG = {};
     function iconImg(key) {
@@ -455,12 +457,17 @@
       }
       // Ground tiles and shoreline cliffs.
       var cliff = 5;
-      var fd = frontDirs();
+      // Tile corners c0 (x,y) c1 (x+1,y) c2 (x+1,y+1) c3 (x,y+1); edge i runs ci→c(i+1) and borders the N, E, S, W neighbour.
+      var fc = frontCorner(), EDGE_NB = [3, 0, 1, 2];
+      var eA = fc, eB = (fc + 3) % 4; // the two edges that meet at the front corner
       tiles.forEach(function (t) {
-        var vc = rot(t.x + 0.5, t.y + 0.5), vx = vc.x - 0.5, vy = vc.y - 0.5;
-        var pts = [toScreenV(vx, vy, 0), toScreenV(vx + 1, vy, 0), toScreenV(vx + 1, vy + 1, 0), toScreenV(vx, vy + 1, 0)];
-        g.beginPath(); g.moveTo(pts[0].x, pts[0].y); g.lineTo(pts[1].x, pts[1].y); g.lineTo(pts[2].x, pts[2].y); g.lineTo(pts[3].x, pts[3].y); g.closePath();
-        var eR = t.wat ? t.wat[fd[0]] : t.edgeR, eL = t.wat ? t.wat[fd[1]] : t.edgeL;
+        var w = [[t.x, t.y], [t.x + 1, t.y], [t.x + 1, t.y + 1], [t.x, t.y + 1]].map(function (c) { return toScreen(c[0], c[1], 0); });
+        g.beginPath(); g.moveTo(w[0].x, w[0].y); g.lineTo(w[1].x, w[1].y); g.lineTo(w[2].x, w[2].y); g.lineTo(w[3].x, w[3].y); g.closePath();
+        // pts: [far, right neighbour, front, left neighbour] in screen terms, as the cliff code below expects.
+        var f0 = w[fc], na = w[(fc + 1) % 4], nb = w[(fc + 3) % 4], rightA = na.x > nb.x;
+        var pts = [w[(fc + 2) % 4], rightA ? na : nb, f0, rightA ? nb : na];
+        var wA = t.wat ? t.wat[EDGE_NB[eA]] : false, wB = t.wat ? t.wat[EDGE_NB[eB]] : false;
+        var eR = rightA ? wA : wB, eL = rightA ? wB : wA;
         var fill = t.sand ? theme.sand : t.k ? (t.d < (STYLE[t.k].r - 0.6) ? theme.soil : theme.land) : theme.land2;
         if (scene.flood && t.k && D.DISTRICTS[t.k].side === 'island' && t.v < 0.55) fill = theme.water;
         g.fillStyle = t.v < 0.5 ? fill : shade(fill.charAt(0) === '#' ? fill : '#888888', theme.dark ? 0.03 : -0.03);
@@ -913,9 +920,13 @@
       return { x: (p.x * s) + base.ox * cam.z - (W / 2) * (cam.z - 1) + cam.px, y: ((p.y - (z || 0)) * s) + base.oy * cam.z - (H / 2) * (cam.z - 1) + cam.py };
     }
     function boxFaces(b, s) {
-      // Corners in view space, so the two faces drawn are always the ones facing the camera whatever the spin.
-      var odd = ROT % 2 === 1, hw = (odd ? b.dep : b.w) / 2, hd = (odd ? b.w : b.dep) / 2, c = rot(b.x, b.y);
-      var p0 = toScreenV(c.x - hw, c.y - hd, 0), p1 = toScreenV(c.x + hw, c.y - hd, 0), p2 = toScreenV(c.x + hw, c.y + hd, 0), p3 = toScreenV(c.x - hw, c.y + hd, 0);
+      // Corners in view space at the building's true size, labelled so p2 is the corner nearest the camera, p1 and p3
+      // its neighbours (p1 to the right on screen) and p0 the far corner. The faces drawn then always face the camera.
+      var hw = b.w / 2, hd = b.dep / 2, c = rot(b.x, b.y);
+      var vs = [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(function (o) { var v = rotV(o[0], o[1]); return { x: c.x + v.x, y: c.y + v.y }; });
+      var fi = 0; for (var q = 1; q < 4; q++) if (vs[q].x + vs[q].y > vs[fi].x + vs[fi].y + 1e-9) fi = q;
+      var na = vs[(fi + 1) % 4], nb = vs[(fi + 3) % 4], right = (na.x - na.y) > (nb.x - nb.y);
+      var p2 = toScreenV(vs[fi].x, vs[fi].y, 0), p1 = toScreenV(right ? na.x : nb.x, right ? na.y : nb.y, 0), p3 = toScreenV(right ? nb.x : na.x, right ? nb.y : na.y, 0), p0 = toScreenV(vs[(fi + 2) % 4].x, vs[(fi + 2) % 4].y, 0);
       var up = b.h * s;
       return { p0: p0, p1: p1, p2: p2, p3: p3, up: up };
     }
@@ -1459,7 +1470,7 @@
     function schedule() { if (!raf) raf = root.requestAnimationFrame(frame); }
 
     // Pointer: tap a pin to select; drag to pan; pinch, wheel or double-tap to zoom.
-    var drag = null, touches = {}, pinch = null, lastTap = 0, MAXZ = 12;
+    var drag = null, touches = {}, pinch = null, lastTap = 0, MAXZ = 24;
     function zoomAt(z, fx, fy) {
       z = Math.max(1, Math.min(MAXZ, z));
       var wpt = fromScreen(fx, fy);
@@ -1474,10 +1485,10 @@
       var ids = Object.keys(touches);
       if (ids.length === 2) {
         var a = touches[ids[0]], b = touches[ids[1]];
-        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: cam.z };
+        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: cam.z, a: Math.atan2(b.y - a.y, b.x - a.x), ang: ANG, turned: false };
         drag = null; return;
       }
-      drag = { x: e.clientX, y: e.clientY, px: cam.px, py: cam.py, moved: false };
+      drag = { x: e.clientX, y: e.clientY, px: cam.px, py: cam.py, moved: false, turn: e.shiftKey || e.button === 2, ang: ANG };
       canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener('pointermove', function (e) {
@@ -1485,15 +1496,24 @@
       if (pinch) {
         var ids = Object.keys(touches); if (ids.length < 2) return;
         var a = touches[ids[0]], b = touches[ids[1]], d = Math.hypot(a.x - b.x, a.y - b.y);
+        // Two-finger twist turns the map (after a small dead zone, so a plain pinch doesn't wobble it).
+        var da = Math.atan2(b.y - a.y, b.x - a.x) - pinch.a; da = Math.atan2(Math.sin(da), Math.cos(da));
+        if (pinch.turned || Math.abs(da) > 0.12) { pinch.turned = true; setAngle(pinch.ang - da, false); }
         zoomAt(pinch.z * d / pinch.d, (a.x + b.x) / 2, (a.y + b.y) / 2);
         return;
       }
       if (!drag) return;
       var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
+      if (drag.moved && drag.turn) { setAngle(drag.ang - dx * 0.008, false); return; } // Shift+drag or right-drag turns the map
       if (drag.moved && cam.z > 1) { cam.px = drag.px + dx; cam.py = drag.py + dy; clampCam(); staticKey = ''; kick(); }
     });
-    function lift(e) { delete touches[e.pointerId]; if (Object.keys(touches).length < 2 && pinch) { pinch = null; drag = { moved: true }; } }
+    function lift(e) {
+      delete touches[e.pointerId];
+      if (Object.keys(touches).length < 2 && pinch) { if (pinch.turned) setAngle(ANG, true); pinch = null; drag = { moved: true }; }
+      else if (drag && drag.turn && drag.moved) setAngle(ANG, true);
+    }
+    canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     canvas.addEventListener('pointercancel', function (e) { lift(e); drag = null; });
     canvas.addEventListener('wheel', function (e) {
       // Only take the wheel when it zooms: at full zoom in or out, let the page scroll.
@@ -1551,13 +1571,27 @@
       if (bestPlace && opts.onSelectPlace) opts.onSelectPlace(bestPlace);
       else if (best && opts.onSelect) opts.onSelect(best);
     });
-    // Spin in 90° steps, keeping whatever is in the middle of the screen in the middle.
-    function spin(dir) {
-      var mid = fromScreen(W / 2, H / 2), z = cam.z;
-      ROT = (ROT + dir + 4) % 4; sortWorld(); W = 0; resize();
-      cam.z = z; cam.px = 0; cam.py = 0; var p = toScreen(mid.x, mid.y, 0); cam.px = W / 2 - p.x; cam.py = H / 2 - p.y; clampCam();
+    // Spin to any angle, keeping the middle of the screen in the middle and the scale steady.
+    var spinning = null;
+    function setAngle(a, settle) {
+      var mid = fromScreen(W / 2, H / 2), scale = base.s * cam.z;
+      ANG = ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      sortWorld(!settle);
+      if (settle) { W = 0; resize(); cam.z = Math.max(1, Math.min(MAXZ, scale / base.s)); try { root.localStorage && root.localStorage.setItem('lasgidi.spin.v2', String(ANG)); } catch (e) {} }
+      cam.px = 0; cam.py = 0; var p = toScreen(mid.x, mid.y, 0); cam.px = W / 2 - p.x; cam.py = H / 2 - p.y; clampCam();
       staticKey = ''; kick();
-      try { root.localStorage && root.localStorage.setItem('lasgidi.spin.v1', String(ROT)); } catch (e) {}
+    }
+    function spin(dir) {
+      // dir +1 turns the map clockwise on screen (the ⟳ arrow); a larger ANG turns it anticlockwise.
+      var from = ANG, to = Math.round((ANG - dir * Math.PI / 2) / (Math.PI / 2)) * (Math.PI / 2);
+      if (reduce) { setAngle(to, true); return; }
+      if (spinning) root.cancelAnimationFrame(spinning);
+      var t0 = 0, D = 350;
+      var step = function (ts) {
+        if (!t0) t0 = ts; var u = Math.min(1, (ts - t0) / D), e = 1 - Math.pow(1 - u, 3);
+        setAngle(from + (to - from) * e, u >= 1); spinning = u < 1 ? root.requestAnimationFrame(step) : null;
+      };
+      spinning = root.requestAnimationFrame(step);
     }
     zoom.addEventListener('click', function (e) {
       var sp = e.target.closest('[data-spin]'); if (sp) { spin(+sp.getAttribute('data-spin')); return; }
