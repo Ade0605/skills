@@ -1508,13 +1508,18 @@
       (pl.dealer ? dealerView() : '') +
       (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.cruise ? cruiseCard() : '') + roomCardFor(pl.id) + (pl.hydepark ? hydeParkView() : '') +
       (pl.id === 'airport' && !S.challenge ? japaView() : '') +
-      (pl.hr ? hrCard(pl) : '') + (pl.shares ? sharesCard(pl) : '') +
+      hrCards(pl) + (pl.shares ? sharesCard(pl) : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : rideRow(pl.district));
   }
   // A workplace's HR desk: the career it hires for, with an Apply button when you are there.
-  function hrCard(pl) {
-    var cid = pl.hr, c = D.CAREERS[cid]; if (!c) return '';
+  // Each career's workplace: the place in its district where you clock in, and whose HR desk hires for it.
+  var CAREER_PLACE = { dispatch: 'airport', phones: 'cv', trader: 'balogun', buka: 'mamaput', danfo: 'oshodi_hub', tech: 'hub', bank: 'banks', music: 'studio', civil: 'abj_cbd', consult: 'abj_millennium',
+    oil: 'ph_yards', ajah_refinery: 'refinery_site', fitness: 'lekki_gym', abj_trader: 'abj_wuse_market', abj_driver: 'abj_cbd', abj_hotel: 'abj_millennium', ph_docks: 'ph_bonny_pl', ph_fishing: 'ph_mile1', ph_hotel: 'ph_garden', ph_teacher: 'ph_uniport' };
+  function careersAt(pl) { return Object.keys(D.CAREERS).filter(function (k) { return (CAREER_PLACE[k] === pl.id && D.CAREERS[k].district === pl.district) || pl.hr === k; }); }
+  function hrCards(pl) { return careersAt(pl).map(function (k) { return hrCard(pl, k); }).join(''); }
+  function hrCard(pl, cid) {
+    cid = cid || pl.hr; var c = D.CAREERS[cid]; if (!c) return '';
     var e = L.jobEligibility(S, cid), mine = S.job && S.job.id === cid;
     var days = c.days.map(function (d) { return D.DAYS[d]; }).join(', ');
     return '<div class="section"><h3>🧑‍💼 HR office · ' + esc(c.name) + '</h3><p class="note">Starts as ' + esc(c.titles[0]) + ' on ' + N(c.pay[0]) + ' a shift, ' + pad(c.start) + ':00–' + pad(c.end) + ':00, ' + esc(days) + '. Needs ' + esc(D.SKILLS[c.skill]) + ' ' + c.req[0] + '. Top grade: ' + esc(c.titles[c.titles.length - 1]) + '.</p>' +
@@ -1877,11 +1882,13 @@
   }
   function venueActs(pl) {
     var here = S.loc === pl.district, avail = here ? L.availableActions(S) : [];
-    return pl.acts.map(function (aid) {
+    var shift = here && S.job && careersAt(pl).indexOf(S.job.id) >= 0 ? avail.filter(function (x) { return x.id === 'work_shift'; })[0] : null;
+    var out = shift ? [{ id: 'work_shift', def: { label: shift.label }, a: shift, icon: '💼', short: 'Clock in', off: !!shift.disabled }] : [];
+    return out.concat(pl.acts.map(function (aid) {
       var def = (D.PLACE_ACTIONS[pl.district] || []).filter(function (x) { return x.id === aid; })[0]; if (!def) return null;
       var a = avail.filter(function (x) { return x.id === aid; })[0];
       return { id: aid, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
-    }).filter(Boolean);
+    }).filter(Boolean));
   }
   function venueScene(pl) {
     var set = venueSet(pl), hr = Math.floor(S.t / 60), crew = VENUE_CREW[set], seed = pl.id + ':' + hr, n = 3 + vHash(seed, 1) % 4, acts = venueActs(pl), slots = Math.max(1, Math.min(8, acts.length));
@@ -1897,12 +1904,12 @@
     var commuters = [0, 1].map(function (k) { var st = venueStranger(pl.id + ':c', k); return { look: st.look, outfit: st.outfit, hat: set === 'refinery' ? '#f2c200' : null, vest: set === 'refinery' ? '#f39c12' : null }; });
     // While the ride view is still up, hold the arrival (and keep you off the yard) until it closes.
     var riding = !!document.getElementById('ride-view'), here = S.loc === pl.district && !riding, trip = !riding && ui.trip && ui.trip.to === pl.district && Date.now() - ui.trip.at < 120000 ? ui.trip : null;
-    var worksHere = S.job && D.CAREERS[S.job.id] && pl.hr === S.job.id, h0 = L.hour(S);
+    var worksHere = S.job && careersAt(pl).indexOf(S.job.id) >= 0, h0 = L.hour(S), bub = ui.venueBubble && ui.venueBubble.place === pl.id && Date.now() - ui.venueBubble.at < 7000 ? ui.venueBubble.text : null;
     return {
       name: pl.name, set: set, acts: acts, people: people, commuters: commuters, night: h0 >= 19 || h0 < 6,
       sign: pl.name.toUpperCase().slice(0, 30), signBg: set === 'refinery' ? '#1f3b63' : set === 'nightlife' ? '#8e24aa' : '#1f3b63',
       shuttle: set === 'refinery' ? 'staff' : set === 'airport' || set === 'govt' || set === 'estate' || set === 'dealer' ? 'cab' : set === 'stadium' || set === 'campus' ? 'brt' : ['danfo', 'keke', 'okada', 'cab'][vHash(pl.id, 3) % 4],
-      me: here ? { look: S.look, outfit: S.outfit, extra: myExtra(), label: 'You', me: true, say: venueSay(pl.id, online.me || 'me'), hat: set === 'refinery' && (worksHere || ui.venueSlot != null) ? '#ffffff' : null } : null,
+      me: here ? { look: S.look, outfit: S.outfit, extra: myExtra(), label: worksHere ? 'You · ' + D.CAREERS[S.job.id].titles[S.job.level] : 'You', me: true, say: venueSay(pl.id, online.me || 'me') || bub, vest: worksHere ? (set === 'hospital' ? '#2fa36b' : '#f39c12') : null, hat: (set === 'refinery' || set === 'workshop') && (worksHere || ui.venueSlot != null) ? '#ffffff' : null } : null,
       meSlot: ui.venueSlot != null ? ui.venueSlot : Math.min(5, slots - 1),
       arrive: trip && VENUE_RIDES[trip.mode] ? trip.mode : null, arriveKey: trip ? 'trip:' + trip.at : ''
     };
@@ -1932,7 +1939,7 @@
       (here ? '<p class="note">Tap a sign in the yard, or a person to hear them. Workers and visitors come in by ' + esc({ refinery: 'staff bus', airport: 'cab' }[venueSet(pl)] || 'danfo, keke and okada') + ' all day.</p>' +
         '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; }).join('') + '</div>'
         : '<p class="note">You are in ' + esc(D.DISTRICTS[S.loc].name) + '. Take a ride to ' + esc(D.DISTRICTS[pl.district].name) + ': it pulls up at the gate and you walk in.</p>' + rideRow(pl.district)) +
-      (pl.hr ? hrCard(pl) : '') + (pl.shares ? sharesCard(pl) : '') + (S.loc === pl.district ? venueChatView(pl) : '');
+      hrCards(pl) + (pl.shares ? sharesCard(pl) : '') + (S.loc === pl.district ? venueChatView(pl) : '');
   }
   function mountVenue() {
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
@@ -1943,7 +1950,7 @@
         var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0], x = p0 && venueActs(p0)[i]; if (!x) return;
         if (S.loc !== p0.district) { ui.toasts.push({ msg: 'Ride to ' + D.DISTRICTS[p0.district].name + ' first, then walk in.', ok: false }); renderToasts(); return; }
         if (!x.a || x.a.disabled) { ui.toasts.push({ msg: (x.a && x.a.disabled) || (x.def.when ? 'Open ' + whenText(x.def.when) : 'Not open now'), ok: false }); renderToasts(); return; }
-        ui.venueSlot = i; run(function () { var r = L.doAction(S, x.id); if (r && r.ok) { ui.activity = activityFor(x.id); ui.activityAt = Date.now(); } return r; });
+        ui.venueSlot = i; run(function () { var r = L.doAction(S, x.id); if (r && r.ok) { ui.activity = activityFor(x.id); ui.activityAt = Date.now(); if (x.id === 'work_shift') ui.venueBubble = { place: p0.id, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; });
       } });
       var pn = document.createElement('div'); pn.className = 'cv-panel ap-panel'; pn.id = 'venue-panel'; ov.appendChild(venueStage.el); ov.appendChild(pn); document.body.appendChild(ov); venueKey = '';
     }
@@ -2637,7 +2644,8 @@
       var c = D.CAREERS[S.job.id], need = L.promotionNeeds(S);
       var skillLvl = L.skillLevel(S, c.skill);
       var avg = S.job.shifts ? S.job.perfSum / S.job.shifts : 0;
-      html += '<div class="section" style="padding-top:0"><h3>' + esc(c.titles[S.job.level]) + ' · ' + esc(c.name) + '</h3>' +
+      var wp = D.PLACES.filter(function (p) { return p.id === CAREER_PLACE[S.job.id] || p.hr === S.job.id; })[0];
+      html += '<div class="section" style="padding-top:0"><h3>' + esc(c.titles[S.job.level]) + ' · ' + esc(c.name) + '</h3>' + (wp ? '<p><button type="button" class="btn sm" id="work-venue" data-venue="' + wp.id + '">🚪 See your workplace: ' + esc(wp.name) + '</button></p>' : '') +
         '<dl class="kv"><dt>Where</dt><dd>' + esc(D.DISTRICTS[c.district].name) + '</dd><dt>Shift</dt><dd class="num">' + pad(c.start) + ':00–' + pad(c.end) + ':00 · ' + c.days.map(function (d) { return D.DAYS[d]; }).join(' ') + '</dd>' +
         '<dt>Pay per shift</dt><dd class="num">' + N(Math.round(c.pay[S.job.level] * S.econ.wage / 50) * 50) + '</dd>' +
         '<dt>Strikes</dt><dd class="num">' + S.job.missed + ' / 3</dd>' +
@@ -3858,7 +3866,7 @@
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
     if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
-    if (ds.act) { var aid0 = ds.act; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { ui.activity = activityFor(aid0); ui.activityAt = Date.now(); } return r; }); return; }
+    if (ds.act) { var aid0 = ds.act; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { ui.activity = activityFor(aid0); ui.activityAt = Date.now(); if (aid0 === 'work_shift' && ui.venueOpen) ui.venueBubble = { place: ui.venueOpen, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
     if (ds.interview !== undefined) { ui.interview = ds.interview || null; render(); return; }
