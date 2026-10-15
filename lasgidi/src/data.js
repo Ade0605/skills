@@ -163,6 +163,14 @@
   ];
   // Job interviews (rules 13) for the degree careers: [question, options, right answer].
   var INTERVIEWS = {
+    ph_teacher: [
+      ['Half the class failed the test. What do you do first?', ['Find out which topics they missed and reteach them', 'Give the same test again tomorrow', 'Report the class to the principal'], 0],
+      ['A pupil is always sleeping in class. You…', ['Talk to them and their parents to find out why', 'Make them stand outside', 'Ignore it'], 0],
+      ['What is a lesson note for?', ['Planning what to teach, how, and how to check they learnt it', 'Showing the inspector you came to work', 'Copying from the textbook'], 0],
+      ['A parent offers you money to raise their child\'s grade. You…', ['Refuse politely and tell the head teacher', 'Take it this once', 'Ask for more'], 0],
+      ['There are 60 pupils and 20 textbooks. You…', ['Group them to share, and put key notes on the board', 'Teach only those with books', 'Send the rest home'], 0],
+      ['Why do continuous assessments matter?', ['They show progress during the term, not only at exams', 'They fill the report card', 'They do not matter'], 0]
+    ],
     bank: [
       ['A customer wants to open an account. What do you ask for first?', ['A valid ID and BVN', 'Their salary slip', 'A reference letter from their pastor'], 0],
       ['A customer is shouting about a failed transfer. You…', ['Calm them, check the transaction and log a complaint', 'Tell them to go home and come back tomorrow', 'Call security at once'], 0],
@@ -392,6 +400,12 @@
     ph_rumuokoro_room: { name: 'Room in Rumuokoro', district: 'ph_rumuokoro', rent: 2800, power: 0.4, sleep: 0.85, type: 'room', x: 13.6, y: 4.8 },
     ph_dline_selfcon:  { name: 'Self-con, D-Line', district: 'ph_dline', rent: 7000, power: 0.5, sleep: 0.9, type: 'selfcon', x: 8.2, y: 16.0 },
     ph_gra_flat:       { name: '3-bed flat, GRA Phase 2', district: 'ph_gra', rent: 40000, power: 0.75, sleep: 1.05, type: 'flat3', x: 12.4, y: 9.8 },
+    abj_kubwa_rp:      { name: 'Room and parlour, Kubwa', district: 'abj_kubwa', rent: 9000, power: 0.55, sleep: 0.95, type: 'miniflat', x: 4.4, y: 3.4 },
+    abj_garki_flat:    { name: '2-bed flat, Garki Area 11', district: 'abj_garki', rent: 38000, power: 0.8, sleep: 1, type: 'flat2', x: 15.8, y: 15.4 },
+    abj_jabi_flat:     { name: 'Mini flat by Jabi Lake', district: 'abj_jabi', rent: 22000, power: 0.7, sleep: 1, type: 'miniflat', x: 6.0, y: 11.6, daily: { stress: -1 } },
+    ph_choba_room:     { name: 'Student room, Choba', district: 'ph_choba', rent: 3500, power: 0.45, sleep: 0.85, type: 'room', x: 2.6, y: 6.6 },
+    ph_dline_flat:     { name: '2-bed flat, D-Line', district: 'ph_dline', rent: 18000, power: 0.6, sleep: 1, type: 'flat2', x: 9.0, y: 15.2 },
+    ph_oldgra_bungalow:{ name: 'Bungalow, Old GRA', district: 'ph_oldgra', rent: 45000, power: 0.75, sleep: 1.05, type: 'flat3', x: 13.8, y: 15.0 },
     ph_oldgra_duplex:  { name: 'Duplex, Old GRA', district: 'ph_oldgra', rent: 90000, power: 0.85, sleep: 1.1, type: 'duplex', x: 14.6, y: 16.2, daily: { stress: -3 } },
     // Lekki Hyde Park: a gated estate on the lagoon side of the Lekki–Epe Expressway, in five zones.
     hp_terrace_own: { name: 'Your terrace, Garden Row, Lekki Hyde Park', district: 'lekki', rent: 0, power: 0.9, sleep: 1.1, type: 'duplex', owned: true, ownedBy: 'hp_terrace', hydepark: true, x: 31.4, y: 23.7, daily: { stress: -3 }, perk: 'Garden Row: neat terraces by the estate park. Rich, quietly.' },
@@ -457,7 +471,29 @@
       pay: [7500, 13000, 22000, 42000, 85000], req: [1, 3, 5, 7, 9] },
     fitness:  { name: 'Fitness', district: 'lekki', skill: 'fitness', start: 6, end: 12, days: [0,1,2,3,4,5],
       titles: ['Gym Assistant', 'Trainer', 'Head Coach', 'Gym Owner', 'Fitness Icon'],
-      pay: [5000, 8000, 13500, 24000, 45000], req: [1, 3, 5, 7, 9] }
+      pay: [5000, 8000, 13500, 24000, 45000], req: [1, 3, 5, 7, 9] },
+    // Abuja and Port Harcourt careers. Pay sits at or below the Lagos equivalents.
+    abj_trader:  { name: 'Market Trading (Abuja)', district: 'abj_wuse', skill: 'hustle', start: 7, end: 17, days: [0,1,2,3,4,5],
+      titles: ['Market Boy/Girl', 'Stall Hand', 'Stall Owner', 'Wholesaler', 'Market Chief'],
+      pay: [4200, 6500, 10500, 17500, 32000], req: [0, 2, 4, 6, 9] },
+    abj_driver:  { name: 'Ministry Driving', district: 'abj_garki', skill: 'hustle', start: 7, end: 16, days: [0,1,2,3,4],
+      titles: ['Pool Driver', 'Director\'s Driver', 'Head of Transport', 'Fleet Manager', 'Logistics Contractor'],
+      pay: [4800, 7000, 11000, 18000, 30000], req: [1, 3, 5, 7, 9] },
+    abj_hotel:   { name: 'Hospitality (Abuja)', district: 'abj_maitama', skill: 'charisma', start: 14, end: 23, days: [0,2,3,4,5,6],
+      titles: ['Waiter', 'Front Desk', 'Events Lead', 'Hotel Manager', 'Hotelier'],
+      pay: [4500, 7500, 12000, 21000, 38000], req: [0, 2, 4, 6, 9] },
+    ph_docks:    { name: 'Port Work', district: 'ph_borokiri', skill: 'fitness', start: 6, end: 15, days: [0,1,2,3,4,5],
+      titles: ['Dock Hand', 'Crane Banksman', 'Shift Foreman', 'Terminal Supervisor', 'Shipping Agent'],
+      pay: [4500, 7200, 11500, 19000, 34000], req: [0, 2, 4, 6, 9] },
+    ph_fishing:  { name: 'Fishing Cooperative', district: 'ph_dline', skill: 'craft', start: 5, end: 13, days: [0,1,2,3,4,5,6],
+      titles: ['Net Mender', 'Boat Crew', 'Boat Captain', 'Cold Room Owner', 'Fish Merchant'],
+      pay: [3800, 6000, 9500, 16000, 28000], req: [0, 2, 4, 6, 8] },
+    ph_hotel:    { name: 'Hospitality (PH)', district: 'ph_gra', skill: 'charisma', start: 14, end: 23, days: [0,2,3,4,5,6],
+      titles: ['Waiter', 'Front Desk', 'Events Lead', 'Hotel Manager', 'Hotelier'],
+      pay: [4500, 7500, 12000, 21000, 38000], req: [0, 2, 4, 6, 9] },
+    ph_teacher:  { name: 'Teaching', district: 'ph_choba', skill: 'tech', degree: true, start: 7, end: 15, days: [0,1,2,3,4],
+      titles: ['Classroom Teacher', 'Senior Teacher', 'Head of Department', 'Vice Principal', 'Principal'],
+      pay: [6000, 9000, 14000, 22000, 36000], req: [1, 3, 5, 7, 9] }
   };
 
   // Effects: needs deltas (hunger, energy, fun, social, hygiene, stress), xp, earn, cost.
@@ -1233,7 +1269,9 @@
     ikeja: { mult: 1.1, rent: 15000 }, ikorodu: { mult: 0.85, rent: 4000 }, oshodi: { mult: 1.05, rent: 8000 },
     mushin: { mult: 0.9, rent: 5000 }, festac: { mult: 0.95, rent: 7000 }, surulere: { mult: 1.0, rent: 9000 },
     yaba: { mult: 1.05, rent: 12000 }, island: { mult: 1.1, rent: 14000 }, ikoyi: { mult: 1.2, rent: 35000 },
-    vi: { mult: 1.25, rent: 40000 }, lekki: { mult: 1.25, rent: 30000 }, ajah: { mult: 0.95, rent: 8000 }
+    vi: { mult: 1.25, rent: 40000 }, lekki: { mult: 1.25, rent: 30000 }, ajah: { mult: 0.95, rent: 8000 },
+    abj_wuse: { mult: 1.1, rent: 16000 }, abj_garki: { mult: 1.05, rent: 14000 }, abj_kubwa: { mult: 0.85, rent: 4500 },
+    ph_gra: { mult: 1.1, rent: 15000 }, ph_dline: { mult: 1.0, rent: 8000 }, ph_rumuokoro: { mult: 0.9, rent: 5000 }
   };
   // Upgrades: what each business becomes at levels 2 and 3, and its emoji on the map.
   var BUSINESS_GROWTH = {

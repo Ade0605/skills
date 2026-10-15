@@ -2491,3 +2491,27 @@ test('rules 16: quitting and re-applying keeps today\'s shift and missed strikes
   assert.ok(L.applyJob(s, cid, true).ok);
   assert.equal(s.job.missed, 2); assert.equal(s.job.lastShift, L.day(s));
 });
+
+test('Abuja and PH: new careers, homes and business sites are valid and live in their own city', () => {
+  const add = { careers: ['abj_trader', 'abj_driver', 'abj_hotel', 'ph_docks', 'ph_fishing', 'ph_hotel', 'ph_teacher'], homes: ['abj_kubwa_rp', 'abj_garki_flat', 'abj_jabi_flat', 'ph_choba_room', 'ph_dline_flat', 'ph_oldgra_bungalow'], sites: ['abj_wuse', 'abj_garki', 'abj_kubwa', 'ph_gra', 'ph_dline', 'ph_rumuokoro'] };
+  for (const k of add.careers) { const c = D.CAREERS[k]; assert.ok(c && D.DISTRICTS[c.district] && D.SKILLS[c.skill] && c.pay.length === 5 && c.titles.length === 5 && c.req.length === 5, k); assert.notEqual(L.districtCity(c.district), 'lagos'); }
+  for (const k of add.homes) { const h = D.HOMES[k]; assert.ok(h && D.DISTRICTS[h.district] && D.HOME_TYPES[h.type] && h.rent > 0, k); assert.notEqual(L.districtCity(h.district), 'lagos'); }
+  for (const k of add.sites) { assert.ok(D.BUSINESS_SITES[k] && D.DISTRICTS[k], k); assert.notEqual(L.districtCity(k), 'lagos'); }
+  assert.ok(D.INTERVIEWS.ph_teacher.length >= 5);
+});
+
+test('Port Harcourt life: dock job, a shift, the D-Line flat and a D-Line business, replayed to its seal', () => {
+  const r = L.newGame({ seed: 101, origin: 'nepo', goal: 'freestyle' }); const done = () => { while (r.pending.length) L.resolveChoice(r, 1); };
+  done();
+  const go = (d) => { if (r.loc === d) return; const o = L.travelOptions(r, d).filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(o && L.travel(r, d, o.mode).ok, 'to ' + d); done(); };
+  go('ikeja'); assert.ok(L.intercity(r, 'ph', 'flight').ok); done();
+  go('ph_borokiri'); assert.ok(L.applyJob(r, 'ph_docks').ok, L.jobEligibility(r, 'ph_docks').reason); done();
+  for (let i = 0; i < 48 && !L.availableActions(r).some(a => a.id === 'work_shift' && !a.disabled); i++) { L.wait(r, 60); done(); if (r.loc !== 'ph_borokiri') go('ph_borokiri'); }
+  const b0 = r.cash + r.bank; assert.ok(L.doAction(r, 'work_shift').ok); done(); assert.ok(r.cash + r.bank > b0, 'paid for the shift');
+  r.cash += 0; go('ph_dline');
+  const mv = L.moveHouse(r, 'ph_dline_flat'); done();
+  const biz = L.buyBusiness(r, 'pos', 'ph_dline'); done();
+  assert.ok(mv.ok, mv.msg); assert.equal(r.home, 'ph_dline_flat');
+  assert.ok(biz.ok, biz.msg); assert.equal(r.businesses[0].site, 'ph_dline');
+  assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});

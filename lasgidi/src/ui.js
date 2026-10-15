@@ -2513,7 +2513,7 @@
     var site = ui.bizSite || (D.BUSINESS_SITES[S.loc] ? S.loc : 'surulere'), sd = D.BUSINESS_SITES[site];
     html += '<details' + (S.businesses.length && !ui.bizOpen ? '' : ' open') + '><summary>Build a business</summary>' +
       '<div class="inline"><label class="label" for="biz-site">Site</label><select id="biz-site">' + Object.keys(D.BUSINESS_SITES).map(function (k) {
-        return '<option value="' + k + '"' + (k === site ? ' selected' : '') + '>' + esc(D.DISTRICTS[k].name) + ' · ×' + D.BUSINESS_SITES[k].mult.toFixed(2) + ' · rent ' + N(L.price(S, D.BUSINESS_SITES[k].rent)) + '/wk</option>';
+        return '<option value="' + k + '"' + (k === site ? ' selected' : '') + '>' + esc(D.DISTRICTS[k].name) + (L.districtCity(k) !== 'lagos' ? ', ' + esc(D.CITIES[L.districtCity(k)].name) : '') + ' · ×' + D.BUSINESS_SITES[k].mult.toFixed(2) + ' · rent ' + N(L.price(S, D.BUSINESS_SITES[k].rent)) + '/wk</option>';
       }).join('') + '</select></div>' + ['high', 'mid', 'low'].map(function (tier) {
         var keys = Object.keys(D.BUSINESSES).filter(function (k) { return D.BUSINESSES[k].tier === tier; });
         return '<h4 class="dl-group">' + esc(D.BUSINESS_TIERS[tier]) + '</h4><div class="list">' + keys.map(function (k) {
