@@ -191,6 +191,7 @@
     mountCruise();
     mountAirport();
     mountRoom();
+    mountVenue();
     Array.prototype.forEach.call(document.querySelectorAll('canvas.ww-hall'), drawHall);
     drawHudAvatar();
     mountInterior();
@@ -1494,7 +1495,7 @@
     var chips = pl.acts.map(function (aid) { var def = (D.PLACE_ACTIONS[pl.district] || []).filter(function (x) { return x.id === aid; })[0]; return def ? '<span class="act-chip">' + actIcon(def) + ' ' + esc(def.label) + '</span>' : ''; }).join('');
     return '<div class="sheet-grab" aria-hidden="true"></div>' + pic('place:' + pl.id, pl.name, '', 'pl-pic') + '<div class="inline" style="justify-content:space-between"><h3 class="pl-title">' + (icon3d(pl.glyph) ? '<span class="pl-ic3d">' + icon3d(pl.glyph, pl.name) + '</span>' : '<span class="pl-ic" style="border-color:' + t.color + '">' + (pl.icon || '•') + '</span>') + '<span>' + esc(pl.name) + '<small>' + esc(D.DISTRICTS[pl.district].name) + '</small></span></h3><button class="btn sm ghost" id="close-place" data-closeplace="1">Close</button></div>' +
       '<p class="note"><span class="pl-type" style="color:' + t.color + '">' + esc(t.name) + '</span></p><p>' + esc(pl.text) + '</p>' +
-      '<button type="button" class="link-btn" id="share-' + pl.id + '" data-shareplace="' + pl.id + '">🔗 Share a link to ' + esc(pl.name) + '</button>' +
+      '<div class="inline"><button type="button" class="btn sm go" id="venue-' + pl.id + '" data-venue="' + pl.id + '">🚪 Walk in</button><button type="button" class="link-btn" id="share-' + pl.id + '" data-shareplace="' + pl.id + '">🔗 Share a link to ' + esc(pl.name) + '</button></div>' +
       (chips ? '<div class="act-chips">' + chips + '</div>' : '') +
       (rows ? '<div class="list">' + rows + '</div>' : '') +
       (pl.dealer ? dealerView() : '') +
@@ -1809,6 +1810,98 @@
     if (online.room) online.room.emit('deck', { room: S.room.id, text: r.text }).catch(function () {});
     mountRoom();
   }
+  /* ---------- walk-in venues: every place on the map as a small yard with its people and rides ---------- */
+  var venueStage = null, venueKey = '';
+  var VENUE_CREW = {
+    refinery: [['Plant hand', 'Shift change is at two. Hard hat on before the gate.', 1], ['Process engineer', 'Column three is running hot today.', 1], ['Security', 'Visitors sign the book first, abeg.', 0], ['Tanker driver', 'Loading since six. Na so the work be.', 1], ['Visitor', 'The flare stack is bigger than I thought.', 0]],
+    airport: [['Traveller', 'Boarding in forty minutes. Where is gate three?', 0], ['Ground crew', 'Chocks in, fuel truck next.', 1], ['Pilot', 'Clear skies over Abuja this evening.', 0], ['Cab driver', 'Island or mainland? Traffic is bad at Ikeja.', 0]],
+    transport: [['Conductor', 'Oshodi! Oshodi! Enter with your change!', 0], ['Driver', 'We move when the bus full.', 0], ['Passenger', 'This queue no dey move at all.', 0], ['Hawker', 'Gala, Lacasera, pure water!', 0]],
+    food: [['Mama Put', 'Rice, beans, dodo. Wetin you go chop?', 0], ['Customer', 'The stew here is sweet die.', 0], ['Waiter', 'Small chops are coming now.', 0]],
+    nightlife: [['DJ', 'Next song go burst your head.', 0], ['Bouncer', 'No shorts tonight, boss.', 0], ['Raver', 'This party no get part two!', 0]],
+    culture: [['Guide', 'This piece is older than Lagos itself.', 0], ['Artist', 'I paint the danfos at dawn.', 0], ['Tourist', 'Take my picture with the statue, please.', 0]],
+    outdoors: [['Jogger', 'Five laps before the sun gets hot.', 0], ['Family', 'The children want ice cream again.', 0], ['Hawker', 'Coconut! Fresh coconut!', 0]],
+    learn: [['Student', 'Exams start Monday. I never read.', 0], ['Teacher', 'Sit down, the class has started.', 0], ['Lab tech', 'Do not touch that beaker.', 0]],
+    services: [['Clerk', 'Come back with two passport photos.', 0], ['Customer', 'The network is down again.', 0], ['Security', 'Drop your bag in the tray.', 0]]
+  };
+  var VENUE_RIDES = { danfo: 1, brt: 1, cab: 1, keke: 1, okada: 1, car: 1 };
+  function venueSet(pl) {
+    if (/refinery|yards|docks/.test(pl.id)) return 'refinery';
+    if (DEP_PLACES[pl.id] || pl.id === 'new_airport_site' || pl.glyph === 'plane') return 'airport';
+    return VENUE_CREW[pl.type] ? pl.type : 'outdoors';
+  }
+  function vHash(str, n) { var h = 2166136261; for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619); return Math.imul(h ^ n, 2654435761) >>> 0; }
+  // A stranger dressed from the wardrobe, the same each game hour.
+  function venueStranger(seed, ix) {
+    var h = vHash(seed, ix), ids = Object.keys(D.CLOTHES), pick = function (slot, k) { var l = ids.filter(function (c) { return D.CLOTHES[c].slot === slot; }); return l[(h >>> k) % l.length]; };
+    var dress = (h >>> 3) % 5 === 0, outfit = dress ? { dress: pick('dress', 4) } : { top: pick('top', 5), bottom: pick('bottom', 9) };
+    outfit.shoes = pick('shoes', 13);
+    return { look: { skin: h % D.LOOKS.skin.length, hair: (h >>> 6) % D.LOOKS.hair.length, shape: (h >>> 11) % 3 }, outfit: outfit };
+  }
+  // A sign-sized name for an action: the part before any colon or bracket, cut at a word and never ending on a small word.
+  var VENUE_STOP = /^(a|an|the|in|at|as|on|of|for|to|and|with|from|by|your|my)$/i;
+  function venueShort(label) {
+    var base = label.replace(/\s*\(.*?\)/g, '').split(/[:,–]/)[0].trim();
+    if (base.length <= 20) return base;
+    var out = []; base.split(' ').some(function (w) { if ((out.concat(w).join(' ')).length > 20) return true; out.push(w); return false; });
+    while (out.length > 1 && VENUE_STOP.test(out[out.length - 1])) out.pop();
+    return out.join(' ') || base.slice(0, 20);
+  }
+  function venueActs(pl) {
+    var here = S.loc === pl.district, avail = here ? L.availableActions(S) : [];
+    return pl.acts.map(function (aid) {
+      var def = (D.PLACE_ACTIONS[pl.district] || []).filter(function (x) { return x.id === aid; })[0]; if (!def) return null;
+      var a = avail.filter(function (x) { return x.id === aid; })[0];
+      return { id: aid, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
+    }).filter(Boolean);
+  }
+  function venueScene(pl) {
+    var set = venueSet(pl), hr = Math.floor(S.t / 60), crew = VENUE_CREW[set], seed = pl.id + ':' + hr, n = 3 + vHash(seed, 1) % 4, acts = venueActs(pl), slots = Math.max(1, Math.min(8, acts.length));
+    var people = [];
+    for (var i = 0; i < n; i++) {
+      var role = crew[vHash(seed, 20 + i) % crew.length], st = venueStranger(seed, i);
+      people.push({ look: st.look, outfit: st.outfit, label: role[0], line: role[1], slot: vHash(seed, 40 + i) % 8, hat: role[2] && set === 'refinery' ? '#f2c200' : null, vest: role[2] ? '#f39c12' : null });
+    }
+    // Live players in this district stand here too, under their @handles.
+    (online.peerList || []).filter(function (p) { return p.d === pl.district && !online.muted[p.by] && p.look; }).slice(0, 4).forEach(function (p, k) {
+      people.push({ look: p.look, outfit: {}, label: handleOf(p.by), line: 'a player here now. Chat from the map.', slot: (k * 3 + 2) % 8, live: true });
+    });
+    var commuters = [0, 1].map(function (k) { var st = venueStranger(pl.id + ':c', k); return { look: st.look, outfit: st.outfit, hat: set === 'refinery' ? '#f2c200' : null, vest: set === 'refinery' ? '#f39c12' : null }; });
+    // While the ride view is still up, hold the arrival (and keep you off the yard) until it closes.
+    var riding = !!document.getElementById('ride-view'), here = S.loc === pl.district && !riding, trip = !riding && ui.trip && ui.trip.to === pl.district && Date.now() - ui.trip.at < 120000 ? ui.trip : null;
+    var worksHere = S.job && D.CAREERS[S.job.id] && pl.hr === S.job.id, h0 = L.hour(S);
+    return {
+      name: pl.name, set: set, acts: acts, people: people, commuters: commuters, night: h0 >= 19 || h0 < 6,
+      sign: pl.name.toUpperCase().slice(0, 30), signBg: set === 'refinery' ? '#1f3b63' : set === 'nightlife' ? '#8e24aa' : '#1f3b63',
+      shuttle: set === 'refinery' ? 'staff' : set === 'airport' ? 'cab' : ['danfo', 'keke', 'okada', 'cab'][vHash(pl.id, 3) % 4],
+      me: here ? { look: S.look, outfit: S.outfit, extra: myExtra(), label: 'You', me: true, hat: set === 'refinery' && (worksHere || ui.venueSlot != null) ? '#ffffff' : null } : null,
+      meSlot: ui.venueSlot != null ? ui.venueSlot : Math.min(5, slots - 1),
+      arrive: trip && VENUE_RIDES[trip.mode] ? trip.mode : null, arriveKey: trip ? 'trip:' + trip.at : ''
+    };
+  }
+  function venuePanel(pl) {
+    var here = S.loc === pl.district, acts = venueActs(pl), crowd = venueScene(pl).people.length + (here ? 1 : 0);
+    return '<div class="ap-head"><b>' + esc(pl.icon || '📍') + ' ' + esc(pl.name) + '</b><span class="muted">' + esc(D.DISTRICTS[pl.district].name) + ' · ' + crowd + ' here · ' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="venue-close" data-venueclose="1" aria-label="Leave the scene">✕</button></div>' +
+      (here ? '<p class="note">Tap a sign in the yard, or a person to hear them. Workers and visitors come in by ' + esc({ refinery: 'staff bus', airport: 'cab' }[venueSet(pl)] || 'danfo, keke and okada') + ' all day.</p>' +
+        '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; }).join('') + '</div>'
+        : '<p class="note">You are in ' + esc(D.DISTRICTS[S.loc].name) + '. Take a ride to ' + esc(D.DISTRICTS[pl.district].name) + ': it pulls up at the gate and you walk in.</p>' + rideRow(pl.district)) +
+      (pl.hr ? hrCard(pl) : '') + (pl.shares ? sharesCard(pl) : '');
+  }
+  function mountVenue() {
+    var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
+    if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); return; }
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'venue-view'; ov.className = 'cruise-view venue-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', pl.name);
+      if (!venueStage) venueStage = window.LasgidiVenue.create({ onAct: function (i) {
+        var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0], x = p0 && venueActs(p0)[i]; if (!x) return;
+        if (S.loc !== p0.district) { ui.toasts.push({ msg: 'Ride to ' + D.DISTRICTS[p0.district].name + ' first, then walk in.', ok: false }); renderToasts(); return; }
+        if (!x.a || x.a.disabled) { ui.toasts.push({ msg: (x.a && x.a.disabled) || (x.def.when ? 'Open ' + whenText(x.def.when) : 'Not open now'), ok: false }); renderToasts(); return; }
+        ui.venueSlot = i; run(function () { var r = L.doAction(S, x.id); if (r && r.ok) { ui.activity = activityFor(x.id); ui.activityAt = Date.now(); } return r; });
+      } });
+      var pn = document.createElement('div'); pn.className = 'cv-panel ap-panel'; pn.id = 'venue-panel'; ov.appendChild(venueStage.el); ov.appendChild(pn); document.body.appendChild(ov); venueKey = '';
+    }
+    var html = venuePanel(pl); if (html !== venueKey) { document.getElementById('venue-panel').innerHTML = html; venueKey = html; }
+    venueStage.update(venueScene(pl)); venueStage.start();
+  }
   /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
   var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
   var DOMESTIC = ['Abuja', 'Port Harcourt', 'Kano', 'Enugu', 'Benin City', 'Owerri', 'Uyo', 'Ilorin'], ABROAD = ['London', 'Dubai', 'Accra', 'Johannesburg', 'Atlanta', 'Nairobi', 'Paris', 'Istanbul', 'Doha', 'Toronto'];
@@ -1955,7 +2048,7 @@
       '<div class="rv-veh' + (chauffeur ? ' vip' : '') + '">' + veh + '</div></div>' +
       '<div class="rv-bar"><i></i></div>' +
       '<div class="rv-foot"><span>' + (sights.length ? '📍 ' + esc(sights.join(' · ')) : '☁️ Above the city') + '</span><button class="btn go" id="rv-arrive" type="button">Arrive</button></div></div>';
-    var done = function () { if (el.parentNode) el.remove(); };
+    var done = function () { if (el.parentNode) { el.remove(); if (ui.venueOpen) mountVenue(); } }; // a walk-in scene behind the ride starts its arrival now
     el.addEventListener('click', function (e) { if (e.target === el || (e.target.closest && e.target.closest('#rv-arrive'))) done(); });
     el.addEventListener('keydown', function (e) { if (e.key === 'Escape') done(); });
     document.body.appendChild(el);
@@ -3444,7 +3537,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-venue],[data-venueclose],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3715,7 +3808,7 @@
       return;
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
-    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; if (ui.tab === 'map' && !ui.place) ui.tab = 'do'; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
+    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
     if (ds.act) { var aid0 = ds.act; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { ui.activity = activityFor(aid0); ui.activityAt = Date.now(); } return r; }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
@@ -3777,6 +3870,8 @@
     if (ds.fidstab) { ui.fidsTab = ds.fidstab; mountAirport(); return; }
     if (ds.layer) { var ly = mapLayers(); ly[ds.layer] = !ly[ds.layer]; try { localStorage.setItem(LAYER_KEY, JSON.stringify(ly)); } catch (e) {} render(); return; }
     if (ds.roomenter) { var re0 = ds.roomenter; run(function () { var r = L.roomEnter(S, re0); if (r.ok) { ui.roomOpen = re0; ui.cruiseOpen = false; ui.airportOpen = false; } return r; }); syncPresence(); return; }
+    if (ds.venue) { ui.venueOpen = ds.venue; ui.venueSlot = null; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
+    if (ds.venueclose) { ui.venueOpen = null; render(); return; }
     if (ds.roomopen) { ui.roomOpen = ds.roomopen; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.roomspot) { var rsp = ds.roomspot; if (S.room && S.room.spot === rsp) return; run(function () { return L.roomSpot(S, S.room.id, rsp); }); syncPresence(); return; }
     if (ds.mappop) { ui.mapPop = ui.mapPop === 'do' ? null : 'do'; if (ui.mapPop) { ui.place = null; ui.board = null; ui.homeSel = null; } render(); return; }
