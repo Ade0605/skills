@@ -940,6 +940,8 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .pp-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .pp-badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: rgba(127,127,127,.15); opacity: .55; }
 .pp-badge.got { opacity: 1; background: rgba(242,182,0,.3); font-weight: 700; }
+.shop-adult { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-weight: 700; }
+.tag-swatch { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 9px; vertical-align: middle; }
 .room-night { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; margin: 4px 0 6px; border-radius: 10px; background: #fff4cc; color: #3a2c00; font-size: 13px; }
 .room-night .muted { color: #6b5a1f; }
 .cv-spots { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }

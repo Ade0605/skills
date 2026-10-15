@@ -442,25 +442,20 @@ The engine is deterministic: all randomness comes from a seeded PRNG kept in the
 - **Where to read it:** a Safety and privacy card on the start screen and in the Guide app spells all of this out.
 - **Background:** `docs/REVIEW.md` section 6 compares this with a field review of Lagos Life.
 
-## Planned: real-cash purchases (cosmetics only), to be built near the end
+## Real-cash cosmetics: the Style shop (self-hosted only)
 
-Decided with the project owner on 13 Oct 2026, and not built yet:
+Real money buys **cosmetics only**: name-tag colours for your @handle in live rooms and on the cruise. They never buy naira, status, skills or anything that changes a life, so the Hall of Fame and Weekly Lagos stay fair and money stays hard to make. The claude.ai artifact build has no shop at all.
 
-- **What you can buy:** real cash buys **cosmetics only**: outfits, home décor, car colours and profile badges.
-  - It never buys naira, status, skills or anything else that changes a life's money. The Hall of Fame and Weekly Lagos stay fair, and money stays hard to make.
-- **Payments:** Flutterwave (Nigerian and international cards) and PayPal.
-- **Where it runs:** on a self-hosted copy of the game (the PWA), with a small server that:
-  - creates each payment;
-  - verifies it with the provider's webhook and secret key;
-  - only then unlocks the item for the player's account.
-- **The artifact build:** it can't load the providers' checkout scripts or verify a payment, so it keeps no real-money flow.
-- **Before going live:** build and test everything in Flutterwave and PayPal **sandbox** mode. The owner sets up the business accounts and puts the keys in the server's settings. Keys never go in the repository or the game code.
-- **Also needed:**
-  - an 18+ check before purchase;
-  - clear prices in ₦ and $, and a receipt;
-  - a refund and terms page;
-  - a purchase history on the Me tab.
-- **Purchases and replays:** owned cosmetics live outside a life's replay, the way profile photos do, so buying them never changes a ledger seal.
+- **Run it:** `npm run shop` serves the game and the shop from `server/` (Node 18+, no dependencies). Settings are environment variables; keys never go in the code:
+  - `PORT`, `PUBLIC_URL` (the address players use, for payment return links), `DATA_DIR` (default `server/data/`, ignored by git);
+  - Flutterwave (naira): `FLW_SECRET_KEY`, `FLW_SECRET_HASH` (the webhook secret hash set in the Flutterwave dashboard, with the webhook pointed at `/api/flutterwave/webhook`), and `FLW_RECEIPT_EMAIL`. Flutterwave needs an email on every payment, and the game never asks players for one, so the shop owner's receipts address is used;
+  - PayPal (US dollars): `PAYPAL_CLIENT_ID`, `PAYPAL_SECRET`;
+  - `SHOP_MODE=live` switches PayPal to live. Leave it unset for sandbox, and use Flutterwave test keys, until everything has been tried with test cards.
+- **How a payment is checked:** the server creates the payment, then unlocks the item only after it asks the provider itself: Flutterwave's transaction verify call (amount, currency and reference must match), or a completed PayPal capture of the exact amount. Webhooks without the right secret hash are refused, and one payment can never unlock twice.
+- **In the game:** the 🎨 Style shop app only appears when the game is served by this server. Players must tick "I am 18 or over", prices show in ₦ and $, a receipt reference is shown on return, purchases are listed in the shop and on the Me tab, and terms and refunds are at `/terms.html` (the shop owner fills in their business details there before going live).
+- **Identity:** a random shop key is made on the device and kept in the browser. It is never typed and is not a password; clearing site data loses it, so keep the receipt reference.
+- **Replays:** owned cosmetics live outside a life's state, like profile photos, so buying one never changes a ledger seal.
+- **Not done:** others in the room do not yet see your tag colour (it shows on your own screen only), and there is no admin page for refunds; the owner refunds through the Flutterwave or PayPal dashboard.
 
 ## Disclaimer
 

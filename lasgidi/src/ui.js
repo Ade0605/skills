@@ -1565,7 +1565,7 @@
     { by: 'crew:dj', label: 'DJ', spot: 'party', crew: true, look: { skin: 5, hair: 5, shape: 1 }, outfit: { top: 'crop', bottom: 'joggers' } }];
   var STARTERS = ['st_tee', 'st_ankara', 'st_adire', 'st_asooke'];
   function deckScene() {
-    var me = { by: online.me || 'me', label: handleOf(online.me), spot: S.cruise.spot, me: true, look: S.look, outfit: S.outfit };
+    var mt = myTag(), me = { by: online.me || 'me', label: handleOf(online.me), spot: S.cruise.spot, me: true, look: S.look, outfit: S.outfit, tagc: mt && mt.color, tagi: mt && mt.ink };
     var peers = deckPeers().slice(0, 16).map(function (p) { var h = 0; for (var i = 0; i < p.by.length; i++) h = (h * 31 + p.by.charCodeAt(i)) >>> 0; return { by: p.by, label: handleOf(p.by), spot: p.at.slice(7), look: p.look, outfit: { top: STARTERS[h % 4], bottom: ['st_jeans', 'st_chinos', 'st_wrapper'][h % 3] } }; });
     var bubbles = {}, now = Date.now();
     (online.deck || []).forEach(function (m) { if (now - m.at < 7000) bubbles[m.by] = m.text; });
@@ -1733,7 +1733,7 @@
   }
   var roomStage = null, roomKey = '';
   function roomScene(id) {
-    var pre = 'room:' + id + ':', me = { by: online.me || 'me', label: handleOf(online.me), spot: S.room.spot, me: true, look: S.look, outfit: S.outfit };
+    var pre = 'room:' + id + ':', me = { by: online.me || 'me', label: handleOf(online.me), spot: S.room.spot, me: true, look: S.look, outfit: S.outfit, tagc: (myTag() || {}).color, tagi: (myTag() || {}).ink };
     var peers = roomPeers(id).slice(0, 16).map(function (p) { var h = 0; for (var i = 0; i < p.by.length; i++) h = (h * 31 + p.by.charCodeAt(i)) >>> 0; return { by: p.by, label: handleOf(p.by), spot: p.at.slice(pre.length), look: p.look, outfit: { top: STARTERS[h % 4], bottom: ['st_jeans', 'st_chinos', 'st_wrapper'][h % 3] } }; });
     var bubbles = {}, now = Date.now(); (online.roomChat || []).forEach(function (m) { if (m.room === id && now - m.at < 7000) bubbles[m.by] = m.text; });
     var h0 = L.hour(S); var R0 = D.ROOMS[id], lay = R0.layout || id; var NPC_LOOKS = [{ skin: 4, hair: 2, shape: 1 }, { skin: 2, hair: 4, shape: 0 }, { skin: 5, hair: 6, shape: 2 }, { skin: 3, hair: 1, shape: 1 }, { skin: 1, hair: 3, shape: 0 }], NPC_TOPS = ['st_asooke', 'shirt', 'blazer', 'jersey', 'crop'];
@@ -2659,6 +2659,7 @@
     var html = '<div class="panel-h"><h2>' + esc(L.titledName(S)) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">' + labelChips(L.lagosLabels(S)) + photoView() +
       '<details class="section cv-wrap"' + (ui.cvOpen ? ' open' : '') + '><summary id="cv-open" data-cvopen="1">📄 My CV</summary>' + cvHtml(L.cv(S)) +
       '<div class="inline"><button class="btn sm" id="cv-share" data-cvshare="1">' + (online.cvs && online.cvs[online.me] ? 'Update my shared CV' : 'Share my CV with players') + '</button>' + (online.cvStatus ? '<span class="note">' + esc(online.cvStatus) + '</span>' : '') + '</div></details>';
+    if (online.shop && (online.owned || []).length) html += '<div class="section">' + purchaseHistory() + '</div>';
     html += '<div class="section" style="padding-top:0"><h3>Goal: ' + esc(g.name) + (S.won ? ' · done' : '') + '</h3><p class="note">' + esc(g.text) + '</p>' +
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
     html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
@@ -2814,7 +2815,7 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['home', '🏠', 'Home'], ['people', '👥', 'People'], ['jobs', '💼', 'Careers'], ['money', '💰', 'Money'], ['assets', '📊', 'Assets'], ['houses', '🏡', 'Houses'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe']
+    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe'], ['style', '🎨', 'Style shop']
   ];
   // Every festival, match and concert in every city, with when it is on.
   var GUIDE = [
@@ -3223,6 +3224,7 @@
       else if (app === 'money') body = moneyView();
       else if (app === 'assets') body = '<div class="panel-b">' + assetsView() + '</div>';
       else if (app === 'houses') body = '<div class="panel-b">' + housesView() + '</div>';
+      else if (app === 'style') body = '<div class="panel-b">' + styleView() + '</div>';
       var a = APPS.filter(function (x) { return x[0] === app; })[0];
       return '<div class="phone-top"><button class="btn sm ghost" id="app-back" data-app="">‹ Apps</button><b>' + (a ? a[1] + ' ' + esc(a[2]) : '') + '</b></div>' + body;
     }
@@ -3238,7 +3240,7 @@
     return '<div class="phone-frame' + (h >= 19 || h < 6 ? ' night' : '') + '"><div class="ph-status"><span>' + pad(h) + ':' + pad(mins) + '</span><span class="ph-notch" aria-hidden="true"></span><span>' + net + ' ▮▮▮ ' + batt + '%</span></div>' +
       '<div class="ph-lock"><b>' + pad(h) + ':' + pad(mins) + '</b><span>' + esc(L.dateLabel ? L.dateLabel(S) : L.clockLabel(S)) + ' · ' + esc(D.CITIES[L.cityOf(S)].name) + '</span></div>' +
       (news.length ? '<div class="ph-news" aria-label="Latest news"><span class="ph-news-h">📰 Latest</span><div class="ph-ticker"><div>' + news.map(function (l) { return '<span>' + esc(l.text) + '</span>'; }).join('') + '</div></div></div>' : '') +
-      '<div class="apps ph-apps">' + APPS.map(function (x, i) {
+      '<div class="apps ph-apps">' + APPS.filter(function (x) { return x[0] !== 'style' || online.shop; }).map(function (x, i) {
       var n = badge[x[0]];
       return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic" style="--a1:' + APP_TINTS[i % APP_TINTS.length][0] + ';--a2:' + APP_TINTS[i % APP_TINTS.length][1] + '">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';
     }).join('') + '</div><div class="ph-home" aria-hidden="true"></div></div>';
@@ -3423,7 +3425,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3760,6 +3762,9 @@
     if (ds.roomspot) { var rsp = ds.roomspot; if (S.room && S.room.spot === rsp) return; run(function () { return L.roomSpot(S, S.room.id, rsp); }); syncPresence(); return; }
     if (ds.mappop) { ui.mapPop = ui.mapPop === 'do' ? null : 'do'; if (ui.mapPop) { ui.place = null; ui.board = null; ui.homeSel = null; } render(); return; }
     if (ds.mappopclose) { ui.mapPop = null; ui.place = null; ui.board = null; ui.homeSel = null; render(); return; }
+    if (ds.shopadult) { ui.shopAdult = !!t.checked; render(); return; }
+    if (ds.shopbuy) { var sb = ds.shopbuy.split(':'); shopBuy(sb[0], sb[1]); return; }
+    if (ds.shopequip != null && t.hasAttribute('data-shopequip')) { try { if (ds.shopequip && ownedItem(ds.shopequip)) localStorage.setItem(TAG_KEY, ds.shopequip); else localStorage.removeItem(TAG_KEY); } catch (e) {} render(); return; }
     if (ds.roomhang) { var rh0 = ds.roomhang; run(function () { return L.roomHang(S, S.room.id, rh0); }); return; }
     if (ds.roomnight) { var rn0 = ds.roomnight; run(function () { return L.roomNight(S, rn0); }); return; }
     if (ds.roomleave) { ui.roomOpen = null; run(function () { return L.roomLeave(S); }); syncPresence(); return; }
@@ -3932,11 +3937,74 @@
     var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
   }
 
+  /* ---------- Style shop (self-hosted PWA only) ----------
+     Real cash buys cosmetics only, through the shop server in server/. Owned items live on this device and on
+     that server, never in a life's state, so they change no ledger, score or replay. The artifact build has no shop. */
+  var SHOP_KEY = 'lasgidi.shopkey.v1', TAG_KEY = 'lasgidi.tag.v1';
+  function shopKey() {
+    var k = null; try { k = localStorage.getItem(SHOP_KEY); } catch (e) {}
+    if (!/^[a-z0-9]{16,40}$/.test(k || '')) {
+      var b = new Uint8Array(24); (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(b) : b.forEach(function (v, i) { b[i] = Math.random() * 256; });
+      k = Array.prototype.map.call(b, function (v) { return 'abcdefghijklmnopqrstuvwxyz0123456789'[v % 36]; }).join('');
+      try { localStorage.setItem(SHOP_KEY, k); } catch (e) {}
+    }
+    return k;
+  }
+  function initShop() {
+    if (!document.querySelector('meta[name="lasgidi-shop"]') || !window.fetch) return; // only when served by the shop server
+    fetch('/api/shop', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !j.catalog) return;
+      online.shop = j; return fetch('/api/owned?account=' + shopKey(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (o) { online.owned = (o && o.items) || []; scheduleRender(); });
+    }).catch(function () {});
+    var q = new URLSearchParams(location.search), st = q.get('shop');
+    if (st) {
+      ui.toasts.push(st === 'ok' ? { msg: '🎨 Payment confirmed. Your item is unlocked (receipt ' + (q.get('ref') || '') + ').', ok: true } : st === 'cancel' ? { msg: 'Payment cancelled. Nothing was charged.', ok: false } : { msg: 'The payment could not be confirmed, so nothing was unlocked. If you were charged, contact the shop with your receipt.', ok: false });
+      try { history.replaceState(null, '', location.pathname); } catch (e) {}
+      ui.tab = 'phone'; ui.app = 'style'; scheduleRender();
+    }
+  }
+  function ownedItem(id) { return (online.owned || []).some(function (g) { return g.item === id; }); }
+  function myTag() {
+    var id = null; try { id = localStorage.getItem(TAG_KEY); } catch (e) {}
+    var C = online.shop && online.shop.catalog[id];
+    return C && ownedItem(id) ? { color: C.color, ink: C.ink } : null;
+  }
+  function styleView() {
+    var sh = online.shop; if (!sh) return '<p class="note">The Style shop is only on self-hosted copies of the game.</p>';
+    var P = sh.providers, cat = sh.catalog, eq = null; try { eq = localStorage.getItem(TAG_KEY); } catch (e) {}
+    var html = '<div class="section" style="padding-top:0"><h3>🎨 Style shop</h3><p class="note">Real money buys <b>cosmetics only</b>: a colour for your @handle in live rooms and on the cruise. It never buys naira, skills, status or any advantage, and it is not part of any life\'s score or replay.</p>' +
+      (sh.mode !== 'live' ? '<p class="why">Sandbox mode: payments use test cards and accounts, and no real money moves.</p>' : '') +
+      (!P.flutterwave && !P.paypal ? '<p class="why">No payment method is set up on this server yet.</p>' : '') +
+      '<label class="shop-adult"><input type="checkbox" id="shop-adult"' + (ui.shopAdult ? ' checked' : '') + ' data-shopadult="1"> I am 18 or over</label>' +
+      '<p class="note"><a href="/terms.html" target="_blank" rel="noopener">Terms and refunds</a></p><div class="list">' + Object.keys(cat).map(function (k) {
+        var C = cat[k], own = ownedItem(k), on = own && eq === k;
+        var buy = own ? '<button class="btn sm' + (on ? '' : ' go') + '" id="shop-eq-' + k + '" data-shopequip="' + (on ? '' : k) + '">' + (on ? 'Take off' : 'Wear') + '</button>'
+          : (P.flutterwave ? '<button class="btn sm go" id="shop-flw-' + k + '" data-shopbuy="' + k + ':flutterwave"' + (ui.shopAdult ? '' : ' disabled title="Tick 18 or over first"') + '>Pay ₦' + C.ngn.toLocaleString('en') + '</button>' : '') +
+            (P.paypal ? '<button class="btn sm ghost" id="shop-pp-' + k + '" data-shopbuy="' + k + ':paypal"' + (ui.shopAdult ? '' : ' disabled title="Tick 18 or over first"') + '>PayPal $' + C.usd + '</button>' : '');
+        return '<div class="item"><div><h3><span class="tag-swatch" style="background:' + C.color + ';color:' + C.ink + '">@you</span> ' + esc(C.name) + '</h3><div class="meta"><span>₦' + C.ngn.toLocaleString('en') + ' · $' + C.usd + '</span>' + (own ? '<span class="gain">Owned</span>' : '') + '</div></div><div class="inline">' + buy + '</div></div>';
+      }).join('') + '</div>' + purchaseHistory() + '</div>';
+    return html;
+  }
+  function purchaseHistory() {
+    var h = online.owned || []; if (!h.length) return '';
+    var cat = (online.shop && online.shop.catalog) || {};
+    return '<h4>🧾 Your purchases</h4><div class="list">' + h.map(function (g) {
+      return '<div class="item"><div><h3>' + esc((cat[g.item] || {}).name || g.item) + '</h3><div class="meta"><span>' + esc(g.currency === 'NGN' ? '₦' + Number(g.amount).toLocaleString('en') : '$' + g.amount) + ' · ' + esc(g.provider === 'paypal' ? 'PayPal' : 'Flutterwave') + '</span><span>' + esc(String(g.at).slice(0, 10)) + '</span><span class="muted">Receipt ' + esc(g.ref) + '</span></div></div></div>';
+    }).join('') + '</div>';
+  }
+  function shopBuy(item, provider) {
+    if (!ui.shopAdult) { ui.toasts.push({ msg: 'Tick "I am 18 or over" first.', ok: false }); renderToasts(); return; }
+    fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account: shopKey(), item: item, provider: provider, adult: true }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) { if (x.ok && x.j.url && /^https:\/\//.test(x.j.url)) location.href = x.j.url; else { ui.toasts.push({ msg: (x.j && x.j.error) || 'The shop could not start the payment.', ok: false }); renderToasts(); } })
+      .catch(function () { ui.toasts.push({ msg: 'The shop is not reachable right now.', ok: false }); renderToasts(); });
+  }
   function start(data) {
     S = (data && data.state) ? L.migrate(data.state) : (prefs.mode === 'weekly' && weeklyRun()) || load(SAVE_KEY);
     if (data && data.ui) Object.assign(ui, data.ui, { toasts: [] });
     render();
     initOnline();
+    initShop();
   }
   var hot = window.claude && window.claude.hot;
   if (hot && hot.snapshot) hot.snapshot(function () { return { state: S, ui: { tab: ui.tab, sel: ui.sel } }; });

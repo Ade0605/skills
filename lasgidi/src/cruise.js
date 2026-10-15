@@ -217,9 +217,9 @@
         var label = it.pl.label || '';
         g.font = '700 ' + Math.min(12, Math.max(9, s * 0.2)) + 'px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
         var lw = g.measureText(label).width + 12, ly = p.y - fh - 4 - dance - (it.lift || 0);
-        g.fillStyle = it.pl.me ? '#f2b600' : it.pl.npc ? '#2e7d32' : it.pl.crew ? 'rgba(40,44,52,.85)' : '#2f6fd0';
+        g.fillStyle = it.pl.me ? (it.pl.tagc || '#f2b600') : it.pl.npc ? '#2e7d32' : it.pl.crew ? 'rgba(40,44,52,.85)' : '#2f6fd0';
         g.beginPath(); if (g.roundRect) g.roundRect(p.x - lw / 2, ly - 9, lw, 18, 9); else g.rect(p.x - lw / 2, ly - 9, lw, 18); g.fill();
-        g.fillStyle = it.pl.me ? '#1a1500' : '#ffffff'; g.fillText(label, p.x, ly);
+        g.fillStyle = it.pl.me ? (it.pl.tagi || '#1a1500') : '#ffffff'; g.fillText(label, p.x, ly);
         var bub = scene.bubbles && scene.bubbles[it.pl.by];
         if (bub) {
           g.font = '600 12px system-ui, sans-serif'; var text = bub.length > 34 ? bub.slice(0, 33) + '…' : bub, bw = g.measureText(text).width + 16, by = ly - 26;
