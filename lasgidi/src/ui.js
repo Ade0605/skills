@@ -1500,8 +1500,24 @@
       (pl.dealer ? dealerView() : '') +
       (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.cruise ? cruiseCard() : '') + roomCardFor(pl.id) + (pl.hydepark ? hydeParkView() : '') +
       (pl.id === 'airport' && !S.challenge ? japaView() : '') +
+      (pl.hr ? hrCard(pl) : '') + (pl.shares ? sharesCard(pl) : '') +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : rideRow(pl.district));
+  }
+  // A workplace's HR desk: the career it hires for, with an Apply button when you are there.
+  function hrCard(pl) {
+    var cid = pl.hr, c = D.CAREERS[cid]; if (!c) return '';
+    var e = L.jobEligibility(S, cid), mine = S.job && S.job.id === cid;
+    var days = c.days.map(function (d) { return D.DAYS[d]; }).join(', ');
+    return '<div class="section"><h3>🧑‍💼 HR office · ' + esc(c.name) + '</h3><p class="note">Starts as ' + esc(c.titles[0]) + ' on ' + N(c.pay[0]) + ' a shift, ' + pad(c.start) + ':00–' + pad(c.end) + ':00, ' + esc(days) + '. Needs ' + esc(D.SKILLS[c.skill]) + ' ' + c.req[0] + '. Top grade: ' + esc(c.titles[c.titles.length - 1]) + '.</p>' +
+      '<div class="inline"><button class="btn sm go" id="hr-' + cid + '" data-apply="' + cid + '"' + (e.ok ? '' : ' disabled') + '>' + (mine ? 'You work here' : 'Apply for a job') + '</button>' + (!e.ok && !mine ? '<span class="why">' + esc(e.reason) + '</span>' : '') + '</div></div>';
+  }
+  // The listed company behind a site: today's share price, with a link to buy on the exchange.
+  function sharesCard(pl) {
+    var St = D.STOCKS[pl.shares]; if (!St) return '';
+    var px = Math.round(L.stockPrice(S, pl.shares)), held = S.stocks && S.stocks[pl.shares];
+    return '<div class="section"><h3>' + St.icon + ' ' + esc(St.name) + ' runs this plant</h3><p class="note">Listed on the exchange as ' + esc(St.ticker) + '. ' + (held && held.u ? 'You hold ' + held.u + ' shares.' : 'Buy shares through your broker in the Stocks app.') + '</p>' +
+      '<div class="inline"><span class="act-chip">Per share <b>' + N(px) + '</b></span><span class="act-chip">10 shares <b>' + N(px * 10) + '</b></span><button class="btn sm" id="shares-' + pl.id + '" data-app="stocks" data-tab="phone">📈 Open Stocks</button></div></div>';
   }
   /* ---------- fishing: a card where there's water, and on the cruise rail ---------- */
   function fishingCard(compact) {
