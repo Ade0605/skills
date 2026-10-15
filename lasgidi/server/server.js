@@ -21,6 +21,7 @@ function config(env) {
     dataDir: env.DATA_DIR || path.join(__dirname, 'data'),
     root: path.join(__dirname, '..'),
     live,
+    adminToken: env.SHOP_ADMIN_TOKEN || '',
     flw: env.FLW_SECRET_KEY ? { key: env.FLW_SECRET_KEY, hash: env.FLW_SECRET_HASH || '', receipt: env.FLW_RECEIPT_EMAIL || '', api: env.FLW_API || 'https://api.flutterwave.com/v3' } : null,
     paypal: env.PAYPAL_CLIENT_ID && env.PAYPAL_SECRET ? { id: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_SECRET, api: env.PAYPAL_API || (live ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com') } : null
   };
@@ -43,6 +44,16 @@ function store(dir) {
       o.status = 'paid'; o.providerId = String(providerId || ''); o.paidAt = new Date().toISOString();
       (db.grants[o.account] = db.grants[o.account] || []).push({ item: o.item, ref: o.ref, provider: o.provider, amount: o.amount, currency: o.currency, at: o.paidAt });
       save(); return true;
+    },
+    // Owner restore: move a paid order's item to a new shop key (the old key loses it, so items can't be shared).
+    restore: (ref, acc) => {
+      const o = db.orders[ref]; if (!o || o.status !== 'paid') return 'No paid order with that receipt';
+      if (o.account === acc) return 'That key already has it';
+      const old = db.grants[o.account] || [], g = old.filter(x => x.ref === ref)[0]; if (!g) return 'No grant for that receipt';
+      if ((db.grants[acc] || []).some(x => x.item === o.item)) return 'That key already owns this item';
+      db.grants[o.account] = old.filter(x => x.ref !== ref);
+      (db.grants[acc] = db.grants[acc] || []).push(Object.assign({}, g, { restored: new Date().toISOString() }));
+      o.restoredFrom = (o.restoredFrom || []).concat(o.account); o.account = acc; save(); return '';
     }
   };
 }
@@ -165,6 +176,15 @@ function createApp(cfg, fetchImpl) {
       if (url.pathname === '/api/paypal/return' && cfg.paypal) {
         const ok = await paypalCapture(url.searchParams.get('ref') || '', url.searchParams.get('token') || '');
         return send(res, 302, '', { Location: '/?shop=' + (ok ? 'ok&ref=' + ok : 'fail') });
+      }
+      if (url.pathname === '/api/admin/restore' && req.method === 'POST') {
+        // Owner only: from this machine, with the admin token. No token set means no admin endpoint at all.
+        const local = /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '');
+        if (!cfg.adminToken || !local) return send(res, 404, { error: 'Not found' });
+        if (!same(req.headers['x-admin-token'] || '', cfg.adminToken)) return send(res, 401, { error: 'Bad token' });
+        let b; try { b = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'Bad request' }); }
+        if (!/^lsg_[0-9a-f]{24}$/.test(b.ref || '') || !ACCOUNT.test(b.account || '')) return send(res, 400, { error: 'Give a receipt (lsg_…) and a shop key' });
+        const err = db.restore(b.ref, b.account); return send(res, err ? 409 : 200, err ? { error: err } : { ok: true });
       }
       if (url.pathname.startsWith('/api/')) return send(res, 404, { error: 'Not found' });
       if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');

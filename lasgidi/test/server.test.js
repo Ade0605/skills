@@ -91,3 +91,22 @@ test('shop: serves the game but never the server folder, data or dotfiles', asyn
     for (const p of ['/server/server.js', '/server/data/shop.json', '/%2e%2e/%2e%2e/etc/passwd', '/.git/config', '/node_modules/terser/package.json']) assert.equal((await req(p)).status, 404, p);
   });
 });
+
+test('shop: the owner can move a paid item to a new shop key, only from this machine with the admin token', async () => {
+  const NEW = 'zzzzzzzzzz9876543210';
+  await withServer(Object.assign({ SHOP_ADMIN_TOKEN: 'owner-secret' }, KEYS), async (req, st) => {
+    const c = await (await post(req, '/api/checkout', { account: ACC, item: 'tag_night', provider: 'flutterwave', adult: true })).json();
+    await req('/api/flutterwave/return?status=successful&transaction_id=555');
+    const restore = (token, body) => post(req, '/api/admin/restore', body || { ref: c.ref, account: NEW }, token ? { 'x-admin-token': token } : {});
+    assert.equal((await restore('')).status, 401);
+    assert.equal((await restore('wrong')).status, 401);
+    assert.equal((await restore('owner-secret', { ref: 'lsg_nope', account: NEW })).status, 400);
+    assert.equal((await restore('owner-secret')).status, 200);
+    const oldItems = (await (await req('/api/owned?account=' + ACC)).json()).items, newItems = (await (await req('/api/owned?account=' + NEW)).json()).items;
+    assert.equal(oldItems.length, 0, 'the old key loses it, so items cannot be shared');
+    assert.equal(newItems.length, 1); assert.equal(newItems[0].item, 'tag_night');
+    assert.equal((await restore('owner-secret')).status, 409, 'restoring again to the same key does nothing');
+  });
+  // With no admin token configured there is no admin endpoint at all.
+  await withServer(KEYS, async req => assert.equal((await post(req, '/api/admin/restore', { ref: 'x', account: NEW }, { 'x-admin-token': '' })).status, 404));
+});

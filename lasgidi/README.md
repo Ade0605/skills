@@ -453,9 +453,10 @@ Real money buys **cosmetics only**: name-tag colours for your @handle in live ro
   - `SHOP_MODE=live` switches PayPal to live. Leave it unset for sandbox, and use Flutterwave test keys, until everything has been tried with test cards.
 - **How a payment is checked:** the server creates the payment, then unlocks the item only after it asks the provider itself: Flutterwave's transaction verify call (amount, currency and reference must match), or a completed PayPal capture of the exact amount. Webhooks without the right secret hash are refused, and one payment can never unlock twice.
 - **In the game:** the 🎨 Style shop app only appears when the game is served by this server. Players must tick "I am 18 or over", prices show in ₦ and $, a receipt reference is shown on return, purchases are listed in the shop and on the Me tab, and terms and refunds are at `/terms.html` (the shop owner fills in their business details there before going live).
-- **Identity:** a random shop key is made on the device and kept in the browser. It is never typed and is not a password; clearing site data loses it, so keep the receipt reference.
+- **Identity:** a random shop key is made on the device and kept in the browser. It is never typed and is not a password. The Style shop shows it under "Your shop key", with a Copy button.
+- **Restoring items:** a player on a new device (or who cleared site data) sends the owner their receipt reference and their new shop key. The owner runs `SHOP_ADMIN_TOKEN=... PORT=... npm run shop:restore -- <receipt> <new key>` on the server machine. It only works from that machine, only with the admin token set in `SHOP_ADMIN_TOKEN` (with no token set there is no admin endpoint at all), and it moves the item, so the old key loses it and items can't be shared.
 - **Replays:** owned cosmetics live outside a life's state, like profile photos, so buying one never changes a ledger seal.
-- **Not done:** others in the room do not yet see your tag colour (it shows on your own screen only), and there is no admin page for refunds; the owner refunds through the Flutterwave or PayPal dashboard.
+- **Not done:** the tag colour shows on your own screen only (self-hosted copies have no live players), and refunds go through the Flutterwave or PayPal dashboard.
 
 ## Disclaimer
 

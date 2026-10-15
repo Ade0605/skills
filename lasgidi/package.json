@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node --test test/engine.test.js test/gov.test.js test/chat.test.js test/server.test.js",
     "shop": "node server/server.js",
+    "shop:restore": "node server/restore.js",
     "build": "node tools/build-single.js",
     "serve": "python3 -m http.server 8080"
   },
