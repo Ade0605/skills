@@ -1828,13 +1828,35 @@
     culture: [['Guide', 'This piece is older than Lagos itself.', 0], ['Artist', 'I paint the danfos at dawn.', 0], ['Tourist', 'Take my picture with the statue, please.', 0]],
     outdoors: [['Jogger', 'Five laps before the sun gets hot.', 0], ['Family', 'The children want ice cream again.', 0], ['Hawker', 'Coconut! Fresh coconut!', 0]],
     learn: [['Student', 'Exams start Monday. I never read.', 0], ['Teacher', 'Sit down, the class has started.', 0], ['Lab tech', 'Do not touch that beaker.', 0]],
-    services: [['Clerk', 'Come back with two passport photos.', 0], ['Customer', 'The network is down again.', 0], ['Security', 'Drop your bag in the tray.', 0]]
+    services: [['Clerk', 'Come back with two passport photos.', 0], ['Customer', 'The network is down again.', 0], ['Security', 'Drop your bag in the tray.', 0]],
+    beach: [['Lifeguard', 'No swimming past the flags, abeg.', 1], ['Horse rider', 'Ride along the shore, ₦2,000 only.', 0], ['Coconut seller', 'Fresh coconut, cold and sweet!', 0], ['Beachgoer', 'This breeze dey cure stress.', 0]],
+    jetty: [['Boatman', 'Life jacket first, then we move.', 1], ['Ticket clerk', 'Next boat leaves in ten minutes.', 0], ['Fisherman', 'The catch was small this morning.', 0], ['Commuter', 'Water no get go-slow.', 0]],
+    stadium: [['Coach', 'Two more laps, then shooting drills.', 0], ['Fan', 'Up the Eagles!', 0], ['Groundsman', 'Mind the fresh lines.', 1], ['Ticket tout', 'Best seats, small money!', 0]],
+    mall: [['Shopper', 'The sale on the second floor is serious.', 0], ['Security', 'Bags open at the door, please.', 0], ['Cinema usher', 'The 6pm show is almost full.', 0]],
+    mosque: [['Imam', 'Jumat service starts at one.', 0], ['Worshipper', 'Peace be unto you.', 0], ['Caretaker', 'Shoes off at the steps, please.', 0]],
+    church: [['Usher', 'Welcome! The choir is warming up.', 0], ['Chorister', 'We have been practising all week.', 0], ['Pastor', 'Service starts at nine, come early.', 0]],
+    govt: [['Guard', 'Only appointments past this gate.', 1], ['Aide', 'The commissioner is in a meeting.', 0], ['Visitor', 'I came to see how government works.', 0]],
+    hospital: [['Nurse', 'Take a number and sit down, please.', 0], ['Doctor', 'Drink water and rest, you hear?', 0], ['Patient', 'The queue is long today.', 0], ['Paramedic', 'Clear the way for the ambulance!', 1]],
+    bank: [['Teller', 'Next customer, please.', 0], ['Security', 'One person at a time in the door.', 0], ['Customer', 'The ATM swallowed my card again.', 0]],
+    workshop: [['Mechanic', 'Your engine needs small work, oga.', 1], ['Apprentice', 'Pass me the spanner, the ten.', 1], ['Customer', 'How much for the brake pads?', 0]],
+    dealer: [['Sales rep', 'This one is tokunbo, very clean.', 0], ['Buyer', 'Can I test drive it?', 0], ['Mechanic', 'Engine is sound, I checked it.', 1]],
+    salon: [['Barber', 'Low cut or fade today?', 0], ['Stylist', 'Braids take four hours, sit tight.', 0], ['Customer', 'Make it sharp for the owambe.', 0]],
+    gym: [['Trainer', 'Ten more reps, you can do it!', 0], ['Member', 'Leg day is the hardest day.', 0], ['Receptionist', 'Monthly plan or day pass?', 0]],
+    music: [['Sound engineer', 'Check, one two, one two.', 1], ['Musician', 'We go from highlife to afrobeat.', 0], ['Fan', 'This band is fire!', 0]],
+    campus: [['Lecturer', 'Assignments are due on Friday.', 0], ['Student', 'The library is full again.', 0], ['Porter', 'Visitors sign in at the lodge.', 0]],
+    tech: [['Developer', 'The demo crashed, then it worked.', 0], ['Founder', 'We are raising a seed round.', 0], ['Designer', 'Make the logo bigger, they said.', 0]],
+    estate: [['Gateman', 'Who are you here to see?', 1], ['Resident', 'Light has been steady this week.', 0], ['Gardener', 'The hedges grow fast in rainy season.', 0]]
   };
   var VENUE_RIDES = { danfo: 1, brt: 1, cab: 1, keke: 1, okada: 1, car: 1 };
+  // The look of a place's yard: a few by id, the rest by its map glyph, then by its type.
+  var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
   function venueSet(pl) {
-    if (/refinery|yards|docks/.test(pl.id)) return 'refinery';
+    if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
     if (DEP_PLACES[pl.id] || pl.id === 'new_airport_site' || pl.glyph === 'plane') return 'airport';
-    return VENUE_CREW[pl.type] ? pl.type : 'outdoors';
+    if (pl.glyph === 'dome') return pl.type === 'services' ? 'church' : 'govt';
+    if (pl.glyph === 'tool') return 'workshop';
+    if (pl.glyph === 'club' && pl.type === 'nightlife') return 'nightlife';
+    return VENUE_BY_GLYPH[pl.glyph] || (VENUE_CREW[pl.type] ? pl.type : 'outdoors');
   }
   function vHash(str, n) { var h = 2166136261; for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619); return Math.imul(h ^ n, 2654435761) >>> 0; }
   // A stranger dressed from the wardrobe, the same each game hour.
@@ -1866,7 +1888,7 @@
     var people = [];
     for (var i = 0; i < n; i++) {
       var role = crew[vHash(seed, 20 + i) % crew.length], st = venueStranger(seed, i);
-      people.push({ look: st.look, outfit: st.outfit, label: role[0], line: role[1], slot: vHash(seed, 40 + i) % 8, hat: role[2] && set === 'refinery' ? '#f2c200' : null, vest: role[2] ? '#f39c12' : null });
+      people.push({ look: st.look, outfit: st.outfit, label: role[0], line: role[1], slot: vHash(seed, 40 + i) % 8, hat: role[2] && (set === 'refinery' || set === 'workshop') ? '#f2c200' : null, vest: role[2] ? (set === 'hospital' ? '#2fa36b' : set === 'beach' || set === 'jetty' ? '#e2652b' : '#f39c12') : null });
     }
     // Live players in this district stand here too, under their @handles.
     (online.peerList || []).filter(function (p) { return p.d === pl.district && !online.muted[p.by] && p.look; }).slice(0, 4).forEach(function (p, k) {
@@ -1879,7 +1901,7 @@
     return {
       name: pl.name, set: set, acts: acts, people: people, commuters: commuters, night: h0 >= 19 || h0 < 6,
       sign: pl.name.toUpperCase().slice(0, 30), signBg: set === 'refinery' ? '#1f3b63' : set === 'nightlife' ? '#8e24aa' : '#1f3b63',
-      shuttle: set === 'refinery' ? 'staff' : set === 'airport' ? 'cab' : ['danfo', 'keke', 'okada', 'cab'][vHash(pl.id, 3) % 4],
+      shuttle: set === 'refinery' ? 'staff' : set === 'airport' || set === 'govt' || set === 'estate' || set === 'dealer' ? 'cab' : set === 'stadium' || set === 'campus' ? 'brt' : ['danfo', 'keke', 'okada', 'cab'][vHash(pl.id, 3) % 4],
       me: here ? { look: S.look, outfit: S.outfit, extra: myExtra(), label: 'You', me: true, say: venueSay(pl.id, online.me || 'me'), hat: set === 'refinery' && (worksHere || ui.venueSlot != null) ? '#ffffff' : null } : null,
       meSlot: ui.venueSlot != null ? ui.venueSlot : Math.min(5, slots - 1),
       arrive: trip && VENUE_RIDES[trip.mode] ? trip.mode : null, arriveKey: trip ? 'trip:' + trip.at : ''
