@@ -942,6 +942,7 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .pp-badge.got { opacity: 1; background: rgba(242,182,0,.3); font-weight: 700; }
 .shop-adult { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-weight: 700; }
 .shop-key { font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 4px 8px; border-radius: 8px; background: rgb(127 127 127 / .15); word-break: break-all; }
+.iv-spin { position: absolute; right: 8px; top: 8px; display: flex; gap: 4px; }
 .tag-swatch { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 9px; vertical-align: middle; }
 .room-night { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; margin: 4px 0 6px; border-radius: 10px; background: #fff4cc; color: #3a2c00; font-size: 13px; }
 .room-night .muted { color: #6b5a1f; }

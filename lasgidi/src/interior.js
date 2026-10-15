@@ -38,26 +38,53 @@
     var wrap = document.createElement('div'); wrap.className = 'iv';
     var canvas = document.createElement('canvas'); canvas.className = 'iv-canvas'; canvas.setAttribute('role', 'img');
     wrap.appendChild(canvas);
+    var spinBar = document.createElement('div'); spinBar.className = 'iv-spin';
+    spinBar.innerHTML = '<button type="button" class="pg-zbtn" data-ivspin="-1" aria-label="Turn the room left">⟲</button><button type="button" class="pg-zbtn" data-ivspin="1" aria-label="Turn the room right">⟳</button>';
+    wrap.appendChild(spinBar);
+    spinBar.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-ivspin]'); if (!b) return;
+      turn = (turn + (+b.getAttribute('data-ivspin') > 0 ? 3 : 1)) % 4; // ⟳ turns the room clockwise on screen
+      try { root.localStorage && root.localStorage.setItem('lasgidi.homespin.v1', String(turn)); } catch (e2) {}
+      draw();
+    });
     var ctx = canvas.getContext('2d');
     var view = null, W = 0, H = 0, dpr = 1, s = 1, ox = 0, oy = 0, hits = [], drag = null, hover = null;
     var emojiFont = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
 
-    function iso(x, y, z) { return { x: ox + (x - y) * TW / 2 * s, y: oy + (x + y) * TH / 2 * s - (z || 0) * s }; }
+    // Spin in 90° steps: home coordinates (x, y) turn into view coordinates (u, v) about the home's middle, so the
+    // two walls drawn are always the far ones and the grid stays square for placing furniture.
+    var turn = 0; try { turn = (+(root.localStorage && root.localStorage.getItem('lasgidi.homespin.v1')) || 0) % 4; } catch (e) {}
+    var CX = 0, CY = 0;
+    function toV(x, y) { var dx = x - CX, dy = y - CY; for (var i = 0; i < turn; i++) { var t = dx; dx = dy; dy = -t; } return { u: CX + dx, v: CY + dy }; }
+    function fromV(u, v) { var dx = u - CX, dy = v - CY; for (var i = 0; i < (4 - turn) % 4; i++) { var t = dx; dx = dy; dy = -t; } return { x: CX + dx, y: CY + dy }; }
+    function isoV(u, v, z) { return { x: ox + (u - v) * TW / 2 * s, y: oy + (u + v) * TH / 2 * s - (z || 0) * s }; }
+    function iso(x, y, z) { var q = toV(x, y); return isoV(q.u, q.v, z); }
     function fromScreen(sx, sy) {
       var a = (sx - ox) / (TW / 2 * s), b = (sy - oy) / (TH / 2 * s);
-      return { x: (a + b) / 2, y: (b - a) / 2 };
+      return fromV((a + b) / 2, (b - a) / 2);
     }
+    // A home-space rectangle as a view-space rectangle (still axis-aligned after a 90° turn).
+    function rectV(x, y, w, d) {
+      var a = toV(x, y), b = toV(x + w, y + d);
+      return { u: Math.min(a.u, b.u), v: Math.min(a.v, b.v), w: Math.abs(b.u - a.u), d: Math.abs(b.v - a.v) };
+    }
+    function depthV(x, y) { var q = toV(x, y); return q.u + q.v; }
 
     function fit() {
       var r = wrap.getBoundingClientRect();
       var w = Math.max(260, Math.round(r.width)), h = Math.round(w * (w < 600 ? 0.8 : 0.58));
       dpr = Math.min(2, root.devicePixelRatio || 1);
       if (w !== W || h !== H) { W = w; H = h; canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); canvas.style.height = H + 'px'; }
-      var sz = view.size, gw = sz[0] + 4, gd = sz[1] + 2.5; // room, driveway and front lawn
-      var spanX = (gw + gd) * TW / 2, spanY = (gw + gd) * TH / 2 + WALL + 30;
+      var sz = view.size; CX = sz[0] / 2; CY = sz[1] / 2;
+      // Fit the room, driveway and lawn as they sit in the current view.
+      var corners = [[-1, -1], [sz[0] + 4, -1], [sz[0] + 4, sz[1] + 1.5], [-1, sz[1] + 1.5]].map(function (c) { return toV(c[0], c[1]); });
+      var minU = Math.min.apply(null, corners.map(function (c) { return c.u; })), minV = Math.min.apply(null, corners.map(function (c) { return c.v; }));
+      var maxU = Math.max.apply(null, corners.map(function (c) { return c.u; })), maxV = Math.max.apply(null, corners.map(function (c) { return c.v; }));
+      var xs = [minU - maxV, maxU - minV], ys = [minU + minV, maxU + maxV];
+      var spanX = (xs[1] - xs[0]) * TW / 2, spanY = (ys[1] - ys[0]) * TH / 2 + WALL + 30;
       s = Math.min(W / spanX, H / spanY) * 0.94;
-      ox = W / 2 - ((gw - gd) * TW / 2 * s) / 2;
-      oy = (H - spanY * s) / 2 + (WALL + 22) * s;
+      ox = W / 2 - ((xs[0] + xs[1]) / 2) * TW / 2 * s;
+      oy = (H - spanY * s) / 2 + (WALL + 22) * s - ys[0] * TH / 2 * s;
     }
 
     function poly(pts, fill, stroke) {
@@ -66,9 +93,10 @@
       if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
     }
     // An iso box from (x, y) with size (w, d), from height z0 to z1 (px).
-    function box(x, y, w, d, z0, z1, color, top) {
-      var a = iso(x, y, z1), b = iso(x + w, y, z1), c = iso(x + w, y + d, z1), e = iso(x, y + d, z1);
-      var b0 = iso(x + w, y, z0), c0 = iso(x + w, y + d, z0), e0 = iso(x, y + d, z0);
+    function box(x0, y0, w0, d0, z0, z1, color, top) {
+      var R = rectV(x0, y0, w0, d0), x = R.u, y = R.v, w = R.w, d = R.d;
+      var a = isoV(x, y, z1), b = isoV(x + w, y, z1), c = isoV(x + w, y + d, z1), e = isoV(x, y + d, z1);
+      var b0 = isoV(x + w, y, z0), c0 = isoV(x + w, y + d, z0), e0 = isoV(x, y + d, z0);
       poly([b, c, c0, b0], shade(color, -0.25));
       poly([e, c, c0, e0], shade(color, -0.1));
       poly([a, b, c, e], top || color);
@@ -142,9 +170,16 @@
       poly([iso(-1, -1), iso(sz[0] + 4, -1), iso(sz[0] + 4, sz[1] + 1.5), iso(-1, sz[1] + 1.5)], view.dark ? '#2f3d2c' : '#b9cf9a');
       poly([iso(sz[0] + 0.4, 0), iso(sz[0] + 3.6, 0), iso(sz[0] + 3.6, sz[1]), iso(sz[0] + 0.4, sz[1])], view.dark ? '#3a3b3e' : '#c9c6bf');
       // Back walls with windows.
-      poly([iso(0, 0, WALL), iso(sz[0], 0, WALL), iso(sz[0], 0), iso(0, 0)], shade(wall, -0.06));
-      poly([iso(0, 0, WALL), iso(0, sz[1], WALL), iso(0, sz[1]), iso(0, 0)], shade(wall, -0.16));
-      for (var wx = 1; wx < sz[0] - 0.5; wx += 2.5) poly([iso(wx, 0, WALL * 0.75), iso(wx + 1, 0, WALL * 0.75), iso(wx + 1, 0, WALL * 0.35), iso(wx, 0, WALL * 0.35)], view.power || view.hour < 18 && view.hour >= 7 ? '#a9d4ea' : '#2a3a4a');
+      // Cars on a driveway that sits behind the room in this view go down before the walls.
+      var cars = view.vehicles.filter(function (v) { return D.VEHICLES[v.id].kind === 'car'; });
+      var carsBehind = depthV(sz[0] + 2, sz[1] / 2) < depthV(sz[0] / 2, sz[1] / 2);
+      var drawCars = function () { cars.slice(0, 4).forEach(function (v, i) { drawCar(sz[0] + 1.1, 0.4 + i * 1.3, D.VEHICLES[v.id]); }); };
+      if (carsBehind) drawCars();
+      // The two far walls of the room as it sits in the view, with windows.
+      var RV = rectV(0, 0, sz[0], sz[1]), u0 = RV.u, v0 = RV.v, uw = RV.w, vd = RV.d, lit = view.power || view.hour < 18 && view.hour >= 7 ? '#a9d4ea' : '#2a3a4a';
+      poly([isoV(u0, v0, WALL), isoV(u0 + uw, v0, WALL), isoV(u0 + uw, v0), isoV(u0, v0)], shade(wall, -0.06));
+      poly([isoV(u0, v0, WALL), isoV(u0, v0 + vd, WALL), isoV(u0, v0 + vd), isoV(u0, v0)], shade(wall, -0.16));
+      for (var wx = 1; wx < uw - 0.5; wx += 2.5) poly([isoV(u0 + wx, v0, WALL * 0.75), isoV(u0 + wx + 1, v0, WALL * 0.75), isoV(u0 + wx + 1, v0, WALL * 0.35), isoV(u0 + wx, v0, WALL * 0.35)], lit);
       // Floor tiles, by room.
       var rooms = roomsFor(type, sz);
       function roomOf(tx, ty) { for (var i = 0; i < rooms.length; i++) { var r = rooms[i]; if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.d) return r; } return null; }
@@ -171,7 +206,8 @@
       // Items, back to front.
       hits = [];
       var list = view.items.map(function (it, i) { return { it: it, i: i }; }).filter(function (o) { return o.it.x != null; });
-      list.sort(function (a, b) { return (a.it.x + a.it.y) - (b.it.x + b.it.y); });
+      list.sort(function (a, b) { var fa = D.FURNITURE[a.it.id], fb = D.FURNITURE[b.it.id], da = a.it.r ? [fa.d, fa.w] : [fa.w, fa.d], db = b.it.r ? [fb.d, fb.w] : [fb.w, fb.d];
+        return depthV(a.it.x + da[0] / 2, a.it.y + da[1] / 2) - depthV(b.it.x + db[0] / 2, b.it.y + db[1] / 2); });
       list.forEach(function (o) {
         var f = D.FURNITURE[o.it.id];
         var moving = drag && drag.idx === o.i && drag.to;
@@ -188,8 +224,7 @@
       });
       if (drag && drag.to) drawItem({ id: view.items[drag.idx].id, x: drag.to.x, y: drag.to.y, r: view.items[drag.idx].r }, D.FURNITURE[view.items[drag.idx].id], true);
       // Driveway: cars, a helipad, boats at a jetty marker.
-      var cars = view.vehicles.filter(function (v) { return D.VEHICLES[v.id].kind === 'car'; });
-      cars.slice(0, 4).forEach(function (v, i) { drawCar(sz[0] + 1.1, 0.4 + i * 1.3, D.VEHICLES[v.id]); });
+      if (!carsBehind) drawCars();
       var stored = view.items.filter(function (it) { return it.x == null; }).length, moreCars = Math.max(0, cars.length - 4);
       var chips = [];
       if (stored) chips.push('🅿️ +' + stored + ' in storage');
