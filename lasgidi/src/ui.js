@@ -2051,7 +2051,7 @@
     if (!slot) return;
     if (!playground) playground = window.LasgidiPlayground.create({
       onSelect: function (k) { ui.sel = k === S.loc ? null : k; ui.place = null; ui.board = null; render(); },
-      onSelectPlace: function (id) { clearPicks(); ui.place = id; render(); },
+      onSelectPlace: function (id) { clearPicks(); ui.mapPop = null; ui.place = id; render(); },
       onSelectPlayer: function (by) { clearPicks(); ui.chatWith = by; online.unread[by] = 0; render(); },
       onSelectBoard: function (id) { clearPicks(); ui.board = id; render(); },
       onSelectHome: function (id) { clearPicks(); ui.homeSel = id; render(); },
@@ -2060,6 +2060,44 @@
     });
     slot.appendChild(playground.el); window.__pg = playground;
     playground.update(sceneFor());
+    mountMapUI(narrow);
+  }
+  // On-map controls: the map fills the window, a 📋 Do button opens what you can do here, and tapping a pin
+  // (a place, a home or a billboard) opens its card as a pop-up over the map.
+  function mapPopKind() {
+    if (ui.mapPop === 'do') return 'do';
+    if (ui.sel && ui.sel !== S.loc) return '';
+    if (ui.chatWith || ui.seaOpen) return '';
+    return ui.place ? 'place' : ui.board ? 'board' : ui.homeSel ? 'home' : '';
+  }
+  function mapDoHtml() {
+    var acts = L.availableActions(S), sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
+    var place = acts.filter(function (a) { return !a.atHome; }).sort(sortOpen), home = acts.filter(function (a) { return a.atHome; }).sort(sortOpen);
+    var html = adviceView() + '<div class="list">' + place.map(actionRow).join('') + '</div>' +
+      (home.length ? '<h4>At home · ' + esc(L.homeDef(S).name) + '</h4><div class="list">' + home.map(actionRow).join('') + '</div>' : '') +
+      '<div class="inline"><button class="btn ghost" id="wait-1" data-wait="60">Wait 1 hour</button></div>';
+    return html.replace(/ id="/g, ' id="mp-'); // the Do tab can be on screen too: keep ids unique
+  }
+  function mountMapUI(narrow) {
+    var el = playground && playground.el; if (!el) return;
+    var full = el.classList.contains('pg-full');
+    if (!full) {
+      el.classList.add('pg-fit');
+      var top = el.getBoundingClientRect().top + window.scrollY;
+      var h = Math.max(360, window.innerHeight - (narrow ? 76 : 16) - (narrow ? 0 : Math.max(0, top - window.scrollY - 8)));
+      el.style.height = (narrow ? Math.max(360, window.innerHeight - 76 - 8) : h) + 'px';
+    } else el.style.height = '';
+    var dock = el.querySelector('.map-dock');
+    if (!dock) { dock = document.createElement('div'); dock.className = 'map-dock'; el.appendChild(dock); }
+    var n = L.availableActions(S).filter(function (a) { return !a.disabled; }).length, kind = mapPopKind();
+    dock.innerHTML = '<button type="button" class="map-dock-btn' + (kind === 'do' ? ' on' : '') + '" id="map-do" data-mappop="do" aria-expanded="' + (kind === 'do') + '" aria-label="What you can do in ' + esc(D.DISTRICTS[S.loc].name) + '">📋 Do here <span class="num">' + n + '</span></button>';
+    var pop = el.querySelector('.map-pop');
+    if (!pop) { pop = document.createElement('div'); pop.className = 'map-pop'; pop.setAttribute('role', 'dialog'); el.appendChild(pop); }
+    var title = kind === 'do' ? '📋 In ' + D.DISTRICTS[S.loc].name : kind === 'place' ? '📍 ' + (D.PLACES.filter(function (p) { return p.id === ui.place; })[0] || {}).name : kind === 'board' ? '🪧 Billboard' : kind === 'home' ? '🏠 ' + (D.HOMES[ui.homeSel] || {}).name : '';
+    var body = kind === 'do' ? mapDoHtml() : kind === 'place' ? placeView(ui.place) : kind === 'board' ? boardView(ui.board) : kind === 'home' ? homeView(ui.homeSel) : '';
+    pop.hidden = !kind;
+    pop.setAttribute('aria-label', title || 'Map');
+    pop.innerHTML = kind ? '<div class="map-pop-h"><b>' + esc(title || '') + '</b><button type="button" class="btn sm ghost" id="map-pop-close" data-mappopclose="1" aria-label="Close">✕</button></div><div class="map-pop-b">' + body + '</div>' : '';
   }
 
   // Fly or take the bus to another city.
@@ -2140,7 +2178,7 @@
       layerChips() + '<div class="pg-wrap">' + (firstRun() ? '' : questChips()) + '<div class="pg-slot"></div></div>' + (firstRun() ? '' : govChips()) + placeFilters() + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
       '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
-        : ui.chatWith ? chatView(ui.chatWith) : ui.seaOpen ? seaView() : ui.place ? placeView(ui.place) : ui.board ? boardView(ui.board) : ui.homeSel ? homeView(ui.homeSel) : ui.plotSel != null ? plotView(ui.plotSel)
+        : ui.chatWith ? chatView(ui.chatWith) : ui.seaOpen ? seaView() : (ui.place || ui.board || ui.homeSel) ? '<p class="note">Opened on the map. Tap ✕ on the card to close it.</p>' : ui.plotSel != null ? plotView(ui.plotSel)
         : '<p>' + esc(d.blurb) + ' Tap a district, a place, a home or a billboard.</p>') + '</div>';
   }
 
@@ -3384,7 +3422,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3458,7 +3496,7 @@
     if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; if (t.hasAttribute('data-app')) ui.app = ds.app || null; if (ds.tripto) { clearPicks(); ui.sel = ds.tripto === S.loc ? null : ds.tripto; } if (ds.seaopen) { clearPicks(); ui.seaOpen = true; } if (ds.place && t.hasAttribute('data-place')) { clearPicks(); ui.place = ds.place; } if (t.hasAttribute('data-placecat')) { clearPicks(); ui.placeCat = ds.placecat || null; } render(); if (ds.seaopen && playground && playground.focusSea) playground.focusSea(); return; }
     if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
     if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
-    if (ds.place) { ui.place = ds.place; ui.board = null; ui.sel = null; render(); return; }
+    if (ds.place) { ui.place = ds.place; ui.board = null; ui.mapPop = null; ui.sel = null; render(); return; }
     if (ds.lookskin !== undefined) { run(function () { return L.setLook(S, +ds.lookskin, S.look.hair, S.look.shape); }); return; }
     if (ds.lookshape !== undefined) { run(function () { return L.setLook(S, S.look.skin, S.look.hair, +ds.lookshape); }); return; }
     if (ds.wear) { run(function () { return L.wear(S, ds.wear); }); return; }
@@ -3719,6 +3757,8 @@
     if (ds.roomenter) { var re0 = ds.roomenter; run(function () { var r = L.roomEnter(S, re0); if (r.ok) { ui.roomOpen = re0; ui.cruiseOpen = false; ui.airportOpen = false; } return r; }); syncPresence(); return; }
     if (ds.roomopen) { ui.roomOpen = ds.roomopen; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.roomspot) { var rsp = ds.roomspot; if (S.room && S.room.spot === rsp) return; run(function () { return L.roomSpot(S, S.room.id, rsp); }); syncPresence(); return; }
+    if (ds.mappop) { ui.mapPop = ui.mapPop === 'do' ? null : 'do'; if (ui.mapPop) { ui.place = null; ui.board = null; ui.homeSel = null; } render(); return; }
+    if (ds.mappopclose) { ui.mapPop = null; ui.place = null; ui.board = null; ui.homeSel = null; render(); return; }
     if (ds.roomhang) { var rh0 = ds.roomhang; run(function () { return L.roomHang(S, S.room.id, rh0); }); return; }
     if (ds.roomnight) { var rn0 = ds.roomnight; run(function () { return L.roomNight(S, rn0); }); return; }
     if (ds.roomleave) { ui.roomOpen = null; run(function () { return L.roomLeave(S); }); syncPresence(); return; }

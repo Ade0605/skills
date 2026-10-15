@@ -352,7 +352,7 @@
 
     function resize() {
       var r = wrap.getBoundingClientRect();
-      var full = wrap.classList.contains('pg-full');
+      var full = wrap.classList.contains('pg-full') || wrap.classList.contains('pg-fit'); // pg-fit: the page sets the map's height (fills the window)
       var w = Math.max(240, Math.round(r.width)), h = full ? Math.max(200, Math.round(r.height)) : Math.max(200, Math.round(w * (w < 600 ? 1.15 : 0.85)));
       dpr = Math.min(w < 600 ? 1.5 : 2, root.devicePixelRatio || 1); // cheap phones: fewer pixels to fill
       if (w === W && h === H && canvas.width === Math.round(w * dpr)) return false;
