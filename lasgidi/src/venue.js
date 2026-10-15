@@ -21,10 +21,10 @@
     var cv = document.createElement('canvas'); cv.className = 'cruise-canvas';
     cv.setAttribute('role', 'img'); el.appendChild(cv);
     var bar = document.createElement('div'); bar.className = 'iv-spin';
-    bar.innerHTML = '<button type="button" class="pg-zbtn" data-vspin="-1" aria-label="Turn the view left">⟲</button><button type="button" class="pg-zbtn" data-vspin="1" aria-label="Turn the view right">⟳</button>';
+    bar.innerHTML = '<button type="button" class="pg-zbtn" data-vclean="1" aria-label="Clean screen: hide signs and names" aria-pressed="false">🧹</button><button type="button" class="pg-zbtn" data-vphoto="1" aria-label="Take a photo">📷</button><button type="button" class="pg-zbtn" data-vspin="-1" aria-label="Turn the view left">⟲</button><button type="button" class="pg-zbtn" data-vspin="1" aria-label="Turn the view right">⟳</button>';
     el.appendChild(bar);
     var g = cv.getContext('2d'), scene = { people: [], acts: [] }, figs = {}, hits = [], raf = 0, W = 0, H = 0, dpr = 1, t0 = 0;
-    var turn = 0, spin = null, fit = null, deferQ = null, CX = 5, CY = 3.7;
+    var clean = false, turn = 0, spin = null, fit = null, deferQ = null, CX = 5, CY = 3.7;
     var bubble = null, arriveKey = '', arriveAt = -1, reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function size() {
@@ -366,7 +366,12 @@
       g.fillStyle = scene.night ? '#262a31' : '#b9b4aa'; g.beginPath(); g.ellipse(W / 2, H * 1.05, W * 0.85, H * 0.62, 0, Math.PI, 0); g.fill();
       road();
       (SETS[scene.set] || SETS.outdoors)(now);
-      if (scene.sign) label(GATE + 1.2, PAD.d - 0.1, 1.15, scene.sign, scene.signBg || '#1f3b63');
+      if (scene.sign && !clean) label(GATE + 1.2, PAD.d - 0.1, 1.15, scene.sign, scene.signBg || '#1f3b63');
+      // Lamp posts at the gate, glowing after dark.
+      [GATE - 0.9, GATE + 0.9].forEach(function (lx) { at(lx, PAD.d - 0.15, function () { var a = P(lx, PAD.d - 0.15, 0), b = P(lx, PAD.d - 0.15, 1.3); g.strokeStyle = '#3a3d42'; g.lineWidth = 2; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); if (scene.night) { var gl = g.createRadialGradient(b.x, b.y, 1, b.x, b.y, b.s * 0.9); gl.addColorStop(0, 'rgba(255,226,140,.9)'); gl.addColorStop(1, 'rgba(255,226,140,0)'); g.fillStyle = gl; g.beginPath(); g.arc(b.x, b.y, b.s * 0.9, 0, Math.PI * 2); g.fill(); } g.fillStyle = scene.night ? '#fff3c4' : '#c9ced3'; g.beginPath(); g.arc(b.x, b.y, 3, 0, Math.PI * 2); g.fill(); }); });
+      // Today's gem, if it is hidden here: a bobbing, sparkling stone.
+      var gemHit = null;
+      if (scene.gem) { var gq = SLOTS[scene.gem.slot % SLOTS.length], gx = gq[0] - 0.55, gy = gq[1] + 0.95; at(gx, gy, function () { var gp = P(gx, gy, 0.35 + (reduce ? 0 : Math.sin(now / 400) * 0.06)), r = gp.s * 0.24; g.fillStyle = 'rgba(0,0,0,.15)'; var sh = P(gx, gy, 0); g.beginPath(); g.ellipse(sh.x, sh.y, r, r * 0.4, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#33c3f0'; g.beginPath(); g.moveTo(gp.x, gp.y - r); g.lineTo(gp.x + r * 0.8, gp.y - r * 0.2); g.lineTo(gp.x, gp.y + r); g.lineTo(gp.x - r * 0.8, gp.y - r * 0.2); g.closePath(); g.fill(); g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.moveTo(gp.x, gp.y - r); g.lineTo(gp.x + r * 0.3, gp.y - r * 0.2); g.lineTo(gp.x, gp.y + r * 0.2); g.lineTo(gp.x - r * 0.4, gp.y - r * 0.2); g.closePath(); g.fill(); if (!reduce) { var tw = (now / 300) % 6; g.fillStyle = '#ffffff'; g.fillRect(gp.x + r * Math.cos(tw) * 1.4 - 1, gp.y - r * 1.2 + Math.sin(tw) * r * 0.5 - 1, 2.5, 2.5); } gemHit = { kind: 'gem', x: gp.x, y: gp.y, w: r * 3, h: r * 3 }; }); }
       // People: those already here, then commuters dropped off by the shuttle, then you.
       var list = [];
       (scene.people || []).forEach(function (pl, i) {
@@ -394,10 +399,11 @@
       list.forEach(function (it) { later(depth(it.x, it.y), function () { var r = person(it.pl, it.x, it.y, it.a, now); if (it.i >= 0) pHits.push({ kind: 'person', i: it.i, x: r.x, y: r.y, w: r.w, h: r.h }); }); });
       // Draw everything queued, back to front, then the name tags and the action signs on top.
       var q = deferQ; deferQ = null; q.sort(function (a, b) { return a.d - b.d; }).forEach(function (it) { it.f(); });
-      list.forEach(function (it) { if (it.a > 0.5 && (it.pl.me || it.pl.live)) personTag(it.pl, it.x, it.y); });
+      if (gemHit) pHits.push(gemHit);
+      if (!clean) list.forEach(function (it) { if (it.a > 0.5 && (it.pl.me || it.pl.live || it.pl.named)) personTag(it.pl, it.x, it.y); });
       // Action signs, one per slot.
       hits = pHits;
-      (scene.acts || []).slice(0, SLOTS.length).forEach(function (a, i) {
+      (clean ? [] : scene.acts || []).slice(0, SLOTS.length).forEach(function (a, i) {
         var q = SLOTS[i], p = P(q[0], q[1], 1.25 + (i % 2) * 0.25); g.font = '800 ' + Math.min(12, Math.max(9, p.s * 0.18)) + 'px system-ui, sans-serif';
         var txt = W < 560 ? a.icon : a.icon + ' ' + a.short, tw = g.measureText(txt).width + 14, th = 20, on = !a.off;
         g.fillStyle = on ? 'rgba(255,255,255,.95)' : 'rgba(235,235,235,.75)'; g.strokeStyle = on ? '#2f6fd0' : '#9aa0a6'; g.lineWidth = 1.5;
@@ -407,7 +413,7 @@
         hits.push({ kind: 'act', i: i, x: p.x, y: p.y - th / 2, w: tw, h: th + 6 });
       });
 
-      list.forEach(function (it) {
+      if (!clean) list.forEach(function (it) {
         if (!it.pl.say) return;
         var p = P(it.x, it.y, 0), fh = p.s * 1.35; g.font = '600 12px system-ui, sans-serif';
         var t = it.pl.say.length > 60 ? it.pl.say.slice(0, 58) + '…' : it.pl.say, bw = Math.min(W - 20, g.measureText(t).width + 18), bx = Math.max(10, Math.min(W - bw - 10, p.x - bw / 2)), by = Math.max(6, p.y - fh - 50);
@@ -420,10 +426,18 @@
         g.fillStyle = '#ffffff'; g.strokeStyle = '#17181a'; g.lineWidth = 1; g.beginPath(); if (g.roundRect) g.roundRect(bx, by, bw, 24, 12); else g.rect(bx, by, bw, 24); g.fill(); g.stroke();
         g.fillStyle = '#17181a'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(bubble.text, bx + 9, by + 12);
       }
+      if (scene.weather === 'rain' || scene.weather === 'storm') {
+        g.fillStyle = 'rgba(40,55,75,' + (scene.weather === 'storm' ? 0.28 : 0.16) + ')'; g.fillRect(0, 0, W, H);
+        g.strokeStyle = 'rgba(210,225,245,.55)'; g.lineWidth = 1; var n = scene.weather === 'storm' ? 140 : 80;
+        for (var rd = 0; rd < n; rd++) { var rx = (rd * 97.13 % W), ry = ((rd * 53.7 + (reduce ? 0 : now * 0.6)) % (H + 20)) - 20; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx - 3, ry + 12); g.stroke(); }
+        if (scene.weather === 'storm' && !reduce && Math.floor(now / 97) % 61 === 0) { g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(0, 0, W, H); }
+      } else if (scene.weather === 'harmattan') { g.fillStyle = 'rgba(214,180,120,.22)'; g.fillRect(0, 0, W, H); }
       if (scene.night) { g.fillStyle = 'rgba(10,14,40,.22)'; g.fillRect(0, 0, W, H); }
       raf = reduce ? 0 : root.requestAnimationFrame(frame);
     }
     bar.addEventListener('click', function (e) {
+      var cb = e.target.closest('[data-vclean]'); if (cb) { clean = !clean; cb.setAttribute('aria-pressed', String(clean)); if (reduce) frame(performance.now()); return; }
+      if (e.target.closest('[data-vphoto]')) { if (opts.onPhoto) opts.onPhoto(cv); return; }
       var b = e.target.closest('[data-vspin]'); if (!b) return;
       var d = +b.getAttribute('data-vspin') > 0 ? -1 : 1, from = spin ? spin.to : turn; // ⟳ turns the yard clockwise on screen
       spin = reduce ? null : { from: from, to: from + d, at: performance.now() }; turn = ((from + d) % 4 + 4) % 4;
@@ -434,12 +448,14 @@
       for (var i = hits.length - 1; i >= 0; i--) {
         var h = hits[i]; if (Math.abs(x - h.x) > h.w / 2 || Math.abs(y - h.y) > h.h / 2) continue;
         if (h.kind === 'act') { if (opts.onAct) opts.onAct(h.i); return; }
+        if (h.kind === 'gem') { if (opts.onGem) opts.onGem(scene.gem.n); return; }
+        var np = scene.people[h.i]; if (np && np.npc && opts.onNpc) { bubble = { text: np.label + ': ' + np.line, at: performance.now(), pos: h }; opts.onNpc(np.npc); return; }
         var pl = scene.people[h.i]; if (pl && pl.line) { bubble = { text: (pl.live ? pl.label : pl.label + ': ') + (pl.live ? ' · ' : '') + pl.line, at: performance.now(), pos: h }; if (reduce) frame(performance.now()); }
         return;
       }
     });
     return {
-      el: el,
+      el: el, canvas: cv,
       update: function (sc) {
         scene = sc || scene;
         cv.setAttribute('aria-label', (scene.name || 'A place') + '. ' + (scene.people || []).length + ' people here. Things to do are listed below.');

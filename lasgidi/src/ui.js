@@ -1890,6 +1890,18 @@
       return { id: aid, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
     }).filter(Boolean));
   }
+  function venueNamed(pl) {
+    var out = [];
+    Object.keys(D.NPCS).forEach(function (k) {
+      var n = D.NPCS[k], wp = CAREER_PLACE[n.career], home = D.PLACES.filter(function (p) { return p.id === wp && p.district === n.district; })[0] || D.PLACES.filter(function (p) { return p.district === n.district; })[0];
+      if (home && home.id === pl.id) out.push({ name: n.name, role: n.role, npc: k, line: 'Sit down, make we gist. An hour, ₦500 for drinks.' });
+    });
+    Object.keys(D.LOCALS || {}).forEach(function (k) {
+      var lo = D.LOCALS[k], R0 = D.ROOMS[lo.room];
+      if (R0 && R0.place === pl.id) out.push({ name: lo.name, role: lo.role, line: lo.text + ' Find them in the live room here.' });
+    });
+    return out;
+  }
   function venueScene(pl) {
     var set = venueSet(pl), hr = Math.floor(S.t / 60), crew = VENUE_CREW[set], seed = pl.id + ':' + hr, n = 3 + vHash(seed, 1) % 4, acts = venueActs(pl), slots = Math.max(1, Math.min(8, acts.length));
     var people = [];
@@ -1901,12 +1913,15 @@
     (online.peerList || []).filter(function (p) { return p.d === pl.district && !online.muted[p.by] && p.look; }).slice(0, 4).forEach(function (p, k) {
       people.push({ look: p.look, outfit: {}, label: handleOf(p.by), line: 'a player here now. Say hello below.', slot: (k * 3 + 2) % 8, live: true, say: venueSay(pl.id, p.by) });
     });
+    // Named characters: the NPCs at their workplace (or the first place in their district), and locals at their room's place.
+    venueNamed(pl).forEach(function (nm, k) { var st = venueStranger(nm.name, 0); people.push({ look: st.look, outfit: st.outfit, label: nm.name + ' · ' + nm.role, line: nm.line, named: true, npc: nm.npc || null, slot: (vHash(nm.name, 5) + k) % 8 }); });
     var commuters = [0, 1].map(function (k) { var st = venueStranger(pl.id + ':c', k); return { look: st.look, outfit: st.outfit, hat: set === 'refinery' ? '#f2c200' : null, vest: set === 'refinery' ? '#f39c12' : null }; });
     // While the ride view is still up, hold the arrival (and keep you off the yard) until it closes.
     var riding = !!document.getElementById('ride-view'), here = S.loc === pl.district && !riding, trip = !riding && ui.trip && ui.trip.to === pl.district && Date.now() - ui.trip.at < 120000 ? ui.trip : null;
     var worksHere = S.job && careersAt(pl).indexOf(S.job.id) >= 0, h0 = L.hour(S), bub = ui.venueBubble && ui.venueBubble.place === pl.id && Date.now() - ui.venueBubble.at < 7000 ? ui.venueBubble.text : null;
     return {
-      name: pl.name, set: set, acts: acts, people: people, commuters: commuters, night: h0 >= 19 || h0 < 6,
+      name: pl.name, set: set, acts: acts, people: people, commuters: commuters, night: h0 >= 19 || h0 < 6, weather: L.weatherNow(S) || 'clear',
+      gem: (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? { n: gm.n, slot: vHash(pl.id, 7 + gm.n) % 8 } : null; })(),
       sign: pl.name.toUpperCase().slice(0, 30), signBg: set === 'refinery' ? '#1f3b63' : set === 'nightlife' ? '#8e24aa' : '#1f3b63',
       shuttle: set === 'refinery' ? 'staff' : set === 'airport' || set === 'govt' || set === 'estate' || set === 'dealer' ? 'cab' : set === 'stadium' || set === 'campus' ? 'brt' : ['danfo', 'keke', 'okada', 'cab'][vHash(pl.id, 3) % 4],
       me: here ? { look: S.look, outfit: S.outfit, extra: myExtra(), label: worksHere ? 'You · ' + D.CAREERS[S.job.id].titles[S.job.level] : 'You', me: true, say: venueSay(pl.id, online.me || 'me') || bub, vest: worksHere ? (set === 'hospital' ? '#2fa36b' : '#f39c12') : null, hat: (set === 'refinery' || set === 'workshop') && (worksHere || ui.venueSlot != null) ? '#ffffff' : null } : null,
@@ -1936,6 +1951,8 @@
   function venuePanel(pl) {
     var here = S.loc === pl.district, acts = venueActs(pl), crowd = venueScene(pl).people.length + (here ? 1 : 0);
     return '<div class="ap-head"><b>' + esc(pl.icon || '📍') + ' ' + esc(pl.name) + '</b><span class="muted">' + esc(D.DISTRICTS[pl.district].name) + ' · ' + crowd + ' here · ' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="venue-close" data-venueclose="1" aria-label="Leave the scene">✕</button></div>' +
+      (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? '<div class="gem-here"><span>💎 A gem is hidden in this yard. Tap it' + (here ? '' : ' once you are here') + '.</span>' + (here ? '<button class="btn sm" id="vgem-' + gm.n + '" data-gem="' + gm.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '') + '</div>' : ''; })() +
+      (venueNamed(pl).length ? '<p class="note">Here: ' + venueNamed(pl).map(function (n) { return '<b>' + esc(n.name) + '</b> (' + esc(n.role) + ')'; }).join(', ') + '. Tap them in the yard.</p>' : '') +
       (here ? '<p class="note">Tap a sign in the yard, or a person to hear them. Workers and visitors come in by ' + esc({ refinery: 'staff bus', airport: 'cab' }[venueSet(pl)] || 'danfo, keke and okada') + ' all day.</p>' +
         '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; }).join('') + '</div>'
         : '<p class="note">You are in ' + esc(D.DISTRICTS[S.loc].name) + '. Take a ride to ' + esc(D.DISTRICTS[pl.district].name) + ': it pulls up at the gate and you walk in.</p>' + rideRow(pl.district)) +
@@ -1946,7 +1963,20 @@
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); return; }
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'venue-view'; ov.className = 'cruise-view venue-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', pl.name);
-      if (!venueStage) venueStage = window.LasgidiVenue.create({ onAct: function (i) {
+      if (!venueStage) venueStage = window.LasgidiVenue.create({
+        onPhoto: function (cv) { var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0]; ui.photoFrom = 'venue'; takePhoto(cv, p0 ? p0.name : 'Lasgidi'); },
+        onGem: function (n) {
+          var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0];
+          if (!p0 || S.loc !== p0.district) { ui.toasts.push({ msg: 'Ride there first, then pick up the gem.', ok: false }); renderToasts(); return; }
+          var gid = gemToday(); run(function () { return L.collectGem(S, gid, n); });
+        },
+        onNpc: function (k) {
+          var a = L.availableActions(S).filter(function (x) { return x.id === 'npc_' + k; })[0];
+          if (!a) { ui.toasts.push({ msg: 'Ride to ' + D.DISTRICTS[D.NPCS[k].district].name + ' to gist with ' + D.NPCS[k].name + '.', ok: false }); renderToasts(); return; }
+          if (a.disabled) { ui.toasts.push({ msg: a.disabled, ok: false }); renderToasts(); return; }
+          run(function () { return L.doAction(S, a.id); });
+        },
+        onAct: function (i) {
         var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0], x = p0 && venueActs(p0)[i]; if (!x) return;
         if (S.loc !== p0.district) { ui.toasts.push({ msg: 'Ride to ' + D.DISTRICTS[p0.district].name + ' first, then walk in.', ok: false }); renderToasts(); return; }
         if (!x.a || x.a.disabled) { ui.toasts.push({ msg: (x.a && x.a.disabled) || (x.def.when ? 'Open ' + whenText(x.def.when) : 'Not open now'), ok: false }); renderToasts(); return; }
@@ -3917,7 +3947,7 @@
     if (ds.fishsell) { run(function () { return L.sellFish(S); }); return; }
     if (ds.fishcook) { run(function () { return L.cookFish(S); }); return; }
     if (ds.photo) { ui.photoFrom = ds.photo; if (ds.photo === 'cruise') takePhoto(document.querySelector('#cruise-view .cruise-canvas'), 'Lagoon Boat Cruise'); else if (ds.photo === 'airport') takePhoto(document.querySelector('.airport-canvas'), ui.airportName || 'Airport'); else if (ds.photo === 'room') takePhoto(document.querySelector('#room-view .cruise-canvas'), D.ROOMS[S.room.id].name); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); return; }
-    if (ds.photoretake) { var pv = document.getElementById('photo-view'); if (pv) pv.remove(); setTimeout(function () { if (ui.photoFrom === 'cruise') takePhoto(document.querySelector('#cruise-view .cruise-canvas'), 'Lagoon Boat Cruise'); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); }, 80); return; }
+    if (ds.photoretake) { var pv = document.getElementById('photo-view'); if (pv) pv.remove(); setTimeout(function () { if (ui.photoFrom === 'cruise') takePhoto(document.querySelector('#cruise-view .cruise-canvas'), 'Lagoon Boat Cruise'); else if (ui.photoFrom === 'venue' && venueStage && document.getElementById('venue-view')) { var vp0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0]; takePhoto(venueStage.canvas, vp0 ? vp0.name : 'Lasgidi'); } else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); }, 80); return; }
     if (ds.photoclose) { ui.photo = null; var pv2 = document.getElementById('photo-view'); if (pv2) pv2.remove(); return; }
     if (ds.photosave) { savePhoto(); return; }
     if (ds.cruisefold) { ui.cruiseFold = !ui.cruiseFold; mountCruise(); return; }
