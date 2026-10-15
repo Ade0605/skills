@@ -22,6 +22,8 @@ function config(env) {
     root: path.join(__dirname, '..'),
     live,
     adminToken: env.SHOP_ADMIN_TOKEN || '',
+    rateLimit: +env.SHOP_RATE_LIMIT || 30,
+    trustProxy: env.SHOP_TRUST_PROXY === '1',
     flw: env.FLW_SECRET_KEY ? { key: env.FLW_SECRET_KEY, hash: env.FLW_SECRET_HASH || '', receipt: env.FLW_RECEIPT_EMAIL || '', api: env.FLW_API || 'https://api.flutterwave.com/v3' } : null,
     paypal: env.PAYPAL_CLIENT_ID && env.PAYPAL_SECRET ? { id: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_SECRET, api: env.PAYPAL_API || (live ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com') } : null
   };
@@ -32,11 +34,19 @@ function store(dir) {
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, 'shop.json');
   let db = { orders: {}, grants: {} };
-  try { db = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) {}
-  const save = () => { const tmp = file + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(db)); fs.renameSync(tmp, file); };
+  if (fs.existsSync(file)) {
+    // A damaged file must never be replaced by an empty store: that would wipe everyone's purchases.
+    try { db = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { throw new Error('shop.json is damaged; restore it from a backup before starting the shop (' + e.message + ')'); }
+  }
+  const save = () => {
+    const tmp = file + '.tmp', fd = fs.openSync(tmp, 'w');
+    try { fs.writeSync(fd, JSON.stringify(db)); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+    fs.renameSync(tmp, file);
+  };
   return {
     order: ref => db.orders[ref] || null,
     addOrder: o => { db.orders[o.ref] = o; save(); },
+    pendingFor: acc => Object.keys(db.orders).filter(k => db.orders[k].account === acc && db.orders[k].status === 'pending' && Date.now() - Date.parse(db.orders[k].created) < 86400000).length,
     owned: acc => db.grants[acc] || [],
     // Idempotent: the same payment reference never grants twice.
     grant: (ref, providerId) => {
@@ -60,7 +70,7 @@ function store(dir) {
 
 function send(res, code, body, headers) {
   const isStr = typeof body === 'string';
-  res.writeHead(code, Object.assign({ 'Content-Type': isStr ? 'text/plain; charset=utf-8' : 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }, headers || {}));
+  res.writeHead(code, Object.assign({ 'Content-Type': isStr ? 'text/plain; charset=utf-8' : 'application/json', 'Cache-Control': 'no-store' }, SEC, headers || {}));
   res.end(isStr ? body : JSON.stringify(body));
 }
 function readBody(req, limit) {
@@ -70,6 +80,20 @@ function readBody(req, limit) {
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     req.on('error', reject);
   });
+}
+// Security headers for every page the shop serves.
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+const SEC = { 'Content-Security-Policy': CSP, 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' };
+// A small per-IP rate limit for /api/: 30 requests a minute, refilled continuously.
+function limiter(rate, per) {
+  const bucket = new Map();
+  return ip => {
+    const now = Date.now(), b = bucket.get(ip) || { t: now, n: rate };
+    b.n = Math.min(rate, b.n + (now - b.t) * rate / per); b.t = now;
+    if (bucket.size > 5000) bucket.clear();
+    if (b.n < 1) { bucket.set(ip, b); return false; }
+    b.n -= 1; bucket.set(ip, b); return true;
+  };
 }
 function same(a, b) { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); }
 
@@ -88,6 +112,7 @@ function createApp(cfg, fetchImpl) {
     if (!ACCOUNT.test(body.account || '')) return [400, { error: 'Bad shop key' }];
     if (body.adult !== true) return [400, { error: 'Purchases are for players aged 18 or over' }];
     if (db.owned(body.account).some(g => g.item === body.item)) return [409, { error: 'You already own this' }];
+    if (db.pendingFor(body.account) >= 5) return [429, { error: 'Too many unfinished payments. Finish or wait a day.' }];
     const ref = 'lsg_' + crypto.randomBytes(12).toString('hex');
     if (body.provider === 'flutterwave' && cfg.flw) {
       if (!cfg.flw.receipt) return [503, { error: 'The shop owner has not set a receipts address' }];
@@ -120,11 +145,13 @@ function createApp(cfg, fetchImpl) {
     const r = await f(cfg.flw.api + '/transactions/' + id + '/verify', { headers: { Authorization: 'Bearer ' + cfg.flw.key } });
     const j = await r.json(); const d = j && j.data;
     if (!r.ok || !d || d.status !== 'successful') return false;
+    if (!/^lsg_[0-9a-f]{24}$/.test(String(d.tx_ref || ''))) return false;
     const o = db.order(d.tx_ref); if (!o || o.provider !== 'flutterwave') return false;
     if (d.currency !== o.currency || Number(d.amount) < Number(o.amount)) return false;
     db.grant(o.ref, d.id); return o.ref;
   }
   async function paypalCapture(ref, token) {
+    if (!/^[A-Z0-9-]{5,40}$/.test(token)) return false;
     const o = db.order(ref); if (!o || o.provider !== 'paypal' || o.providerOrder !== token) return false;
     if (o.status === 'paid') return ref;
     const tok = await paypalToken();
@@ -138,23 +165,30 @@ function createApp(cfg, fetchImpl) {
 
   function serveStatic(req, res, url) {
     let p = decodeURIComponent(url.pathname); if (p === '/') p = '/index.html';
-    if (p === '/terms.html') return fs.createReadStream(path.join(__dirname, 'terms.html')).on('open', () => res.writeHead(200, { 'Content-Type': TYPES['.html'] })).pipe(res);
+    if (p === '/terms.html') return fs.createReadStream(path.join(__dirname, 'terms.html')).on('open', () => res.writeHead(200, Object.assign({ 'Content-Type': TYPES['.html'] }, SEC))).pipe(res);
     const file = path.normalize(path.join(cfg.root, p));
     if (!file.startsWith(cfg.root + path.sep) || file.includes(path.sep + 'server' + path.sep) || file.includes(path.sep + 'node_modules' + path.sep) || /(^|[\\/])\./.test(path.relative(cfg.root, file))) return send(res, 404, 'Not found');
     fs.stat(file, (err, st) => {
       if (err || !st.isFile()) return send(res, 404, 'Not found');
       if (file === path.join(cfg.root, 'index.html')) { // tell the game a shop server is here
         const html = fs.readFileSync(file, 'utf8').replace('<head>', '<head>\n<meta name="lasgidi-shop" content="1">');
-        res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' }); return res.end(html);
+        res.writeHead(200, Object.assign({ 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-cache' }, SEC)); return res.end(html);
       }
-      res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff' });
+      res.writeHead(200, Object.assign({ 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' }, SEC));
       fs.createReadStream(file).pipe(res);
     });
   }
 
+  const allow = limiter(cfg.rateLimit || 30, 60000);
   return async function handle(req, res) {
     const url = new URL(req.url, 'http://x');
     try {
+      if (url.pathname.startsWith('/api/')) {
+        // Behind a trusted proxy (SHOP_TRUST_PROXY=1), limit by the client address it forwards; otherwise by the socket.
+        const ip = cfg.trustProxy && req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : (req.socket.remoteAddress || '');
+        if (!allow(ip)) return send(res, 429, { error: 'Slow down' });
+        if (req.method === 'POST' && !/^application\/json\b/.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'Send JSON' });
+      }
       if (url.pathname === '/api/shop' && req.method === 'GET') return send(res, 200, { catalog: COSMETICS, providers, mode: cfg.live ? 'live' : 'sandbox', terms: '/terms.html' });
       if (url.pathname === '/api/owned' && req.method === 'GET') {
         const acc = url.searchParams.get('account') || ''; if (!ACCOUNT.test(acc)) return send(res, 400, { error: 'Bad shop key' });
@@ -179,7 +213,9 @@ function createApp(cfg, fetchImpl) {
       }
       if (url.pathname === '/api/admin/restore' && req.method === 'POST') {
         // Owner only: from this machine, with the admin token. No token set means no admin endpoint at all.
-        const local = /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '');
+        // Behind a reverse proxy every request looks local, so anything a proxy forwarded is refused.
+        const proxied = req.headers['x-forwarded-for'] || req.headers.forwarded || req.headers['x-real-ip'] || req.headers['x-forwarded-host'];
+        const local = !proxied && /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '');
         if (!cfg.adminToken || !local) return send(res, 404, { error: 'Not found' });
         if (!same(req.headers['x-admin-token'] || '', cfg.adminToken)) return send(res, 401, { error: 'Bad token' });
         let b; try { b = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'Bad request' }); }

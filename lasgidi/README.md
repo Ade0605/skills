@@ -456,6 +456,13 @@ Real money buys **cosmetics only**: name-tag colours for your @handle in live ro
 - **Identity:** a random shop key is made on the device and kept in the browser. It is never typed and is not a password. The Style shop shows it under "Your shop key", with a Copy button.
 - **Restoring items:** a player on a new device (or who cleared site data) sends the owner their receipt reference and their new shop key. The owner runs `SHOP_ADMIN_TOKEN=... PORT=... npm run shop:restore -- <receipt> <new key>` on the server machine. It only works from that machine, only with the admin token set in `SHOP_ADMIN_TOKEN` (with no token set there is no admin endpoint at all), and it moves the item, so the old key loses it and items can't be shared.
 - **Replays:** owned cosmetics live outside a life's state, like profile photos, so buying one never changes a ledger seal.
+- **Security (reviewed 15 Oct 2026):**
+  - every page carries a strict Content-Security-Policy (scripts only from the game itself), `X-Frame-Options: DENY` and `Referrer-Policy: same-origin`;
+  - `/api/` is rate-limited per address (30 a minute, `SHOP_RATE_LIMIT`); behind a reverse proxy set `SHOP_TRUST_PROXY=1` so the limit uses the forwarded client address;
+  - POSTs must be JSON; each shop key can have at most five unfinished payments a day;
+  - provider references and PayPal tokens are format-checked before any call to the provider;
+  - the admin restore endpoint refuses anything a proxy forwarded, so run `shop:restore` against the server's own port on the same machine;
+  - purchases are written with an fsync and an atomic rename, and a damaged `shop.json` stops the server rather than starting empty and wiping purchases. Back up `server/data/` regularly.
 - **Not done:** the tag colour shows on your own screen only (self-hosted copies have no live players), and refunds go through the Flutterwave or PayPal dashboard.
 
 ## Disclaimer

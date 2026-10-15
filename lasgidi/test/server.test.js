@@ -110,3 +110,28 @@ test('shop: the owner can move a paid item to a new shop key, only from this mac
   // With no admin token configured there is no admin endpoint at all.
   await withServer(KEYS, async req => assert.equal((await post(req, '/api/admin/restore', { ref: 'x', account: NEW }, { 'x-admin-token': '' })).status, 404));
 });
+
+test('shop security: headers, JSON-only posts, rate limit, proxied admin calls and the pending-order cap', async () => {
+  await withServer(Object.assign({ SHOP_ADMIN_TOKEN: 'owner-secret', SHOP_RATE_LIMIT: '200' }, KEYS), async req => {
+    const page = await req('/index.html');
+    assert.match(page.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
+    assert.equal(page.headers.get('x-frame-options'), 'DENY');
+    assert.equal((await req('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '{}' })).status, 415);
+    // Through a proxy, the admin endpoint is not there even with the right token.
+    assert.equal((await post(req, '/api/admin/restore', { ref: 'lsg_' + '0'.repeat(24), account: ACC }, { 'x-admin-token': 'owner-secret', 'x-forwarded-for': '203.0.113.9' })).status, 404);
+    // At most five unfinished payments per shop key.
+    const items = ['tag_emerald', 'tag_lagoon', 'tag_ankara', 'tag_night'];
+    let last; for (let i = 0; i < 6; i++) last = await post(req, '/api/checkout', { account: ACC, item: items[i % 4], provider: 'flutterwave', adult: true });
+    assert.equal(last.status, 429);
+  });
+  await withServer({ SHOP_RATE_LIMIT: '5' }, async req => {
+    const codes = []; for (let i = 0; i < 8; i++) codes.push((await req('/api/shop')).status);
+    assert.ok(codes.slice(0, 5).every(c => c === 200)); assert.equal(codes[7], 429);
+  });
+});
+
+test('shop security: a damaged purchase file stops the shop instead of wiping purchases', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lsg-shop-')); fs.writeFileSync(path.join(dir, 'shop.json'), '{"orders":');
+  assert.throws(() => createApp(config({ DATA_DIR: dir })), /damaged/);
+  assert.equal(fs.readFileSync(path.join(dir, 'shop.json'), 'utf8'), '{"orders":', 'the file is left as it was');
+});
