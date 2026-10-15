@@ -2083,9 +2083,10 @@
     var full = el.classList.contains('pg-full');
     if (!full) {
       el.classList.add('pg-fit');
-      var top = el.getBoundingClientRect().top + window.scrollY;
-      var h = Math.max(360, window.innerHeight - (narrow ? 76 : 16) - (narrow ? 0 : Math.max(0, top - window.scrollY - 8)));
-      el.style.height = (narrow ? Math.max(360, window.innerHeight - 76 - 8) : h) + 'px';
+      // Fill the window below the sticky status strip and above the phone's bottom bar.
+      var strip = document.querySelector('.strip'), nav = document.querySelector('.bnav');
+      var used = (strip ? strip.getBoundingClientRect().height : 0) + (narrow && nav ? nav.getBoundingClientRect().height : 0) + 16;
+      el.style.height = Math.max(340, Math.round(window.innerHeight - used)) + 'px';
     } else el.style.height = '';
     var dock = el.querySelector('.map-dock');
     if (!dock) { dock = document.createElement('div'); dock.className = 'map-dock'; el.appendChild(dock); }

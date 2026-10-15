@@ -99,6 +99,35 @@
     return '#' + c(r) + c(g) + c(b);
   }
   function iso(x, y) { return { x: (x - y) * TW / 2, y: (x + y) * TH / 2 }; }
+  // Spin: the view turns in 90° steps about the city's centre. World coordinates never change; only the view does.
+  var ROT = 0, RCX = 0, RCY = 0;
+  function rot(x, y, r) { var dx = x - RCX, dy = y - RCY; for (var i = 0; i < (r == null ? ROT : r); i++) { var t = dx; dx = dy; dy = -t; } return { x: RCX + dx, y: RCY + dy }; }
+  function unrot(x, y) { return rot(x, y, (4 - ROT) % 4); }
+  function isoR(x, y) { var q = rot(x, y); return iso(q.x, q.y); }
+  function depth(x, y) { var q = rot(x, y); return q.x + q.y; }
+  function landBox() {
+    LAND_BOX = { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9 };
+    tiles.forEach(function (t) {
+      [[t.x, t.y], [t.x + 1, t.y], [t.x, t.y + 1], [t.x + 1, t.y + 1]].forEach(function (c) {
+        var p = isoR(c[0], c[1]);
+        LAND_BOX.minX = Math.min(LAND_BOX.minX, p.x); LAND_BOX.maxX = Math.max(LAND_BOX.maxX, p.x);
+        LAND_BOX.minY = Math.min(LAND_BOX.minY, p.y); LAND_BOX.maxY = Math.max(LAND_BOX.maxY, p.y);
+      });
+    });
+  }
+  // Which world neighbour sits on a tile's view-front edges (+x and +y in the view) for the current spin.
+  var DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  function frontDirs() {
+    var out = [];
+    [[1, 0], [0, 1]].forEach(function (v) { var dx = v[0], dy = v[1]; for (var i = 0; i < (4 - ROT) % 4; i++) { var t = dx; dx = dy; dy = -t; } for (var k = 0; k < 4; k++) if (DIRS[k][0] === dx && DIRS[k][1] === dy) out.push(k); });
+    return out;
+  }
+  function sortWorld() {
+    tiles.sort(function (a, b) { return depth(a.x + 0.5, a.y + 0.5) - depth(b.x + 0.5, b.y + 0.5); });
+    buildings.sort(function (a, b) { return depth(a.x, a.y) - depth(b.x, b.y); });
+    trees.sort(function (a, b) { return depth(a.x, a.y) - depth(b.x, b.y); });
+    landBox();
+  }
   function shade(hex, f) {
     var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
     var t = f < 0 ? 0 : 255, p = Math.abs(f);
@@ -158,7 +187,7 @@
       var cx = tx + 0.5, cy = ty + 0.5;
       if (isWater(cx, cy)) continue;
       var nd = nearestDistrict(cx, cy);
-      tiles.push({ x: tx, y: ty, k: nd.d < 6 ? nd.k : null, d: nd.d, edgeR: isWater(cx + 1, cy), edgeL: isWater(cx, cy + 1), v: hash(tx, ty, 1), sand: city === 'lagos' && inPoly(cx, cy, BEACH) && !inPoly(cx, cy, ISLAND) });
+      tiles.push({ x: tx, y: ty, k: nd.d < 6 ? nd.k : null, d: nd.d, edgeR: isWater(cx + 1, cy), edgeL: isWater(cx, cy + 1), wat: [isWater(cx + 1, cy), isWater(cx, cy + 1), isWater(cx - 1, cy), isWater(cx, cy - 1)], v: hash(tx, ty, 1), sand: city === 'lagos' && inPoly(cx, cy, BEACH) && !inPoly(cx, cy, ISLAND) });
     }
   }
   // Buildings sit on a finer 0.5 km grid. SPACING thins every district and FOOT trims footprints, so streets and yards show between blocks.
@@ -237,17 +266,8 @@
         roof: m.roof[(i + j) % m.roof.length], wall: m.wall, glass: m.glass, pitch: m.pitch });
     }
   });
-  buildings.sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
-  trees.sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
-
-  LAND_BOX = { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9 };
-  tiles.forEach(function (t) {
-    [[t.x, t.y], [t.x + 1, t.y], [t.x, t.y + 1], [t.x + 1, t.y + 1]].forEach(function (c) {
-      var p = iso(c[0], c[1]);
-      LAND_BOX.minX = Math.min(LAND_BOX.minX, p.x); LAND_BOX.maxX = Math.max(LAND_BOX.maxX, p.x);
-      LAND_BOX.minY = Math.min(LAND_BOX.minY, p.y); LAND_BOX.maxY = Math.max(LAND_BOX.maxY, p.y);
-    });
-  });
+  RCX = (X0 + X1) / 2; RCY = (Y0 + Y1) / 2;
+  sortWorld();
   // The Sea Plots grid is not part of the fit: the frame fits the land, so the city fills the map.
   if (false && city === 'lagos' && D.SEA) {
     var S0 = D.SEA, sx1 = S0.x0 + S0.cols * S0.gap, sy1 = S0.y0 + S0.rows * S0.gap;
@@ -288,7 +308,7 @@
     hud.className = 'pg-hud';
     var zoom = document.createElement('div');
     zoom.className = 'pg-zoom';
-    zoom.innerHTML = '<button type="button" class="pg-zbtn" data-z="full" aria-label="Enlarge map" aria-pressed="false">⛶</button><button type="button" class="pg-zbtn" data-z="1" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-z="-1" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-z="0" aria-label="Centre on me">◎</button><button type="button" class="pg-zbtn" data-photo="map" aria-label="Take a photo of the map">📷</button>';
+    zoom.innerHTML = '<button type="button" class="pg-zbtn" data-z="full" aria-label="Enlarge map" aria-pressed="false">⛶</button><button type="button" class="pg-zbtn" data-z="1" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-z="-1" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-z="0" aria-label="Centre on me">◎</button><button type="button" class="pg-zbtn" data-spin="-1" aria-label="Spin the map left">⟲</button><button type="button" class="pg-zbtn" data-spin="1" aria-label="Spin the map right">⟳</button><button type="button" class="pg-zbtn" data-photo="map" aria-label="Take a photo of the map">📷</button>';
     canvas.tabIndex = 0;
     wrap.appendChild(canvas); wrap.appendChild(hud); wrap.appendChild(zoom);
 
@@ -306,7 +326,8 @@
     })();
     var scene = null, theme = null, staticLayer = null, staticKey = '';
     var W = 0, H = 0, dpr = 1, cam = { z: 1, px: 0, py: 0 }, base = { s: 1, ox: 0, oy: 0 };
-    var opened = false, OPEN_ZOOM = 1.8;
+    try { var sp0 = +(root.localStorage && root.localStorage.getItem('lasgidi.spin.v1')); if (sp0 >= 1 && sp0 <= 3) { ROT = sp0; sortWorld(); } } catch (e) {}
+    var opened = false, OPEN_ZOOM = 2.4;
     // 3D icon pictures (src/icons.js), drawn inside the pins when they have loaded.
     var ICON_IMG = {};
     function iconImg(key) {
@@ -373,10 +394,10 @@
       var ix = (sx - base.ox * cam.z + (W / 2) * (cam.z - 1) - cam.px) / sc;
       var iy = (sy - base.oy * cam.z + (H / 2) * (cam.z - 1) - cam.py) / sc;
       var a = ix / (TW / 2), b = iy / (TH / 2);
-      return { x: (a + b) / 2, y: (b - a) / 2 };
+      return unrot((a + b) / 2, (b - a) / 2);
     }
     function toScreen(x, y, z) {
-      var p = iso(x, y), s = base.s * cam.z;
+      var p = isoR(x, y), s = base.s * cam.z;
       return { x: (p.x * s) + base.ox * cam.z - (W / 2) * (cam.z - 1) + cam.px, y: ((p.y - (z || 0)) * s) + base.oy * cam.z - (H / 2) * (cam.z - 1) + cam.py };
     }
 
@@ -434,18 +455,22 @@
       }
       // Ground tiles and shoreline cliffs.
       var cliff = 5;
+      var fd = frontDirs();
       tiles.forEach(function (t) {
-        var pts = diamond(t.x, t.y, 0);
+        var vc = rot(t.x + 0.5, t.y + 0.5), vx = vc.x - 0.5, vy = vc.y - 0.5;
+        var pts = [toScreenV(vx, vy, 0), toScreenV(vx + 1, vy, 0), toScreenV(vx + 1, vy + 1, 0), toScreenV(vx, vy + 1, 0)];
+        g.beginPath(); g.moveTo(pts[0].x, pts[0].y); g.lineTo(pts[1].x, pts[1].y); g.lineTo(pts[2].x, pts[2].y); g.lineTo(pts[3].x, pts[3].y); g.closePath();
+        var eR = t.wat ? t.wat[fd[0]] : t.edgeR, eL = t.wat ? t.wat[fd[1]] : t.edgeL;
         var fill = t.sand ? theme.sand : t.k ? (t.d < (STYLE[t.k].r - 0.6) ? theme.soil : theme.land) : theme.land2;
         if (scene.flood && t.k && D.DISTRICTS[t.k].side === 'island' && t.v < 0.55) fill = theme.water;
         g.fillStyle = t.v < 0.5 ? fill : shade(fill.charAt(0) === '#' ? fill : '#888888', theme.dark ? 0.03 : -0.03);
         g.fill();
-        if (t.edgeR) {
+        if (eR) {
           var b = pts[1], c = pts[2];
           g.beginPath(); g.moveTo(b.x, b.y); g.lineTo(c.x, c.y); g.lineTo(c.x, c.y + cliff * s); g.lineTo(b.x, b.y + cliff * s); g.closePath();
           g.fillStyle = theme.side; g.fill();
         }
-        if (t.edgeL) {
+        if (eL) {
           var c2 = pts[2], d2 = pts[3];
           g.beginPath(); g.moveTo(d2.x, d2.y); g.lineTo(c2.x, c2.y); g.lineTo(c2.x, c2.y + cliff * s); g.lineTo(d2.x, d2.y + cliff * s); g.closePath();
           g.fillStyle = shade(theme.side.charAt(0) === '#' ? theme.side : '#666666', -0.15); g.fill();
@@ -585,7 +610,7 @@
         houses.push({ x: pp.x, y: pp.y, w: E.gap * 0.5, dep: E.gap * 0.42, h: 7 + hash(pn, 3, 61) * 3, k: E.district, pitch: true,
           roof: scene.myPlot === pn ? '#f2b600' : ESTATE_ROOFS[Math.floor(hash(pn, 4, 62) * ESTATE_ROOFS.length)], wall: '#efe9dc' });
       }
-      var items = trees.map(function (t) { return { tree: t, z: t.x + t.y }; }).concat(buildings.concat(houses).map(function (b) { return { b: b, z: b.x + b.y }; }));
+      var items = trees.map(function (t) { return { tree: t, z: depth(t.x, t.y) }; }).concat(buildings.concat(houses).map(function (b) { return { b: b, z: depth(b.x, b.y) }; }));
       items.sort(function (a, b) { return a.z - b.z; });
       items.forEach(function (it) { if (it.tree) drawTree(g, it.tree, s); else drawBuilding(g, it.b, s, night, power[it.b.k]); });
 
@@ -882,9 +907,15 @@
       g.beginPath(); g.arc(p.x, p.y - 4.5 * s, r, 0, Math.PI * 2); g.fillStyle = theme.tree; g.fill();
     }
 
+    // Screen point for view-space coordinates (already spun).
+    function toScreenV(vx, vy, z) {
+      var p = iso(vx, vy), s = base.s * cam.z;
+      return { x: (p.x * s) + base.ox * cam.z - (W / 2) * (cam.z - 1) + cam.px, y: ((p.y - (z || 0)) * s) + base.oy * cam.z - (H / 2) * (cam.z - 1) + cam.py };
+    }
     function boxFaces(b, s) {
-      var hw = b.w / 2, hd = b.dep / 2;
-      var p0 = toScreen(b.x - hw, b.y - hd, 0), p1 = toScreen(b.x + hw, b.y - hd, 0), p2 = toScreen(b.x + hw, b.y + hd, 0), p3 = toScreen(b.x - hw, b.y + hd, 0);
+      // Corners in view space, so the two faces drawn are always the ones facing the camera whatever the spin.
+      var odd = ROT % 2 === 1, hw = (odd ? b.dep : b.w) / 2, hd = (odd ? b.w : b.dep) / 2, c = rot(b.x, b.y);
+      var p0 = toScreenV(c.x - hw, c.y - hd, 0), p1 = toScreenV(c.x + hw, c.y - hd, 0), p2 = toScreenV(c.x + hw, c.y + hd, 0), p3 = toScreenV(c.x - hw, c.y + hd, 0);
       var up = b.h * s;
       return { p0: p0, p1: p1, p2: p2, p3: p3, up: up };
     }
@@ -1428,7 +1459,7 @@
     function schedule() { if (!raf) raf = root.requestAnimationFrame(frame); }
 
     // Pointer: tap a pin to select; drag to pan; pinch, wheel or double-tap to zoom.
-    var drag = null, touches = {}, pinch = null, lastTap = 0, MAXZ = 6;
+    var drag = null, touches = {}, pinch = null, lastTap = 0, MAXZ = 12;
     function zoomAt(z, fx, fy) {
       z = Math.max(1, Math.min(MAXZ, z));
       var wpt = fromScreen(fx, fy);
@@ -1475,6 +1506,8 @@
     canvas.addEventListener('keydown', function (e) {
       if (e.key === '+' || e.key === '=') { zoomAt(cam.z * 1.25, W / 2, H / 2); e.preventDefault(); }
       else if (e.key === '-' || e.key === '_') { zoomAt(cam.z / 1.25, W / 2, H / 2); e.preventDefault(); }
+      else if (e.key === 'q' || e.key === 'Q') { spin(-1); e.preventDefault(); }
+      else if (e.key === 'e' || e.key === 'E') { spin(1); e.preventDefault(); }
     });
     function setFull(on) {
       wrap.classList.toggle('pg-full', on);
@@ -1518,7 +1551,16 @@
       if (bestPlace && opts.onSelectPlace) opts.onSelectPlace(bestPlace);
       else if (best && opts.onSelect) opts.onSelect(best);
     });
+    // Spin in 90° steps, keeping whatever is in the middle of the screen in the middle.
+    function spin(dir) {
+      var mid = fromScreen(W / 2, H / 2), z = cam.z;
+      ROT = (ROT + dir + 4) % 4; sortWorld(); W = 0; resize();
+      cam.z = z; cam.px = 0; cam.py = 0; var p = toScreen(mid.x, mid.y, 0); cam.px = W / 2 - p.x; cam.py = H / 2 - p.y; clampCam();
+      staticKey = ''; kick();
+      try { root.localStorage && root.localStorage.setItem('lasgidi.spin.v1', String(ROT)); } catch (e) {}
+    }
     zoom.addEventListener('click', function (e) {
+      var sp = e.target.closest('[data-spin]'); if (sp) { spin(+sp.getAttribute('data-spin')); return; }
       var b = e.target.closest('[data-z]'); if (!b) return;
       if (b.getAttribute('data-z') === 'full') { setFull(!wrap.classList.contains('pg-full')); return; }
       var z = +b.getAttribute('data-z');
