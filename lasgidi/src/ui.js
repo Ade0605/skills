@@ -4,7 +4,7 @@
   var L = window.Lasgidi, D = L.DATA, N = L.naira;
   var SAVE_KEY = 'lasgidi.save.v1', WEEKLY_KEY = 'lasgidi.weekly.v1';
   var app = document.getElementById('app');
-  var ui = { tab: window.matchMedia && window.matchMedia('(max-width: 899px)').matches ? 'map' : 'do', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0, plan: 'day' }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
+  var ui = { tab: 'map', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0, plan: 'day' }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
   var S = null;
 
   /* ---------- storage (best effort) ---------- */
@@ -32,12 +32,12 @@
     if (S) save();
     var w = fresh ? null : weeklyRun();
     if (!w) w = L.newGame({ challenge: thisWeek(), name: (S && S.name) || ui.draftName || 'Ade' });
-    S = w; ui.tab = 'do'; ui.sel = null; ui.place = null; ui.board = null; online.wStatus = '';
+    S = w; ui.tab = 'map'; ui.sel = null; ui.place = null; ui.board = null; online.wStatus = '';
     setMode('weekly'); save(); render(); subscribeWeekly();
   }
   function backToLife() {
     if (S) save();
-    S = load(SAVE_KEY); ui.tab = 'do'; ui.sel = null; ui.place = null; ui.board = null;
+    S = load(SAVE_KEY); ui.tab = 'map'; ui.sel = null; ui.place = null; ui.board = null;
     setMode('life'); render();
   }
 
@@ -894,7 +894,8 @@
 
   function board() {
     var isNarrow = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
-    if (!isNarrow && ui.tab === 'map') ui.tab = 'do';
+    // The Map tab is the map alone, full width, on every screen: what you can do sits in its 📋 pop-up.
+    if (ui.tab === 'map') return '<div class="board map-only"><section class="panel map-panel" aria-label="Map of Lagos">' + mapBlock() + '</section></div>' + bottomNav();
     var tabs = [['do', 'Do'], ['map', 'Map'], ['phone', '📱 Phone'], ['home', 'Home'], ['work', 'Work'], ['money', 'Money'], ['me', 'Me'], ['gist', 'Gist']];
     var debt = L.debts(S) > 0, unread = unreadCount();
     if (ui.tab === 'gist') markRead();
@@ -905,9 +906,9 @@
     }).join('') + '</div>';
     var body = ({ do: doView, map: function () { return mapBlock(); }, phone: phoneView, home: houseTab, buy: buyView, work: workView, money: moneyView, me: meView, gist: gistView }[ui.tab] || doView)();
     return '<div class="board">' +
-      // One map per layout: the desktop panel, or the Map tab on phones.
+      // One map per layout: the desktop panel beside the tabs, or none on phones (the Map tab shows it).
       (isNarrow ? '' : '<section class="panel map-panel" aria-label="Map of Lagos">' + mapBlock() + '</section>') +
-      '<section class="panel work-panel">' + bar + '<div class="tab-body">' + body + '</div></section></div>' + (isNarrow ? bottomNav() : '');
+      '<section class="panel work-panel">' + bar + '<div class="tab-body">' + body + '</div></section></div>' + bottomNav();
   }
 
   /* ---------- map: the playground ---------- */
@@ -2047,7 +2048,7 @@
   function mountPlayground() {
     if (!S || !window.LasgidiPlayground) return;
     var narrow = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
-    var slot = document.querySelector(narrow ? '.tab-body .pg-slot' : '.map-panel .pg-slot');
+    var slot = document.querySelector('.map-panel .pg-slot') || document.querySelector('.tab-body .pg-slot');
     if (!slot) return;
     if (!playground) playground = window.LasgidiPlayground.create({
       onSelect: function (k) { ui.sel = k === S.loc ? null : k; ui.place = null; ui.board = null; render(); },
@@ -2085,7 +2086,9 @@
       el.classList.add('pg-fit');
       // Fill the window below the sticky status strip and above the phone's bottom bar.
       var strip = document.querySelector('.strip'), nav = document.querySelector('.bnav');
-      var used = (strip ? strip.getBoundingClientRect().height : 0) + (narrow && nav ? nav.getBoundingClientRect().height : 0) + 16;
+      var navH = nav ? nav.getBoundingClientRect().height : 0;
+      // The map on its own: fit it between its top edge and the bottom bar, so every control shows without scrolling.
+      var used = el.closest('.map-only') ? Math.min(el.getBoundingClientRect().top + window.scrollY, window.innerHeight * 0.45) + navH + 10 : (strip ? strip.getBoundingClientRect().height : 0) + navH + 16;
       el.style.height = Math.max(340, Math.round(window.innerHeight - used)) + 'px';
     } else el.style.height = '';
     var dock = el.querySelector('.map-dock');
@@ -3460,7 +3463,7 @@
       if (ds.heir === 'skip' || !hw) { render(); return; }
       introState();
       S = L.newGame({ name: hw.name, goal: ui.draftGoal, seed: (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0, origin: 'heir', heir: hw });
-      ui.tab = 'do'; ui.sel = null; ui.draftOrigin = null;
+      ui.tab = 'map'; ui.sel = null; ui.draftOrigin = null;
       releaseOldSea();
       save(); render(); return;
     }
@@ -3468,7 +3471,7 @@
       introState();
       var ob = onb();
       S = L.newGame({ name: ui.draftName.trim() || 'Ade', goal: ui.draftGoal, seed: ui.seed, traits: ob.traits.length === 2 ? ob.traits : undefined, startHome: ob.home || undefined, look: ob.look, outfit: ob.outfit });
-      ui.tab = 'do'; ui.sel = null; ui.draftOrigin = null; ui.onb = null;
+      ui.tab = 'map'; ui.sel = null; ui.draftOrigin = null; ui.onb = null;
       releaseOldSea();
       save(); render(); return;
     }

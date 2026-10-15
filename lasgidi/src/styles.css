@@ -333,6 +333,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 @media (max-width: 899px) {
   .board { grid-template-columns: minmax(0, 1fr); }
   .map-panel { display: none; }
+  .map-only .map-panel { display: block; }
   .tab-map { display: inline-block; }
   .needs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .wallet { margin-left: 0; }
@@ -901,7 +902,10 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .bn { display: grid; justify-items: center; gap: 1px; padding: 4px 0; border: 0; background: none; color: var(--muted); font: 700 11px var(--font-body); cursor: pointer; border-radius: 12px; }
 .bn span { font-size: 20px; }
 .bn.on { color: var(--ink); background: var(--sunk); }
-@media (max-width: 899px) { body { padding-bottom: 72px; } .toasts { bottom: 80px; } }
+body { padding-bottom: 72px; } .toasts { bottom: 80px; }
+.board.map-only { grid-template-columns: minmax(0, 1fr); }
+.map-only .map-panel { position: static; }
+@media (min-width: 900px) { .bnav { left: 50%; right: auto; transform: translateX(-50%); width: min(520px, 100%); border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0; } }
 
 /* White wedding */
 .ww { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border-radius: 18px; background: var(--sunk); }

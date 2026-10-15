@@ -286,7 +286,7 @@
   // Landmarks drawn into the static layer.
   var RUNWAY = [[3.2, 0.6], [9.6, 0.2], [9.8, 1.0], [3.4, 1.4]];
   var STADIUM = { x: 9.2, y: 16.6, rx: 0.9, ry: 0.7 };
-  // Ibeju-Lekki construction sites, east of Ajah: a refinery and a new international airport.
+  // Ibeju-Lekki refinery site east of Ajah, and the new international airport (laid out here, drawn in Ikeja).
   var REFINERY = { x0: 44.2, y0: 22.8, x1: 51.0, y1: 24.9 }, NEW_AIRPORT = { x0: 44.2, y0: 25.1, x1: 51.2, y1: 27.3 }, AIRPORT_AT = { x: 0.9, y: 2.1 };
 
   /* ---------- the playground ---------- */
@@ -379,6 +379,7 @@
       var w = Math.max(240, Math.round(r.width)), h = full ? Math.max(200, Math.round(r.height)) : Math.max(200, Math.round(w * (w < 600 ? 1.15 : 0.85)));
       dpr = Math.min(w < 600 ? 1.5 : 2, root.devicePixelRatio || 1); // cheap phones: fewer pixels to fill
       if (w === W && h === H && canvas.width === Math.round(w * dpr)) return false;
+      var keep = opened && W ? fromScreen(W / 2, H / 2) : null; // the page resized the map: keep the same spot in the middle
       W = w; H = h;
       canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
       canvas.style.height = full ? '100%' : H + 'px';
@@ -387,6 +388,7 @@
       base.s = Math.min(W / (maxX - minX), H / (maxY - minY)) * 0.97;
       base.ox = W / 2 - (minX + maxX) / 2 * base.s;
       base.oy = H / 2 - (minY + maxY) / 2 * base.s;
+      if (keep) { var kp = toScreen(keep.x, keep.y, 0); cam.px += W / 2 - kp.x; cam.py += H / 2 - kp.y; clampCam(); }
       staticKey = '';
       return true;
     }
@@ -653,9 +655,11 @@
       if (fill) { g.fillStyle = fill; g.fill(); }
       if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 1; g.stroke(); }
     }
-    function sitePad(g, s, R) {
-      var sand = theme.dark ? '#4a4538' : '#d9cfb4';
+    // A site pad: sand with a dashed orange fence while building, or mown grass once done.
+    function sitePad(g, s, R, done) {
+      var sand = done ? (theme.dark ? '#33493a' : '#9cc58a') : theme.dark ? '#4a4538' : '#d9cfb4';
       poly(g, [[R.x0, R.y0], [R.x1, R.y0], [R.x1, R.y1], [R.x0, R.y1]], sand);
+      if (done) return;
       g.setLineDash([2 * s, 2 * s]); poly(g, [[R.x0, R.y0], [R.x1, R.y0], [R.x1, R.y1], [R.x0, R.y1]], null, '#e2652b', Math.max(1, 1.2 * s)); g.setLineDash([]);
     }
     // A vertical cylinder at (x, y): radius in km, height in px (scaled). frame = only rings and struts (under construction).
@@ -685,11 +689,13 @@
     function truck(g, s, x, y, col) {
       var c = toScreen(x, y, 0); g.fillStyle = col; g.fillRect(c.x - 3 * s, c.y - 3 * s, 4.5 * s, 2.5 * s); g.fillStyle = '#e8e8e8'; g.fillRect(c.x + 1.5 * s, c.y - 2.6 * s, 1.8 * s, 2.1 * s);
     }
-    function sign(g, s, x, y, l1, l2) {
+    // A two-post sign board: yellow site board, or (done) a navy gateway board with one white line.
+    function sign(g, s, x, y, l1, l2, done) {
       var c = toScreen(x, y, 0), w = 34 * s, h = 7.5 * s;
       g.fillStyle = '#17181a'; g.fillRect(c.x - w / 2 + 1 * s, c.y - h - 3 * s, 0.8 * s, h + 3 * s); g.fillRect(c.x + w / 2 - 2 * s, c.y - h - 3 * s, 0.8 * s, h + 3 * s);
-      g.fillStyle = '#f2c200'; g.fillRect(c.x - w / 2, c.y - h - 4 * s, w, h);
-      g.fillStyle = '#17181a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = done ? '#1f3b63' : '#f2c200'; g.fillRect(c.x - w / 2, c.y - h - 4 * s, w, h);
+      g.fillStyle = done ? '#ffffff' : '#17181a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      if (done) { g.font = '800 ' + Math.max(5, 2.8 * s) + 'px sans-serif'; g.fillText(l1, c.x, c.y - h - 4 * s + h * 0.5); return; }
       g.font = '800 ' + Math.max(5, 2.6 * s) + 'px sans-serif'; g.fillText(l1, c.x, c.y - h - 4 * s + h * 0.33);
       g.font = '900 ' + Math.max(5, 2.9 * s) + 'px sans-serif'; g.fillText(l2, c.x, c.y - h - 4 * s + h * 0.72);
     }
@@ -869,32 +875,64 @@
       // Laid out in local coordinates (x 44.2–51.2, y 25.1–27.3), then moved to its real spot beside Murtala Muhammed in Ikeja.
       var o0 = toScreen(0, 0, 0), o1 = toScreen(AIRPORT_AT.x - NEW_AIRPORT.x0, AIRPORT_AT.y - NEW_AIRPORT.y0, 0);
       g.save(); g.translate(o1.x - o0.x, o1.y - o0.y);
-      var R = NEW_AIRPORT;
-      sitePad(g, s, R);
-      // Runway with a threshold and centre line, and a taxiway.
-      poly(g, [[44.5, 25.25], [48.6, 25.25], [48.6, 25.6], [44.5, 25.6]], theme.road);
-      g.strokeStyle = '#ffffff'; g.lineWidth = Math.max(0.5, 0.7 * s); g.setLineDash([3 * s, 3 * s]);
-      var r0 = toScreen(44.8, 25.42, 0), r1 = toScreen(48.4, 25.42, 0); g.beginPath(); g.moveTo(r0.x, r0.y); g.lineTo(r1.x, r1.y); g.stroke(); g.setLineDash([]);
-      poly(g, [[45.4, 25.6], [45.7, 25.6], [45.7, 26.0], [45.4, 26.0]], theme.road);
-      poly(g, [[48.6, 25.25], [51.0, 25.25], [51.0, 25.6], [48.6, 25.6]], theme.dark ? '#5a4a36' : '#b89a72'); // graded earth for the runway extension
-      // Terminal: a glass block, the next bay as a red steel frame, then bare columns.
-      drawBuilding(g, { x: 46.4, y: 26.15, w: 1.6, dep: 0.45, h: 9, wall: '#4f82b0', roof: '#d6d9dc', glass: true }, s, 0, true);
-      var f0 = toScreen(47.4, 25.95, 0), f1 = toScreen(48.3, 25.95, 0);
-      g.strokeStyle = '#b8322b'; g.lineWidth = Math.max(0.8, 1 * s);
-      for (var k = 0; k <= 3; k++) { var x = f0.x + (f1.x - f0.x) * k / 3, y = f0.y + (f1.y - f0.y) * k / 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 9 * s); g.stroke(); }
-      g.beginPath(); g.moveTo(f0.x, f0.y - 9 * s); g.lineTo(f1.x, f1.y - 9 * s); g.moveTo(f0.x, f0.y - 4.5 * s); g.lineTo(f1.x, f1.y - 4.5 * s); g.stroke();
-      for (var c2 = 0; c2 < 5; c2++) { var q = toScreen(48.5 + c2 * 0.18, 26.05, 0); g.strokeStyle = '#56595e'; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x, q.y - 5 * s); g.stroke(); }
-      // Hangar arches, a water tower, fuel tanks, the car park and the access road.
-      for (var hgi = 0; hgi < 4; hgi++) { var hc = toScreen(44.75, 25.85 + hgi * 0.22, 0); g.strokeStyle = '#a8322b'; g.lineWidth = Math.max(0.8, 1.2 * s); g.beginPath(); g.ellipse(hc.x, hc.y, 4 * s, 5 * s, 0, Math.PI, 0); g.stroke(); }
-      cyl(g, s, 50.2, 25.95, 0.28, 15, '#9aa2ab', true); cyl(g, s, 50.2, 25.95, 0.42, 4, '#a6adb5'); // tower legs, then the tank on top would hide them; keep it simple
-      [[50.5, 26.55], [50.75, 26.55], [51.0, 26.55]].forEach(function (k) { cyl(g, s, k[0], k[1], 0.2, 3, '#d7dadd'); });
-      poly(g, [[46.3, 26.55], [47.6, 26.55], [47.6, 26.95], [46.3, 26.95]], theme.road);
-      ['#c0392b', '#2f6fa0', '#ffffff', '#2fa36b'].forEach(function (col, i) { var c = toScreen(46.55 + i * 0.3, 26.75, 0); g.fillStyle = col; g.fillRect(c.x - 1.5 * s, c.y - 1 * s, 3 * s, 2 * s); });
+      var R = NEW_AIRPORT, white = '#ffffff', tar = theme.dark ? '#3b3f45' : '#5d636b';
+      sitePad(g, s, R, true);
+      // Runway: full length, edge lines, a dashed centre line and threshold bars at both ends.
+      poly(g, [[44.45, 25.22], [51.05, 25.22], [51.05, 25.5], [44.45, 25.5]], tar);
+      g.strokeStyle = white; g.lineWidth = Math.max(0.4, 0.5 * s);
+      [25.25, 25.47].forEach(function (ey) { var a = toScreen(44.5, ey, 0), b = toScreen(51.0, ey, 0); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); });
+      g.lineWidth = Math.max(0.5, 0.7 * s); g.setLineDash([3 * s, 3 * s]);
+      var r0 = toScreen(44.95, 25.36, 0), r1 = toScreen(50.55, 25.36, 0); g.beginPath(); g.moveTo(r0.x, r0.y); g.lineTo(r1.x, r1.y); g.stroke(); g.setLineDash([]);
+      [44.55, 50.8].forEach(function (tx) { for (var k = 0; k < 6; k++) { var ty = 25.27 + k * 0.035; poly(g, [[tx, ty], [tx + 0.18, ty], [tx + 0.18, ty + 0.018], [tx, ty + 0.018]], white); } });
+      // Parallel taxiway with yellow centre line, two links to the runway, and the apron.
+      poly(g, [[44.9, 25.62], [50.6, 25.62], [50.6, 25.74], [44.9, 25.74]], tar);
+      [45.4, 50.1].forEach(function (lx) { poly(g, [[lx, 25.5], [lx + 0.14, 25.5], [lx + 0.14, 25.62], [lx, 25.62]], tar); });
+      g.strokeStyle = '#f2c200'; g.lineWidth = Math.max(0.4, 0.45 * s); var t0 = toScreen(44.95, 25.68, 0), t1 = toScreen(50.55, 25.68, 0); g.beginPath(); g.moveTo(t0.x, t0.y); g.lineTo(t1.x, t1.y); g.stroke();
+      poly(g, [[45.9, 25.74], [49.6, 25.74], [49.6, 26.2], [45.9, 26.2]], theme.dark ? '#4a4f56' : '#9aa1a9');
+      [46.3, 46.9, 47.5, 48.6, 49.2].forEach(function (sx) { var a = toScreen(sx, 25.8, 0), b = toScreen(sx, 26.2, 0); g.strokeStyle = '#f2c200'; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); });
+      // Planes: three at the stands nose-in, one rolling for take-off.
+      plane(g, 46.3, 25.95, Math.PI / 2, '#1f8a5b'); plane(g, 47.5, 25.95, Math.PI / 2, '#c0392b'); plane(g, 48.6, 25.95, Math.PI / 2, '#2f6fa0');
+      plane(g, 49.6, 25.36, Math.PI, '#e2652b');
+      // Hangars at the west end, the control tower, and the fuel farm in the east.
+      drawBuilding(g, { x: 44.8, y: 25.98, w: 0.65, dep: 0.36, h: 6, wall: '#a9b0b8', roof: '#c7ccd1', pitch: true, rise: 4 }, s, 0, true);
+      drawBuilding(g, { x: 44.8, y: 26.46, w: 0.65, dep: 0.36, h: 6, wall: '#a9b0b8', roof: '#c7ccd1', pitch: true, rise: 4 }, s, 0, true);
+      // Terminal: two glass halls joined by a low concourse, with jet bridges out to the stands.
+      drawBuilding(g, { x: 46.85, y: 26.42, w: 1.5, dep: 0.4, h: 9, wall: '#4f82b0', roof: '#e3e6e9', glass: true }, s, 0, true);
+      drawBuilding(g, { x: 48.0, y: 26.36, w: 0.8, dep: 0.26, h: 4.5, wall: '#5d8fbb', roof: '#e3e6e9', glass: true }, s, 0, true);
+      drawBuilding(g, { x: 48.95, y: 26.42, w: 1.0, dep: 0.4, h: 8, wall: '#4f82b0', roof: '#e3e6e9', glass: true }, s, 0, true);
+      [46.3, 47.5, 48.6].forEach(function (bx) { drawBuilding(g, { x: bx, y: 26.11, w: 0.05, dep: 0.18, h: 2.2, wall: '#d7dadd', roof: '#eceef0' }, s, 0, true); });
+      ctrlTower(g, s, 45.7, 26.55);
+      [[50.3, 26.3], [50.6, 26.3], [50.9, 26.3]].forEach(function (k) { cyl(g, s, k[0], k[1], 0.2, 3, '#d7dadd'); });
+      // Landside: the car park, the forecourt road and the gateway sign.
+      poly(g, [[46.2, 26.68], [47.6, 26.68], [47.6, 26.98], [46.2, 26.98]], theme.road);
+      ['#c0392b', '#2f6fa0', '#ffffff', '#2fa36b', '#17181a'].forEach(function (col, i) { var c = toScreen(46.45 + i * 0.26, 26.83, 0); g.fillStyle = col; g.fillRect(c.x - 1.5 * s, c.y - 1 * s, 3 * s, 2 * s); });
       poly(g, [[44.3, 27.05], [51.1, 27.05], [51.1, 27.22], [44.3, 27.22]], theme.road);
-      crane(g, s, 45.9, 25.8, 22, 1.0); crane(g, s, 48.0, 25.75, 20, 0.9); crane(g, s, 49.7, 25.7, 24, 1.1);
-      truck(g, s, 46.9, 26.4, '#e2652b'); truck(g, s, 49.2, 26.45, '#e2652b');
-      sign(g, s, 49.6, 27.0, 'LAGOS INTERNATIONAL AIRPORT', 'COMING SOON');
+      sign(g, s, 49.6, 27.0, 'LAGOS INTERNATIONAL AIRPORT', '', true);
       g.restore();
+    }
+    // A jet seen from above, drawn flat in world coordinates so it turns with the map. heading: radians, nose direction.
+    function plane(g, x, y, heading, livery) {
+      var c = Math.cos(heading), sn = Math.sin(heading);
+      function P(u, v) { return [x + u * c - v * sn, y + u * sn + v * c]; }
+      function shape(pts, fill, dx) { poly(g, pts.map(function (p) { var q = P(p[0], p[1]); return [q[0] + (dx || 0), q[1] + (dx || 0)]; }), fill); }
+      var body = [[0.17, 0], [0.14, 0.022], [-0.14, 0.02], [-0.17, 0], [-0.14, -0.02], [0.14, -0.022]];
+      var wings = [[0.04, 0.02], [-0.04, 0.16], [-0.07, 0.16], [-0.03, 0.02], [-0.03, -0.02], [-0.07, -0.16], [-0.04, -0.16], [0.04, -0.02]];
+      var tail = [[-0.12, 0.015], [-0.16, 0.07], [-0.175, 0.07], [-0.16, 0], [-0.175, -0.07], [-0.16, -0.07], [-0.12, -0.015]];
+      var sh = 'rgba(0,0,0,.18)';
+      shape(wings, sh, 0.02); shape(body, sh, 0.02);
+      shape(wings, '#d9dde1'); shape(tail, livery); shape(body, '#f4f5f6');
+      shape([[0.06, 0.012], [-0.12, 0.012], [-0.12, 0.004], [0.06, 0.004]], livery);
+    }
+    // The control tower: a slim shaft with a glass cab and a roof cap.
+    function ctrlTower(g, s, x, y) {
+      var c = toScreen(x, y, 0), rx = 0.07 * TW * s * 0.5, ry = 0.07 * TH * s * 0.5, up = 22 * s, cab = 4 * s;
+      g.fillStyle = '#c3c8cd'; g.fillRect(c.x - rx, c.y - up, rx * 2, up); g.fillStyle = '#9aa1a9'; g.fillRect(c.x, c.y - up, rx, up);
+      var w = rx * 2.6, h = ry * 2.6;
+      g.fillStyle = '#2b4f72'; g.fillRect(c.x - w, c.y - up - cab, w * 2, cab);
+      g.beginPath(); g.ellipse(c.x, c.y - up, w, h, 0, 0, Math.PI); g.fill();
+      g.fillStyle = 'rgba(160,210,240,.55)'; g.fillRect(c.x - w * 0.9, c.y - up - cab * 0.85, w * 1.8, cab * 0.6);
+      g.beginPath(); g.ellipse(c.x, c.y - up - cab, w * 1.1, h * 1.1, 0, 0, Math.PI * 2); g.fillStyle = '#e3e6e9'; g.fill();
+      g.strokeStyle = '#6b7280'; g.lineWidth = Math.max(0.5, 0.6 * s); g.beginPath(); g.moveTo(c.x, c.y - up - cab); g.lineTo(c.x, c.y - up - cab - 4 * s); g.stroke();
     }
 
     function drawTree(g, t, s) {
