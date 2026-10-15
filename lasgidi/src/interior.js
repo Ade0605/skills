@@ -165,7 +165,7 @@
       fit();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
-      var sz = view.size, type = view.type, fl = FLOORS[type] || FLOORS.room, wall = WALLS[type] || WALLS.room;
+      var sz = view.size, type = view.type, fl = FLOORS[type] || FLOORS.room, wall = /^#[0-9a-f]{6}$/i.test(view.paint || '') ? view.paint : WALLS[type] || WALLS.room; // shop house paint, if you wear one
       // Lawn and driveway.
       poly([iso(-1, -1), iso(sz[0] + 4, -1), iso(sz[0] + 4, sz[1] + 1.5), iso(-1, sz[1] + 1.5)], view.dark ? '#2f3d2c' : '#b9cf9a');
       poly([iso(sz[0] + 0.4, 0), iso(sz[0] + 3.6, 0), iso(sz[0] + 3.6, sz[1]), iso(sz[0] + 0.4, sz[1])], view.dark ? '#3a3b3e' : '#c9c6bf');

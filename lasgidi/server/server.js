@@ -7,7 +7,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { COSMETICS } = require('./catalog');
+const { COSMETICS, KINDS } = require('./catalog');
 
 const ACCOUNT = /^[a-z0-9]{16,40}$/; // a random shop key the game makes on the device (not a password, never typed)
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon' };
@@ -189,7 +189,7 @@ function createApp(cfg, fetchImpl) {
         if (!allow(ip)) return send(res, 429, { error: 'Slow down' });
         if (req.method === 'POST' && !/^application\/json\b/.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'Send JSON' });
       }
-      if (url.pathname === '/api/shop' && req.method === 'GET') return send(res, 200, { catalog: COSMETICS, providers, mode: cfg.live ? 'live' : 'sandbox', terms: '/terms.html' });
+      if (url.pathname === '/api/shop' && req.method === 'GET') return send(res, 200, { catalog: COSMETICS, kinds: KINDS, providers, mode: cfg.live ? 'live' : 'sandbox', terms: '/terms.html' });
       if (url.pathname === '/api/owned' && req.method === 'GET') {
         const acc = url.searchParams.get('account') || ''; if (!ACCOUNT.test(acc)) return send(res, 400, { error: 'Bad shop key' });
         return send(res, 200, { items: db.owned(acc) });

@@ -1096,7 +1096,7 @@
         var mine = e.id === scene.homeId, sel = e.id === scene.homeSel;
         if (!(mine || sel || scene.showHomes || cam.z >= 1.6)) return;
         var p = toScreen(e.x, e.y, 0), icon = HOME_ICON[e.type] || '🏠';
-        var cy = pin3d(ctx, p.x, p.y, mine ? er + 2 : er, mine ? theme.danfo : '#6b7280', icon, { sel: sel, lift: (MODELS[e.type].h[1] + 6) * s, bob: mine && !reduce, glyph: 'dome', bead: mine ? '#fff3c4' : null, img: 'h_' + (e.type === 'flat2' || e.type === 'flat3' ? 'flat' : e.type) });
+        var cy = pin3d(ctx, p.x, p.y, mine ? er + 2 : er, mine ? (/^#[0-9a-f]{6}$/i.test(scene.homePaint || '') ? scene.homePaint : theme.danfo) : '#6b7280', icon, { sel: sel, lift: (MODELS[e.type].h[1] + 6) * s, bob: mine && !reduce, glyph: 'dome', bead: mine ? '#fff3c4' : null, img: 'h_' + (e.type === 'flat2' || e.type === 'flat3' ? 'flat' : e.type) });
         var n = scene.residents && scene.residents[e.id];
         if (n) {
           ctx.beginPath(); ctx.arc(p.x + er, cy - er * 0.6, 7, 0, Math.PI * 2); ctx.fillStyle = theme.lagoon; ctx.fill();

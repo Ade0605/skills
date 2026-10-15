@@ -36,7 +36,8 @@
     return ctx.createPattern(t, 'repeat');
   }
 
-  function draw(canvas, look, outfit) {
+  // extra: an optional shop accessory { look, color } drawn last, over the outfit. Never part of a life's state.
+  function draw(canvas, look, outfit, extra) {
     var dpr = Math.min(2, root.devicePixelRatio || 1), W = 180, H = 260;
     canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     var ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
@@ -114,6 +115,26 @@
       if (acc.name === 'Coral beads') { ctx.fillStyle = acc.color; for (var b = -3; b <= 3; b++) { ctx.beginPath(); ctx.arc(cx + b * 5, 84 + Math.abs(b) * -1.2 + 2, 2.8, 0, Math.PI * 2); ctx.fill(); } }
       else if (acc.name === 'Luxury watch') { ctx.fillStyle = acc.color; ctx.fillRect(cx + sw + 4, 150, 9, 6); }
       else { ctx.strokeStyle = acc.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, 84, 15, 0.2, Math.PI - 0.2); ctx.stroke(); }
+    }
+    if (extra && extra.look) drawExtra(ctx, cx, sw, extra);
+  }
+  function drawExtra(ctx, cx, sw, x) {
+    var c = /^#[0-9a-f]{6}$/i.test(x.color || '') ? x.color : '#17181a';
+    if (x.look === 'shades') {
+      ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx - 9, 44, 8, 5.5, 0, 0, Math.PI * 2); ctx.ellipse(cx + 9, 44, 8, 5.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(cx - 2, 42, 4, 2); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(cx - 13, 41, 4, 2); ctx.fillRect(cx + 5, 41, 4, 2);
+    } else if (x.look === 'chain') {
+      ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(cx, 82, 19, 0.15, Math.PI - 0.15); ctx.stroke();
+      ctx.strokeStyle = shade(c, 0.35); ctx.lineWidth = 1.2; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.arc(cx, 82, 19, 0.15, Math.PI - 0.15); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = c; ctx.beginPath(); ctx.arc(cx, 103, 5, 0, Math.PI * 2); ctx.fill();
+    } else if (x.look === 'cap') {
+      ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx, 24, 25, 15, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = shade(c, -0.25); ctx.beginPath(); ctx.ellipse(cx + 18, 25, 18, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx, 10, 2.2, 0, Math.PI * 2); ctx.fill();
+    } else if (x.look === 'phones') {
+      ctx.strokeStyle = c; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.arc(cx, 40, 27, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+      ctx.fillStyle = c; ctx.fillRect(cx - 32, 36, 9, 16); ctx.fillRect(cx + 23, 36, 9, 16);
+      ctx.fillStyle = shade(c, -0.3); ctx.fillRect(cx - 30, 39, 5, 10); ctx.fillRect(cx + 25, 39, 5, 10);
     }
   }
 

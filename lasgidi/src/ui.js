@@ -772,7 +772,7 @@
   }
   function drawAvatar() {
     var cv = document.getElementById('avatar-canvas');
-    if (cv && window.LasgidiAvatar && S) window.LasgidiAvatar.draw(cv, S.look, S.outfit);
+    if (cv && window.LasgidiAvatar && S) window.LasgidiAvatar.draw(cv, S.look, S.outfit, myExtra());
   }
 
   function weeklyInviteView() {
@@ -934,7 +934,7 @@
       flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(), players: mapPlayers(), layers: mapLayers(), showBoards: ui.placeCat === 'boards', weather: L.weatherNow(S), sea: { claims: seaClaims(), mine: online.me || 'me', sel: ui.seaOpen ? seaSel() : null }, trip: ui.trip && Date.now() - ui.trip.at < 2600 ? ui.trip : null,
       clock: L.clockLabel(S), banner: banner,
       places: ui.placeCat === 'boards' || ui.placeCat === 'homes' || ui.placeCat === 'cities' ? [] : D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && (!ui.placeCat || p.type === ui.placeCat); }), place: ui.place,
-      homeId: S.home, homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
+      homeId: S.home, homePaint: myPaint(), homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
       myPlot: L.myPlot(S), plotSel: ui.plotSel, plotOwners: plotOwners(),
       boards: boardAdsMap(), board: ui.board, gems: gemsLeft(),
       biz: S.businesses.filter(function (b) { return b.site; }).map(function (b) { return { district: b.site, icon: D.BUSINESS_GROWTH[b.id].icon }; })
@@ -948,7 +948,7 @@
     if (!c || !S || !window.LasgidiAvatar) return;
     if (!hudOff) hudOff = document.createElement('canvas');
     try {
-      window.LasgidiAvatar.draw(hudOff, S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit || {});
+      window.LasgidiAvatar.draw(hudOff, S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit || {}, myExtra());
       var r = hudOff.width / 180, g = c.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
       c.width = 56 * dpr; c.height = 56 * dpr; c.style.width = '56px'; c.style.height = '56px';
       g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
@@ -1277,7 +1277,7 @@
     });
     slot.appendChild(interior.el);
     var h = L.homeDef(S);
-    interior.update({ size: L.roomSize(S), type: h.type || 'room', name: h.name, items: S.items, vehicles: S.vehicles, sel: ui.itemSel, power: S.power, hour: L.hour(S),
+    interior.update({ paint: myPaint(), size: L.roomSize(S), type: h.type || 'room', name: h.name, items: S.items, vehicles: S.vehicles, sel: ui.itemSel, power: S.power, hour: L.hour(S),
       dark: document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) });
   }
   var FX_NAMES = { sleep: 'sleep', power: 'light', gen: 'gen cost', fun: 'enjoyment', stress: 'stress', social: 'social', hunger: 'belle', energy: 'energy', hygiene: 'hygiene' };
@@ -1582,7 +1582,7 @@
     { by: 'crew:dj', label: 'DJ', spot: 'party', crew: true, look: { skin: 5, hair: 5, shape: 1 }, outfit: { top: 'crop', bottom: 'joggers' } }];
   var STARTERS = ['st_tee', 'st_ankara', 'st_adire', 'st_asooke'];
   function deckScene() {
-    var mt = myTag(), me = { by: online.me || 'me', label: handleOf(online.me), spot: S.cruise.spot, me: true, look: S.look, outfit: S.outfit, tagc: mt && mt.color, tagi: mt && mt.ink };
+    var mt = myTag(), me = { by: online.me || 'me', label: handleOf(online.me), spot: S.cruise.spot, me: true, extra: myExtra(), look: S.look, outfit: S.outfit, tagc: mt && mt.color, tagi: mt && mt.ink };
     var peers = deckPeers().slice(0, 16).map(function (p) { var h = 0; for (var i = 0; i < p.by.length; i++) h = (h * 31 + p.by.charCodeAt(i)) >>> 0; return { by: p.by, label: handleOf(p.by), spot: p.at.slice(7), look: p.look, outfit: { top: STARTERS[h % 4], bottom: ['st_jeans', 'st_chinos', 'st_wrapper'][h % 3] } }; });
     var bubbles = {}, now = Date.now();
     (online.deck || []).forEach(function (m) { if (now - m.at < 7000) bubbles[m.by] = m.text; });
@@ -1750,7 +1750,7 @@
   }
   var roomStage = null, roomKey = '';
   function roomScene(id) {
-    var pre = 'room:' + id + ':', me = { by: online.me || 'me', label: handleOf(online.me), spot: S.room.spot, me: true, look: S.look, outfit: S.outfit, tagc: (myTag() || {}).color, tagi: (myTag() || {}).ink };
+    var pre = 'room:' + id + ':', me = { by: online.me || 'me', label: handleOf(online.me), spot: S.room.spot, me: true, extra: myExtra(), look: S.look, outfit: S.outfit, tagc: (myTag() || {}).color, tagi: (myTag() || {}).ink };
     var peers = roomPeers(id).slice(0, 16).map(function (p) { var h = 0; for (var i = 0; i < p.by.length; i++) h = (h * 31 + p.by.charCodeAt(i)) >>> 0; return { by: p.by, label: handleOf(p.by), spot: p.at.slice(pre.length), look: p.look, outfit: { top: STARTERS[h % 4], bottom: ['st_jeans', 'st_chinos', 'st_wrapper'][h % 3] } }; });
     var bubbles = {}, now = Date.now(); (online.roomChat || []).forEach(function (m) { if (m.room === id && now - m.at < 7000) bubbles[m.by] = m.text; });
     var h0 = L.hour(S); var R0 = D.ROOMS[id], lay = R0.layout || id; var NPC_LOOKS = [{ skin: 4, hair: 2, shape: 1 }, { skin: 2, hair: 4, shape: 0 }, { skin: 5, hair: 6, shape: 2 }, { skin: 3, hair: 1, shape: 1 }, { skin: 1, hair: 3, shape: 0 }], NPC_TOPS = ['st_asooke', 'shirt', 'blazer', 'jersey', 'crop'];
@@ -3784,7 +3784,7 @@
     if (ds.copytext) { var ct = ds.copytext; try { navigator.clipboard.writeText(ct).then(function () { ui.toasts.push({ msg: 'Copied.', ok: true }); renderToasts(); }, function () {}); } catch (e) {} return; }
     if (ds.shopadult) { ui.shopAdult = !!t.checked; render(); return; }
     if (ds.shopbuy) { var sb = ds.shopbuy.split(':'); shopBuy(sb[0], sb[1]); return; }
-    if (ds.shopequip != null && t.hasAttribute('data-shopequip')) { try { if (ds.shopequip && ownedItem(ds.shopequip)) localStorage.setItem(TAG_KEY, ds.shopequip); else localStorage.removeItem(TAG_KEY); } catch (e) {} render(); return; }
+    if (ds.shopequip != null && t.hasAttribute('data-shopequip')) { var qk = ds.shopequip.split(':'), qc = online.shop && online.shop.catalog[qk[1]]; if (!qk[1] || (qc && qc.kind === qk[0] && ownedItem(qk[1]))) setWear(qk[0], qk[1] || null); render(); return; }
     if (ds.roomhang) { var rh0 = ds.roomhang; run(function () { return L.roomHang(S, S.room.id, rh0); }); return; }
     if (ds.roomnight) { var rn0 = ds.roomnight; run(function () { return L.roomNight(S, rn0); }); return; }
     if (ds.roomleave) { ui.roomOpen = null; run(function () { return L.roomLeave(S); }); syncPresence(); return; }
@@ -3960,7 +3960,24 @@
   /* ---------- Style shop (self-hosted PWA only) ----------
      Real cash buys cosmetics only, through the shop server in server/. Owned items live on this device and on
      that server, never in a life's state, so they change no ledger, score or replay. The artifact build has no shop. */
-  var SHOP_KEY = 'lasgidi.shopkey.v1', TAG_KEY = 'lasgidi.tag.v1';
+  var SHOP_KEY = 'lasgidi.shopkey.v1', TAG_KEY = 'lasgidi.tag.v1', WEAR_KEY = 'lasgidi.wear.v1';
+  // What you wear from the shop: one item per kind ({ tag, acc, paint }), kept on this device. The old tag key moves in.
+  function wearing() {
+    var w = null; try { w = JSON.parse(localStorage.getItem(WEAR_KEY) || 'null'); } catch (e) {}
+    if (!w || typeof w !== 'object') { w = {}; try { var t = localStorage.getItem(TAG_KEY); if (t) w.tag = t; } catch (e) {} }
+    return w;
+  }
+  function setWear(kind, id) {
+    var w = wearing(); if (id) w[kind] = id; else delete w[kind];
+    try { localStorage.setItem(WEAR_KEY, JSON.stringify(w)); localStorage.removeItem(TAG_KEY); } catch (e) {}
+  }
+  // The catalogue entry you wear for a kind, only if this key owns it.
+  function worn(kind) {
+    var id = wearing()[kind], C = online.shop && online.shop.catalog[id];
+    return C && C.kind === kind && ownedItem(id) ? C : null;
+  }
+  function myExtra() { var a = worn('acc'); return a ? { look: a.look, color: a.color } : null; }
+  function myPaint() { var p = worn('paint'); return p ? p.color : null; }
   function shopKey() {
     var k = null; try { k = localStorage.getItem(SHOP_KEY); } catch (e) {}
     if (!/^[a-z0-9]{16,40}$/.test(k || '')) {
@@ -3984,28 +4001,28 @@
     }
   }
   function ownedItem(id) { return (online.owned || []).some(function (g) { return g.item === id; }); }
-  function myTag() {
-    var id = null; try { id = localStorage.getItem(TAG_KEY); } catch (e) {}
-    var C = online.shop && online.shop.catalog[id];
-    return C && ownedItem(id) ? { color: C.color, ink: C.ink } : null;
-  }
+  function myTag() { var C = worn('tag'); return C ? { color: C.color, ink: C.ink } : null; }
   function styleView() {
     var sh = online.shop; if (!sh) return '<p class="note">The Style shop is only on self-hosted copies of the game.</p>';
-    var P = sh.providers, cat = sh.catalog, eq = null; try { eq = localStorage.getItem(TAG_KEY); } catch (e) {}
-    var html = '<div class="section" style="padding-top:0"><h3>🎨 Style shop</h3><p class="note">Real money buys <b>cosmetics only</b>: a colour for your @handle in live rooms and on the cruise. It never buys naira, skills, status or any advantage, and it is not part of any life\'s score or replay.</p>' +
+    var P = sh.providers, cat = sh.catalog, wear = wearing(), kinds = sh.kinds || { tag: 'Name tags' };
+    var html = '<div class="section" style="padding-top:0"><h3>🎨 Style shop</h3><p class="note">Real money buys <b>cosmetics only</b>: a colour for your @handle in live rooms and on the cruise, an accessory over your avatar, or a paint colour for your home. You wear one of each kind. It never buys naira, skills, status or any advantage, and it is not part of any life\'s score or replay.</p>' +
       (sh.mode !== 'live' ? '<p class="why">Sandbox mode: payments use test cards and accounts, and no real money moves.</p>' : '') +
       (!P.flutterwave && !P.paypal ? '<p class="why">No payment method is set up on this server yet.</p>' : '') +
       '<label class="shop-adult"><input type="checkbox" id="shop-adult"' + (ui.shopAdult ? ' checked' : '') + ' data-shopadult="1"> I am 18 or over</label>' +
-      '<p class="note"><a href="/terms.html" target="_blank" rel="noopener">Terms and refunds</a></p><div class="list">' + Object.keys(cat).map(function (k) {
-        var C = cat[k], own = ownedItem(k), on = own && eq === k;
-        var buy = own ? '<button class="btn sm' + (on ? '' : ' go') + '" id="shop-eq-' + k + '" data-shopequip="' + (on ? '' : k) + '">' + (on ? 'Take off' : 'Wear') + '</button>'
-          : (P.flutterwave ? '<button class="btn sm go" id="shop-flw-' + k + '" data-shopbuy="' + k + ':flutterwave"' + (ui.shopAdult ? '' : ' disabled title="Tick 18 or over first"') + '>Pay ₦' + C.ngn.toLocaleString('en') + '</button>' : '') +
-            (P.paypal ? '<button class="btn sm ghost" id="shop-pp-' + k + '" data-shopbuy="' + k + ':paypal"' + (ui.shopAdult ? '' : ' disabled title="Tick 18 or over first"') + '>PayPal $' + C.usd + '</button>' : '');
-        return '<div class="item"><div><h3><span class="tag-swatch" style="background:' + C.color + ';color:' + C.ink + '">@you</span> ' + esc(C.name) + '</h3><div class="meta"><span>₦' + C.ngn.toLocaleString('en') + ' · $' + C.usd + '</span>' + (own ? '<span class="gain">Owned</span>' : '') + '</div></div><div class="inline">' + buy + '</div></div>';
-      }).join('') + '</div>' + purchaseHistory() +
+      '<p class="note"><a href="/terms.html" target="_blank" rel="noopener">Terms and refunds</a></p>' + Object.keys(kinds).map(function (kind) {
+        var ids = Object.keys(cat).filter(function (k) { return (cat[k].kind || 'tag') === kind; });
+        return ids.length ? '<h4>' + esc(kinds[kind]) + '</h4><div class="list">' + ids.map(function (k) { return shopRow(k, kind); }).join('') + '</div>' : '';
+      }).join('') + purchaseHistory() +
       '<h4>🔑 Your shop key</h4><p class="note">Your items belong to this key, kept in this browser. On a new device, or if you clear this site\'s data, send the shop owner your receipt and your new key, and they can move your items across.</p>' +
       '<div class="inline"><code class="shop-key">' + esc(shopKey()) + '</code><button class="btn sm ghost" id="shop-key-copy" data-copytext="' + esc(shopKey()) + '">Copy</button></div></div>';
     return html;
+  }
+  function shopRow(k, kind) {
+    var sh = online.shop, P = sh.providers, C = sh.catalog[k], own = ownedItem(k), on = own && wearing()[kind] === k;
+        var buy = own ? '<button class="btn sm' + (on ? '' : ' go') + '" id="shop-eq-' + k + '" data-shopequip="' + kind + ':' + (on ? '' : k) + '">' + (on ? 'Take off' : 'Wear') + '</button>'
+          : (P.flutterwave ? '<button class="btn sm go" id="shop-flw-' + k + '" data-shopbuy="' + k + ':flutterwave"' + (ui.shopAdult ? '' : ' disabled title="Tick 18 or over first"') + '>Pay ₦' + C.ngn.toLocaleString('en') + '</button>' : '') +
+            (P.paypal ? '<button class="btn sm ghost" id="shop-pp-' + k + '" data-shopbuy="' + k + ':paypal"' + (ui.shopAdult ? '' : ' disabled title="Tick 18 or over first"') + '>PayPal $' + C.usd + '</button>' : '');
+    return '<div class="item"><div><h3><span class="tag-swatch" style="background:' + C.color + ';color:' + C.ink + '">' + (kind === 'tag' ? '@you' : kind === 'paint' ? '🏠' : '✨') + '</span> ' + esc(C.name) + '</h3><div class="meta"><span>₦' + C.ngn.toLocaleString('en') + ' · $' + C.usd + '</span>' + (own ? '<span class="gain">Owned</span>' : '') + '</div></div><div class="inline">' + buy + '</div></div>';
   }
   function purchaseHistory() {
     var h = online.owned || []; if (!h.length) return '';

@@ -34,7 +34,16 @@ test('shop: lists cosmetics only, in sandbox by default, with no providers until
   await withServer({}, async req => {
     const j = await (await req('/api/shop')).json();
     assert.equal(j.mode, 'sandbox'); assert.deepEqual(j.providers, { flutterwave: false, paypal: false });
-    for (const it of Object.values(j.catalog)) { assert.equal(it.kind, 'tag'); assert.ok(it.ngn > 0 && /^\d+\.\d\d$/.test(it.usd)); }
+    assert.deepEqual(Object.keys(j.kinds), ['tag', 'acc', 'paint']);
+    const looks = ['shades', 'chain', 'cap', 'phones'];
+    for (const it of Object.values(j.catalog)) {
+      assert.ok(j.kinds[it.kind], 'every item has a known kind');
+      assert.ok(it.ngn >= 1500 && it.ngn <= 3000 && /^\d+\.\d\d$/.test(it.usd) && +it.usd <= 3.99, 'priced as a small cosmetic');
+      assert.match(it.color, /^#[0-9a-f]{6}$/i);
+      if (it.kind === 'acc') assert.ok(looks.includes(it.look), 'an accessory names a drawing the avatar knows');
+      assert.deepEqual(Object.keys(it).filter(k => !['name', 'kind', 'look', 'color', 'ink', 'ngn', 'usd'].includes(k)), [], 'no field that could carry an advantage');
+    }
+    for (const k of ['tag', 'acc', 'paint']) assert.ok(Object.values(j.catalog).some(it => it.kind === k));
     const r = await post(req, '/api/checkout', { account: ACC, item: 'tag_emerald', provider: 'paypal', adult: true });
     assert.equal(r.status, 400);
   });

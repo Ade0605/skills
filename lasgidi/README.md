@@ -445,7 +445,7 @@ The engine is deterministic: all randomness comes from a seeded PRNG kept in the
 
 ## Real-cash cosmetics: the Style shop (self-hosted only)
 
-Real money buys **cosmetics only**: name-tag colours for your @handle in live rooms and on the cruise. They never buy naira, status, skills or anything that changes a life, so the Hall of Fame and Weekly Lagos stay fair and money stays hard to make. The claude.ai artifact build has no shop at all.
+Real money buys **cosmetics only**, in three kinds, and you wear one of each: name-tag colours for your @handle in live rooms and on the cruise; accessories drawn over your own avatar on your phone, in rooms and on the cruise (dark shades, a gold rope chain, a snapback cap, studio headphones); and house paint for your home's walls in the home designer and your home pin on the map (sage, terracotta, sky blue). Prices run from ₦1,500 to ₦3,000 ($1.99 to $3.99). What you wear is kept in this browser (`lasgidi.wear.v1`), never in a life's state. They never buy naira, status, skills or anything that changes a life, so the Hall of Fame and Weekly Lagos stay fair and money stays hard to make. The claude.ai artifact build has no shop at all.
 
 - **Run it:** `npm run shop` serves the game and the shop from `server/` (Node 18+, no dependencies). Settings are environment variables; keys never go in the code:
   - `PORT`, `PUBLIC_URL` (the address players use, for payment return links), `DATA_DIR` (default `server/data/`, ignored by git);

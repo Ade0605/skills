@@ -56,10 +56,10 @@
       g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, p.x, p.y - th / 2);
     }
     function figure(pl) {
-      var key = JSON.stringify([pl.look, pl.outfit]);
+      var ex = pl.me && pl.extra && pl.extra.look ? pl.extra : null, key = JSON.stringify([pl.look, pl.outfit, ex]);
       if (figs[key]) return figs[key];
       if (!root.LasgidiAvatar) return null;
-      try { var c = document.createElement('canvas'); root.LasgidiAvatar.draw(c, pl.look || { skin: 2, hair: 0, shape: 1 }, pl.outfit || {}); figs[key] = c; } catch (e) { return null; }
+      try { var c = document.createElement('canvas'); root.LasgidiAvatar.draw(c, pl.look || { skin: 2, hair: 0, shape: 1 }, pl.outfit || {}, ex); figs[key] = c; } catch (e) { return null; }
       if (Object.keys(figs).length > 60) figs = {};
       return figs[key];
     }
