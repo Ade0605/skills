@@ -2347,7 +2347,7 @@ test('rules 15: leaving and re-entering a room does not reset the daily catch-up
     return { hang: L.roomHang(s, 'park', 'femi'), night: L.roomNight(s, 'park') };
   };
   const now = run(L.RULES);
-  assert.equal(L.RULES, 15);
+  assert.ok(L.RULES >= 15);
   assert.ok(!now.hang.ok); assert.match(now.hang.msg, /already caught up/);
   assert.ok(!now.night.ok); assert.match(now.night.msg, /joined tonight/);
   const old = run(14);
@@ -2416,4 +2416,78 @@ test('no real business or maker names on places, place activities or vehicles', 
   texts.push(D.CAR.name);
   const bad = texts.filter(t => banned.test(t));
   assert.deepEqual(bad, []);
+});
+
+// Rules 16 audit fixes. Each recipe reproduces a loophole under rules 15 and shows it closed under rules 16.
+function life16(rules, seed) { const s = L.newGame({ seed: seed || 1, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 1); return s; }
+function goTo(s, t) { while (s.t < t) { while (s.pending.length) L.resolveChoice(s, 1); for (const k in s.needs) s.needs[k] = k === 'stress' ? 0 : 100; L.wait(s, Math.min(240, t - s.t)); } while (s.pending.length) L.resolveChoice(s, 1); }
+
+test('rules 16: a stock buy over the cap is refused before any money moves', () => {
+  for (const rules of [15, 16]) {
+    const s = life16(rules); s.t = 1440 * 7 + 630; s.bank = 30000000;
+    assert.ok(L.buyStock(s, 'ekocem', 19000000).ok);
+    const b = s.bank, r = L.buyStock(s, 'ekocem', 5000000);
+    assert.ok(!r.ok);
+    if (rules >= 16) assert.equal(s.bank, b); else assert.ok(s.bank < b, 'rules 15 replays as played');
+  }
+});
+
+test('rules 16: firing a manager is not a visit, and hiring pays the first part-week', () => {
+  const s = life16(16); assert.ok(L.buyBusiness(s, 'pos', Object.keys(D.BUSINESS_SITES)[0]).ok); goTo(s, 1440 * 10);
+  const v0 = s.businesses[0].visit, b0 = s.cash + s.bank;
+  assert.ok(L.hireManager(s, 0).ok); assert.ok(b0 - (s.cash + s.bank) > 0, 'part-week salary paid');
+  assert.ok(L.fireManager(s, 0).ok); assert.equal(s.businesses[0].visit, v0);
+});
+
+test('rules 16: a loan repaid inside its first week still pays a week of interest', () => {
+  for (const rules of [15, 16]) {
+    const s = life16(rules); goTo(s, 1440 * 7 + 30); assert.ok(L.takeLoan(s, 'app', 100000).ok);
+    goTo(s, 1440 * 14 - 30); s.cash += 500000;
+    const b = s.cash + s.bank; while (s.loans.length) assert.ok(L.repayLoan(s, 0, s.loans[0].bal).ok);
+    const paid = b - (s.cash + s.bank);
+    if (rules >= 16) assert.ok(paid > 100000); else assert.equal(paid, 100000);
+  }
+});
+
+test('rules 16: each tournament once a day, and two street mini-game runs a day', () => {
+  for (const rules of [15, 16]) {
+    const s = life16(rules); s.skills.fitness = 100; goTo(s, 1440 + 18 * 60); s.loc = 'mushin'; s.cash += 100000;
+    let wins = 0; for (let i = 0; i < 4; i++) if (L.doAction(s, 'mushin_arm').ok) wins++;
+    if (rules >= 16) assert.equal(wins, 1); else assert.ok(wins >= 2);
+    const b = life16(rules); goTo(b, 1440 + 11 * 60); b.loc = 'ph_oldgra';
+    let runs = 0; for (let i = 0; i < 4; i++) { b.needs.hunger = 50; b.needs.energy = 100; if (L.startMinigame(b, 'bole').ok && L.boleShift(b, 54000, 60, 0).ok) runs++; }
+    if (rules >= 16) assert.equal(runs, 2); else assert.ok(runs >= 3);
+  }
+});
+
+test('rules 16: past gem days cannot be farmed once a later day is hunted', () => {
+  const s = life16(16); goTo(s, 1440 + 540);
+  const later = '2026-10-15', older = '2026-10-01', g = L.gemsFor(later)[0];
+  s.loc = g.district; assert.ok(L.collectGem(s, later, 0).ok);
+  goTo(s, 1440 * 2 + 540); const o = L.gemsFor(older)[0]; s.loc = o.district;
+  assert.match(L.collectGem(s, older, 0).msg, /gems are gone/);
+});
+
+test('rules 16: re-boarding the cruise the same day gives no fresh boost and keeps the deck count', () => {
+  for (const rules of [15, 16]) {
+    const s = life16(rules); goTo(s, 1440 + 600); s.loc = 'ikoyi'; s.cash += 100000;
+    assert.ok(L.cruiseBoard(s).ok); L.cruiseLeave(s);
+    s.needs.fun = 10; assert.ok(L.cruiseBoard(s).ok);
+    if (rules >= 16) assert.equal(s.needs.fun, 10); else assert.ok(s.needs.fun > 10);
+  }
+});
+
+test('rules 16: forged gift keys are refused, opening takes time, and sending gives social twice a day', () => {
+  const s = life16(16); goTo(s, 1440 + 600); s.cash += 100000;
+  assert.match(L.openGift(s, 'nobody', 'fabric').msg, /not valid/);
+  const t0 = s.t; assert.ok(L.openGift(s, 'u12:1791900000000', 'fabric').ok); assert.ok(s.t > t0);
+  s.needs.social = 10; for (let i = 0; i < 5; i++) assert.ok(L.sendGift(s, 'suya').ok);
+  assert.equal(s.needs.social, 20, 'only the first two sends lift your mood');
+});
+
+test('rules 16: quitting and re-applying keeps today\'s shift and missed strikes', () => {
+  const s = life16(16); const cid = Object.keys(D.CAREERS)[0];
+  assert.ok(L.applyJob(s, cid, true).ok, cid); s.job.missed = 2; s.job.lastShift = L.day(s);
+  assert.ok(L.applyJob(s, cid, true).ok);
+  assert.equal(s.job.missed, 2); assert.equal(s.job.lastShift, L.day(s));
 });

@@ -36,7 +36,9 @@
   // 13 adds job interviews for the degree careers (a connect still gets you in);
   // 14 adds the full Detty December: December rates, traffic, IJGB relatives, a hustle boom.
   // 15 keeps the once-a-day room limits (catch-ups, room nights) across visits, so leaving and re-entering does not reset them.
-  var RULES = 15;
+  // 16 closes the loopholes found in an audit: stock buys over the cap, manager hire/fire visits, interest-free
+  // week loans, uncapped tournaments and street mini-games, old gem dates, cruise re-boarding, forged gifts, job re-applies.
+  var RULES = 16;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -796,6 +798,8 @@
     if (a.fx && a.fx.hunger > 0 && s.needs.hunger >= 90 && a.special !== 'owambe') return 'You are full';
     if (cost && !canAfford(s, cost)) return 'Costs ' + naira(cost);
     if (a.minigame === 'quiz' && s.quizDay === day(s)) return 'One show a day: come back tomorrow';
+    if (s.rules >= 16 && a.compete && dayCount(s, 'c:' + a.id)) return 'One entry a day: come back tomorrow';
+    if (s.rules >= 16 && (a.minigame === 'bole' || a.minigame === 'hawk' || a.minigame === 'danfo') && dayCount(s, 'm:' + a.minigame) >= 2) return 'Two runs a day: rest and come back tomorrow';
     switch (a.special) {
       case 'cook': if (s.pantry <= 0) return 'No foodstuff at home'; break;
       case 'flex': if (!luxuryCar(s)) return 'Bring a luxury car (₦40m or more) to flex here'; break;
@@ -920,6 +924,7 @@
     // Amateur tournaments: your skill against the field, with a capped prize (new actions only).
     compete: function (s, a) {
       var C = a.compete, score = skillLevel(s, C.skill) * 8 + rand(s) * 60;
+      if (s.rules >= 16) dayBump(s, 'c:' + a.id);
       if (score >= 50) { var prize = price(s, C.prize); earn(s, prize, 'Prize: ' + C.name); s.stats.wins = (s.stats.wins || 0) + 1; return '🏆 You won the ' + C.name + ': ' + naira(prize) + '!'; }
       return 'You lost the ' + C.name + '. Train more and come back.';
     },
@@ -1037,7 +1042,8 @@
     if (!force && needsInterview(s, cid)) { var nf = fail('This job needs an interview: three questions in the panel above.'); nf.interview = cid; return nf; }
     var c = D.CAREERS[cid];
     if (s.job) { log(s, 'You resigned as ' + D.CAREERS[s.job.id].titles[s.job.level] + '.', 'info'); endJob(s, 'resigned'); }
-    s.job = { id: cid, level: 0, shifts: 0, perfSum: 0, missed: 0, lastShift: -1, since: s.t };
+    var keep = s.rules >= 16 && s.jobMarks ? s.jobMarks : null;
+    s.job = { id: cid, level: 0, shifts: 0, perfSum: 0, missed: keep && keep.d >= day(s) - 14 ? keep.missed : 0, lastShift: keep ? keep.lastShift : -1, since: s.t };
     var via = e.connect ? ' ' + D.NPCS[e.connect].name + ' put in a word for you.' : '';
     log(s, 'Hired: ' + c.titles[0] + ' (' + c.name + ').' + via, 'good');
     return finish(s, ok('You start as ' + c.titles[0] + '. Shifts ' + String(c.start).padStart(2, '0') + ':00–' + String(c.end).padStart(2, '0') + ':00, ' + c.days.map(function (d) { return D.DAYS[d]; }).join(' ') + '.'));
@@ -1046,6 +1052,7 @@
   // The CV keeps past jobs (state only, never money, so it changes no seal).
   function endJob(s, why) {
     if (!s.job) return;
+    if (s.rules >= 16) s.jobMarks = { lastShift: s.job.lastShift, missed: s.job.missed || 0, d: day(s) }; // rules 16: re-applying can't wipe these
     (s.jobHistory = s.jobHistory || []).push({ id: s.job.id, level: s.job.level, shifts: s.job.shifts, from: s.job.since, to: s.t, why: why });
     if (s.jobHistory.length > 30) s.jobHistory.shift();
     s.job = null;
@@ -1801,6 +1808,7 @@
   function repayLoan(s, i, amt) {
     var l = s.loans[i];
     if (!l || l.bal <= 0) return fail('No such loan.');
+    if (s.rules >= 16 && l.rate && !l.ticked) { l.bal = Math.round(l.bal * (1 + l.rate)); l.ticked = true; } // a week's interest is owed however soon you repay
     amt = Math.min(Math.floor(amt), l.bal);
     if (!(amt > 0)) return fail('Enter an amount.');
     s.alerts = [];
@@ -1820,6 +1828,7 @@
     s.loans.forEach(function (l) {
       if (l.bal <= 0) return;
       if (l.rate) l.bal = Math.round(l.bal * (1 + l.rate));
+      l.ticked = true;
       l.weeksLeft--;
       if (l.weeksLeft > 0) return;
       if (l.kind === 'app') {
@@ -1884,13 +1893,18 @@
     if (!b) return fail('No such business.');
     if (!b.level) return fail('Rebuild it on a site to hire a manager.');
     if (b.manager) return fail('It already has a manager.');
+    if (s.rules >= 16) { // the first part-week is paid at hire, so hire-and-fire is never free
+      var left = 7 - dow(s), w0 = Math.round(managerPay(s, b) * left / 7);
+      if (w0 && !canAfford(s, w0)) return fail('The first part-week of salary is ' + naira(w0) + '.');
+      s.alerts = []; if (w0) pay(s, w0, 'Manager salary (first part-week): ' + businessName(b));
+    }
     b.manager = true;
     return ok('Hired. A manager costs ' + naira(managerPay(s, b)) + ' a week; no more weekly visits needed.');
   }
   function fireManager(s, i) {
     var b = s.businesses[i];
     if (!b || !b.manager) return fail('No manager to let go.');
-    b.manager = false; b.visit = day(s);
+    b.manager = false; if (s.rules < 16) b.visit = day(s);
     return ok('You let the manager go. Visit at least weekly from now on.');
   }
   function weeklyBusinessCosts(s) {
@@ -2295,6 +2309,9 @@
     if (roomFee(s, id) && !canAfford(s, roomFee(s, id))) return 'Entry is ' + naira(roomFee(s, id));
     return busyBlock(s) || '';
   }
+  // Rules 16: per-day counts kept on the life (never on a visit or a job object).
+  function dayCount(s, key) { var M = s.dayMarks && s.dayMarks[key]; return M && M.d === day(s) ? M.n : 0; }
+  function dayBump(s, key) { if (!s.dayMarks) s.dayMarks = {}; s.dayMarks[key] = { d: day(s), n: dayCount(s, key) + 1 }; }
   function pad2(n) { return String(n).padStart(2, '0'); }
   function roomEnter(s, id) {
     var why = roomBlock(s, id); if (why) return fail(why + '.');
@@ -2477,8 +2494,11 @@
     s.alerts = [];
     var C = D.CRUISE, fare = cruiseFare(s);
     if (!pay(s, fare, 'Lagoon Boat Cruise ticket')) return fail('Not enough money.');
-    s.cruise = { until: s.t + C.mins, spot: 'rail', n: 0 };
-    applyFx(s, C.fx); unlock(s, 'cruise');
+    var r16 = s.rules >= 16, nToday = r16 ? dayCount(s, 'cruise:moves') : 0;
+    s.cruise = { until: s.t + C.mins, spot: 'rail', n: nToday };
+    if (!r16 || !dayCount(s, 'cruise:board')) applyFx(s, C.fx);
+    if (r16) dayBump(s, 'cruise:board');
+    unlock(s, 'cruise');
     log(s, '🛳️ You boarded the Lagoon Boat Cruise at Five Cowries Creek.', 'good');
     return finish(s, ok('All aboard! Move around the deck.' + passportStamp(s, 'cruise')));
   }
@@ -2492,6 +2512,7 @@
     s.alerts = [];
     if (cost) pay(s, cost, 'Deck bar');
     s.cruise.spot = spot; s.cruise.n = (s.cruise.n || 0) + 1;
+    if (s.rules >= 16) { if (!s.dayMarks) s.dayMarks = {}; s.dayMarks['cruise:moves'] = { d: day(s), n: s.cruise.n }; }
     if (s.cruise.n <= 6) applyFx(s, P.fx); // the deck stops giving after a while
     advance(s, 30);
     var line = P.text;
@@ -3438,7 +3459,8 @@
     var cost = price(s, G.price);
     s.alerts = [];
     if (!pay(s, cost, 'Gift: ' + G.name)) return fail(G.name + ' costs ' + naira(cost) + '.');
-    applyFx(s, { social: 5 });
+    if (s.rules < 16 || dayCount(s, 'gift') < 2) applyFx(s, { social: 5 });
+    if (s.rules >= 16) dayBump(s, 'gift');
     return ok('You sent a ' + G.name.toLowerCase() + '.');
   }
   // key identifies the gift (sender and time); up to 3 opened per game day.
@@ -3448,8 +3470,12 @@
     if (Object.prototype.hasOwnProperty.call(s.giftsOpened, key)) return fail('You already opened this gift.');
     var today = day(s), n = Object.keys(s.giftsOpened).filter(function (k) { return s.giftsOpened[k] === today; }).length;
     if (n >= 3) return fail('You have opened three gifts today. Save the rest for tomorrow.');
+    if (s.rules >= 16) {
+      if (s.pending.length) return fail('Decide on the open event first.');
+      if (!/^\S{1,63}:\d{1,16}$/.test(key)) return fail('That gift is not valid.'); // sender id, then the send time
+    }
     s.giftsOpened[key] = today;
-    applyFx(s, G.fx);
+    applyFx(s, G.fx); if (s.rules >= 16) advance(s, 10);
     unlock(s, 'gifted');
     return finish(s, ok(G.icon + ' You opened a ' + G.name.toLowerCase() + '. Your mood lifts.'));
   }
@@ -3480,6 +3506,7 @@
     if (s.pending.length) return fail('Decide on the open event first.');
     if (s.loc !== g.district) return fail('That gem is in ' + D.DISTRICTS[g.district].name + '. Go there first.');
     var rec = s.gems[dayId];
+    if (!rec && s.rules >= 16 && Object.keys(s.gems).some(function (k) { return k > dayId; })) return fail('That day\'s gems are gone.');
     if (!rec) {
       var today = day(s);
       if (Object.keys(s.gems).some(function (k) { return s.gems[k].day === today; })) return fail('You already hunted today in this life. Sleep, and try tomorrow\'s gems.');
@@ -3550,6 +3577,7 @@
     if (units < 1) return fail('Not enough for one share.');
     var cost = Math.round(units * px), fee = brokerFee(cost);
     if (cost + fee > s.bank) return fail('Shares are paid from savings. You need ' + naira(cost + fee) + ' including the broker\'s fee.');
+    if (s.rules >= 16) { var inv16 = Object.keys(s.stocks).reduce(function (a, k) { return a + s.stocks[k].cost; }, 0), cap16 = price(s, STOCK_CAP); if (inv16 + cost + fee > cap16) return fail('Your broker caps a retail account at ' + naira(cap16) + ' invested. You have ' + naira(inv16) + ' in.'); }
     s.alerts = [];
     post(s, 'bank', -cost, 'Shares bought: ' + S.ticker);
     post(s, 'bank', -fee, 'Broker fee');
@@ -4181,6 +4209,7 @@
     }
     advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp);
     if (kind === 'quiz') s.quizDay = day(s);
+    if (s.rules >= 16) dayBump(s, 'm:' + kind);
     s.mini = { kind: kind, t: s.t, cost: cost };
     var spent = (cost.entry || 0) + (cost.stock || 0) + (cost.owner || 0) + (cost.fuel || 0);
     return finish(s, ok('▶ ' + a.label.replace(/ \(mini-game\)$/, '') + (spent ? ': ' + naira(spent) + ' paid up front' : '') + '. Quitting forfeits the run.'));
