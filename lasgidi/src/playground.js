@@ -286,7 +286,7 @@
   // Landmarks drawn into the static layer.
   var RUNWAY = [[3.2, 0.6], [9.6, 0.2], [9.8, 1.0], [3.4, 1.4]];
   var STADIUM = { x: 9.2, y: 16.6, rx: 0.9, ry: 0.7 };
-  // Ibeju-Lekki refinery site east of Ajah, and the new international airport (laid out here, drawn in Ikeja).
+  // The Ibeju-Lekki refinery east of Ajah, and the new international airport (laid out here, drawn in Ikeja).
   var REFINERY = { x0: 44.2, y0: 22.8, x1: 51.0, y1: 24.9 }, NEW_AIRPORT = { x0: 44.2, y0: 25.1, x1: 51.2, y1: 27.3 }, AIRPORT_AT = { x: 0.9, y: 2.1 };
 
   /* ---------- the playground ---------- */
@@ -677,18 +677,6 @@
       }
       if (rings) { g.strokeStyle = rings; g.lineWidth = Math.max(0.8, 1 * s); for (var i = 1; i < 6; i++) { g.beginPath(); g.ellipse(c.x, c.y - up * i / 6, rx * 1.15, ry * 1.15, 0, 0, Math.PI * 2); g.stroke(); } }
     }
-    function crane(g, s, x, y, h, jib) {
-      var b = toScreen(x, y, 0), top = { x: b.x, y: b.y - h * s }, end = toScreen(x + jib, y - jib * 0.3, 0);
-      g.strokeStyle = '#e8b416'; g.lineWidth = Math.max(1.2, 1.6 * s);
-      g.beginPath(); g.moveTo(b.x, b.y); g.lineTo(top.x, top.y); g.stroke();
-      g.beginPath(); g.moveTo(top.x - 6 * s, top.y + 2 * s); g.lineTo(end.x, end.y - h * s); g.stroke();
-      g.strokeStyle = theme.dark ? '#ccc' : '#444'; g.lineWidth = Math.max(0.5, 0.5 * s);
-      g.beginPath(); g.moveTo(end.x - 2 * s, end.y - h * s); g.lineTo(end.x - 2 * s, end.y - h * s * 0.45); g.stroke();
-      g.fillStyle = '#c0392b'; g.fillRect(end.x - 4 * s, end.y - h * s * 0.45, 4 * s, 1.5 * s);
-    }
-    function truck(g, s, x, y, col) {
-      var c = toScreen(x, y, 0); g.fillStyle = col; g.fillRect(c.x - 3 * s, c.y - 3 * s, 4.5 * s, 2.5 * s); g.fillStyle = '#e8e8e8'; g.fillRect(c.x + 1.5 * s, c.y - 2.6 * s, 1.8 * s, 2.1 * s);
-    }
     // A two-post sign board: yellow site board, or (done) a navy gateway board with one white line.
     function sign(g, s, x, y, l1, l2, done) {
       var c = toScreen(x, y, 0), w = 34 * s, h = 7.5 * s;
@@ -770,31 +758,40 @@
     }
     function drawRefinery(g, s) {
       var R = REFINERY;
-      sitePad(g, s, R);
-      // Tank farm: finished tanks with a green band, half-built frames, and bare foundations.
+      sitePad(g, s, R, true);
+      poly(g, [[44.35, 22.9], [50.95, 22.9], [50.95, 24.8], [44.35, 24.8]], theme.dark ? '#4c4f53' : '#cfd2d4'); // the concrete plant yard
+      // Tank farm: eight finished tanks, each with a green band.
       poly(g, [[44.5, 23.0], [47.0, 23.0], [47.0, 24.3], [44.5, 24.3]], theme.dark ? '#57534a' : '#c8c3b5');
-      var tanks = [[44.95, 23.3, 0], [45.6, 23.3, 0], [46.25, 23.3, 1], [44.95, 23.95, 0], [45.6, 23.95, 1], [46.25, 23.95, 1]];
+      var tanks = [[44.95, 23.3, 0], [45.6, 23.3, 0], [46.25, 23.3, 0], [46.9, 23.3, 0], [44.95, 23.95, 0], [45.6, 23.95, 0], [46.25, 23.95, 0], [46.9, 23.95, 0]];
       tanks.forEach(function (k) { cyl(g, s, k[0], k[1], 0.55, 9, '#dfe2e5', k[2] === 1); if (!k[2]) { var c = toScreen(k[0], k[1], 0); g.strokeStyle = '#1f8a4c'; g.lineWidth = Math.max(0.8, 1 * s); g.beginPath(); g.ellipse(c.x, c.y - 6 * s, 0.55 * TW * s * 0.5, 0.55 * TH * s * 0.5, 0, 0, Math.PI); g.stroke(); } });
-      [[46.75, 23.3], [46.75, 23.95]].forEach(function (k) { var c = toScreen(k[0], k[1], 0); g.beginPath(); g.ellipse(c.x, c.y, 0.55 * TW * s * 0.5, 0.55 * TH * s * 0.5, 0, 0, Math.PI * 2); g.fillStyle = theme.dark ? '#6a665c' : '#e9e5da'; g.fill(); });
       // Pipe rack across the site.
       var a = toScreen(44.6, 24.55, 0), b = toScreen(50.6, 24.45, 0);
       g.strokeStyle = '#7c8794'; g.lineWidth = Math.max(1, 1.6 * s); g.beginPath(); g.moveTo(a.x, a.y - 3 * s); g.lineTo(b.x, b.y - 3 * s); g.stroke();
       g.strokeStyle = '#e8b416'; g.lineWidth = Math.max(0.6, 0.8 * s); g.beginPath(); g.moveTo(a.x, a.y - 4.2 * s); g.lineTo(b.x, b.y - 4.2 * s); g.stroke();
       for (var i = 0; i <= 10; i++) { var q = toScreen(44.6 + i * 0.6, 24.55 - i * 0.01, 0); g.strokeStyle = '#7c8794'; g.lineWidth = Math.max(0.5, 0.6 * s); g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x, q.y - 3 * s); g.stroke(); }
       // Distillation columns with yellow ladders, a control building, a cooling tower, flare stacks.
-      cyl(g, s, 47.9, 23.3, 0.32, 20, '#9aa2ab', false, '#e8b416'); cyl(g, s, 48.5, 23.6, 0.3, 16, '#9aa2ab', false, '#e8b416');
+      cyl(g, s, 47.75, 23.25, 0.32, 20, '#9aa2ab', false, '#e8b416'); cyl(g, s, 48.35, 23.55, 0.3, 16, '#9aa2ab', false, '#e8b416'); cyl(g, s, 48.0, 23.95, 0.26, 13, '#9aa2ab', false, '#e8b416');
       drawBuilding(g, { x: 49.5, y: 23.3, w: 0.7, dep: 0.6, h: 7, wall: '#c9ced3', roof: '#b6bcc2' }, s, 0, true);
       var ct = toScreen(50.25, 23.95, 0), crx = 0.55 * TW * s * 0.5, cry = 0.55 * TH * s * 0.5, cup = 13 * s;
       g.beginPath(); g.moveTo(ct.x - crx, ct.y); g.quadraticCurveTo(ct.x - crx * 0.55, ct.y - cup * 0.6, ct.x - crx * 0.7, ct.y - cup); g.lineTo(ct.x + crx * 0.7, ct.y - cup); g.quadraticCurveTo(ct.x + crx * 0.55, ct.y - cup * 0.6, ct.x + crx, ct.y); g.closePath();
       g.fillStyle = theme.dark ? '#8d9196' : '#c9cdd1'; g.fill();
       g.beginPath(); g.ellipse(ct.x, ct.y - cup, crx * 0.7, cry * 0.7, 0, 0, Math.PI * 2); g.fillStyle = theme.dark ? '#5d6166' : '#9ea3a8'; g.fill();
-      [[50.6, 23.0], [50.85, 23.2]].forEach(function (k) { var c = toScreen(k[0], k[1], 0); for (var j = 0; j < 6; j++) { g.fillStyle = j % 2 ? '#ffffff' : '#c0392b'; g.fillRect(c.x - 0.7 * s, c.y - (j + 1) * 3 * s, 1.4 * s, 3 * s); } });
-      crane(g, s, 46.0, 22.95, 26, 1.2); crane(g, s, 48.9, 24.2, 22, 1.0);
-      truck(g, s, 45.2, 24.75, '#e2652b'); truck(g, s, 47.6, 24.8, '#e8b416');
-      // A jetty for tankers into the lagoon, and the sign.
+      // Flare stacks, now lit: a small flame on each.
+      [[50.6, 23.0], [50.85, 23.2]].forEach(function (k) {
+        var c = toScreen(k[0], k[1], 0); for (var j = 0; j < 6; j++) { g.fillStyle = j % 2 ? '#ffffff' : '#c0392b'; g.fillRect(c.x - 0.7 * s, c.y - (j + 1) * 3 * s, 1.4 * s, 3 * s); }
+        var fy = c.y - 18 * s; g.beginPath(); g.moveTo(c.x - 1.6 * s, fy); g.quadraticCurveTo(c.x - 1.2 * s, fy - 3 * s, c.x, fy - 5.5 * s); g.quadraticCurveTo(c.x + 1.2 * s, fy - 3 * s, c.x + 1.6 * s, fy); g.closePath(); g.fillStyle = '#f39c12'; g.fill();
+        g.beginPath(); g.ellipse(c.x, fy - 1.2 * s, 0.7 * s, 1.6 * s, 0, 0, Math.PI * 2); g.fillStyle = '#ffe08a'; g.fill();
+      });
+      // Tanker lorries at the loading gantry, by the gate.
+      drawBuilding(g, { x: 47.9, y: 24.6, w: 0.9, dep: 0.16, h: 3.5, wall: '#7c8794', roof: '#e8b416' }, s, 0, true);
+      [47.6, 47.9, 48.2].forEach(function (tx, i) { var c = toScreen(tx, 24.72, 0); g.fillStyle = '#dfe2e5'; g.fillRect(c.x - 3 * s, c.y - 3 * s, 4.5 * s, 2.5 * s); g.fillStyle = ['#c0392b', '#2f6fa0', '#1f8a4c'][i]; g.fillRect(c.x + 1.5 * s, c.y - 2.6 * s, 1.8 * s, 2.1 * s); });
+      // A jetty into the lagoon with a tanker ship moored at its head, and the gateway sign.
       var j0 = toScreen(45.4, 22.8, 0), j1 = toScreen(45.4, 22.0, 0);
       g.strokeStyle = theme.dark ? '#77756d' : '#b9b4a6'; g.lineWidth = Math.max(2, 3 * s); g.beginPath(); g.moveTo(j0.x, j0.y); g.lineTo(j1.x, j1.y); g.stroke();
-      sign(g, s, 50.2, 24.85, 'LAGOS OIL REFINERY', 'COMING SOON');
+      poly(g, [[44.75, 21.72], [45.25, 21.66], [46.15, 21.66], [46.15, 21.9], [45.25, 21.9], [44.75, 21.84]], '#8a2f2b');
+      poly(g, [[45.3, 21.7], [46.1, 21.7], [46.1, 21.86], [45.3, 21.86]], '#3f4a55');
+      drawBuilding(g, { x: 46.0, y: 21.78, w: 0.14, dep: 0.18, h: 3.5, wall: '#f4f5f6', roof: '#dfe2e5' }, s, 0, true);
+      sign(g, s, 50.2, 24.85, 'LAGOS OIL REFINERY', '', true);
     }
     function drawBeach(g, s) {
       // Clear shallows: a turquoise band off the sand.
