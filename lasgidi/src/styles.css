@@ -999,3 +999,12 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .pg-layers { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 6px; }
 .room-view.room-beach { background: #2a9cc4; }
 .room-card { background: linear-gradient(135deg, #8a5a2b, #d9822b); }
+/* Walk-in scenes: on phones the yard leads and the panel is a sheet with its own scroll; ▾ folds it to its header. */
+.venue-view .cv-panel { max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; }
+.venue-view.folded .cv-panel > :not(.ap-head) { display: none; }
+@media (max-width: 600px) {
+  .venue-view { grid-template-rows: minmax(0, 1fr) auto; }
+  .venue-view .cv-panel { max-height: 42vh; margin-bottom: 8px; }
+  .venue-view .iv-spin { gap: 2px; }
+  .venue-view .iv-spin .pg-zbtn { width: 34px; height: 34px; }
+}

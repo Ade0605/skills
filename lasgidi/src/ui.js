@@ -82,6 +82,30 @@
     good: function () { tone(784, 0, 0.12); tone(988, 0.1, 0.12); tone(1175, 0.2, 0.25); }
   };
   function play(name) { if (prefs.sound && sounds[name]) { try { sounds[name](); } catch (e) { /* audio blocked */ } } }
+  // Ambience for walk-in scenes: quiet looping noise shaped per kind of place, made in WebAudio (no files).
+  var AMBIENCE_OF = { beach: 'surf', jetty: 'surf', food: 'crowd', mall: 'crowd', stadium: 'crowd', transport: 'crowd', nightlife: 'pulse', music: 'pulse', refinery: 'hum', workshop: 'hum', airport: 'hum' };
+  var amb = { kind: null, stop: null };
+  function ambience(kind) {
+    if (amb.kind === kind) return;
+    if (amb.stop) { try { amb.stop(); } catch (e) {} } amb = { kind: null, stop: null };
+    if (!kind) return;
+    var a = ctx(); if (!a) return;
+    try {
+      var len = a.sampleRate * 2, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0), last = 0;
+      for (var i = 0; i < len; i++) { last = kind === 'surf' || kind === 'hum' ? (last + 0.02 * (Math.random() * 2 - 1)) / 1.02 : Math.random() * 2 - 1; d[i] = last * (kind === 'surf' || kind === 'hum' ? 3.5 : 1); }
+      var src = a.createBufferSource(); src.buffer = buf; src.loop = true;
+      var f = a.createBiquadFilter(), gn = a.createGain(), parts = [src];
+      f.type = kind === 'crowd' ? 'bandpass' : 'lowpass'; f.frequency.value = { surf: 500, crowd: 900, pulse: 160, hum: 220, street: 700 }[kind] || 600; f.Q.value = kind === 'crowd' ? 0.8 : 0.5;
+      gn.gain.value = 0.0001; gn.gain.exponentialRampToValueAtTime({ surf: 0.05, crowd: 0.02, pulse: 0.04, hum: 0.03, street: 0.012 }[kind] || 0.02, a.currentTime + 1.2);
+      src.connect(f); f.connect(gn); gn.connect(a.destination);
+      // Swells: the surf rolls in and out, the club pulses on the beat.
+      if (kind === 'surf' || kind === 'pulse') { var lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = kind === 'surf' ? 0.12 : 2.0; lg.gain.value = kind === 'surf' ? 0.035 : 0.03; lfo.connect(lg); lg.connect(gn.gain); lfo.start(); parts.push(lfo); }
+      if (kind === 'hum') { var o = a.createOscillator(), og = a.createGain(); o.type = 'sawtooth'; o.frequency.value = 55; og.gain.value = 0.006; o.connect(og); og.connect(a.destination); o.start(); parts.push(o); var og0 = og; }
+      src.start();
+      amb = { kind: kind, stop: function () { var t = a.currentTime; gn.gain.cancelScheduledValues(t); gn.gain.setValueAtTime(gn.gain.value, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.4); if (og0) og0.gain.setValueAtTime(0, t + 0.4); parts.forEach(function (p) { try { p.stop(t + 0.45); } catch (e) {} }); } };
+    } catch (e) { amb = { kind: null, stop: null }; }
+  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) ambience(null); else if (ui && ui.venueOpen) { try { mountVenue(); } catch (e) {} } });
 
   function esc(v) {
     return String(v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
@@ -1852,7 +1876,15 @@
     tech: [['Developer', 'The demo crashed, then it worked.', 0], ['Founder', 'We are raising a seed round.', 0], ['Designer', 'Make the logo bigger, they said.', 0]],
     estate: [['Gateman', 'Who are you here to see?', 1], ['Resident', 'Light has been steady this week.', 0], ['Gardener', 'The hedges grow fast in rainy season.', 0]]
   };
-  var VENUE_RIDES = { danfo: 1, brt: 1, cab: 1, keke: 1, okada: 1, car: 1 };
+  // How a trip arrives in a scene: road rides pull up at the gate, boats at the pier, choppers on the helipad; the rest walk in.
+  var VENUE_ARRIVE = { danfo: 'danfo', brt: 'brt', rail: 'brt', cab: 'cab', keke: 'keke', okada: 'okada', car: 'car', ferry: 'boat', boat: 'boat', heli: 'heli' };
+  var VENUE_WATER = { jetty: { x: 5.0, y: 1.0, lane: 0.9 }, beach: { x: 4.6, y: 2.1, lane: 1.2 } };
+  // The car you drive, as the engine picks it: your chosen one, else the fastest you own.
+  function myRideColor() {
+    var dv = S.vehicles && S.driving >= 0 ? S.vehicles[S.driving] : null;
+    if (!(dv && D.VEHICLES[dv.id] && D.VEHICLES[dv.id].kind === 'car')) { dv = null; (S.vehicles || []).forEach(function (v) { var V = D.VEHICLES[v.id]; if (V && V.kind === 'car' && (!dv || V.speed > D.VEHICLES[dv.id].speed)) dv = v; }); }
+    return dv ? D.VEHICLES[dv.id].color : '#c9ccd2';
+  }
   // The look of a place's yard: a few by id, the rest by its map glyph, then by its type.
   var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
   function venueSet(pl) {
@@ -1926,7 +1958,9 @@
       shuttle: set === 'refinery' ? 'staff' : set === 'airport' || set === 'govt' || set === 'estate' || set === 'dealer' ? 'cab' : set === 'stadium' || set === 'campus' ? 'brt' : ['danfo', 'keke', 'okada', 'cab'][vHash(pl.id, 3) % 4],
       me: here ? { look: S.look, outfit: S.outfit, extra: myExtra(), label: worksHere ? 'You · ' + D.CAREERS[S.job.id].titles[S.job.level] : 'You', me: true, say: venueSay(pl.id, online.me || 'me') || bub, vest: worksHere ? (set === 'hospital' ? '#2fa36b' : '#f39c12') : null, hat: (set === 'refinery' || set === 'workshop') && (worksHere || ui.venueSlot != null) ? '#ffffff' : null } : null,
       meSlot: ui.venueSlot != null ? ui.venueSlot : Math.min(5, slots - 1),
-      arrive: trip && VENUE_RIDES[trip.mode] ? trip.mode : null, arriveKey: trip ? 'trip:' + trip.at : ''
+      arrive: trip ? VENUE_ARRIVE[trip.mode] || null : null, arriveKey: trip ? 'trip:' + trip.at : '', water: VENUE_WATER[set] || null,
+      arriveColor: trip && trip.mode === 'car' ? myRideColor() : null,
+      chauffeur: trip && trip.mode === 'car' && (S.staff || []).some(function (x) { return x.id === 'driver' || x === 'driver'; }) ? (function () { var st = venueStranger('chauffeur', 0); return { look: st.look, outfit: { top: Object.keys(D.CLOTHES).filter(function (c) { return D.CLOTHES[c].slot === 'top'; })[0], bottom: Object.keys(D.CLOTHES).filter(function (c) { return D.CLOTHES[c].slot === 'bottom'; })[0] }, hat: '#17181a' }; })() : null
     };
   }
   // The last thing someone said here, for 7 seconds over their head.
@@ -1950,7 +1984,7 @@
   }
   function venuePanel(pl) {
     var here = S.loc === pl.district, acts = venueActs(pl), crowd = venueScene(pl).people.length + (here ? 1 : 0);
-    return '<div class="ap-head"><b>' + esc(pl.icon || '📍') + ' ' + esc(pl.name) + '</b><span class="muted">' + esc(D.DISTRICTS[pl.district].name) + ' · ' + crowd + ' here · ' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="venue-close" data-venueclose="1" aria-label="Leave the scene">✕</button></div>' +
+    return '<div class="ap-head"><b>' + esc(pl.icon || '📍') + ' ' + esc(pl.name) + '</b><span class="muted">' + esc(D.DISTRICTS[pl.district].name) + ' · ' + crowd + ' here · ' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="venue-fold" data-venuefold="1" aria-expanded="' + !ui.venueFold + '" aria-label="' + (ui.venueFold ? 'Show the panel' : 'Fold the panel away') + '">' + (ui.venueFold ? '▴' : '▾') + '</button><button class="btn sm ghost" id="venue-close" data-venueclose="1" aria-label="Leave the scene">✕</button></div>' +
       (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? '<div class="gem-here"><span>💎 A gem is hidden in this yard. Tap it' + (here ? '' : ' once you are here') + '.</span>' + (here ? '<button class="btn sm" id="vgem-' + gm.n + '" data-gem="' + gm.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '') + '</div>' : ''; })() +
       (venueNamed(pl).length ? '<p class="note">Here: ' + venueNamed(pl).map(function (n) { return '<b>' + esc(n.name) + '</b> (' + esc(n.role) + ')'; }).join(', ') + '. Tap them in the yard.</p>' : '') +
       (here ? '<p class="note">Tap a sign in the yard, or a person to hear them. Workers and visitors come in by ' + esc({ refinery: 'staff bus', airport: 'cab' }[venueSet(pl)] || 'danfo, keke and okada') + ' all day.</p>' +
@@ -1960,7 +1994,7 @@
   }
   function mountVenue() {
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
-    if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); return; }
+    if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'venue-view'; ov.className = 'cruise-view venue-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', pl.name);
       if (!venueStage) venueStage = window.LasgidiVenue.create({
@@ -1986,7 +2020,9 @@
     }
     var html = venuePanel(pl), pn = document.getElementById('venue-panel');
     if (html !== venueKey) { var inp = document.getElementById('venue-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'venue-in'; pn.innerHTML = html; venueKey = html; var ni = document.getElementById('venue-in'); if (ni) { ni.value = val; if (foc) ni.focus(); } }
-    venueStage.update(venueScene(pl)); venueStage.start();
+    ov.classList.toggle('folded', !!ui.venueFold);
+    var sc = venueScene(pl); venueStage.update(sc); venueStage.start();
+    ambience(prefs.sound && !document.hidden ? AMBIENCE_OF[sc.set] || 'street' : null);
   }
   /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
   var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
@@ -3624,7 +3660,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -3959,6 +3995,7 @@
     if (ds.roomenter) { var re0 = ds.roomenter; run(function () { var r = L.roomEnter(S, re0); if (r.ok) { ui.roomOpen = re0; ui.cruiseOpen = false; ui.airportOpen = false; } return r; }); syncPresence(); return; }
     if (ds.venue) { ui.venueOpen = ds.venue; ui.venueSlot = null; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.venuesend) { var vi = document.getElementById('venue-in'); sendVenue(vi ? vi.value : ''); return; }
+    if (ds.venuefold) { ui.venueFold = !ui.venueFold; mountVenue(); return; }
     if (ds.venueclose) { ui.venueOpen = null; render(); return; }
     if (ds.roomopen) { ui.roomOpen = ds.roomopen; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.roomspot) { var rsp = ds.roomspot; if (S.room && S.room.spot === rsp) return; run(function () { return L.roomSpot(S, S.room.id, rsp); }); syncPresence(); return; }

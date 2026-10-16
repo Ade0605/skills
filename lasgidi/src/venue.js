@@ -321,6 +321,25 @@
       var nW = Math.max(2, Math.round(R.len / 0.32)); for (var i = 0; i < nW; i++) { var wx = x - R.len / 2 + 0.08 + i * (R.len - 0.16) / nW; poly([[wx, y + sy, R.h * 0.68], [wx + (R.len - 0.16) / nW - 0.05, y + sy, R.h * 0.68], [wx + (R.len - 0.16) / nW - 0.05, y + sy, R.h * 0.92], [wx, y + sy, R.h * 0.92]], 'rgba(40,60,80,.75)'); }
       [x - R.len / 2 + 0.22, x + R.len / 2 - 0.22].forEach(function (wx) { var p = P(wx, y + sy, 0.06); g.fillStyle = '#17181a'; g.beginPath(); g.ellipse(p.x, p.y, p.s * 0.09, p.s * 0.07, 0, 0, Math.PI * 2); g.fill(); });
     }
+    // The helipad by the gate, and a chopper that drops in, waits and lifts off as u runs 0..1.
+    var HELI = { x: 8.7, y: 5.1 };
+    function helipad() {
+      var c = P(HELI.x, HELI.y, 0.006), r = c.s * 0.55; g.fillStyle = 'rgba(40,44,52,.85)'; g.beginPath(); g.ellipse(c.x, c.y, r, r * 0.5, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#f2c200'; g.lineWidth = 2; g.beginPath(); g.ellipse(c.x, c.y, r * 0.8, r * 0.4, 0, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = '#ffffff'; g.font = '900 ' + Math.max(9, r * 0.5) + 'px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('H', c.x, c.y);
+    }
+    function chopper(u, now) {
+      var z = u < 0.35 ? 4 * (1 - u / 0.35) : u < 0.6 ? 0 : 4 * Math.pow((u - 0.6) / 0.4, 1.5), x = HELI.x + (u > 0.6 ? (u - 0.6) * 3 : 0);
+      at(x, HELI.y + 0.01, function () {
+        var b = P(x, HELI.y, z + 0.18), s = b.s, sh = P(x, HELI.y, 0);
+        g.fillStyle = 'rgba(0,0,0,' + Math.max(0.05, 0.2 - z * 0.04) + ')'; g.beginPath(); g.ellipse(sh.x, sh.y, s * 0.45, s * 0.18, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#1f3b63'; g.beginPath(); g.ellipse(b.x, b.y, s * 0.42, s * 0.2, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(160,210,240,.85)'; g.beginPath(); g.ellipse(b.x - s * 0.18, b.y - s * 0.03, s * 0.16, s * 0.12, 0, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = '#1f3b63'; g.lineWidth = Math.max(2, s * 0.06); g.beginPath(); g.moveTo(b.x + s * 0.35, b.y); g.lineTo(b.x + s * 0.85, b.y - s * 0.12); g.stroke();
+        g.strokeStyle = '#3a3d42'; g.lineWidth = 2; g.beginPath(); g.moveTo(b.x - s * 0.3, b.y + s * 0.24); g.lineTo(b.x + s * 0.3, b.y + s * 0.24); g.stroke();
+        var spin = reduce ? 0.6 : now / 40; g.strokeStyle = 'rgba(30,30,30,.7)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(b.x + Math.cos(spin) * s * 0.8, b.y - s * 0.24 + Math.sin(spin) * s * 0.12); g.lineTo(b.x - Math.cos(spin) * s * 0.8, b.y - s * 0.24 - Math.sin(spin) * s * 0.12); g.stroke();
+      });
+    }
     function road() {
       poly([[-3, PAD.d + 0.3, -0.25], [PAD.w + 3, PAD.d + 0.3, -0.25], [PAD.w + 3, PAD.d + 1.3, -0.25], [-3, PAD.d + 1.3, -0.25]], '#4a4f56');
       g.setLineDash([8, 8]); var a = P(-3, ROAD, -0.25), b = P(PAD.w + 3, ROAD, -0.25); g.strokeStyle = '#f2c200'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); g.setLineDash([]);
@@ -366,6 +385,7 @@
       g.fillStyle = scene.night ? '#262a31' : '#b9b4aa'; g.beginPath(); g.ellipse(W / 2, H * 1.05, W * 0.85, H * 0.62, 0, Math.PI, 0); g.fill();
       road();
       (SETS[scene.set] || SETS.outdoors)(now);
+      if (scene.arrive === 'heli' || scene.helipad) helipad();
       if (scene.sign && !clean) label(GATE + 1.2, PAD.d - 0.1, 1.15, scene.sign, scene.signBg || '#1f3b63');
       // Lamp posts at the gate, glowing after dark.
       [GATE - 0.9, GATE + 0.9].forEach(function (lx) { at(lx, PAD.d - 0.15, function () { var a = P(lx, PAD.d - 0.15, 0), b = P(lx, PAD.d - 0.15, 1.3); g.strokeStyle = '#3a3d42'; g.lineWidth = 2; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); if (scene.night) { var gl = g.createRadialGradient(b.x, b.y, 1, b.x, b.y, b.s * 0.9); gl.addColorStop(0, 'rgba(255,226,140,.9)'); gl.addColorStop(1, 'rgba(255,226,140,0)'); g.fillStyle = gl; g.beginPath(); g.arc(b.x, b.y, b.s * 0.9, 0, Math.PI * 2); g.fill(); } g.fillStyle = scene.night ? '#fff3c4' : '#c9ced3'; g.beginPath(); g.arc(b.x, b.y, 3, 0, Math.PI * 2); g.fill(); }); });
@@ -388,10 +408,14 @@
       if (me) {
         var target = SLOTS[(scene.meSlot || 5) % SLOTS.length], tx = target[0] + 0.35, ty = target[1] + 0.85;
         if (arriving) {
-          var ride = scene.arrive && RIDES[scene.arrive] ? scene.arrive : null;
-          if (ride) vehicle(rideX(au), ROAD, ride);
-          var w2 = ride ? Math.max(0, (au - 0.4) / 0.35) : au / 0.6, wk = Math.min(1, w2);
-          if (!ride || au > 0.38) mePos = { x: (ride ? GATE : -1) + (tx - (ride ? GATE : -1)) * wk, y: PAD.d + 0.45 + (ty - PAD.d - 0.45) * wk };
+          var kind = scene.arrive, wet = kind === 'boat' && scene.water, sky = kind === 'heli', ride = !wet && !sky && kind && RIDES[kind] ? kind : null;
+          // Where you step off: the gate (road), the pier head or shore (boat), or the helipad (chopper).
+          var from = wet ? { x: scene.water.x, y: scene.water.y } : sky ? { x: HELI.x, y: HELI.y } : ride ? { x: GATE, y: PAD.d + 0.45 } : { x: -1, y: PAD.d + 0.45 };
+          if (ride) { vehicle(rideX(au), ROAD, ride, 0, scene.arriveColor); if (scene.chauffeur && au > 0.3 && au < 0.75) list.push({ pl: scene.chauffeur, x: GATE + 0.55, y: ROAD - 0.42, a: 1, i: -1 }); }
+          if (wet) boat(-2 + (scene.water.x - 0.8 + 2) * Math.min(1, au / 0.35) + (au > 0.6 ? (au - 0.6) * 20 : 0), scene.water.lane, 1.4, scene.arriveColor || '#1f4f7a', now);
+          if (sky) chopper(au, now);
+          var w2 = ride || wet || sky ? Math.max(0, (au - 0.4) / 0.35) : au / 0.6, wk = Math.min(1, w2);
+          if (!(ride || wet || sky) || au > 0.38) mePos = { x: from.x + (tx - from.x) * wk, y: from.y + (ty - from.y) * wk };
         } else mePos = { x: tx, y: ty };
         if (mePos) list.push({ pl: me, x: mePos.x, y: mePos.y, a: 1, i: -2 });
       }
