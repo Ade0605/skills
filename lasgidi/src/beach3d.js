@@ -13,6 +13,7 @@
   var SPOTS_MARKET = [[-4, -20], [4, -20], [-5, -13], [5, -13], [-3, -6], [3, -6], [-5, 1], [5, 1]];
   var SPOTS_JETTY = [[-8, -22], [0, -24], [8, -22], [-12, -27], [12, -27], [0, -12], [0, -2], [0, 8]];
   var SPOTS_PARK = [[-22, -14], [-10, -17], [2, -18], [14, -16], [26, -12], [-16, -6], [-2, -8], [12, -7]];
+  var SPOTS_PLAZA = [[-24, -24], [-12, -28], [0, -30], [12, -28], [24, -24], [-18, -16], [16, -16], [0, -20]];
   var SPOTS_CLUB = [[-15, -3], [-6, -7], [6, -7], [15, -3], [-17, 11], [-7, 4], [7, 4], [17, 11]];
   var SAND0 = -22, SAND_D = 38, SEA0 = 16; // sand from the lawn's edge (z -22) to the waterline (z 16)
 
@@ -98,9 +99,9 @@
       for (var c = 0; c < 5; c++) crown.add(mesh(new T.SphereGeometry(0.16, 8, 6), mat('coco', { color: 0x5a4a2a, roughness: 0.6 }), Math.cos(c * 1.3) * 0.25, -0.25, Math.sin(c * 1.3) * 0.25));
       g.add(crown); g.userData.crown = crown; dyn.add(g); palms.push(g); return g;
     }
-    function SP() { return PRK ? SPOTS_PARK : JTY ? SPOTS_JETTY : MKT ? SPOTS_MARKET : STAD ? (sc.street ? SPOTS_STREET : SPOTS_STADIUM) : CLUB ? SPOTS_CLUB : HARBOUR ? SPOTS_HARBOUR : SPOTS; }
-    var ESTATE = false, HARBOUR = false, CLUB = false, ROOF = false, STAD = false, MKT = false, JTY = false, PRK = false; // Lekki Hyde Park: lawns and a lake; Harbour Live: a paved island in the harbour
-    function groundY(x, z) { if (PRK) return 0.05; if (JTY) return z > -15 ? 1.1 : 0.85; if (CLUB || STAD || MKT) return 0.05; if (HARBOUR) return 1.2; if (ESTATE) return z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20); if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
+    function SP() { return PLZ ? SPOTS_PLAZA : PRK ? SPOTS_PARK : JTY ? SPOTS_JETTY : MKT ? SPOTS_MARKET : STAD ? (sc.street ? SPOTS_STREET : SPOTS_STADIUM) : CLUB ? SPOTS_CLUB : HARBOUR ? SPOTS_HARBOUR : SPOTS; }
+    var ESTATE = false, HARBOUR = false, CLUB = false, ROOF = false, STAD = false, MKT = false, JTY = false, PRK = false, PLZ = false; // Lekki Hyde Park: lawns and a lake; Harbour Live: a paved island in the harbour
+    function groundY(x, z) { if (PRK || PLZ) return 0.05; if (JTY) return z > -15 ? 1.1 : 0.85; if (CLUB || STAD || MKT) return 0.05; if (HARBOUR) return 1.2; if (ESTATE) return z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20); if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
 
     /* ---------- villas with infinity pools (White Sand Beach) ---------- */
     var dyn = new T.Group(); world.add(dyn); var villas = new T.Group(), palms = []; dyn.add(villas);
@@ -633,6 +634,74 @@
       PK.lamps.forEach(function (m) { m.color.set(night ? 0xffe2a0 : 0x6b6458); }); PK.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; });
     }
 
+
+    /* ---------- grand squares: a cathedral, a mosque or a state house over a paved plaza with flags and a fountain ---------- */
+    var plzG = new T.Group(); plzG.visible = false; S3.add(plzG); var PZ = {};
+    function arches(g, w, h, n, x0, y0, z, colr) { for (var i = 0; i < n; i++) { var sh = new T.Shape(), aw = w / n * 0.62, ax = x0 - w / 2 + (i + 0.5) * (w / n); sh.moveTo(-aw / 2, 0); sh.lineTo(-aw / 2, h - aw / 2); sh.absarc(0, h - aw / 2, aw / 2, Math.PI, 0, true); sh.lineTo(aw / 2, 0); var m = new T.Mesh(new T.ShapeGeometry(sh, 12), mat('arch' + colr, { color: colr, roughness: 0.6 })); m.position.set(ax, y0, z); m.rotation.y = Math.PI; g.add(m); } }
+    function cathedral(x, z, s) {
+      var g = new T.Group(); g.position.set(x, 0, z); g.scale.setScalar(s || 1); var stone = mat('cstone', { color: 0xe9e2d4, roughness: 0.8 }), roof = mat('croof', { color: 0x5a6b78, roughness: 0.6, metalness: 0.2 });
+      g.add(mesh(new T.BoxGeometry(26, 22, 60), stone, 0, 11, 30)); var rf = mesh(new T.CylinderGeometry(15, 15, 60, 3, 1), roof, 0, 26, 30); rf.rotation.x = Math.PI / 2; rf.rotation.y = Math.PI / 2; rf.scale.set(1, 1, 0.55); g.add(rf);
+      g.add(mesh(new T.BoxGeometry(34, 30, 4), stone, 0, 15, 0)); [-13, 13].forEach(function (tx) { g.add(mesh(new T.BoxGeometry(9, 50, 9), stone, tx, 25, 0)); g.add(mesh(new T.ConeGeometry(6.4, 22, 4), roof, tx, 61, 0)); g.add(mesh(new T.ConeGeometry(0.4, 4, 6), mat('gold', { color: 0xd4af37, metalness: 0.8, roughness: 0.3 }), tx, 74, 0)); });
+      var rose = canvasTex(256, 256, function (c, w, h) { c.fillStyle = '#1a2a4a'; c.fillRect(0, 0, w, h); for (var k = 0; k < 16; k++) { c.fillStyle = ['#c0392b', '#1f5fa0', '#f2b600', '#2fa36b'][k % 4]; c.beginPath(); c.moveTo(w / 2, h / 2); c.arc(w / 2, h / 2, 120, k / 16 * Math.PI * 2, (k + 1) / 16 * Math.PI * 2); c.fill(); } c.strokeStyle = '#e9e2d4'; c.lineWidth = 8; for (var r2 = 30; r2 <= 120; r2 += 30) { c.beginPath(); c.arc(w / 2, h / 2, r2, 0, Math.PI * 2); c.stroke(); } });
+      var rm = new T.MeshStandardMaterial({ map: rose, emissive: 0xffffff, emissiveMap: rose, emissiveIntensity: 0.15 }), rw = new T.Mesh(new T.CircleGeometry(6, 32), rm); rw.position.set(0, 21, -2.05); rw.rotation.y = Math.PI; g.add(rw); PZ.glow.push(rm);
+      arches(g, 18, 10, 3, 0, 0, -2.05, 0x2a2018); for (var b = 0; b < 6; b++) [-14, 14].forEach(function (bx) { g.add(mesh(new T.BoxGeometry(2, 18, 3), stone, bx, 9, 8 + b * 9)); });
+      g.add(mesh(new T.CylinderGeometry(0.3, 0.3, 8, 6), mat('gold', {}), 0, 34, 0)); g.add(mesh(new T.BoxGeometry(4, 0.6, 0.6), mat('gold', {}), 0, 36, 0));
+      plzG.add(g); return g;
+    }
+    function mosque(x, z, s) {
+      var g = new T.Group(); g.position.set(x, 0, z); g.scale.setScalar(s || 1); var wall = mat('mwall', { color: 0xf4f1ea, roughness: 0.7 }), gold = mat('mgold', { color: 0xd4af37, metalness: 0.85, roughness: 0.25 }), trim = mat('mtrim', { color: 0x1d7a43, roughness: 0.5 });
+      g.add(mesh(new T.BoxGeometry(50, 16, 46), wall, 0, 8, 22)); g.add(mesh(new T.BoxGeometry(51, 1.2, 47), trim, 0, 16.2, 22));
+      g.add(mesh(new T.CylinderGeometry(16, 16, 6, 32), wall, 0, 19.5, 22)); var dome = mesh(new T.SphereGeometry(16, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), gold, 0, 22.5, 22); dome.scale.y = 1.15; g.add(dome); g.add(mesh(new T.CylinderGeometry(0.4, 0.6, 5, 8), gold, 0, 43, 22)); g.add(mesh(new T.TorusGeometry(1.4, 0.3, 8, 20, Math.PI * 1.6), gold, 0, 46.5, 22));
+      [[-20, 4], [20, 4], [-20, 40], [20, 40]].forEach(function (q) { g.add(mesh(new T.SphereGeometry(5, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), gold, q[0], 16.6, q[1])); });
+      [[-30, -2], [30, -2], [-30, 46], [30, 46]].forEach(function (q) { g.add(mesh(new T.CylinderGeometry(1.6, 2, 60, 12), wall, q[0], 30, q[1])); [22, 40, 54].forEach(function (y) { g.add(mesh(new T.CylinderGeometry(2.6, 2.6, 1, 12), trim, q[0], y, q[1])); }); g.add(mesh(new T.ConeGeometry(2, 7, 12), gold, q[0], 63.5, q[1])); });
+      arches(g, 44, 11, 7, 0, 0, -1.05, 0x22301f); PZ.domes.push(gold);
+      plzG.add(g); return g;
+    }
+    function stateHouse(x, z, domeOn) {
+      var g = new T.Group(); g.position.set(x, 0, z); var wall = mat('swall', { color: 0xf7f5f0, roughness: 0.6 });
+      g.add(mesh(new T.BoxGeometry(90, 20, 30), wall, 0, 10, 15)); g.add(mesh(new T.BoxGeometry(92, 1.5, 32), mat('scorn', { color: 0xe2dccd }), 0, 20.6, 15)); g.add(mesh(new T.BoxGeometry(94, 2, 6), wall, 0, 1, -3));
+      for (var c = 0; c < 14; c++) g.add(mesh(new T.CylinderGeometry(0.9, 1, 18, 14), wall, -39 + c * 6, 11, -1.5));
+      var ped = new T.Shape(); ped.moveTo(-26, 0); ped.lineTo(26, 0); ped.lineTo(0, 8); ped.lineTo(-26, 0); g.add(mesh(new T.ExtrudeGeometry(ped, { depth: 3, bevelEnabled: false }), wall, 0, 21, -3));
+      if (domeOn) { g.add(mesh(new T.CylinderGeometry(9, 9, 6, 32), wall, 0, 24, 15)); g.add(mesh(new T.SphereGeometry(9, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), mat('sdome', { color: 0x3d7a5a, metalness: 0.5, roughness: 0.35 }), 0, 27, 15)); }
+      for (var w = 0; w < 12; w++) [6, 14].forEach(function (y) { g.add(mesh(new T.BoxGeometry(3, 4, 0.2), glassM, -38 + w * 7, y, -0.1)); });
+      plzG.add(g); return g;
+    }
+    function buildPlaza() {
+      plzG.clear(); var id = sc.placeId || 'plaza'; PZ = { glow: [], domes: [], flags: [], lamps: [], towers: [] };
+      var paveT = canvasTex(256, 256, function (c, w, h) { var rr = rnd(3); c.fillStyle = '#d8d2c4'; c.fillRect(0, 0, w, h); for (var y = 0; y < h; y += 32) for (var x = 0; x < w; x += 32) { c.fillStyle = 'hsl(40,' + (8 + rr() * 6) + '%,' + (74 + rr() * 8) + '%)'; c.fillRect(x + 1, y + 1, 30, 30); } }, [40, 40]);
+      var pave = mesh(new T.PlaneGeometry(500, 500).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: paveT, roughness: 0.85 }), 0, 0, 0); pave.castShadow = false; plzG.add(pave);
+      var gr = mesh(new T.PlaneGeometry(500, 160).rotateX(-Math.PI / 2), mat('plzlawn', { map: grassTex, roughness: 0.95 }), 0, 0.02, -150); gr.castShadow = false; plzG.add(gr);
+      if (id === 'worship') { cathedral(-55, 50, 0.9); mosque(55, 50, 0.85); }
+      else if (/mosque/.test(id)) mosque(0, 50, 1.15);
+      else if (/ecumenical/.test(id)) cathedral(0, 50, 1.2);
+      else if (/eagle|tbs/.test(id)) {
+        var st = mat('stand', { color: 0xf4f1ea, roughness: 0.7 }); for (var tier = 0; tier < 8; tier++) plzG.add(mesh(new T.BoxGeometry(120, 1.2, 3), st, 0, 0.6 + tier * 1.2, 70 + tier * 3)); var can = mesh(new T.BoxGeometry(124, 0.6, 30), mat('canopy', { color: 0x1d7a43, roughness: 0.5 }), 0, 16, 80); can.rotation.x = -0.08; plzG.add(can); for (var cp = -60; cp <= 60; cp += 15) plzG.add(mesh(new T.CylinderGeometry(0.5, 0.5, 16, 8), st, cp, 8, 94));
+        if (/tbs/.test(id)) { [-30, 30].forEach(function (hx) { var hs = new T.Group(); hs.position.set(hx, 0, 30); hs.add(mesh(new T.BoxGeometry(6, 4, 6), st, 0, 2, 0)); var hm = mat('bronze', { color: 0x6b4a2b, metalness: 0.6, roughness: 0.4 }); hs.add(mesh(new T.CapsuleGeometry(1.2, 4, 4, 8).rotateZ(Math.PI / 2 - 0.5), hm, 0, 7, 0)); hs.add(mesh(new T.CapsuleGeometry(0.6, 2, 4, 8).rotateZ(-0.6), hm, 2.6, 9.2, 0)); [[-1.6, -0.8], [-1.6, 0.8], [1.2, -0.8], [1.2, 0.8]].forEach(function (lq) { hs.add(mesh(new T.CylinderGeometry(0.3, 0.3, 3, 6), hm, lq[0], 5, lq[1])); }); plzG.add(hs); }); }
+        else { var eg = new T.Group(); eg.position.set(0, 0, 36); eg.add(mesh(new T.CylinderGeometry(3, 4, 8, 12), st, 0, 4, 0)); var em = mat('eagle', { color: 0x2b2f36, metalness: 0.6, roughness: 0.35 }); eg.add(mesh(new T.SphereGeometry(2, 16, 12), em, 0, 10, 0)); [-1, 1].forEach(function (sd) { var wg = mesh(new T.BoxGeometry(9, 0.4, 2.6), em, sd * 5, 11.5, 0); wg.rotation.z = sd * 0.35; eg.add(wg); }); eg.add(mesh(new T.ConeGeometry(0.7, 2, 8), mat('gold', { color: 0xd4af37, metalness: 0.8 }), 0, 11.2, -2.2)); plzG.add(eg); }
+      } else stateHouse(0, 60, /threearms/.test(id));
+      // Flags along the plaza, a fountain at its heart, lamps, palms, and the city behind.
+      var flagT = canvasTex(96, 64, function (c, w, h) { c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
+      for (var fp = 0; fp < 10; fp++) { var fx = -45 + fp * 10, fz = 18; plzG.add(mesh(new T.CylinderGeometry(0.15, 0.18, 14, 6), mat('fpole2', { color: 0xdfe3e8, metalness: 0.6 }), fx, 7, fz)); var fg = new T.PlaneGeometry(4, 2.6, 12, 1); fg.translate(2, 0, 0); var flag = new T.Mesh(fg, new T.MeshStandardMaterial({ map: flagT, side: T.DoubleSide, roughness: 0.8 })); flag.position.set(fx, 12.6, fz); flag.userData.base = Float32Array.from(fg.attributes.position.array); plzG.add(flag); PZ.flags.push(flag); }
+      plzG.add(mesh(new T.CylinderGeometry(9, 9.5, 1.2, 40), mat('basin', { color: 0xc9ccd1, roughness: 0.6 }), 0, 0.6, -4)); plzG.add(mesh(new T.CylinderGeometry(8.4, 8.4, 0.2, 40), new T.MeshPhysicalMaterial({ color: 0x5fb3cf, roughness: 0.05, clearcoat: 1 }), 0, 1.15, -4));
+      PZ.spray = []; for (var sp2 = 0; sp2 < 50; sp2++) { var d = mesh(new T.SphereGeometry(0.14, 6, 4), mat('sprayM', { color: 0xf4fbff, roughness: 0.2, transparent: true, opacity: 0.8 }), 0, 1, -4); d.castShadow = false; plzG.add(d); PZ.spray.push(d); }
+      for (var lp = 0; lp < 12; lp++) { var lx = (lp % 2 ? 1 : -1) * 22, lz = -36 + Math.floor(lp / 2) * 10; plzG.add(mesh(new T.CylinderGeometry(0.12, 0.14, 5, 6), frameM, lx, 2.5, lz)); var lb = new T.MeshBasicMaterial({ color: 0x6b6458 }), bl = new T.Mesh(new T.SphereGeometry(0.35, 8, 6), lb); bl.position.set(lx, 5.2, lz); plzG.add(bl); PZ.lamps.push(lb); }
+      [[-34, -20], [34, -20], [-34, 0], [34, 0]].forEach(function (q, i) { palm(q[0], q[1], 10 + i % 2, i % 2 ? -0.15 : 0.15); });
+      var rs = rnd(91); for (var tb = 0; tb < 20; tb++) { var ta = -1.3 + rs() * 2.6, td = 190 + rs() * 120; towerBlock(Math.sin(ta) * td, Math.cos(ta) * td + 60, 14 + rs() * 12, 20 + rs() * 70, 14 + rs() * 10, plzG, 0, PZ.towers); }
+      PZ.flood = []; [[-40, 12, 10], [40, 12, 10], [0, 12, 20]].forEach(function (q) { var L0 = new T.SpotLight(0xfff1d6, 0, 200, 0.7, 0.6, 1.2); L0.position.set(q[0], q[1], q[2]); L0.target.position.set(q[0] * 0.6, 20, 60); plzG.add(L0, L0.target); PZ.flood.push(L0); });
+      // People crossing the plaza; a crowd on worship days (Friday at the mosque, Sunday at the church).
+      var NW = 140, wr = rnd(43), wb = []; for (var w = 0; w < NW; w++) wb.push([-40 + wr() * 80, -36 + wr() * 70, (wr() - 0.5) * 2, (wr() - 0.5) * 2, wr() * 6]);
+      PZ.walkers = squad(NW, function (i) { return [0xf4f3ec, 0xf4f3ec, 0x2f6fa0, 0x1d7a43, 0xc0392b, 0x8e44ad, 0xf2b600][i % 7]; }, 1, plzG); PZ.walkBase = wb;
+    }
+    function plazaFrame(t, night) {
+      var dw = ((sc.day || 0) % 7 + 7) % 7, busy = (/mosque|worship/.test(sc.placeId || '') && dw === 4) || (/ecumenical|worship/.test(sc.placeId || '') && dw === 6), W = PZ.walkers, n = night ? 18 : busy ? W.n : 60;
+      var m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), one = new T.Vector3(1, 1, 1);
+      for (var i = 0; i < W.n; i++) { var b = PZ.walkBase[i]; if (i >= n) { m4.makeTranslation(0, -9, 0); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4); continue; } var x = ((b[0] + t * b[2] + 45) % 90 + 90) % 90 - 45, z = ((b[1] + t * b[3] + 40) % 80 + 80) % 80 - 40; if (Math.hypot(x, z + 4) < 10) x += 12; e.set(0, Math.atan2(-b[3], b[2]), 0); q.setFromEuler(e); m4.compose(v.set(x, Math.abs(Math.sin(t * 6 + b[4])) * 0.06, z), q, one); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4); }
+      W.body.instanceMatrix.needsUpdate = W.head.instanceMatrix.needsUpdate = true;
+      PZ.flags.forEach(function (f, k) { var p = f.geometry.attributes.position, b0 = f.userData.base; for (var j = 0; j < p.count; j++) { var x0 = b0[j * 3]; p.array[j * 3 + 2] = Math.sin(t * 4 + x0 * 1.6 + k) * 0.3 * (x0 / 4); } p.needsUpdate = true; });
+      PZ.spray.forEach(function (d, i) { var u = (t * 0.55 + i / PZ.spray.length) % 1, a = i * 2.39, rad = (i % 5 === 0 ? 0.4 : 4) * u; d.position.set(Math.cos(a) * rad, 1.2 + Math.sin(u * Math.PI) * (i % 5 === 0 ? 7 : 3.5), -4 + Math.sin(a) * rad); });
+      PZ.lamps.forEach(function (m) { m.color.set(night ? 0xffe2a0 : 0x6b6458); }); PZ.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); PZ.glow.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0.15; }); PZ.flood.forEach(function (L0) { L0.intensity = night ? 3000 : 0; });
+    }
+
     /* ---------- people, signs, the gem ---------- */
     var SKIN = [0x6b4029, 0x8a5a3c, 0x4a2c1c, 0x9b6a4b], CL = [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec, 0x17181a];
     function person(i, female) {
@@ -671,14 +740,14 @@
     var built = '';
     function build() {
       var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.rooftop ? 'r' : '') + (sc.name || ''); if (key === built) return; built = key;
-      ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; MKT = sc.mode === 'market'; JTY = sc.mode === 'jetty'; PRK = sc.mode === 'park'; if (PRK) buildPark(); if (MKT) buildMarket(); if (JTY) buildJetty(); if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
-      harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; mktG.visible = MKT; jetG.visible = JTY; parkG.visible = PRK; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
+      ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; MKT = sc.mode === 'market'; JTY = sc.mode === 'jetty'; PRK = sc.mode === 'park'; PLZ = sc.mode === 'plaza'; if (PLZ) buildPlaza(); if (PRK) buildPark(); if (MKT) buildMarket(); if (JTY) buildJetty(); if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
+      harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; mktG.visible = MKT; jetG.visible = JTY; parkG.visible = PRK; plzG.visible = PLZ; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
       // Frame: the estate uses a wider lens so the pool below and the skyline above both fit, as in a terrace photo.
-      if (PRK) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.18; orbit.r = 50; orbit.tx = 0; orbit.tz = 8; } else if (JTY) { cam.fov = 52; orbit.az = 0.35; orbit.pol = 1.2; orbit.r = 52; orbit.tx = 0; orbit.tz = 8; } else if (MKT) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.16; orbit.r = 36; orbit.tx = 0; orbit.tz = 4; } else if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 84; orbit.tx = 0; orbit.tz = sc.street ? 2 : 4; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
+      orbit.ty = 0; if (PLZ) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.3; orbit.r = 70; orbit.tx = 0; orbit.ty = 12; orbit.tz = 20; } else if (PRK) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.18; orbit.r = 50; orbit.tx = 0; orbit.tz = 8; } else if (JTY) { cam.fov = 52; orbit.az = 0.35; orbit.pol = 1.2; orbit.r = 52; orbit.tx = 0; orbit.tz = 8; } else if (MKT) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.16; orbit.r = 36; orbit.tx = 0; orbit.tz = 4; } else if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 84; orbit.tx = 0; orbit.tz = sc.street ? 2 : 4; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
       cam.updateProjectionMatrix(); place();
-      estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB && !STAD && !MKT && !JTY && !PRK; });
+      estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB && !STAD && !MKT && !JTY && !PRK && !PLZ; });
       dyn.clear(); palms = []; villas = new T.Group(); beachBits = new T.Group(); dyn.add(villas, beachBits);
-      if (CLUB || STAD || MKT || JTY || PRK) return;
+      if (CLUB || STAD || MKT || JTY || PRK || PLZ) return;
       if (HARBOUR) { [[-80, -20], [-60, 50], [70, 60], [85, -20], [-30, -50], [40, -50], [-95, 90], [95, 95]].forEach(function (q, i) { palm(q[0], q[1], 9 + (i % 3), (i % 2 ? -0.2 : 0.2)); }); return; }
       if (ESTATE) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); [[-30, 3, 9, 0.3], [-4, 5, 8.5, 0.4], [20, 4, 9.5, 0.2], [44, 2, 9, -0.3], [-25, -24, 12, 0.1], [28, -24, 12, 0.15], [-2, -21, 9, 0.35], [30, 22, 10, -0.2], [-50, 18, 11, 0.25]].forEach(function (q) { palm(q[0], q[1], q[2], q[3]); }); return; }
       if (sc.villas) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); } // the view is from the -12 villa's terrace
@@ -715,7 +784,7 @@
     function frame(now) {
       size(); var t = reduce ? 3 : now / 1000, night = sc.night ? 1 : 0, rain = sc.weather === 'rain' || sc.weather === 'storm';
       var nv = night ? 0.85 : 0; if (Math.abs(skyU.night.value - nv) > 0.01) { skyU.night.value += (nv - skyU.night.value) * 0.1; if (Math.abs(skyU.night.value - nv) <= 0.01) { skyU.night.value = nv; bakeEnv(); } } hemi.intensity = night ? 0.25 : rain ? 0.6 : 0.85; sun.intensity = night ? 0.15 : rain ? 0.7 : 2.2; sun.color.set(night ? 0x8fa8ff : 0xffe2b8); hemi.color.set(0xfff1dd);
-      S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD || MKT || JTY || PRK ? 0.45 : 1);
+      S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD || MKT || JTY || PRK || PLZ ? 0.45 : 1);
       poolM.emissive.set(night ? 0x1fa9c9 : 0x000000); poolM.emissiveIntensity = night ? 0.9 : 0; // underwater lights after dark
       if (HARBOUR) {
         var beat = Math.abs(Math.sin(t * 2.2)), lit = night ? 1 : 0.35, show = sc.show !== false, fshow = sc.hour == null || (sc.hour >= 19 && sc.hour < 23), jk = fshow ? 1 : 0.45;
@@ -726,6 +795,8 @@
         (HB.towers || []).forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); HB.boards.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0.2; }); HB.clubGlass.emissiveIntensity = night ? 0.6 : 0;
         HB.water.material.color.set(night ? 0x0b2236 : 0x1b4f6e); HB.lights.forEach(function (L0) { L0.intensity = night ? L0.userData.max * 3 : 0; }); if (night) hemi.intensity = 0.55;
         var mx = new T.Matrix4(); for (var ci = 0; ci < HB.crowdN; ci++) { var cb = HB.crowdBase[ci], jump = show && (night || reduce) ? Math.max(0, Math.sin(t * 6 + cb[2])) * 0.6 * beat : 0; mx.makeTranslation(cb[0], 1.2 + jump, cb[1]); HB.crowd.setMatrixAt(ci, mx); HB.heads.setMatrixAt(ci, mx); } HB.crowd.count = HB.heads.count = show ? HB.crowdN : 40; HB.crowd.instanceMatrix.needsUpdate = true; HB.heads.instanceMatrix.needsUpdate = true;
+      } else if (PLZ) {
+        plazaFrame(reduce ? 30 : t, !!night); if (night) hemi.intensity = 0.4;
       } else if (PRK) {
         parkFrame(reduce ? 30 : t, !!night); if (night) hemi.intensity = 0.4;
       } else if (JTY) {
@@ -761,7 +832,7 @@
       crowd.forEach(function (p, i) { if (!p.visible || !p.userData.home) return; var hx = p.userData.home[0], hz = p.userData.home[1], u = reduce ? 0 : Math.sin(t * 0.25 + i), x = hx + u * 2.5, z = hz + Math.cos(t * 0.2 + i) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = Math.cos(t * 0.25 + i) > 0 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
       if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
       if (gem && sc.gem) { var gq = SP()[sc.gem.slot % SP().length]; gem.position.set(gq[0] - 2.5, groundY(gq[0] - 2.5, gq[1] + 2) + 1.2 + Math.sin(t * 2) * 0.25, gq[1] + 2); gem.rotation.y = t * 1.5; }
-      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
+      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = PLZ ? -34 + (i % 3) * 1.2 : PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
       signs.forEach(function (s) { s.visible = s.visible && !sc.clean; });
       renderer.render(S3, cam);
