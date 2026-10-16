@@ -2456,6 +2456,8 @@
       city3d = window.LasgidiCity3D.create({
         onSelect: function (k) { ui.sel = k === S.loc ? null : k; ui.place = null; ui.board = null; render(); },
         onSelectPlace: function (id) { clearPicks(); ui.mapPop = null; ui.place = id; render(); },
+        onSelectBoard: function (id) { clearPicks(); ui.board = id; render(); },
+        onSelectPlayer: function (by) { clearPicks(); ui.chatWith = by; online.unread[by] = 0; render(); },
         onToggle: function () { prefs.map3d = false; writeJSON(PREF_KEY, prefs); render(); }
       });
       if (!city3d) want = false;

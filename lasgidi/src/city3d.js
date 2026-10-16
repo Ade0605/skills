@@ -38,10 +38,10 @@
     /* ---------- build a city from the 2D map's world ---------- */
     var DYN = { cars: null, carPath: [], boats: [], boatPath: [], pins: [], areas: [], labels: [], towersM: null, lamps: null, me: null, plane: null, runway: null, flare: null, cables: [] };
     function build(name) {
-      city = name; world.clear(); var Wd = PG.worldFor(name), G = Wd.GEO[name], box = G.box, x0 = box[0], x1 = box[1], y0 = box[2], y1 = box[3], bw = x1 - x0, bh = y1 - y0;
+      city = name; world.clear(); LV.key = ''; var Wd = PG.worldFor(name), G = Wd.GEO[name], box = G.box, x0 = box[0], x1 = box[1], y0 = box[2], y1 = box[3], bw = x1 - x0, bh = y1 - y0;
       DYN = { cars: null, carPath: [], boats: [], boatPath: [], pins: [], areas: Wd.AREAS || {}, labels: [], towersM: null, lamps: null, me: null, plane: null, runway: null, flare: null, cables: [] };
       // Water, then the land with a district-tinted ground texture painted from the 2D map's tiles.
-      var water = new T.Mesh(new T.PlaneGeometry(bw * K * 3, bh * K * 3).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x2f86b0, roughness: 0.18, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.2 })); water.position.set((x0 + bw / 2) * K, -0.4, (y0 + bh / 2) * K); world.add(water); DYN.water = water;
+      var water = new T.Mesh(new T.PlaneGeometry(bw * K * 3, bh * K * 3).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x2f86b0, roughness: 0.42, metalness: 0.05, clearcoat: 0.4, clearcoatRoughness: 0.5 })); water.position.set((x0 + bw / 2) * K, -0.4, (y0 + bh / 2) * K); world.add(water); DYN.water = water;
       var PXK = 12, groundT = canvasTex(Math.round(bw * PXK), Math.round(bh * PXK), function (g, w, h) {
         g.fillStyle = '#a8b57e'; g.fillRect(0, 0, w, h);
         (Wd.tiles || []).forEach(function (t) { if (!t.k) return; g.fillStyle = districtTint(t.k); g.fillRect((t.x - x0) * PXK, (y1 - t.y - 1) * PXK, PXK + 1, PXK + 1); });
@@ -101,6 +101,56 @@
       sun.position.set(orbit.tx + 260, 420, orbit.tz - 200); sun.target.position.set(orbit.tx, 0, orbit.tz); place();
     }
 
+
+    /* ---------- the live layer: billboards, gems, home, businesses, other players, your selection, your trip ---------- */
+    var LIVE = new T.Group(); S3.add(LIVE); var LV = { boards: [], gems: [], players: [], ring: null, key: '' }, TRIP = null;
+    function adFace(ad, sel) {
+      return canvasTex(256, 128, function (g, w, h) { g.fillStyle = '#17181a'; g.fillRect(0, 0, w, h); var col = ad && ad.color, bg = col && col.bg ? col.bg : typeof col === 'string' ? col : '#1f5fa0', fg = col && col.fg ? col.fg : '#ffffff'; g.fillStyle = bg; g.fillRect(6, 6, w - 12, h - 12);
+        var img = ad && ad.img ? LV.imgs[ad.img] : null; if (img && img.complete && img.naturalWidth) g.drawImage(img, 6, 6, w - 12, h - 12);
+        else { g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '56px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif'; g.fillText((ad && ad.emoji) || '📣', 48, h / 2 + 2); g.font = '800 22px system-ui, sans-serif'; var words = String((ad && ad.text) || 'Advertise here').split(' '), line = '', y = 38, lines = []; words.forEach(function (wd) { if ((line + ' ' + wd).trim().length > 14) { lines.push(line.trim()); line = wd; } else line += ' ' + wd; }); lines.push(line.trim()); lines.slice(0, 4).forEach(function (l, i) { g.fillText(l, 165, y + i * 26 - (Math.min(4, lines.length) - 1) * 6); }); }
+        if (sel) { g.strokeStyle = '#ffd23f'; g.lineWidth = 10; g.strokeRect(3, 3, w - 6, h - 6); } });
+    }
+    // Billboards turn to face the default view, so their ads read from the start.
+    function orbitFacing() { return 0; }
+    function liveKey() { return JSON.stringify([city, sc.board, sc.sel, sc.home, (sc.gems || []).map(function (g) { return g.place + g.n; }), (sc.biz || []).map(function (b) { return b.district + b.icon; }), (sc.players || []).map(function (p) { return p.by + p.d + (p.unread || 0); }), sc.layers && sc.layers.boards, Object.keys(sc.boards || {}).map(function (k) { return (sc.boards[k] || []).length; })]); }
+    function buildLive() {
+      LIVE.clear(); LV = { boards: [], gems: [], players: [], ring: null, key: liveKey(), imgs: LV.imgs || {} };
+      var post = mat('bpost', { color: 0x4b4f55, metalness: 0.5 }), frameMat = mat('bframe2', { color: 0x202226 });
+      if (city === 'lagos' && !(sc.layers && sc.layers.boards === false)) D.BILLBOARDS.forEach(function (b) {
+        var ads = (sc.boards && sc.boards[b.id]) || []; if (!ads.length) return; var g = new T.Group(); g.position.set(b.x * K, 0, b.y * K);
+        [-1.4, 1.4].forEach(function (x) { g.add(mesh(new T.CylinderGeometry(0.12, 0.14, 4.4, 6), post, x, 2.2, 0)); }); g.add(mesh(new T.BoxGeometry(5.4, 2.9, 0.25), frameMat, 0, 5.4, -0.1));
+        ads.forEach(function (a) { if (a.img && !LV.imgs[a.img]) { var im = new Image(); im.src = a.img; LV.imgs[a.img] = im; } });
+        var faceM = new T.MeshBasicMaterial({ map: adFace(ads[0], sc.board === b.id), side: T.DoubleSide }), face = new T.Mesh(new T.PlaneGeometry(5, 2.5), faceM); face.position.set(0, 5.4, 0.08); g.rotation.y = orbitFacing(); g.add(face);
+        g.traverse(function (o) { o.userData.board = b.id; }); LIVE.add(g); LV.boards.push({ id: b.id, g: g, face: faceM, ads: ads, at: -1 });
+      });
+      (sc.gems || []).forEach(function (gm) { var p = D.PLACES.filter(function (q) { return q.id === gm.place; })[0]; if (!p) return; var gem = new T.Mesh(new T.OctahedronGeometry(1.1, 0), new T.MeshStandardMaterial({ color: 0x33c3f0, emissive: 0x1aa0d0, emissiveIntensity: 0.8, roughness: 0.1, metalness: 0.2 })); gem.position.set(p.x * K + 1.6, 8.5, p.y * K); gem.userData.place = p.id; LIVE.add(gem); LV.gems.push(gem); });
+      var hd = D.DISTRICTS[sc.home]; if (hd) { var hg = new T.Group(); hg.position.set(hd.x * K - 3, 0, hd.y * K + 2); hg.add(mesh(new T.BoxGeometry(2.4, 1.6, 2), mat('homeW', { color: 0xf4f1ea }), 0, 0.8, 0)); var rf = mesh(new T.ConeGeometry(2, 1.2, 4), mat('homeR', { color: 0xc0392b }), 0, 2.2, 0); rf.rotation.y = Math.PI / 4; hg.add(rf); var ht = sprite(labelTex('🏠 Home', '#ffffff', '#17181a', 38), 6); ht.position.y = 4.2; hg.add(ht); LIVE.add(hg); }
+      (sc.biz || []).forEach(function (bz, i) { var d = D.DISTRICTS[bz.district]; if (!d) return; var s = sprite(labelTex(bz.icon || '🏪', 'rgba(255,255,255,.95)', '#17181a', 44), 3.4); s.position.set(d.x * K + 3 + (i % 3) * 1.6, 6, d.y * K - 2); LIVE.add(s); });
+      (sc.players || []).forEach(function (pl, i) { if (pl.me) return; var d = D.DISTRICTS[pl.d]; if (!d) return; var g = new T.Group(), a = i * 1.3; g.position.set(d.x * K + Math.cos(a) * 4, 0, d.y * K + Math.sin(a) * 4); g.add(mesh(new T.CapsuleGeometry(0.45, 1.1, 4, 8), mat('pl' + i % 5, { color: [0x2fa36b, 0x8e44ad, 0xe67e22, 0xc0392b, 0xf2b600][i % 5] }), 0, 1.2, 0)); var tag = sprite(labelTex((pl.unread ? '🔴 ' : '') + pl.label, 'rgba(23,24,26,.8)', '#ffffff', 36), 6); tag.position.y = 3.4; g.add(tag); g.traverse(function (o) { o.userData.player = pl.by; }); LIVE.add(g); LV.players.push(g); });
+      var sd = D.DISTRICTS[sc.sel]; if (sd && sc.sel !== sc.loc) { var ring = new T.Mesh(new T.RingGeometry(5, 6, 48).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.8, side: T.DoubleSide, depthWrite: false })); ring.position.set(sd.x * K, 0.3, sd.y * K); LIVE.add(ring); LV.ring = ring; }
+    }
+    // Your trip: the ride you took goes from one district to the next while the camera follows.
+    function tripVehicle(mode) {
+      var g = new T.Group(), col = mode === 'danfo' ? 0xf2c200 : mode === 'keke' ? 0x2fa36b : mode === 'okada' ? 0xc0392b : mode === 'brt' ? 0x1f5fa0 : 0xf4f3ec;
+      if (mode === 'ferry' || mode === 'boat') { g.add(mesh(new T.BoxGeometry(4, 0.8, 1.5), mat('tripH', { color: 0xf4f3ec }), 0, 0.2, 0)); g.add(mesh(new T.BoxGeometry(2.2, 0.8, 1.2), mat('tripC', { color: 0x1f5fa0 }), -0.3, 0.9, 0)); }
+      else if (mode === 'heli' || mode === 'jet') { g.add(mesh(new T.CapsuleGeometry(0.5, 2.2, 4, 10).rotateZ(Math.PI / 2), mat('tripA', { color: 0x1f3b63 }), 0, 0, 0)); g.add(mesh(new T.BoxGeometry(mode === 'jet' ? 1 : 4.5, 0.06, mode === 'jet' ? 4 : 0.2), mat('tripB', { color: 0x17181a }), 0, mode === 'jet' ? 0 : 0.7, 0)); }
+      else if (mode === 'trek') { g.add(mesh(new T.CapsuleGeometry(0.5, 1.2, 4, 8), mat('meBody', {}), 0, 1.1, 0)); }
+      else { g.add(mesh(new T.BoxGeometry(mode === 'okada' ? 1.4 : 2.6, mode === 'okada' ? 0.8 : 1.2, mode === 'okada' ? 0.4 : 1.1), mat('tripV' + mode, { color: col, roughness: 0.4 }), 0, 0.7, 0)); }
+      var tag = sprite(labelTex('You', '#2f6fd0', '#ffffff', 40), 5); tag.position.y = 3.4; g.add(tag); LIVE.add(g); return g;
+    }
+    function liveFrame(t, now) {
+      if (liveKey() !== LV.key) buildLive();
+      var slot = Math.floor(now / 6000); LV.boards.forEach(function (b, bi) { var k = (slot + bi) % b.ads.length; if (k !== b.at) { b.at = k; if (b.face.map) b.face.map.dispose(); b.face.map = adFace(b.ads[k], sc.board === b.id); b.face.needsUpdate = true; } });
+      LV.gems.forEach(function (g, i) { g.rotation.y = t * 1.6 + i; g.position.y = 8.5 + Math.sin(t * 2 + i) * 0.5; });
+      if (LV.ring) { var s = 1 + Math.sin(t * 3) * 0.08; LV.ring.scale.set(s, 1, s); }
+      var tr = sc.trip; if (tr && (!TRIP || TRIP.at !== tr.at)) { if (TRIP && TRIP.v) LIVE.remove(TRIP.v); var a = D.DISTRICTS[tr.from], b2 = D.DISTRICTS[tr.to]; TRIP = a && b2 ? { at: tr.at, a: a, b: b2, mode: tr.mode, v: tripVehicle(tr.mode), t0: now } : null; }
+      if (TRIP && TRIP.v) { var u = Math.min(1, (now - TRIP.t0) / 2600), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, x = (TRIP.a.x + (TRIP.b.x - TRIP.a.x) * e) * K, z = (TRIP.a.y + (TRIP.b.y - TRIP.a.y) * e) * K, air = TRIP.mode === 'heli' || TRIP.mode === 'jet' ? Math.sin(u * Math.PI) * 30 + 2 : 0, ang = Math.atan2((TRIP.b.y - TRIP.a.y), (TRIP.b.x - TRIP.a.x));
+        TRIP.v.position.set(x, air + (TRIP.mode === 'ferry' || TRIP.mode === 'boat' ? 0 : 0.2), z); TRIP.v.rotation.y = -ang; fly = { tx: x, tz: z, r: Math.min(orbit.r, 140) };
+        if (u >= 1) { LIVE.remove(TRIP.v); TRIP.v = null; TRIP.done = true; }
+      }
+      if (DYN.me) DYN.me.visible = DYN.me.visible && !(TRIP && TRIP.v);
+    }
+
     /* ---------- camera: pan, turn, zoom; tilt follows zoom ---------- */
     var orbit = { az: 0, r: 500, tx: 0, tz: 0 }, BOX = { x0: -1e4, x1: 1e4, z0: -1e4, z1: 1e4, rmax: 900 }, ptrs = {}, drag = null, pinch0 = 0, twist0 = 0, moved = false, fly = null;
     function pol() { var u = Math.min(1, Math.max(0, (orbit.r - 40) / (BOX.rmax - 40))); return 1.12 - u * 0.62; }
@@ -125,6 +175,8 @@
     var ray = new T.Raycaster(), ndc = new T.Vector2(), ground = new T.Plane(new T.Vector3(0, 1, 0), 0);
     function tap(e) {
       var r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam);
+      var lh = ray.intersectObjects(LIVE.children, true).filter(function (h) { var u = h.object.userData; return u.board || u.player || u.place; })[0];
+      if (lh) { var ud = lh.object.userData; if (ud.board && opts.onSelectBoard) { opts.onSelectBoard(ud.board); return; } if (ud.player && opts.onSelectPlayer) { opts.onSelectPlayer(ud.player); return; } if (ud.place && opts.onSelectPlace) { opts.onSelectPlace(ud.place); return; } }
       var objs = []; DYN.pins.forEach(function (pn) { objs.push(pn.pin); if (pn.name.visible) objs.push(pn.name); });
       var hit = ray.intersectObjects(objs, false)[0]; if (hit && opts.onSelectPlace) { opts.onSelectPlace(hit.object.userData.place); return; }
       var gp = new T.Vector3(); if (!ray.ray.intersectPlane(ground, gp)) return; var wx = gp.x / K, wy = gp.z / K;
@@ -156,7 +208,8 @@
       if (DYN.plane && DYN.runway) { var R = DYN.runway, pu = (t % 40) / 40, roll = Math.min(1, pu / 0.6), x2 = R.x0 + (R.x1 - R.x0) * (roll * roll), z2 = R.z0 + (R.z1 - R.z0) * (roll * roll), hgt = pu > 0.45 ? (pu - 0.45) * 60 : 0; DYN.plane.position.set(x2 + (pu > 0.6 ? (R.x1 - R.x0) * (pu - 0.6) * 2.5 : 0), 0.1 + hgt, z2 + (pu > 0.6 ? (R.z1 - R.z0) * (pu - 0.6) * 2.5 : 0)); DYN.plane.rotation.set(0, -Math.atan2(R.z1 - R.z0, R.x1 - R.x0), hgt > 0 ? 0.15 : 0); DYN.plane.visible = pu < 0.95; }
       if (DYN.flare) DYN.flare.scale.set(1, 0.8 + Math.abs(Math.sin(t * 7)) * 0.5, 1);
       DYN.cables.forEach(function (cb) { cb.l.material.color.setHSL((t * 0.12 + cb.k * 0.08) % 1, 0.9, night ? 0.6 : 0.9); });
-      if (DYN.me) { var d = D.DISTRICTS[sc.loc]; if (d) { DYN.me.visible = true; DYN.me.position.set(d.x * K, 0.2 + (reduce ? 0 : Math.abs(Math.sin(t * 2.5)) * 0.6), d.y * K); } else DYN.me.visible = false; }
+      liveFrame(t, now);
+      if (DYN.me && !(TRIP && TRIP.v)) { var d = D.DISTRICTS[sc.loc]; if (d) { DYN.me.visible = true; DYN.me.position.set(d.x * K, 0.2 + (reduce ? 0 : Math.abs(Math.sin(t * 2.5)) * 0.6), d.y * K); } else DYN.me.visible = false; }
       renderer.render(S3, cam);
       raf = el.isConnected ? root.requestAnimationFrame(frame) : 0;
     }
