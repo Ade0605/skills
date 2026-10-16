@@ -930,11 +930,20 @@
       while (signs.length < Math.min(8, acts.length)) { var s = sprite('', '#fff'); world.add(s); signs.push(s); }
       signs.forEach(function (s, i) { var a = acts[i]; s.visible = !!a; if (!a) return; var q = SP()[i]; s.position.set(q[0], groundY(q[0], q[1]) + 4.2 + (i % 2) * 0.8, q[1]); label(s, a.icon + ' ' + a.short, a.off ? 'rgba(235,235,235,.85)' : '#ffffff', a.off ? '#6b7280' : '#17181a'); s.userData.act = i; });
     }
+    // A person in their own look and outfit (the 3D avatar) when we know it, else the plain figure. Wrapped so it
+    // faces +x like person(), with its legs swinging about x.
+    function avatarFor(d, i) {
+      if (!d || !d.look || !root.LasgidiAvatar3D) return person(i, i % 2 === 1);
+      var outer = new T.Group(), f = root.LasgidiAvatar3D.figure(T, d.look, d.outfit, d.extra); f.rotation.y = Math.PI / 2; f.scale.setScalar(1.05); outer.add(f);
+      outer.userData.legs = f.userData.legs; outer.userData.axis = 'x'; outer.userData.key = JSON.stringify([d.look, d.outfit, d.extra]); return outer;
+    }
+    function lookKey(d) { return d && d.look ? JSON.stringify([d.look, d.outfit, d.extra]) : ''; }
     function syncPeople() {
       var list = sc.people || [];
-      while (crowd.length < list.length) { var p = person(crowd.length, crowd.length % 2 === 1); world.add(p); crowd.push(p); }
-      crowd.forEach(function (p, i) { var d = list[i]; p.visible = !!d; if (!d) return; p.userData.person = i; var q = SP()[(d.slot || i) % SP().length]; p.userData.home = [q[0] + Math.cos(i * 2.3) * 2.2, q[1] + 1.5 + Math.sin(i * 2.3) * 1.6]; p.traverse(function (o) { o.userData.person = i; }); });
-      if (sc.me && !me) { me = person(9, false); meTag = sprite('You', '#2f6fd0', '#fff', 2.4); world.add(me); world.add(meTag); }
+      while (crowd.length < list.length) { var p = avatarFor(list[crowd.length], crowd.length); world.add(p); crowd.push(p); }
+      crowd.forEach(function (p, i) { var d = list[i]; if (d && d.look && lookKey(d) !== (p.userData.key || '')) { var np = avatarFor(d, i); world.remove(p); world.add(np); crowd[i] = p = np; } p.visible = !!d; if (!d) return; p.userData.person = i; var q = SP()[(d.slot || i) % SP().length]; p.userData.home = [q[0] + Math.cos(i * 2.3) * 2.2, q[1] + 1.5 + Math.sin(i * 2.3) * 1.6]; p.traverse(function (o) { o.userData.person = i; }); });
+      if (sc.me && me && lookKey(sc.me) !== (me.userData.key || '')) { world.remove(me); me = null; }
+      if (sc.me && !me) { me = avatarFor(sc.me, 9); if (!meTag) { meTag = sprite('You', '#2f6fd0', '#fff', 2.4); world.add(meTag); } world.add(me); }
       if (me) { me.visible = meTag.visible = !!sc.me; }
       if (sc.gem && !gem) { gem = new T.Mesh(new T.OctahedronGeometry(0.6, 0), new T.MeshPhysicalMaterial({ color: 0x33c3f0, roughness: 0, metalness: 0.1, clearcoat: 1, emissive: 0x0c5a7a, emissiveIntensity: 0.6 })); gem.castShadow = true; gem.traverse(function (o) { o.userData.gem = true; }); world.add(gem); }
       if (gem) gem.visible = !!sc.gem;
@@ -1037,10 +1046,10 @@
       foam.position.z = SEA0 - 1 + Math.sin(t * 0.8) * 1.6; foam.material.opacity = 0.65 + Math.sin(t * 0.8 + 1) * 0.3; wet.position.z = SEA0 - 3.5 + Math.sin(t * 0.8 - 0.6) * 1.2;
       jetski.position.set(-60 + ((t * 9) % 140), -0.2 + Math.sin(t * 3) * 0.15, SEA0 + 30); jetski.rotation.y = 0; sail.position.set(80 - ((t * 1.5) % 200), -0.3, 180); sail.rotation.z = Math.sin(t) * 0.04;
       palms.forEach(function (o) { o.userData.crown.rotation.z = Math.sin(t * 0.9 + o.position.x) * 0.04; });
-      crowd.forEach(function (p, i) { if (!p.visible || !p.userData.home) return; var hx = p.userData.home[0], hz = p.userData.home[1], u = reduce ? 0 : Math.sin(t * 0.25 + i), x = hx + u * 2.5, z = hz + Math.cos(t * 0.2 + i) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = Math.cos(t * 0.25 + i) > 0 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
-      if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
+      crowd.forEach(function (p, i) { if (!p.visible || !p.userData.home) return; var hx = p.userData.home[0], hz = p.userData.home[1], u = reduce ? 0 : Math.sin(t * 0.25 + i), x = hx + u * 2.5, z = hz + Math.cos(t * 0.2 + i) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = Math.cos(t * 0.25 + i) > 0 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation[p.userData.axis || 'z'] = a; p.userData.legs[1].rotation[p.userData.axis || 'z'] = -a; });
+      if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); if (me.userData.axis) me.rotation.y = Math.PI / 2; label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
       if (gem && sc.gem) { var gq = SP()[sc.gem.slot % SP().length]; gem.position.set(gq[0] - 2.5, groundY(gq[0] - 2.5, gq[1] + 2) + 1.2 + Math.sin(t * 2) * 0.25, gq[1] + 2); gem.rotation.y = t * 1.5; }
-      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STR ? -2 + (i % 3) * 0.5 : GAL ? -16 + (i % 3) * 1.2 : PLZ ? -34 + (i % 3) * 1.2 : PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
+      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STR ? -2 + (i % 3) * 0.5 : GAL ? -16 + (i % 3) * 1.2 : PLZ ? -34 + (i % 3) * 1.2 : PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation[p.userData.axis || 'z'] = a; p.userData.legs[1].rotation[p.userData.axis || 'z'] = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
       weatherFrame(t, now);
       signs.forEach(function (s) { s.visible = s.visible && !sc.clean; });

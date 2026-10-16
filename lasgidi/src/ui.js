@@ -2175,7 +2175,7 @@
     if (threeState === 'ready' || threeState === 'failed') { cb(); return; }
     if (threeState === 'loading') { (loadThree.q = loadThree.q || []).push(cb); return; }
     threeState = 'loading'; loadThree.q = [cb];
-    var done = function (ok) { threeState = ok && window.THREE ? 'ready' : 'failed'; var q = loadThree.q; loadThree.q = []; q.forEach(function (f) { f(); }); };
+    var done = function (ok) { threeState = ok && window.THREE ? 'ready' : 'failed'; var q = loadThree.q; loadThree.q = []; q.forEach(function (f) { f(); }); if (threeState === 'ready') { faceCache = {}; try { drawHudAvatar(); } catch (e) {} } }; // avatars redraw in 3D once three.js is in
     try {
       var inl = document.getElementById('lsg-three'), sc = document.createElement('script');
       if (inl) { sc.textContent = inl.textContent; document.head.appendChild(sc); done(true); return; }
@@ -2464,7 +2464,7 @@
     }
     var on = want && !!city3d;
     wrap.classList.toggle('pg-3d', on);
-    if (on) { if (city3d.el.parentNode !== wrap) wrap.insertBefore(city3d.el, wrap.firstChild.nextSibling); city3d.update(sceneFor()); city3d.start(); }
+    if (on) { if (city3d.el.parentNode !== wrap) wrap.insertBefore(city3d.el, wrap.firstChild.nextSibling); city3d.update(Object.assign(sceneFor(), { myLook: S.look, myOutfit: S.outfit })); city3d.start(); }
     else if (city3d && city3d.el.parentNode) { city3d.stop(); city3d.el.remove(); }
     var zb = wrap.querySelector('.pg-zoom');
     if (zb && !zb.querySelector('[data-map3d]') && window.LasgidiCity3D) { var b = document.createElement('button'); b.type = 'button'; b.className = 'pg-zbtn'; b.setAttribute('data-map3d', '1'); b.setAttribute('aria-label', 'Switch to the 3D map'); b.title = '3D map'; b.textContent = '🌐'; b.addEventListener('click', function () { prefs.map3d = true; writeJSON(PREF_KEY, prefs); render(); }); zb.insertBefore(b, zb.firstChild); }
