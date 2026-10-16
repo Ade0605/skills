@@ -91,7 +91,8 @@
       for (var c = 0; c < 5; c++) crown.add(mesh(new T.SphereGeometry(0.16, 8, 6), mat('coco', { color: 0x5a4a2a, roughness: 0.6 }), Math.cos(c * 1.3) * 0.25, -0.25, Math.sin(c * 1.3) * 0.25));
       g.add(crown); g.userData.crown = crown; dyn.add(g); palms.push(g); return g;
     }
-    function groundY(x, z) { if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
+    var ESTATE = false; // Lekki Hyde Park: rolling lawns and a lake instead of sand and sea
+    function groundY(x, z) { if (ESTATE) return z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20); if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
 
     /* ---------- villas with infinity pools (White Sand Beach) ---------- */
     var dyn = new T.Group(); world.add(dyn); var villas = new T.Group(), palms = []; dyn.add(villas);
@@ -133,6 +134,44 @@
     (function () { var r = rnd(19), glassT = mat('tower', { color: 0x7f97ab, roughness: 0.25, metalness: 0.5 }); for (var i = 0; i < 22; i++) { var h = 40 + r() * 110, w = 14 + r() * 16; var b = new T.Mesh(new T.BoxGeometry(w, h, w), glassT); b.position.set(-1150 + i * 30 + r() * 20, h / 2 - 2, 1000 + r() * 200); skyline.add(b); } })();
     var jetski = boat(0xffffff), sail = boat(0xf2f2f2); sail.add(mesh(new T.ConeGeometry(1.2, 5, 3), mat('sail', { color: 0xffffff, side: T.DoubleSide }), 0, 3, 0));
 
+    /* ---------- Lekki Hyde Park: golf lawns, a lake with a fountain, arched bridges, the skyline ---------- */
+    var estateG = new T.Group(); estateG.visible = false; S3.add(estateG); var spray = [], estateBuilt = false;
+    var LAKE = { x: 4, z: 36, rx: 50, rz: 22 };
+    function lakeShape(scale) { var sh = new T.Shape(); for (var i = 0; i <= 64; i++) { var a = i / 64 * Math.PI * 2, wob = 1 + Math.sin(a * 3) * 0.08 + Math.cos(a * 2) * 0.06; var x = Math.cos(a) * LAKE.rx * wob * scale, y = Math.sin(a) * LAKE.rz * wob * scale * (Math.cos(a) > 0.4 ? 0.8 : 1); if (i) sh.lineTo(x, y); else sh.moveTo(x, y); } return sh; }
+    function bridge(x, z, L, rotY) {
+      var sh = new T.Shape(); sh.moveTo(0, 0); sh.lineTo(0, 1.0); sh.quadraticCurveTo(L / 2, 3.0, L, 1.0); sh.lineTo(L, 0); sh.lineTo(0, 0);
+      [0.22, 0.5, 0.78].forEach(function (u) { var h = new T.Path(), cx = L * u, r = L * (u === 0.5 ? 0.14 : 0.09); h.moveTo(cx - r, 0); h.absarc(cx, 0, r, Math.PI, 0, true); h.lineTo(cx - r, 0); sh.holes.push(h); });
+      var g = new T.Group(); g.position.set(x, 0.4, z); g.rotation.y = rotY || 0;
+      var body = mesh(new T.ExtrudeGeometry(sh, { depth: 3, bevelEnabled: false }), mat('stone', { color: 0xf1ece2, roughness: 0.7 }), -L / 2, 0, -1.5); g.add(body);
+      for (var i = 0; i <= 20; i++) { var u = i / 20, px = -L / 2 + u * L, py = 1.0 + (1 - Math.pow(2 * u - 1, 2)) * 1.0; [-1.45, 1.45].forEach(function (zz) { g.add(mesh(new T.BoxGeometry(0.12, 0.7, 0.12), mat('stone', {}), px, py + 0.35, zz)); }); }
+      estateG.add(g); return g;
+    }
+    function buildEstate() {
+      if (estateBuilt) return; estateBuilt = true;
+      var lg = new T.PlaneGeometry(700, 360, 140, 72); lg.rotateX(-Math.PI / 2); lg.translate(0, 0, 150); var lp = lg.attributes.position;
+      for (var i = 0; i < lp.count; i++) { var x = lp.getX(i), z = lp.getZ(i), dx = (x - LAKE.x) / LAKE.rx, dz = (z - LAKE.z) / LAKE.rz, inLake = dx * dx + dz * dz; lp.setY(i, (z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20)) - (inLake < 1.25 ? (1.25 - inLake) * 1.2 : 0)); }
+      lg.computeVertexNormals(); var golf = mesh(lg, mat('golf', { map: grassTex, roughness: 0.95 }), 0, 0, 0); golf.castShadow = false; estateG.add(golf);
+      var rim = mesh(new T.ShapeGeometry(lakeShape(1.04), 64).rotateX(-Math.PI / 2), mat('pebble', { color: 0xa9a294, roughness: 1 }), LAKE.x, 0.42, LAKE.z); rim.castShadow = false; estateG.add(rim);
+      var lake = new T.Mesh(new T.ShapeGeometry(lakeShape(1), 64).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0xa9cdd6, roughness: 0.12, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.03 })); lake.position.set(LAKE.x, 0.46, LAKE.z); lake.receiveShadow = true; estateG.add(lake);
+      // A second, smaller lake far off with its own bridge.
+      var far = new T.Mesh(new T.CircleGeometry(1, 48).rotateX(-Math.PI / 2), lake.material); far.scale.set(34, 1, 10); far.position.set(-80, 0.6, 140); estateG.add(far);
+      bridge(-38, 28, 16, Math.PI / 2 - 0.25); bridge(-80, 140, 12, 0.1);
+      // The fountain in the middle of the lake.
+      estateG.add(mesh(new T.CylinderGeometry(0.8, 1.0, 0.4, 20), mat('stone', {}), LAKE.x, 0.55, LAKE.z));
+      for (var f = 0; f < 70; f++) { var d = mesh(new T.SphereGeometry(0.12 + (f % 3) * 0.05, 6, 4), mat('sprayM', { color: 0xf4fbff, roughness: 0.2, transparent: true, opacity: 0.8 }), LAKE.x, 1, LAKE.z); d.castShadow = false; estateG.add(d); spray.push(d); }
+      // Paths round the lake and a golf green with its flag and a bunker.
+      for (var k = 0; k < 48; k++) { var a = k / 48 * Math.PI * 2, px = LAKE.x + Math.cos(a) * (LAKE.rx + 7), pz = LAKE.z + Math.sin(a) * (LAKE.rz + 5); if (pz < 22) continue; var seg = mesh(new T.BoxGeometry(6.6, 0.06, 1.8), mat('path', {}), px, groundY(px, pz) + 0.05, pz); seg.rotation.y = -a + Math.PI / 2; seg.castShadow = false; estateG.add(seg); }
+      [[60, 30], [-58, 46]].forEach(function (q) { estateG.add(mesh(new T.CylinderGeometry(0.04, 0.04, 2.4, 6), mat('fpole', { color: 0xffffff }), q[0], groundY(q[0], q[1]) + 1.2, q[1])); var fl = mesh(new T.PlaneGeometry(0.9, 0.55), mat('flagR', { color: 0xd23b2f, side: T.DoubleSide }), q[0] + 0.45, groundY(q[0], q[1]) + 2.1, q[1]); estateG.add(fl); var b = mesh(new T.CircleGeometry(1, 24).rotateX(-Math.PI / 2), mat('bunker', { color: 0xe9dcc0, roughness: 1 }), q[0] - 6, groundY(q[0] - 6, q[1] + 3) + 0.04, q[1] + 3); b.scale.set(4, 1, 2); b.castShadow = false; estateG.add(b); });
+      // Clumps of shade trees and palms round the edges.
+      var r = rnd(31), treeM = mat('estTree', { color: 0x3f7f3a, roughness: 0.9, flatShading: true });
+      for (var t2 = 0; t2 < 46; t2++) { var tx = -200 + r() * 400, tz = 150 + r() * 90; if (Math.abs(tx - LAKE.x) < 50 && Math.abs(tz - LAKE.z) < 22) continue; var cr = mesh(new T.IcosahedronGeometry(2.5 + r() * 2.5, 1), treeM, tx, groundY(tx, tz) + 3 + r() * 2, tz); estateG.add(cr); estateG.add(mesh(new T.CylinderGeometry(0.3, 0.4, 3, 6), trunkM, tx, groundY(tx, tz) + 1.5, tz)); }
+      // A row of lakeside homes on the far bank.
+      for (var hh = 0; hh < 12; hh++) { var hx = -150 + hh * 28, hz = 190 + (hh % 2) * 8; estateG.add(mesh(new T.BoxGeometry(14, 6, 9), white, hx, groundY(hx, hz) + 3, hz)); estateG.add(mesh(new T.BoxGeometry(10, 3.5, 7), white, hx - 1, groundY(hx, hz) + 7.7, hz)); estateG.add(mesh(new T.BoxGeometry(11, 2.2, 0.2), glassM, hx, groundY(hx, hz) + 2.6, hz - 4.6)); }
+      // The city skyline on the horizon, larger here as in a view across the estate.
+      var gt = mat('tower2', { color: 0x8aa0b2, roughness: 0.25, metalness: 0.5 });
+      for (var sk = 0; sk < 46; sk++) { var h = 22 + r() * (sk % 5 === 0 ? 110 : 60), w = 9 + r() * 12, x = -700 + sk * 26 + r() * 14 + (sk > 26 ? 160 : 0); var tw = new T.Mesh(new T.BoxGeometry(w, h, w), gt); tw.position.set(x, h / 2, 760 + r() * 140); estateG.add(tw); if (r() < 0.35) { var sp2 = new T.Mesh(new T.ConeGeometry(w * 0.3, h * 0.25, 4), gt); sp2.position.set(x, h + h * 0.12, tw.position.z); estateG.add(sp2); } }
+    }
+
     /* ---------- people, signs, the gem ---------- */
     var SKIN = [0x6b4029, 0x8a5a3c, 0x4a2c1c, 0x9b6a4b], CL = [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec, 0x17181a];
     function person(i, female) {
@@ -170,8 +209,14 @@
     /* ---------- build per place ---------- */
     var built = '';
     function build() {
-      var key = (sc.villas ? 'v' : 'b') + (sc.name || ''); if (key === built) return; built = key;
+      var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.name || ''); if (key === built) return; built = key;
+      ESTATE = sc.mode === 'estate'; if (ESTATE) buildEstate();
+      // Frame: the estate uses a wider lens so the pool below and the skyline above both fit, as in a terrace photo.
+      if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
+      cam.updateProjectionMatrix(); place();
+      estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE; });
       dyn.clear(); palms = []; villas = new T.Group(); beachBits = new T.Group(); dyn.add(villas, beachBits);
+      if (ESTATE) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); [[-30, 3, 9, 0.3], [-4, 5, 8.5, 0.4], [20, 4, 9.5, 0.2], [44, 2, 9, -0.3], [-25, -24, 12, 0.1], [28, -24, 12, 0.15], [-2, -21, 9, 0.35], [30, 22, 10, -0.2], [-50, 18, 11, 0.25]].forEach(function (q) { palm(q[0], q[1], q[2], q[3]); }); return; }
       if (sc.villas) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); } // the view is from the -12 villa's terrace
       else { shack(-22, 2); shack(26, 3); }
       [[-30, 3, 9, 0.3], [-22, -6, 11, -0.2], [-4, 5, 8.5, 0.4], [10, -4, 10, -0.3], [20, 4, 9.5, 0.2], [33, -6, 11, -0.25], [-42, -8, 10, 0.2], [44, 2, 9, -0.3], [-25, -24, 12, 0.1], [2, -25, 11, -0.1], [28, -24, 12, 0.15], [-2, -21, 9, 0.35]].forEach(function (q) { palm(q[0], q[1], q[2], q[3]); });
@@ -208,7 +253,8 @@
       var nv = night ? 0.85 : 0; if (Math.abs(skyU.night.value - nv) > 0.01) { skyU.night.value += (nv - skyU.night.value) * 0.1; if (Math.abs(skyU.night.value - nv) <= 0.01) { skyU.night.value = nv; bakeEnv(); } } hemi.intensity = night ? 0.25 : rain ? 0.6 : 0.85; sun.intensity = night ? 0.15 : rain ? 0.7 : 2.2; sun.color.set(night ? 0x8fa8ff : 0xffe2b8);
       S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029;
       poolM.emissive.set(night ? 0x1fa9c9 : 0x000000); poolM.emissiveIntensity = night ? 0.9 : 0; // underwater lights after dark
-      if (!reduce) waves(t);
+      if (ESTATE) spray.forEach(function (d, i) { var u = ((reduce ? 0.5 : t * 0.55) + i / spray.length) % 1, a = i * 2.39, rad = (i % 4 === 0 ? 0.3 : 2.6) * u; d.position.set(LAKE.x + Math.cos(a) * rad, 0.7 + Math.sin(u * Math.PI) * (i % 4 === 0 ? 9 : 4.5), LAKE.z + Math.sin(a) * rad * 0.8); });
+      else if (!reduce) waves(t);
       foam.position.z = SEA0 - 1 + Math.sin(t * 0.8) * 1.6; foam.material.opacity = 0.65 + Math.sin(t * 0.8 + 1) * 0.3; wet.position.z = SEA0 - 3.5 + Math.sin(t * 0.8 - 0.6) * 1.2;
       jetski.position.set(-60 + ((t * 9) % 140), -0.2 + Math.sin(t * 3) * 0.15, SEA0 + 30); jetski.rotation.y = 0; sail.position.set(80 - ((t * 1.5) % 200), -0.3, 180); sail.rotation.z = Math.sin(t) * 0.04;
       palms.forEach(function (o) { o.userData.crown.rotation.z = Math.sin(t * 0.9 + o.position.x) * 0.04; });
