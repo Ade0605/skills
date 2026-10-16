@@ -10,6 +10,7 @@
   var SPOTS_HARBOUR = [[-42, -32], [0, -42], [42, -32], [-58, 34], [58, 38], [-34, 58], [34, 60], [0, -62]];
   var SPOTS_STADIUM = [[-40, -40], [-20, -41], [0, -41], [20, -41], [40, -40], [-30, -43], [10, -43], [30, -43]];
   var SPOTS_STREET = [[-16, -17], [-8, -17.5], [0, -17.5], [8, -17.5], [16, -17], [-12, -19.5], [4, -19.5], [14, -19.5]];
+  var SPOTS_MARKET = [[-4, -20], [4, -20], [-5, -13], [5, -13], [-3, -6], [3, -6], [-5, 1], [5, 1]];
   var SPOTS_CLUB = [[-15, -3], [-6, -7], [6, -7], [15, -3], [-17, 11], [-7, 4], [7, 4], [17, 11]];
   var SAND0 = -22, SAND_D = 38, SEA0 = 16; // sand from the lawn's edge (z -22) to the waterline (z 16)
 
@@ -95,9 +96,9 @@
       for (var c = 0; c < 5; c++) crown.add(mesh(new T.SphereGeometry(0.16, 8, 6), mat('coco', { color: 0x5a4a2a, roughness: 0.6 }), Math.cos(c * 1.3) * 0.25, -0.25, Math.sin(c * 1.3) * 0.25));
       g.add(crown); g.userData.crown = crown; dyn.add(g); palms.push(g); return g;
     }
-    function SP() { return STAD ? (sc.street ? SPOTS_STREET : SPOTS_STADIUM) : CLUB ? SPOTS_CLUB : HARBOUR ? SPOTS_HARBOUR : SPOTS; }
-    var ESTATE = false, HARBOUR = false, CLUB = false, ROOF = false, STAD = false; // Lekki Hyde Park: lawns and a lake; Harbour Live: a paved island in the harbour
-    function groundY(x, z) { if (CLUB || STAD) return 0.05; if (HARBOUR) return 1.2; if (ESTATE) return z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20); if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
+    function SP() { return MKT ? SPOTS_MARKET : STAD ? (sc.street ? SPOTS_STREET : SPOTS_STADIUM) : CLUB ? SPOTS_CLUB : HARBOUR ? SPOTS_HARBOUR : SPOTS; }
+    var ESTATE = false, HARBOUR = false, CLUB = false, ROOF = false, STAD = false, MKT = false; // Lekki Hyde Park: lawns and a lake; Harbour Live: a paved island in the harbour
+    function groundY(x, z) { if (CLUB || STAD || MKT) return 0.05; if (HARBOUR) return 1.2; if (ESTATE) return z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20); if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
 
     /* ---------- villas with infinity pools (White Sand Beach) ---------- */
     var dyn = new T.Group(); world.add(dyn); var villas = new T.Group(), palms = []; dyn.add(villas);
@@ -378,10 +379,10 @@
       [-w / 2, w / 2].forEach(function (z) { var sd = new T.Mesh(new T.PlaneGeometry(1.8, hgt), netM); sd.position.set(dir * 0.9, hgt / 2, z); g.add(sd); }); var top = new T.Mesh(new T.PlaneGeometry(1.8, w), netM); top.rotation.x = Math.PI / 2; top.position.set(dir * 0.9, hgt, 0); g.add(top);
       stadG.add(g); return g;
     }
-    function squad(n, colrs, size) {
+    function squad(n, colrs, size, grp) {
       var bodyG = new T.CapsuleGeometry(0.3 * size, 1.0 * size, 4, 8); bodyG.translate(0, 1.0 * size, 0); var headG = new T.SphereGeometry(0.24 * size, 10, 8); headG.translate(0, 2.05 * size, 0);
       var body = new T.InstancedMesh(bodyG, new T.MeshStandardMaterial({ roughness: 0.55 }), n), head = new T.InstancedMesh(headG, new T.MeshStandardMaterial({ color: 0x5a341f, roughness: 0.7 }), n), c = new T.Color();
-      for (var i = 0; i < n; i++) body.setColorAt(i, c.set(colrs(i))); body.castShadow = true; stadG.add(body, head); return { body: body, head: head, n: n };
+      for (var i = 0; i < n; i++) body.setColorAt(i, c.set(colrs(i))); body.castShadow = true; (grp || stadG).add(body, head); return { body: body, head: head, n: n };
     }
     // 4-3-3 for each side, attacking left to right for the home team.
     var FORM = [[-48, 0], [-34, -22], [-36, -8], [-36, 8], [-34, 22], [-20, -14], [-22, 0], [-20, 14], [-8, -22], [-6, 0], [-8, 22]];
@@ -463,6 +464,66 @@
       F.body.count = F.head.count = live ? F.n : ST.street ? 8 : 0; F.body.instanceMatrix.needsUpdate = F.head.instanceMatrix.needsUpdate = true;
     }
 
+
+    /* ---------- markets: rows of stalls under zinc and umbrellas, piled goods, traders, hawkers in the aisles ---------- */
+    var mktG = new T.Group(); mktG.visible = false; S3.add(mktG); var MK = {};
+    var MK_ROWS = [-33, -21, -9, 9, 21, 33], MK_Z0 = -26, MK_DZ = 5, MK_N = 15;
+    var GOODS = { food: [0xd23b2f, 0xe8742a, 0x7b3f8c, 0x8a5a2b, 0x9ccf4a, 0xf2c94c, 0xc7ccd1, 0xf4f1ea], crafts: [0x5a3a22, 0x7a4f2e, 0x3b2a1a, 0xc0392b, 0x1f5fa0, 0xf2b600, 0x2fa36b, 0x8e44ad] };
+    function buildMarket() {
+      mktG.clear(); var crafts = /crafts/.test(sc.placeId || ''), r = rnd(hashStr(sc.placeId || 'market')), pal = GOODS[crafts ? 'crafts' : 'food']; MK = { towers: [], lamps: [], crafts: crafts };
+      var dirtT = canvasTex(256, 256, function (g, w, h) { var rr = rnd(13); g.fillStyle = '#8d7e6b'; g.fillRect(0, 0, w, h); for (var i = 0; i < 7000; i++) { g.fillStyle = rr() < 0.5 ? 'rgba(70,60,50,.2)' : 'rgba(190,175,150,.2)'; g.fillRect(rr() * w, rr() * h, 2, 2); } for (var k = 0; k < 6; k++) { g.fillStyle = 'rgba(60,70,80,.35)'; g.beginPath(); g.ellipse(rr() * w, rr() * h, 10 + rr() * 16, 4 + rr() * 6, rr() * 3, 0, Math.PI * 2); g.fill(); } }, [20, 20]);
+      var ground = mesh(new T.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: dirtT, roughness: 0.95 }), 0, 0, 0); ground.castShadow = false; mktG.add(ground);
+      // Stall frames, tables and zinc roofs, instanced: six rows facing the aisles.
+      var NS = MK_ROWS.length * MK_N, m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), sc3 = new T.Vector3(1, 1, 1), c = new T.Color();
+      var zincT = canvasTex(128, 128, function (g, w, h) { var rr = rnd(5); for (var x = 0; x < w; x += 8) { var l = 55 + rr() * 15; g.fillStyle = 'hsl(30,' + (8 + rr() * 20) + '%,' + l + '%)'; g.fillRect(x, 0, 4, h); g.fillStyle = 'hsl(25,25%,' + (l - 12) + '%)'; g.fillRect(x + 4, 0, 4, h); } for (var k = 0; k < 14; k++) { g.fillStyle = 'rgba(140,70,30,' + (0.2 + rr() * 0.3) + ')'; g.beginPath(); g.arc(rr() * w, rr() * h, 4 + rr() * 12, 0, Math.PI * 2); g.fill(); } });
+      var tables = new T.InstancedMesh(new T.BoxGeometry(3.6, 1.0, 2.2), mat('mtable', { color: 0x8a6a42, roughness: 0.9 }), NS), roofs = new T.InstancedMesh(new T.BoxGeometry(4.6, 0.08, 3.6), new T.MeshStandardMaterial({ map: zincT, roughness: 0.6, metalness: 0.5 }), NS), posts = new T.InstancedMesh(new T.CylinderGeometry(0.07, 0.07, 3.2, 6), mat('mpost', { color: 0x5a4632, roughness: 0.9 }), NS * 4);
+      var GN = NS * 9, goods = new T.InstancedMesh(crafts ? new T.CylinderGeometry(0.16, 0.24, 1, 8) : new T.SphereGeometry(0.42, 10, 8), new T.MeshStandardMaterial({ roughness: 0.6 }), GN), cloth = new T.InstancedMesh(new T.BoxGeometry(0.9, 0.18, 0.7), new T.MeshStandardMaterial({ roughness: 0.8 }), NS * 3);
+      var traders = [], gi = 0, ci = 0, stalls = [];
+      MK_ROWS.forEach(function (x, ri) { var face = x < 0 ? 1 : -1; for (var k = 0; k < MK_N; k++) {
+        var z = MK_Z0 + k * MK_DZ, si = ri * MK_N + k, tilt = (r() - 0.5) * 0.08; stalls.push([x, z, face]);
+        m4.makeTranslation(x, 0.5, z); tables.setMatrixAt(si, m4);
+        e.set(tilt, 0, face * 0.12); q.setFromEuler(e); m4.compose(v.set(x - face * 0.4, 3.15 + (r() - 0.5) * 0.2, z), q, sc3); roofs.setMatrixAt(si, m4);
+        [[-1.9, -1.4], [1.9, -1.4], [-1.9, 1.4], [1.9, 1.4]].forEach(function (pp, pk) { m4.makeTranslation(x + pp[0], 1.6, z + pp[1]); posts.setMatrixAt(si * 4 + pk, m4); });
+        var kind = Math.floor(r() * pal.length);
+        for (var gk = 0; gk < 9; gk++) { var gx = x + (gk % 3 - 1) * 1.05 + (r() - 0.5) * 0.2, gz = z + (Math.floor(gk / 3) - 1) * 0.62, s = crafts ? 0.8 + r() * 1.1 : 0.7 + r() * 0.5; e.set(0, r() * 3, 0); q.setFromEuler(e); m4.compose(v.set(gx, 1.0 + (crafts ? s * 0.5 : 0.25 * s), gz), q, new T.Vector3(crafts ? 1 : s, crafts ? s : s * 0.7, crafts ? 1 : s)); goods.setMatrixAt(gi, m4); goods.setColorAt(gi, c.set(pal[(kind + (r() < 0.25 ? 1 : 0)) % pal.length]).offsetHSL(0, 0, (r() - 0.5) * 0.12)); gi++; }
+        for (var ck = 0; ck < 3; ck++) { m4.makeTranslation(x + face * 1.5, 0.12 + ck * 0.19, z - 0.7 + ck * 0.15); cloth.setMatrixAt(ci, m4); cloth.setColorAt(ci, c.setHSL(r(), 0.7, 0.5)); ci++; }
+        traders.push([x - face * 1.6, z + (r() - 0.5) * 1.2, r() * 6]);
+      } });
+      [tables, roofs, posts, goods, cloth].forEach(function (o) { o.castShadow = true; o.receiveShadow = true; mktG.add(o); }); MK.stalls = stalls;
+      // Big umbrellas over some stalls, in faded market colours.
+      var UC = [0xc0392b, 0x1f5fa0, 0xf2b600, 0x2fa36b, 0xe67e22];
+      stalls.forEach(function (st, i) { if (i % 4 !== 1) return; var u = umbrella(st[0] + st[2] * 2.4, 0, st[1], 1.25); u.children[1].material = u.children[2].material = mat('mumb' + (i % 5), { color: UC[i % 5], roughness: 0.8, side: T.DoubleSide }); mktG.add(u); });
+      // The entrance arch with the market's name, the road with a danfo and a keke, low buildings and overhead wires.
+      var title = String(sc.name || 'Market').toUpperCase();
+      var archT = canvasTex(1024, 160, function (g, w, h) { g.fillStyle = crafts ? '#5a3a22' : '#1d5a3c'; g.fillRect(0, 0, w, h); g.fillStyle = '#f2c94c'; g.fillRect(0, 0, w, 10); g.fillRect(0, h - 10, w, 10); g.fillStyle = '#fff'; g.font = '900 86px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(title, w / 2, h / 2 + 4, w - 40); });
+      var arch = new T.Mesh(new T.BoxGeometry(22, 3.4, 0.4), [mat('archS', { color: 0x1c2128 }), mat('archS', {}), mat('archS', {}), mat('archS', {}), new T.MeshStandardMaterial({ map: archT, roughness: 0.6 }), new T.MeshStandardMaterial({ map: archT, roughness: 0.6 })]); arch.position.set(0, 8, -32); mktG.add(arch);
+      [-11, 11].forEach(function (x) { mktG.add(mesh(new T.BoxGeometry(1, 9.7, 1), mat('archP', { color: 0xd9d4ca, roughness: 0.7 }), x, 4.85, -32)); });
+      var road = mesh(new T.PlaneGeometry(400, 12).rotateX(-Math.PI / 2), mat('mroad', { color: 0x3a3f46, roughness: 0.9 }), 0, 0.02, -42); road.castShadow = false; mktG.add(road);
+      var bus = new T.Group(); bus.position.set(-18, 0, -42); bus.add(mesh(new T.BoxGeometry(7, 2.6, 2.6), mat('danfoY', { color: 0xf2c200, roughness: 0.5 }), 0, 1.7, 0)); bus.add(mesh(new T.BoxGeometry(7.05, 0.3, 2.65), mat('danfoB', { color: 0x17181a }), 0, 1.4, 0)); bus.add(mesh(new T.BoxGeometry(5, 0.9, 2.66), glassM, -0.4, 2.4, 0)); [[-2.3, 1.3], [2.3, 1.3], [-2.3, -1.3], [2.3, -1.3]].forEach(function (w) { var wh = mesh(new T.CylinderGeometry(0.45, 0.45, 0.3, 12), mat('tyre', { color: 0x111111 }), w[0], 0.45, w[1]); wh.rotation.x = Math.PI / 2; bus.add(wh); }); mktG.add(bus); MK.bus = bus;
+      var keke = new T.Group(); keke.add(mesh(new T.BoxGeometry(2.4, 1.6, 1.4), mat('kekeG', { color: 0x2fa36b, roughness: 0.5 }), 0, 1.2, 0)); keke.add(mesh(new T.BoxGeometry(2.5, 0.12, 1.5), mat('danfoB', {}), 0, 2.05, 0)); mktG.add(keke); MK.keke = keke;
+      var rs = rnd(71); for (var b = 0; b < 30; b++) { var side = b % 3, bx, bz; if (side === 0) { bx = -60 + b * 4.2; bz = 54 + rs() * 10; } else { bx = (side === 1 ? -1 : 1) * (46 + rs() * 10); bz = -20 + (b % 10) * 9; } towerBlock(bx, bz, 8 + rs() * 6, 6 + rs() * 12, 8 + rs() * 4, mktG, 0, MK.towers); }
+      for (var wl = 0; wl < 6; wl++) { var pts = []; for (var wi = 0; wi <= 12; wi++) { var u = wi / 12; pts.push(new T.Vector3(-45 + u * 90, 9 - Math.sin(u * Math.PI) * 1.2 + wl * 0.3, -36 + wl * 14)); } mktG.add(new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x1a1a1a }))); }
+      // Lanterns for after dark.
+      stalls.forEach(function (st, i) { if (i % 3) return; var lm = new T.Mesh(new T.SphereGeometry(0.22, 8, 6), new T.MeshBasicMaterial({ color: 0x5a5040 })); lm.position.set(st[0] - st[2] * 1.2, 2.7, st[1]); mktG.add(lm); MK.lamps.push(lm.material); });
+      MK.lights = []; [[-15, 6, -10], [15, 6, -10], [0, 6, 14], [-27, 6, 26], [27, 6, 26]].forEach(function (p) { var L0 = new T.PointLight(0xffc070, 0, 40, 1.4); L0.position.set(p[0], p[1], p[2]); mktG.add(L0); MK.lights.push(L0); });
+      // People: a trader behind every stall, shoppers and hawkers (trays on heads) along the aisles.
+      MK.traders = squad(traders.length, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec][i % 7]; }, 1, mktG); MK.traderBase = traders;
+      var NW = 170, wb = [], wr = rnd(19); for (var wk = 0; wk < NW; wk++) { var aisle = [-27, -15, 0, 15, 27][Math.floor(wr() * 5)]; wb.push([aisle + (wr() - 0.5) * (aisle === 0 ? 10 : 4), wr() * 80, (wr() < 0.5 ? 1 : -1) * (0.6 + wr() * 0.8), wr() * 6, wr() < 0.22]); }
+      MK.walkers = squad(NW, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec, 0x17181a][(i * 5) % 8]; }, 1, mktG); MK.walkBase = wb;
+      MK.trays = new T.InstancedMesh(new T.CylinderGeometry(0.55, 0.45, 0.22, 12), mat('tray', { color: 0xc9a46a, roughness: 0.7 }), NW); mktG.add(MK.trays);
+    }
+    function marketFrame(t, open) {
+      var m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), one = new T.Vector3(1, 1, 1), zero = new T.Vector3(0, 0, 0);
+      var W = MK.walkers, wn = open ? W.n : Math.round(W.n * 0.12);
+      for (var i = 0; i < W.n; i++) { var b = MK.walkBase[i]; if (i >= wn) { m4.compose(v.set(0, -9, 0), q, zero); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4); MK.trays.setMatrixAt(i, m4); continue; }
+        var z = MK_Z0 - 4 + ((b[1] + t * b[2] * 1.2) % 80 + 80) % 80; e.set(0, b[2] > 0 ? 0 : Math.PI, 0); q.setFromEuler(e); m4.compose(v.set(b[0] + Math.sin(t * 0.5 + b[3]) * 0.6, Math.abs(Math.sin(t * 6 + b[3])) * 0.06, z), q, one); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4);
+        if (b[4]) { m4.compose(v.set(b[0] + Math.sin(t * 0.5 + b[3]) * 0.6, 2.42, z), q, one); MK.trays.setMatrixAt(i, m4); } else { m4.compose(v.set(0, -9, 0), q, zero); MK.trays.setMatrixAt(i, m4); } }
+      W.body.instanceMatrix.needsUpdate = W.head.instanceMatrix.needsUpdate = MK.trays.instanceMatrix.needsUpdate = true;
+      var Tr = MK.traders; for (var k = 0; k < Tr.n; k++) { var tb = MK.traderBase[k], here = open || k % 5 === 0; m4.compose(v.set(tb[0], here ? Math.max(0, Math.sin(t * 1.5 + tb[2])) * 0.05 : -9, tb[1]), q.identity(), here ? one : zero); Tr.body.setMatrixAt(k, m4); Tr.head.setMatrixAt(k, m4); }
+      Tr.body.instanceMatrix.needsUpdate = Tr.head.instanceMatrix.needsUpdate = true;
+      var kx = ((t * 6) % 140) - 70; MK.keke.position.set(kx, 0, -40); MK.keke.rotation.y = 0; MK.bus.position.x = -18 + Math.max(0, Math.sin(t * 0.15)) * 4;
+    }
+
     /* ---------- people, signs, the gem ---------- */
     var SKIN = [0x6b4029, 0x8a5a3c, 0x4a2c1c, 0x9b6a4b], CL = [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec, 0x17181a];
     function person(i, female) {
@@ -501,14 +562,14 @@
     var built = '';
     function build() {
       var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.rooftop ? 'r' : '') + (sc.name || ''); if (key === built) return; built = key;
-      ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
-      harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
+      ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; MKT = sc.mode === 'market'; if (MKT) buildMarket(); if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
+      harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; mktG.visible = MKT; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
       // Frame: the estate uses a wider lens so the pool below and the skyline above both fit, as in a terrace photo.
-      if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 84; orbit.tx = 0; orbit.tz = sc.street ? 2 : 4; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
+      if (MKT) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.16; orbit.r = 36; orbit.tx = 0; orbit.tz = 4; } else if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 84; orbit.tx = 0; orbit.tz = sc.street ? 2 : 4; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
       cam.updateProjectionMatrix(); place();
-      estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB && !STAD; });
+      estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB && !STAD && !MKT; });
       dyn.clear(); palms = []; villas = new T.Group(); beachBits = new T.Group(); dyn.add(villas, beachBits);
-      if (CLUB || STAD) return;
+      if (CLUB || STAD || MKT) return;
       if (HARBOUR) { [[-80, -20], [-60, 50], [70, 60], [85, -20], [-30, -50], [40, -50], [-95, 90], [95, 95]].forEach(function (q, i) { palm(q[0], q[1], 9 + (i % 3), (i % 2 ? -0.2 : 0.2)); }); return; }
       if (ESTATE) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); [[-30, 3, 9, 0.3], [-4, 5, 8.5, 0.4], [20, 4, 9.5, 0.2], [44, 2, 9, -0.3], [-25, -24, 12, 0.1], [28, -24, 12, 0.15], [-2, -21, 9, 0.35], [30, 22, 10, -0.2], [-50, 18, 11, 0.25]].forEach(function (q) { palm(q[0], q[1], q[2], q[3]); }); return; }
       if (sc.villas) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); } // the view is from the -12 villa's terrace
@@ -545,7 +606,7 @@
     function frame(now) {
       size(); var t = reduce ? 3 : now / 1000, night = sc.night ? 1 : 0, rain = sc.weather === 'rain' || sc.weather === 'storm';
       var nv = night ? 0.85 : 0; if (Math.abs(skyU.night.value - nv) > 0.01) { skyU.night.value += (nv - skyU.night.value) * 0.1; if (Math.abs(skyU.night.value - nv) <= 0.01) { skyU.night.value = nv; bakeEnv(); } } hemi.intensity = night ? 0.25 : rain ? 0.6 : 0.85; sun.intensity = night ? 0.15 : rain ? 0.7 : 2.2; sun.color.set(night ? 0x8fa8ff : 0xffe2b8); hemi.color.set(0xfff1dd);
-      S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD ? 0.45 : 1);
+      S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD || MKT ? 0.45 : 1);
       poolM.emissive.set(night ? 0x1fa9c9 : 0x000000); poolM.emissiveIntensity = night ? 0.9 : 0; // underwater lights after dark
       if (HARBOUR) {
         var beat = Math.abs(Math.sin(t * 2.2)), lit = night ? 1 : 0.35, show = sc.show !== false, fshow = sc.hour == null || (sc.hour >= 19 && sc.hour < 23), jk = fshow ? 1 : 0.45;
@@ -556,6 +617,10 @@
         (HB.towers || []).forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); HB.boards.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0.2; }); HB.clubGlass.emissiveIntensity = night ? 0.6 : 0;
         HB.water.material.color.set(night ? 0x0b2236 : 0x1b4f6e); HB.lights.forEach(function (L0) { L0.intensity = night ? L0.userData.max * 3 : 0; }); if (night) hemi.intensity = 0.55;
         var mx = new T.Matrix4(); for (var ci = 0; ci < HB.crowdN; ci++) { var cb = HB.crowdBase[ci], jump = show && (night || reduce) ? Math.max(0, Math.sin(t * 6 + cb[2])) * 0.6 * beat : 0; mx.makeTranslation(cb[0], 1.2 + jump, cb[1]); HB.crowd.setMatrixAt(ci, mx); HB.heads.setMatrixAt(ci, mx); } HB.crowd.count = HB.heads.count = show ? HB.crowdN : 40; HB.crowd.instanceMatrix.needsUpdate = true; HB.heads.instanceMatrix.needsUpdate = true;
+      } else if (MKT) {
+        var mopen = sc.hour == null ? !night : sc.hour >= 6 && sc.hour < 20;
+        marketFrame(reduce ? 20 : t, mopen);
+        MK.lamps.forEach(function (m) { m.color.set(night ? 0xffd27a : 0x5a5040); }); MK.lights.forEach(function (L0) { L0.intensity = night ? 18 : 0; }); MK.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.7 : 0; }); if (night) hemi.intensity = 0.4;
       } else if (STAD) {
         var live = !!(sc.hour != null ? sc.hour >= 16 && sc.hour < 22 : sc.night), flood = live && !!night;
         matchFrame(reduce ? 30 : t, live || !!ST.street);
@@ -583,7 +648,7 @@
       crowd.forEach(function (p, i) { if (!p.visible || !p.userData.home) return; var hx = p.userData.home[0], hz = p.userData.home[1], u = reduce ? 0 : Math.sin(t * 0.25 + i), x = hx + u * 2.5, z = hz + Math.cos(t * 0.2 + i) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = Math.cos(t * 0.25 + i) > 0 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
       if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
       if (gem && sc.gem) { var gq = SP()[sc.gem.slot % SP().length]; gem.position.set(gq[0] - 2.5, groundY(gq[0] - 2.5, gq[1] + 2) + 1.2 + Math.sin(t * 2) * 0.25, gq[1] + 2); gem.rotation.y = t * 1.5; }
-      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
+      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
       signs.forEach(function (s) { s.visible = s.visible && !sc.clean; });
       renderer.render(S3, cam);
