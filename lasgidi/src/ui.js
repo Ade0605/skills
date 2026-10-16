@@ -216,7 +216,7 @@
     mountAirport();
     mountRoom();
     mountVenue();
-    Array.prototype.forEach.call(document.querySelectorAll('canvas.ww-hall'), drawHall);
+    mountHalls();
     drawHudAvatar();
     mountInterior();
     drawAvatar();
@@ -1713,6 +1713,13 @@
       (q.disabled ? '<p class="why">' + esc(q.disabled) + '.</p>' : '') +
       '<button class="btn go" id="ww-book" data-wwbook="1"' + (q.disabled ? ' disabled' : '') + '>Book ' + (q.date != null ? D.DAYS[q.date % 7] + ', week ' + (Math.floor(q.date / 7) + 1) : 'the date') + ' · ' + N(q.deposit || 0) + '</button></details>';
   }
+  // The hall: live 3D once three.js is in (one hall at a time), else the 2D drawing below.
+  function mountHalls() {
+    var cvs = document.querySelectorAll('canvas.ww-hall'); if (!cvs.length) return;
+    var want = prefs.hall3d !== false && window.LasgidiHall3D;
+    if (want && threeState !== 'ready' && threeState !== 'failed') loadThree(function () { if (document.querySelector('canvas.ww-hall')) mountHalls(); });
+    Array.prototype.forEach.call(cvs, function (cv, i) { if (!(want && i === 0 && threeState === 'ready' && window.LasgidiHall3D.mount(cv, { look: S.look, outfit: S.outfit }))) drawHall(cv); });
+  }
   // The hall, drawn from the plan: theme colours, drapes and lights, chandeliers, the stage, tables, the arch and sparks.
   function drawHall(cv) {
     var W = D.WHITE_WEDDING, p; try { p = JSON.parse(cv.getAttribute('data-wwplan')); } catch (e) { return; }
@@ -2675,6 +2682,8 @@
   function openMinigame(kind) {
     var g = MINIGAMES[kind];
     if (!g || !window[g.lib] || document.getElementById('danfo-overlay')) return;
+    // Load three.js first (once) so the game opens in 3D; it falls back to 2D if that fails.
+    if (prefs.mini3d !== false && window.LasgidiGames3D && threeState !== 'ready' && threeState !== 'failed') { loadThree(function () { openMinigame(kind); }); return; }
     var paid = false;
     if (L.miniStarts(S)) {
       var started = null;
@@ -2688,7 +2697,9 @@
     document.body.appendChild(ov);
     var m = mini = { kind: kind, ov: ov, result: null, timer: 0 };
     var reduce = document.documentElement.classList.contains('lite');
-    m.game = window[g.lib].create({ seed: (S.seed ^ S.t ^ g.salt) | 0, reduce: reduce, onDone: function (r) {
+    // The 3D stage only changes the picture: the game's own state, seed and result are the same as in 2D.
+    var view3d = prefs.mini3d !== false && threeState === 'ready' && window.LasgidiGames3D ? window.LasgidiGames3D.view(kind, { look: S.look, outfit: S.outfit, lite: reduce, reduce: reduce }) : null;
+    m.game = window[g.lib].create({ seed: (S.seed ^ S.t ^ g.salt) | 0, reduce: reduce, view: view3d, onDone: function (r) {
       m.result = r;
       ov.querySelector('#mini-live').textContent = g.done(r) + ' Press ' + g.collect + '.';
       ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">' + g.collect + '</button></div>';

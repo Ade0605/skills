@@ -33,7 +33,8 @@
   var N = 10, PER = 12;
   function create(opts) {
     var wrap = document.createElement('div'); wrap.className = 'quiz-game';
-    var seed = (opts && opts.seed) || 5;
+    var seed = (opts && opts.seed) || 5, view = opts && opts.view, body = wrap;
+    if (view) { body = document.createElement('div'); view.mount(null, wrap); wrap.appendChild(body); } // a 3D studio above the answer card
     function rnd() { seed = (seed + 0x6D2B79F5) | 0; var t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
     var st, timer = 0;
     function pickQs() {
@@ -46,15 +47,17 @@
     }
     function render() {
       if (st.over) {
-        wrap.innerHTML = '<div class="qz-card"><h3>🎤 That\'s the show!</h3><p class="qz-big">' + st.correct + ' / ' + N + '</p><p class="note">' + (st.correct >= 8 ? 'The audience is on its feet!' : st.correct >= 5 ? 'Not bad at all.' : 'Better luck next time.') + '</p></div>';
+        body.innerHTML = '<div class="qz-card"><h3>🎤 That\'s the show!</h3><p class="qz-big">' + st.correct + ' / ' + N + '</p><p class="note">' + (st.correct >= 8 ? 'The audience is on its feet!' : st.correct >= 5 ? 'Not bad at all.' : 'Better luck next time.') + '</p></div>';
+        if (view) view.frame(st, { n: N, per: PER });
         return;
       }
       var q = st.qs[st.i], left = Math.max(0, Math.ceil(st.left));
-      wrap.innerHTML = '<div class="qz-card"><div class="qz-top"><span>Question ' + (st.i + 1) + ' of ' + N + '</span><span>✅ ' + st.correct + '</span><span class="qz-time' + (left <= 3 ? ' low' : '') + '">⏱ ' + left + 's</span></div>' +
+      body.innerHTML = '<div class="qz-card"><div class="qz-top"><span>Question ' + (st.i + 1) + ' of ' + N + '</span><span>✅ ' + st.correct + '</span><span class="qz-time' + (left <= 3 ? ' low' : '') + '">⏱ ' + left + 's</span></div>' +
         '<h3 class="qz-q">' + q.q.replace(/</g, '&lt;') + '</h3><div class="qz-opts">' + q.opts.map(function (o, k) {
           var cls = st.chosen == null ? '' : k === q.ans ? ' right' : k === st.chosen ? ' wrong' : '';
           return '<button type="button" class="qz-opt' + cls + '" data-qz="' + k + '"' + (st.chosen != null ? ' disabled' : '') + '><b>' + 'ABCD'[k] + '</b> ' + o.replace(/</g, '&lt;') + '</button>';
         }).join('') + '</div></div>';
+      if (view) view.frame(st, { n: N, per: PER });
     }
     function answer(k) {
       if (!st || st.over || st.chosen != null) return;
@@ -79,7 +82,7 @@
         timer = setInterval(function () { if (!wrap.isConnected) { stopTimer(); return; } if (st.chosen != null || st.over) return; st.left -= 0.25; if (st.left <= 0) { st.chosen = -1; render(); setTimeout(next, 700); } else if (Math.abs(st.left - Math.round(st.left)) < 0.01) render(); }, 250);
       },
       state: function () { return st; },
-      stop: function () { stopTimer(); root.removeEventListener('keydown', onKey); },
+      stop: function () { stopTimer(); root.removeEventListener('keydown', onKey); if (view) view.dispose(); },
       // For tests: answer every question (right or wrong) instantly.
       tick: function (_s, auto) { while (st && !st.over) { st.chosen = null; var k = auto ? st.qs[st.i].ans : (st.qs[st.i].ans + 1) % 4; if (k === st.qs[st.i].ans) st.correct++; next(); } return { correct: st.correct, total: N, over: st.over }; }
     };

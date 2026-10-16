@@ -334,6 +334,21 @@
       // Coloured washes, and a warm light over the bar.
       [[-12, 13, -6, A], [12, 13, -6, B], [-12, 13, 14, B], [12, 13, 14, A], [-RW / 2 + 6, 8, 0, new T.Color(0xffc070)]].forEach(function (q, i) { var L0 = new T.PointLight(q[3], 0, 70, 1.2); L0.position.set(q[0], q[1], q[2]); L0.userData.max = i === 4 ? 18 : 40; L0.userData.c = q[3]; clubG.add(L0); CB.lights.push(L0); });
       dancers(120, r, function (rr, i) { return i < 96 ? [-10 + rr() * 20, -4 + rr() * 20] : i < 108 ? [-RW / 2 + 9 + rr() * 3, -12 + rr() * 24] : [RW / 2 - 9 - rr() * 3, -20 + rr() * 38]; });
+      if (sc.placeId === 'owambe_hall') owambe(RD);
+    }
+    // The Surulere event hall: a high table on the riser, guests in agbada and gele, and naira raining on the floor.
+    function owambe(RD) {
+      var hz = RD / 2 - 6, cloth = mat('hiCloth', { color: 0xffffff, roughness: 0.7 }), gold = mat('hiGold', { color: 0xd4af37, roughness: 0.35, metalness: 0.6 });
+      [-8, 8].forEach(function (x) { clubG.add(mesh(new T.BoxGeometry(6, 1.2, 1.4), cloth, x, 2.2, hz)); clubG.add(mesh(new T.BoxGeometry(6.05, 0.25, 1.45), gold, x, 2.6, hz)); });
+      var A3 = root.LasgidiAvatar3D, dress = [{ dress: 'agbada', head: 'fila' }, { dress: 'iro_buba', head: 'gele' }, { dress: 'kaftan', head: 'fila' }, { dress: 'gown', head: 'gele' }];
+      if (A3) for (var i = 0; i < 12; i++) {
+        var f = A3.figure(T, { skin: i % 6, hair: i % 4, shape: i % 3 }, dress[i % 4], null), seat = i < 4;
+        if (seat) { f.position.set((i < 2 ? -8 : 8) + (i % 2 ? 1.4 : -1.4), 1.6, hz + 1.2); f.rotation.y = Math.PI; }
+        else { var an = i * 0.785; f.position.set(Math.cos(an) * 4.5, 0.15, 6 + Math.sin(an) * 4); f.rotation.y = an + Math.PI / 2; }
+        f.scale.setScalar(1.25); f.userData.owambe = true; clubG.add(f); (CB.owambe = CB.owambe || []).push(f);
+      }
+      var nt = canvasTex(128, 64, function (g, w, h) { g.fillStyle = '#7fbf6a'; g.fillRect(0, 0, w, h); g.strokeStyle = '#1b5e20'; g.lineWidth = 4; g.strokeRect(4, 4, w - 8, h - 8); g.fillStyle = '#1b5e20'; g.font = '900 28px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('₦1000', w / 2, h / 2); });
+      var NC = 70, notes = new T.InstancedMesh(new T.PlaneGeometry(0.9, 0.45), new T.MeshStandardMaterial({ map: nt, side: T.DoubleSide, roughness: 0.6 }), NC); clubG.add(notes); CB.cash = notes; CB.NC = NC;
     }
     function buildRoof(r, title) {
       var A = CB.pal[0], B = CB.pal[1], Y0 = -70;
@@ -1036,6 +1051,8 @@
         if (CB.lasers) { CB.lasers.visible = open; var lp = CB.lasers.geometry.attributes.position, O = CB.laserO; CB.lasers.material.color.setHSL((0.33 + Math.floor(t / 4) * 0.21) % 1, 1, 0.55); for (var li = 0; li < CB.NL; li++) { var la = -0.9 + 1.8 * li / (CB.NL - 1) + Math.sin(t * 1.3) * 0.35, ev = -0.2 + Math.sin(t * 0.9 + li * 0.25) * 0.1; lp.setXYZ(li * 2, O[0], O[1], O[2]); lp.setXYZ(li * 2 + 1, O[0] + Math.sin(la) * 64, O[1] + ev * 64, O[2] - Math.cos(la) * 64); } lp.needsUpdate = true; }
         CB.beams.forEach(function (b, i) { b.visible = open; b.rotation.z = Math.sin(t * 1.1 + i) * 0.55; b.rotation.x = Math.cos(t * 0.8 + i * 1.7) * 0.45; b.material.color.copy(i % 2 ? A : B); b.material.opacity = 0.07 + 0.08 * kick; });
         CB.lights.forEach(function (L0, i) { var on = ROOF ? night : open; L0.color.copy(on || ROOF ? L0.userData.c : new T.Color(0xfff4e0)); L0.intensity = on ? L0.userData.max * (CB.flame && i === 0 ? 0.8 + 0.3 * Math.sin(t * 13) : 0.7 + 0.5 * kick) : ROOF ? 0 : L0.userData.max * 0.55; });
+        if (CB.cash) { var m5 = new T.Matrix4(), q5 = new T.Quaternion(), e5 = new T.Euler(), v5 = new T.Vector3(), s5 = new T.Vector3(1, 1, 1); CB.cash.visible = open; for (var ci = 0; ci < CB.NC; ci++) { var ck = (ci / CB.NC + t * 0.09 * (0.7 + (ci % 5) * 0.1)) % 1; v5.set(-9 + (ci * 0.618 % 1) * 18, 9 - ck * 9, -3 + (ci * 0.377 % 1) * 19); e5.set(t * 2 + ci, t * 1.3 + ci * 0.5, 0); CB.cash.setMatrixAt(ci, m5.compose(v5, q5.setFromEuler(e5), s5)); } CB.cash.instanceMatrix.needsUpdate = true; }
+        if (CB.owambe) CB.owambe.forEach(function (f, i) { var u = f.userData, a5 = Math.sin(t * 6 + i) * 0.5; if (u.arms) u.arms.forEach(function (l, k) { l.rotation.x = open && i >= 4 && i % 2 ? -1.8 - Math.sin(t * 6 + i + k * 3) * 0.5 : (k ? a5 : -a5) * 0.4; }); if (u.legs && i >= 4) u.legs.forEach(function (l, k) { l.rotation.x = open ? (k ? -a5 : a5) * 0.6 : 0; }); });
         CB.sparks.forEach(function (pt) { pt.visible = open; var a = pt.geometry.attributes.position; for (var k = 0; k < a.count; k++) { var u = Math.random(), an = Math.random() * 6.283, rr2 = u * 0.5; a.setXYZ(k, Math.cos(an) * rr2, u * 1.1, Math.sin(an) * rr2); } a.needsUpdate = true; });
         CB.screens.forEach(function (st) { var cv0 = st.userData.canvas; st.userData.redraw(cv0.getContext('2d'), cv0.width, cv0.height, t); st.needsUpdate = true; });
         CB.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); if (CB.bulbs) CB.bulbs.color.set(night ? 0xffd27a : 0x6b6458); if (CB.water) CB.water.material.color.set(night ? 0x0b2236 : 0x1b4f6e);

@@ -14,7 +14,8 @@
     var pad = document.createElement('div'); pad.className = 'df-pad';
     pad.innerHTML = ICONS.map(function (ic, i) { return '<button type="button" class="df-btn" data-df="' + i + '" style="--c:' + COLORS[i] + '" aria-label="Lane ' + (i + 1) + '">' + ic + '</button>'; }).join('');
     wrap.appendChild(canvas); wrap.appendChild(pad);
-    var ctx = canvas.getContext('2d'), W = 360, H = 520, dpr = 1, seed = (opts && opts.seed) || 7;
+    var ctx = canvas.getContext('2d'), W = 360, H = 520, dpr = 1, seed = (opts && opts.seed) || 7, view = opts && opts.view;
+    if (view) view.mount(canvas, wrap); // a 3D dance floor under the HUD canvas
     function rnd() { seed = (seed + 0x6D2B79F5) | 0; var t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
     var st, raf = 0, last = 0, beat = 60 / BPM, fall = 1.6; // seconds a note takes to reach the line
     var reduce = !!(opts && opts.reduce) || !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -58,6 +59,7 @@
     function draw() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       var pulse = reduce ? 0.4 : 0.5 + 0.5 * Math.cos((st.t / beat) * Math.PI * 2); // lite / reduced motion: steady lights
+      if (view) { ctx.clearRect(0, 0, W, H); view.frame(st, { W: W, H: H, lineY: lineY(), laneX: laneX, fall: fall, beat: beat, lanes: LANES, colors: COLORS, reduce: reduce }); } else {
       var bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#2b0f3a'); bg.addColorStop(1, '#6b3fa0');
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
       // party lights
@@ -75,6 +77,7 @@
         ctx.fillStyle = '#ffffff'; ctx.font = '700 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ICONS[n.lane], laneX(n.lane), y + 1);
       });
       st.cash.forEach(function (c) { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.r); ctx.fillStyle = '#7fbf6a'; ctx.fillRect(-14, -7, 28, 14); ctx.fillStyle = '#1b5e20'; ctx.font = '700 9px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('₦', 0, 0); ctx.restore(); });
+      }
       ctx.textBaseline = 'alphabetic';
       ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(8, 8, W - 16, 34);
       ctx.fillStyle = '#ffffff'; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'left';
@@ -94,7 +97,7 @@
     return {
       el: wrap,
       start: function () { reset(); last = 0; size(); if (!raf) raf = root.requestAnimationFrame(frame); },
-      stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; root.removeEventListener('keydown', onKey); },
+      stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (view) view.dispose(); root.removeEventListener('keydown', onKey); },
       // For tests: play perfectly (or not) without the frame clock.
       tick: function (sec, auto) { if (!st) reset(); var n = Math.round(sec / 0.02); for (var i = 0; i < n && !st.over; i++) { step(0.02); if (auto) st.notes.forEach(function (x) { if (!x.hit && !x.gone && Math.abs(x.t - st.t) < 0.02) hit(x.lane); }); } size(); draw(); return { hits: st.hits, total: st.total, best: st.best, over: st.over }; },
       state: function () { return st; }

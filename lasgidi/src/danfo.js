@@ -15,7 +15,8 @@
     var pad = document.createElement('div'); pad.className = 'dg-pad';
     pad.innerHTML = '<button type="button" class="dg-btn" data-dg="left" aria-label="Left lane">◀</button><button type="button" class="dg-btn brake" data-dg="brake" aria-label="Brake (hold)">BRAKE</button><button type="button" class="dg-btn" data-dg="right" aria-label="Right lane">▶</button>';
     wrap.appendChild(canvas); wrap.appendChild(pad);
-    var ctx = canvas.getContext('2d'), W = 360, H = 560, dpr = 1;
+    var ctx = canvas.getContext('2d'), W = 360, H = 560, dpr = 1, view = opts && opts.view;
+    if (view) view.mount(canvas, wrap); // a 3D stage draws the road; this canvas keeps the HUD on top
     var reduce = !!(opts && opts.reduce) || !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
     var seed = (opts && opts.seed) || 1;
     function rnd() { seed = (seed + 0x6D2B79F5) | 0; var t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
@@ -113,6 +114,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       var sx = st.shake > 0 && !reduce ? (Math.random() - 0.5) * 6 : 0;
       ctx.save(); ctx.translate(sx, 0);
+      if (view) { ctx.clearRect(-10, 0, W + 20, H); view.frame(st, { W: W, H: H, laneX: laneX, roadL: roadL(), roadW: roadW(), busY: H - 110, brake: keys.brake, lanes: LANES, reduce: reduce }); } else {
       ctx.fillStyle = '#3f6b3a'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#9a9384'; ctx.fillRect(roadL() - 16, 0, 16, H); ctx.fillRect(roadL() + roadW(), 0, 16, H);
       ctx.fillStyle = '#3a3b3f'; ctx.fillRect(roadL(), 0, roadW(), H);
@@ -151,6 +153,7 @@
       ctx.fillStyle = '#17181a'; ctx.fillRect(bx - 22, by2 - 6, 44, 5); ctx.fillRect(bx - 22, by2 + 10, 44, 5);
       ctx.fillStyle = 'rgba(20,30,40,.8)'; ctx.fillRect(bx - 16, by2 - 38, 32, 14);
       if (keys.brake) { ctx.fillStyle = '#ff3b30'; ctx.fillRect(bx - 20, by2 + 40, 9, 4); ctx.fillRect(bx + 11, by2 + 40, 9, 4); }
+      }
       ctx.restore();
       // HUD
       ctx.fillStyle = 'rgba(23,24,26,.82)'; rr(8, 8, W - 16, 44, 10); ctx.fill();
@@ -205,7 +208,7 @@
     root.addEventListener('keydown', onKey); root.addEventListener('keyup', onUp);
 
     function start() { reset(); last = 0; size(); if (!raf) raf = root.requestAnimationFrame(frame); }
-    function stop() { if (raf) root.cancelAnimationFrame(raf); raf = 0; root.removeEventListener('keydown', onKey); root.removeEventListener('keyup', onUp); }
+    function stop() { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (view) view.dispose(); root.removeEventListener('keydown', onKey); root.removeEventListener('keyup', onUp); }
     // For tests: advance the game without a browser frame clock.
     function tick(sec, input) { if (!st) reset(); if (input) { if (input.lane != null) st.lane = input.lane; keys.brake = !!input.brake; } var n = Math.round(sec / 0.05); for (var i = 0; i < n && !st.over; i++) step(0.05); size(); draw(); return { t: st.t, fares: st.fares, fines: st.fines, served: st.served, pax: st.pax.length, over: st.over }; }
     return { el: wrap, start: start, stop: stop, tick: tick, state: function () { return st; } };

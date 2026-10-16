@@ -13,7 +13,8 @@
     var pad = document.createElement('div'); pad.className = 'bl-pad';
     pad.innerHTML = FOODS.map(function (f, i) { return '<button type="button" class="hk-btn" data-bl="' + i + '" aria-label="' + f.name + '">' + f.icon + '<small>' + f.name + '</small></button>'; }).join('');
     wrap.appendChild(canvas); wrap.appendChild(pad);
-    var ctx = canvas.getContext('2d'), W = 360, H = 440, dpr = 1, seed = (opts && opts.seed) || 11;
+    var ctx = canvas.getContext('2d'), W = 360, H = 440, dpr = 1, seed = (opts && opts.seed) || 11, view = opts && opts.view;
+    if (view) view.mount(canvas, wrap); // a 3D grill under the HUD canvas
     function rnd() { seed = (seed + 0x6D2B79F5) | 0; var t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
     var st, raf = 0, last = 0;
     function reset() {
@@ -55,6 +56,7 @@
     }
     function draw() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (view) { ctx.clearRect(0, 0, W, H); view.frame(st, { W: W, H: H, slotXY: slotXY, stage: stage, foods: FOODS, gold: GOLD, slots: SLOTS }); } else {
       ctx.fillStyle = '#3b2a1e'; ctx.fillRect(0, 0, W, H);
       // queue
       ctx.fillStyle = '#5a3f2b'; ctx.fillRect(0, 48, W, 92);
@@ -83,6 +85,7 @@
         if (sg === 'burnt') { ctx.fillStyle = '#ff9a8f'; ctx.font = '700 11px sans-serif'; ctx.fillText('BURNT', p.x, p.y + 22); }
         ctx.textBaseline = 'alphabetic';
       }
+      }
       st.pops.forEach(function (p) { ctx.fillStyle = '#7fe08a'; ctx.font = '800 14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(p.text, p.x, p.y); });
       ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(8, 8, W - 16, 32);
       ctx.fillStyle = '#fff'; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'left';
@@ -93,7 +96,8 @@
     function frame(ts) { raf = 0; if (!wrap.isConnected) return; var dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts; size(); step(dt); draw(); if (!st.over) raf = root.requestAnimationFrame(frame); }
     pad.addEventListener('pointerdown', function (e) { var b = e.target.closest('[data-bl]'); if (!b || !st) return; e.preventDefault(); st.pick = +b.dataset.bl; pad.querySelectorAll('.hk-btn').forEach(function (x) { x.classList.toggle('sel', x === b); }); });
     canvas.addEventListener('pointerdown', function (e) {
-      var r = canvas.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+      var r = canvas.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height, p3 = view && view.pick(e.clientX, e.clientY);
+      if (p3) { x = p3.x; y = p3.y; }
       for (var i = 0; i < SLOTS; i++) { var p = slotXY(i); if (Math.hypot(p.x - x, p.y - y) < 38) { tapSlot(i); return; } }
     });
     function onKey(e) { if (!wrap.isConnected || !st) return; var n = { 1: 0, 2: 1, 3: 2 }[e.key]; if (n != null) st.pick = n; var sl = { q: 0, w: 1, e: 2, a: 3, s: 4, d: 5 }[e.key]; if (sl != null) tapSlot(sl); }
@@ -102,7 +106,7 @@
       el: wrap,
       start: function () { reset(); last = 0; size(); if (!raf) raf = root.requestAnimationFrame(frame); },
       state: function () { return st; },
-      stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; root.removeEventListener('keydown', onKey); },
+      stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (view) view.dispose(); root.removeEventListener('keydown', onKey); },
       // For tests: a bot that grills what is ordered and serves when golden.
       tick: function (sec, auto) {
         if (!st) reset(); var n = Math.round(sec / 0.05);

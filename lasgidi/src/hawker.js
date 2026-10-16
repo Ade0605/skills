@@ -14,7 +14,8 @@
     var pad = document.createElement('div'); pad.className = 'hk-pad';
     pad.innerHTML = GOODS.map(function (g, i) { return '<button type="button" class="hk-btn" data-hk="' + i + '" aria-label="' + g.name + '">' + g.icon + '<small>₦' + g.price + '</small></button>'; }).join('') + '<button type="button" class="hk-btn hide" data-hk="hide" aria-label="Hide (hold)">🙈<small>HIDE</small></button>';
     wrap.appendChild(canvas); wrap.appendChild(pad);
-    var ctx = canvas.getContext('2d'), W = 360, H = 480, dpr = 1, seed = (opts && opts.seed) || 9;
+    var ctx = canvas.getContext('2d'), W = 360, H = 480, dpr = 1, seed = (opts && opts.seed) || 9, view = opts && opts.view;
+    if (view) view.mount(canvas, wrap); // a 3D go-slow under the HUD canvas
     function rnd() { seed = (seed + 0x6D2B79F5) | 0; var t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
     var st, raf = 0, last = 0;
     function reset() {
@@ -66,6 +67,7 @@
     }
     function draw() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (view) { ctx.clearRect(0, 0, W, H); view.frame(st, { W: W, H: H, rowY: rowY, rows: ROWS, goods: GOODS }); } else {
       ctx.fillStyle = '#3a3b3f'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#9a9384'; ctx.fillRect(0, 0, W, 60); ctx.fillRect(0, H - 40, W, 40);
       ctx.fillStyle = '#c9ccd2'; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('OSHODI · UNDER BRIDGE', 10, 54);
@@ -87,6 +89,7 @@
         }
       });
       if (st.van) { var vy = H - 30; ctx.fillStyle = '#ffffff'; ctx.fillRect(st.van.x, vy - 22, 100, 28); ctx.fillStyle = '#c0392b'; ctx.fillRect(st.van.x, vy - 10, 100, 6); ctx.fillStyle = '#17181a'; ctx.font = '700 9px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('TASK FORCE', st.van.x + 50, vy + 0); }
+      }
       st.pops.forEach(function (p) { ctx.fillStyle = '#7fe08a'; ctx.font = '800 14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(p.text, p.x, p.y); });
       ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(8, 8, W - 60, 32);
       ctx.fillStyle = '#fff'; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'left';
@@ -98,13 +101,13 @@
     function frame(ts) { raf = 0; if (!wrap.isConnected) return; var dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts; size(); step(dt); draw(); if (!st.over) raf = root.requestAnimationFrame(frame); }
     pad.addEventListener('pointerdown', function (e) { var b = e.target.closest('[data-hk]'); if (!b || !st) return; e.preventDefault(); if (b.dataset.hk === 'hide') st.hiding = true; else { st.pick = +b.dataset.hk; pad.querySelectorAll('.hk-btn').forEach(function (x) { x.classList.toggle('sel', x === b); }); } });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { pad.addEventListener(ev, function () { if (st) st.hiding = false; }); });
-    canvas.addEventListener('pointerdown', function (e) { var r = canvas.getBoundingClientRect(); tapAt((e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height); });
+    canvas.addEventListener('pointerdown', function (e) { var p = view && view.pick(e.clientX, e.clientY); if (p) { tapAt(p.x, p.y); return; } var r = canvas.getBoundingClientRect(); tapAt((e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height); });
     function onKey(e) { if (!wrap.isConnected || !st) return; var n = { 1: 0, 2: 1, 3: 2, 4: 3 }[e.key]; if (n != null && e.type === 'keydown') { st.pick = n; } if (e.key === ' ' || e.key === 'h') { st.hiding = e.type === 'keydown'; e.preventDefault(); } }
     root.addEventListener('keydown', onKey); root.addEventListener('keyup', onKey);
     return {
       el: wrap,
       start: function () { reset(); last = 0; size(); if (!raf) raf = root.requestAnimationFrame(frame); },
-      stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; root.removeEventListener('keydown', onKey); root.removeEventListener('keyup', onKey); },
+      stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (view) view.dispose(); root.removeEventListener('keydown', onKey); root.removeEventListener('keyup', onKey); },
       // For tests: a bot that serves whoever is asking and hides from the van.
       tick: function (sec, auto) {
         if (!st) reset(); var n = Math.round(sec / 0.05);
