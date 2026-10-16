@@ -1,6 +1,6 @@
 /* Offline cache: the game's files are cached on install. The shop's /api/ calls always go to the network. */
-const CACHE = 'lasgidi-v110';
-const FILES = ['./', 'index.html', 'src/styles.css', 'src/data.js', 'src/engine.js', 'src/icons.js', 'src/playground.js', 'src/interior.js', 'src/avatar.js', 'src/images.js', 'src/danfo.js', 'src/danceoff.js', 'src/hawker.js', 'src/bole.js', 'src/quiz.js', 'src/gov.js', 'src/chat.js', 'src/cruise.js', 'src/airport.js', 'src/airport3d.js', 'src/venue.js', 'src/ui.js', 'vendor/three.min.js', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'lasgidi-v111';
+const FILES = ['./', 'index.html', 'src/styles.css', 'src/data.js', 'src/engine.js', 'src/icons.js', 'src/playground.js', 'src/interior.js', 'src/avatar.js', 'src/images.js', 'src/danfo.js', 'src/danceoff.js', 'src/hawker.js', 'src/bole.js', 'src/quiz.js', 'src/gov.js', 'src/chat.js', 'src/cruise.js', 'src/airport.js', 'src/airport3d.js', 'src/beach3d.js', 'src/venue.js', 'src/ui.js', 'vendor/three.min.js', 'manifest.webmanifest', 'icon.svg'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())

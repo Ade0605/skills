@@ -1995,9 +1995,28 @@
   function mountVenue() {
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
+    // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
+    var want3d = venueSet(pl) === 'beach' && !!window.LasgidiBeach3D;
+    if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
+    var kind = want3d && window.THREE ? '3d' : '2d';
+    if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
+    if (kind === '3d' && !beachStage) kind = '2d';
+    if (ov && ov.getAttribute('data-kind') !== kind) { if (venueStage) venueStage.stop(); ov.remove(); ov = null; }
+    if (kind === '2d' && !flatStage) flatStage = window.LasgidiVenue.create(venueCallbacks());
+    venueStage = kind === '3d' ? beachStage : flatStage;
     if (!ov) {
-      ov = document.createElement('div'); ov.id = 'venue-view'; ov.className = 'cruise-view venue-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', pl.name);
-      if (!venueStage) venueStage = window.LasgidiVenue.create({
+      ov = document.createElement('div'); ov.id = 'venue-view'; ov.className = 'cruise-view venue-view'; ov.setAttribute('data-kind', kind); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', pl.name);
+      var pn = document.createElement('div'); pn.className = 'cv-panel ap-panel'; pn.id = 'venue-panel'; ov.appendChild(venueStage.el); ov.appendChild(pn); document.body.appendChild(ov); venueKey = '';
+    }
+    var html = venuePanel(pl), pn0 = document.getElementById('venue-panel');
+    if (html !== venueKey) { var inp = document.getElementById('venue-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'venue-in'; pn0.innerHTML = html; venueKey = html; var ni = document.getElementById('venue-in'); if (ni) { ni.value = val; if (foc) ni.focus(); } }
+    ov.classList.toggle('folded', !!ui.venueFold);
+    var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; venueStage.update(sc); venueStage.start();
+    ambience(prefs.sound && !document.hidden ? AMBIENCE_OF[sc.set] || 'street' : null);
+  }
+  var beachStage = null, flatStage = null;
+  function venueCallbacks() {
+    return {
         onPhoto: function (cv) { var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0]; ui.photoFrom = 'venue'; takePhoto(cv, p0 ? p0.name : 'Lasgidi'); },
         onGem: function (n) {
           var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0];
@@ -2015,14 +2034,7 @@
         if (S.loc !== p0.district) { ui.toasts.push({ msg: 'Ride to ' + D.DISTRICTS[p0.district].name + ' first, then walk in.', ok: false }); renderToasts(); return; }
         if (!x.a || x.a.disabled) { ui.toasts.push({ msg: (x.a && x.a.disabled) || (x.def.when ? 'Open ' + whenText(x.def.when) : 'Not open now'), ok: false }); renderToasts(); return; }
         ui.venueSlot = i; run(function () { var r = L.doAction(S, x.id); if (r && r.ok) { ui.activity = activityFor(x.id); ui.activityAt = Date.now(); if (x.id === 'work_shift') ui.venueBubble = { place: p0.id, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; });
-      } });
-      var pn = document.createElement('div'); pn.className = 'cv-panel ap-panel'; pn.id = 'venue-panel'; ov.appendChild(venueStage.el); ov.appendChild(pn); document.body.appendChild(ov); venueKey = '';
-    }
-    var html = venuePanel(pl), pn = document.getElementById('venue-panel');
-    if (html !== venueKey) { var inp = document.getElementById('venue-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'venue-in'; pn.innerHTML = html; venueKey = html; var ni = document.getElementById('venue-in'); if (ni) { ni.value = val; if (foc) ni.focus(); } }
-    ov.classList.toggle('folded', !!ui.venueFold);
-    var sc = venueScene(pl); venueStage.update(sc); venueStage.start();
-    ambience(prefs.sound && !document.hidden ? AMBIENCE_OF[sc.set] || 'street' : null);
+      } };
   }
   /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
   var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
