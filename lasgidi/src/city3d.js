@@ -200,9 +200,9 @@
       root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var t = reduce ? 5 : now / 1000, dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
       var hr = sc.hour == null ? 12 : sc.hour, night = hr >= 19 || hr < 6, dusk = hr >= 17 && hr < 19, w = sc.weather, wet = w === 'rain' || w === 'storm';
-      var sky = night ? 0x0d1a2e : wet ? 0x9aa6b0 : w === 'harmattan' ? 0xd9c49a : dusk ? 0xf0c9a0 : 0x9fd3ef; S3.background.set(sky); S3.fog.color.set(sky); S3.fog.near = w === 'harmattan' ? 220 : 500; S3.fog.far = w === 'harmattan' ? 800 : 1400;
-      hemi.intensity = night ? 0.35 : wet ? 0.7 : 0.9; sun.intensity = night ? 0.12 : wet ? 0.5 : 1.7; sun.color.set(night ? 0x8fa8ff : dusk ? 0xffc890 : 0xfff1dc);
-      if (DYN.water) DYN.water.material.color.set(night ? 0x0b2236 : 0x2f86b0);
+      var sky = night ? 0x16263f : wet ? 0x9aa6b0 : w === 'harmattan' ? 0xd9c49a : dusk ? 0xf0c9a0 : 0x9fd3ef; S3.background.set(sky); S3.fog.color.set(sky); S3.fog.near = w === 'harmattan' ? 220 : 500; S3.fog.far = w === 'harmattan' ? 800 : 1400;
+      hemi.intensity = night ? 0.62 : wet ? 0.7 : 0.9; sun.intensity = night ? 0.3 : wet ? 0.5 : 1.7; sun.color.set(night ? 0x8fa8ff : dusk ? 0xffc890 : 0xfff1dc);
+      if (DYN.water) DYN.water.material.color.set(night ? 0x143a5a : 0x2f86b0);
       if (DYN.towersM) DYN.towersM.emissiveIntensity = night ? 0.85 : dusk ? 0.25 : 0; if (DYN.lamps) DYN.lamps.material.color.set(night || dusk ? 0xffd27a : 0x6b6458);
       if (fly) { var k = 1 - Math.exp(-dt * 3); orbit.tx += (fly.tx - orbit.tx) * k; orbit.tz += (fly.tz - orbit.tz) * k; orbit.r += (fly.r - orbit.r) * k; if (Math.abs(fly.r - orbit.r) < 1 && Math.hypot(fly.tx - orbit.tx, fly.tz - orbit.tz) < 1) fly = null; place(); }
       if (DYN.cars) { var m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), one = new T.Vector3(1, 1, 1); DYN.carPath.forEach(function (p, i) { var u = ((p.u + t * p.sp * p.dir) % 1 + 1) % 1, ang = Math.atan2(p.bz - p.az, p.bx - p.ax), x = p.ax + (p.bx - p.ax) * u - Math.sin(ang) * p.off, z = p.az + (p.bz - p.az) * u + Math.cos(ang) * p.off; e.set(0, -ang + (p.dir < 0 ? Math.PI : 0), 0); q.setFromEuler(e); m4.compose(v.set(x, p.y, z), q, one); DYN.cars.setMatrixAt(i, m4); }); DYN.cars.instanceMatrix.needsUpdate = true; }

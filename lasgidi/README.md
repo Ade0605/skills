@@ -16,13 +16,32 @@ python3 -m http.server 8080      # or: npm run serve
 
 There is no build step to play. It is plain HTML, CSS and JavaScript, about 1.3 MB as source (around 420 KB gzipped), including 48 small icon images (64px WebP, about 2.4 KB each). Served over HTTPS (or from localhost), it installs as a PWA, caches everything on first load and then works offline.
 
-`npm run build` writes the single-file version to `dist/lasgidi.html` (the one published as a claude.ai artifact). After `npm install` it is minified with terser: about 930 KB, or 350 KB gzipped. Without terser it still builds, just unminified. Only local variable names are shortened; globals and property names stay as written.
+`npm run build` writes the single-file version to `dist/lasgidi.html` (the one published as a claude.ai artifact). After `npm install` it is minified with terser: about 2 MB, or 650 KB gzipped, of which three.js (r158, inlined and started only when a 3D view first opens) is about 640 KB. Without terser it still builds, just unminified. Only local variable names are shortened; globals and property names stay as written.
 
 To get a single self-contained file:
 
 ```sh
 node tools/build-single.js       # writes dist/lasgidi.html
 ```
+
+## Controls
+
+- **Map:** drag to turn, pinch or scroll to zoom, then tap a pin. The place card's 🚪 Walk in button opens the place in 3D.
+- **Inside a place:**
+  - **Walking:** tap the ground to walk there, use WASD or the arrow keys, or the joystick at the bottom-left on touch screens. The camera follows you.
+  - **Doing things:** walk up to a sign and press ▶ Do it, or tap a sign to walk over and do it.
+  - **Buttons:** 🚶 turns walking off; ⟲ ⟳ turn the view; + and − zoom; 📷 takes a photo.
+- **Mini-games:**
+  - **Danfo Run:** ◀ ▶ (or swipe) to change lanes, and hold BRAKE (or ↓/space).
+  - **Dance-off:** tap a lane, or press ← ↓ ↑ → or D F J K.
+  - **Hawker:** keys 1–4 pick an item; hold HIDE (or space).
+  - **Bole grill:** keys 1–3 pick food; tap the grill.
+  - **Quiz:** press A–D.
+  - **Quitting:** Esc quits any game.
+- **Settings:**
+  - **🔊 Sound** turns on music and game sounds (off by default).
+  - **🪶 Lite mode** is for cheap phones, and turns on by itself on low-end devices.
+  - **Pidgin and large text** are there too.
 
 ## Test
 
@@ -575,7 +594,9 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
 - **Music and game sounds (`src/music.js`):** with 🔊 sound on, original beats made in the browser play. Nothing is copied, and there are no audio files.
   - **Afrobeats:** a 3-3-2 kick, shaker, claps, log-drum bass and chord stabs, for the dance-off at the game's own 112 BPM, clubs and stages at night, and parties at home.
   - **Highlife:** bell, walking bass and a guitar-like arpeggio, in the owambe hall and the wedding hall.
-  - **Fuji and a soft pad:** two more styles in the engine, not used anywhere yet.
+  - **Fuji:** talking drums from a stall's speaker at markets and motor parks by day.
+  - **A soft pad:** quiet held chords at home.
+  - **Ambience:** now and then a distant danfo horn at motor parks and on the street, and gulls at the beach and the jetty.
   - **Mini-game sounds:** the five games make their own sounds:
     - **Danfo Run:** fares, the LASTMA whistle, potholes, crashes and the brake squeal, plus the conductor shouting the next stop.
     - **Dance-off:** notes and money spraying.

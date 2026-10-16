@@ -1067,7 +1067,7 @@
     joy.style.display = WK.on && coarse ? '' : 'none';
     doBtn.addEventListener('click', function () { if (WK.near >= 0 && opts.onAct) opts.onAct(WK.near); });
     var KEYS = { w: 'f', arrowup: 'f', s: 'b', arrowdown: 'b', a: 'l', arrowleft: 'l', d: 'r', arrowright: 'r' };
-    function onKey(e) { if (!el.isConnected || !WK.on) return; var t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return; var k = KEYS[String(e.key).toLowerCase()]; if (!k) return; WK.keys[k] = e.type === 'keydown'; if (e.type === 'keydown') { WK.tx = WK.tz = null; WK.act = null; e.preventDefault(); } }
+    function onKey(e) { if (!el.isConnected || !WK.on || (root.LasgidiGL && !root.LasgidiGL.live(el))) return; var t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return; var k = KEYS[String(e.key).toLowerCase()]; if (!k) return; WK.keys[k] = e.type === 'keydown'; if (e.type === 'keydown') { WK.tx = WK.tz = null; WK.act = null; e.preventDefault(); } }
     root.addEventListener('keydown', onKey); root.addEventListener('keyup', onKey);
     function walkFrame(dt, t) {
       if (!me || !sc.me) return;

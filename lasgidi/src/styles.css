@@ -966,7 +966,7 @@ body { padding-bottom: 72px; } .toasts { bottom: 80px; }
 .cv-note { margin: 0; font-size: 12px; }
 @media (max-width: 520px) { .cv-head { grid-template-columns: auto 1fr auto; } .cv-head #cruise-leave { grid-column: 1 / -1; } }
 .toasts { z-index: 48; }
-body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-view) .toasts { top: 12px; bottom: auto; }
+body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-view) .toasts, body:has(#venue-view) .toasts { top: 12px; bottom: auto; }
 .report-box { display: grid; gap: 6px; padding: 10px; border-radius: 14px; background: color-mix(in srgb, #e5484d 10%, var(--sunk)); }
 .report-box .pick { display: flex; flex-wrap: wrap; gap: 6px; }
 .rep-link { font-size: 12px; justify-self: end; }

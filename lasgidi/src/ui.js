@@ -83,7 +83,7 @@
   };
   function play(name) { if (prefs.sound && sounds[name]) { try { sounds[name](); } catch (e) { /* audio blocked */ } } }
   // Ambience for walk-in scenes: quiet looping noise shaped per kind of place, made in WebAudio (no files).
-  var AMBIENCE_OF = { beach: 'surf', jetty: 'surf', food: 'crowd', mall: 'crowd', stadium: 'crowd', transport: 'crowd', nightlife: 'pulse', music: 'pulse', refinery: 'hum', workshop: 'hum', airport: 'hum' };
+  var AMBIENCE_OF = { beach: 'surf', jetty: 'surf', food: 'crowd', mall: 'crowd', stadium: 'crowd', transport: 'motor', nightlife: 'pulse', music: 'pulse', refinery: 'hum', workshop: 'hum', airport: 'hum' };
   var amb = { kind: null, stop: null };
   function ambience(kind) {
     if (kind === 'pulse' && musicWanted()) kind = null; // music plays instead
@@ -96,14 +96,17 @@
       for (var i = 0; i < len; i++) { last = kind === 'surf' || kind === 'hum' ? (last + 0.02 * (Math.random() * 2 - 1)) / 1.02 : Math.random() * 2 - 1; d[i] = last * (kind === 'surf' || kind === 'hum' ? 3.5 : 1); }
       var src = a.createBufferSource(); src.buffer = buf; src.loop = true;
       var f = a.createBiquadFilter(), gn = a.createGain(), parts = [src];
-      f.type = kind === 'crowd' ? 'bandpass' : 'lowpass'; f.frequency.value = { surf: 500, crowd: 900, pulse: 160, hum: 220, street: 700 }[kind] || 600; f.Q.value = kind === 'crowd' ? 0.8 : 0.5;
-      gn.gain.value = 0.0001; gn.gain.exponentialRampToValueAtTime({ surf: 0.05, crowd: 0.02, pulse: 0.04, hum: 0.03, street: 0.012 }[kind] || 0.02, a.currentTime + 1.2);
+      f.type = kind === 'crowd' || kind === 'motor' ? 'bandpass' : 'lowpass'; f.frequency.value = { surf: 500, crowd: 900, motor: 850, pulse: 160, hum: 220, street: 700 }[kind] || 600; f.Q.value = kind === 'crowd' || kind === 'motor' ? 0.8 : 0.5;
+      gn.gain.value = 0.0001; gn.gain.exponentialRampToValueAtTime({ surf: 0.05, crowd: 0.02, motor: 0.02, pulse: 0.04, hum: 0.03, street: 0.012 }[kind] || 0.02, a.currentTime + 1.2);
       src.connect(f); f.connect(gn); gn.connect(a.destination);
       // Swells: the surf rolls in and out, the club pulses on the beat.
       if (kind === 'surf' || kind === 'pulse') { var lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = kind === 'surf' ? 0.12 : 2.0; lg.gain.value = kind === 'surf' ? 0.035 : 0.03; lfo.connect(lg); lg.connect(gn.gain); lfo.start(); parts.push(lfo); }
       if (kind === 'hum') { var o = a.createOscillator(), og = a.createGain(); o.type = 'sawtooth'; o.frequency.value = 55; og.gain.value = 0.006; o.connect(og); og.connect(a.destination); o.start(); parts.push(o); var og0 = og; }
       src.start();
-      amb = { kind: kind, stop: function () { var t = a.currentTime; gn.gain.cancelScheduledValues(t); gn.gain.setValueAtTime(gn.gain.value, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.4); if (og0) og0.gain.setValueAtTime(0, t + 0.4); parts.forEach(function (p) { try { p.stop(t + 0.45); } catch (e) {} }); } };
+      // Now and then: a distant danfo horn at motor parks and on the street, gulls at the beach and the jetty.
+      var timers = [], extra = function () { if (amb.kind !== kind || !prefs.sound) return; try { if (kind === 'surf') { tone(1900 + Math.random() * 500, 0, 0.09, 'sine', 0.018); tone(2500 + Math.random() * 400, 0.11, 0.12, 'sine', 0.014); } else { var hz = 330 + Math.random() * 80; tone(hz, 0, 0.14, 'square', 0.012); if (Math.random() < 0.6) tone(hz, 0.2, 0.22, 'square', 0.012); } } catch (e) {} timers.push(setTimeout(extra, 6000 + Math.random() * 8000)); };
+      if (kind === 'surf' || kind === 'motor' || kind === 'street') timers.push(setTimeout(extra, 2500));
+      amb = { kind: kind, stop: function () { timers.forEach(clearTimeout); var t = a.currentTime; gn.gain.cancelScheduledValues(t); gn.gain.setValueAtTime(gn.gain.value, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.4); if (og0) og0.gain.setValueAtTime(0, t + 0.4); parts.forEach(function (p) { try { p.stop(t + 0.45); } catch (e) {} }); } };
     } catch (e) { amb = { kind: null, stop: null }; }
   }
   // Music (src/music.js): the dance-off, the owambe hall and clubs at night, the wedding hall, and parties.
@@ -113,12 +116,14 @@
     if (ui.venueOpen) {
       var pl = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0], hr = L.hour(S), night = hr >= 19 || hr < 5;
       if (!pl) return null; if (pl.id === 'owambe_hall') return { style: 'highlife' };
-      return (pl.type === 'nightlife' || pl.type === 'music') && night ? { style: 'afro' } : null;
+      if ((pl.type === 'nightlife' || pl.type === 'music') && night) return { style: 'afro' };
+      var ik = D.insideKind(pl); return (ik === 'market' || ik === 'motorpark') && hr >= 7 && hr < 19 ? { style: 'fuji', vol: 0.1 } : null; // fuji from a stall's speaker by day
     }
     if (ui.cruiseOpen || ui.roomOpen || ui.airportOpen) return null;
     if (document.querySelector('.ww-hall-3d')) return { style: 'highlife', vol: 0.14 };
     if (ui.visit && partyOf(ui.visit)) return { style: 'afro', vol: 0.16 };
     if (ui.tab === 'home' && myParty()) return { style: 'afro', vol: 0.16 };
+    if (ui.tab === 'home') return { style: 'pad', vol: 0.08 }; // a soft pad at home
     return null;
   }
   function syncMusic() {
