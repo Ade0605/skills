@@ -515,6 +515,13 @@
     var pr = (online.peerList || []).filter(function (p) { return p.by === host; })[0];
     return (pr && pr.party) || (online.homes[host] && cleanParty(online.homes[host].party)) || null;
   }
+  // A party for the 3D home: its kind, the decorator, and the online guests there now (their looks and names; you too when visiting).
+  function partyScene(pt, host, withMe) {
+    if (!pt) return null;
+    var g = (online.peerList || []).filter(function (p) { return p.at === host && p.look && p.by !== online.me; }).slice(0, 10).map(function (p) { return { look: p.look, name: nameOf(p.by) }; });
+    if (withMe && S) g.unshift({ look: S.look, outfit: S.outfit, name: 'You' });
+    return { kind: pt.kind, planner: !!pt.planner, guests: g };
+  }
   // Faces of everyone at a host's party, as small round images.
   function guestFaces(host, withMe) {
     var list = (online.peerList || []).filter(function (p) { return p.at === host && p.look; }).slice(0, 8), out = '';
@@ -1091,7 +1098,7 @@
     if (window.LasgidiHome3D && window.THREE && threeState === 'ready' && (!visitInterior || !visitInterior.is3d)) { var v3 = window.LasgidiHome3D.create({ onSelect: function () {}, onPlace: function () {} }); if (v3) visitInterior = v3; }
     if (!visitInterior) visitInterior = window.LasgidiInterior.create({ onSelect: function () {}, onPlace: function () {} });
     slot.appendChild(visitInterior.el);
-    visitInterior.update({ size: v.size, type: v.h.type || 'room', name: v.h.name, items: v.items, vehicles: v.vehicles, sel: null, power: true, hour: 12,
+    visitInterior.update({ size: v.size, type: v.h.type || 'room', name: v.h.name, items: v.items, vehicles: v.vehicles, sel: null, power: true, hour: 12, party: partyScene(partyOf(ui.visit), ui.visit, true),
       dark: document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) });
   }
 
@@ -1314,7 +1321,7 @@
     if (!interior) interior = window.LasgidiInterior.create(ivCb);
     slot.appendChild(interior.el); window.__iv = interior;
     var h = L.homeDef(S);
-    interior.update({ paint: myPaint(), size: L.roomSize(S), type: h.type || 'room', name: h.name, items: S.items, vehicles: S.vehicles, sel: ui.itemSel, power: S.power, hour: L.hour(S), look: S.look, outfit: S.outfit,
+    interior.update({ paint: myPaint(), size: L.roomSize(S), type: h.type || 'room', name: h.name, items: S.items, vehicles: S.vehicles, sel: ui.itemSel, power: S.power, hour: L.hour(S), look: S.look, outfit: S.outfit, party: partyScene(myParty(), online.me),
       dark: document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) });
   }
   var FX_NAMES = { sleep: 'sleep', power: 'light', gen: 'gen cost', fun: 'enjoyment', stress: 'stress', social: 'social', hunger: 'belle', energy: 'energy', hygiene: 'hygiene' };

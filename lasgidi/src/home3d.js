@@ -116,6 +116,46 @@
     function freeTile() { var occ = occupied(), w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1]; for (var y = d - 1; y >= 0; y--) for (var x = w - 1; x >= 0; x--) if (!occ[x + ',' + y]) return [x, y]; return [w - 1, d - 1]; }
     function selectGlow() { items3.forEach(function (g, i) { if (!g) return; g.traverse(function (o) { if (o.isMesh && o.material && o.material.emissive && !o.userData.keepEmissive) { o.material = o.material.clone(); o.material.emissive.set(i === view.sel ? 0xffb000 : 0x000000); o.material.emissiveIntensity = i === view.sel ? 0.35 : 0; } }); }); }
 
+    /* ---------- a party at home: guests dancing, a disco ball and coloured lights, decorations ---------- */
+    var partyG = new T.Group(); S3.add(partyG); var PT = null, partyKey = '';
+    function tag(text, me) { var c = document.createElement('canvas'), g = c.getContext('2d'); g.font = '700 30px system-ui, sans-serif'; var w = Math.ceil(g.measureText(text).width) + 28; c.width = w; c.height = 44; g = c.getContext('2d'); g.fillStyle = me ? '#2f6fd0' : 'rgba(23,24,26,.82)'; g.beginPath(); g.moveTo(22, 0); g.arcTo(w, 0, w, 44, 22); g.arcTo(w, 44, 0, 44, 22); g.arcTo(0, 44, 0, 0, 22); g.arcTo(0, 0, w, 0, 22); g.fill(); g.fillStyle = '#fff'; g.font = '700 30px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, 23); var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; var sp = new T.Sprite(new T.SpriteMaterial({ map: t, depthTest: false })); sp.renderOrder = 9; sp.scale.set(0.32 * w / 44, 0.32, 1); return sp; }
+    function stranger(n) { var h = Math.imul(n + 7, 2654435761) >>> 0, C = D.CLOTHES, ids = Object.keys(C), pk = function (slot, k) { var l = ids.filter(function (c) { return C[c].slot === slot; }); return l[(h >>> k) % l.length]; }; var o = (h >>> 3) % 3 === 0 ? { dress: pk('dress', 4) } : { top: pk('top', 5), bottom: pk('bottom', 9) }; o.shoes = pk('shoes', 13); if ((h >>> 15) % 3 === 0) o.head = pk('head', 17); return { look: { skin: h % D.LOOKS.skin.length, hair: (h >>> 6) % D.LOOKS.hair.length, shape: (h >>> 11) % 3 }, outfit: o }; }
+    function buildParty() {
+      partyG.clear(); PT = null; var p = view && view.party; if (!p || !root.LasgidiAvatar3D) return;
+      var w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1], occ = occupied(), tiles = [], mine = freeTile();
+      for (var y = 0; y < d; y++) for (var x = 0; x < w; x++) if (!occ[x + ',' + y] && !(x === mine[0] && y === mine[1])) tiles.push([x, y]);
+      var fancy = p.planner || /owambe|grand|wedding/.test(p.kind), want = Math.min(tiles.length * 2, Math.max((p.guests || []).length, { small: 5, owambe: 9, grand: 12, wedding: 10 }[p.kind] || 6));
+      PT = { guests: [], lights: [], ball: null, conf: null, w: w, d: d };
+      for (var i = 0; i < want && tiles.length; i++) {
+        var tl = tiles[(i * 7) % tiles.length], who = (p.guests || [])[i] || stranger(i), f = root.LasgidiAvatar3D.figure(T, who.look, who.outfit || {}, null);
+        f.scale.setScalar(0.9); f.position.set(tl[0] + 0.3 + (i % 2) * 0.4, 0, tl[1] + 0.3 + ((i >> 1) % 2) * 0.4); f.rotation.y = i * 1.9; f.traverse(function (o) { o.castShadow = true; }); partyG.add(f); PT.guests.push(f);
+        if (who.name) { var tg = tag('@' + who.name); tg.position.set(f.position.x, 2.05, f.position.z); partyG.add(tg); }
+      }
+      // A disco ball on a chain and three coloured lights sweeping the room.
+      var ball = new T.Mesh(new T.IcosahedronGeometry(0.22, 1), new T.MeshStandardMaterial({ color: 0xe8eef4, metalness: 0.5, roughness: 0.2, flatShading: true, emissive: 0x8899aa, emissiveIntensity: 0.6 })); ball.position.set(w / 2, 2.35, d / 2); partyG.add(ball); PT.ball = ball;
+      cyl(partyG, 0.01, 0.01, 0.4, M(0x999999), w / 2, 2.65, d / 2, 4);
+      [0xff3b8a, 0x3bc9ff, 0xf2b600].forEach(function (c, k) { var L0 = new T.PointLight(c, 6, 9, 1.6); L0.position.set(w / 2, 2.2, d / 2); partyG.add(L0); PT.lights.push(L0); });
+      // A speaker and a drinks table in the corner by the door.
+      box(partyG, 0.45, 0.9, 0.4, M(0x15181c, 0.6), w - 0.35, 0.45, d - 0.3); cyl(partyG, 0.14, 0.14, 0.03, M(0x333333, 0.3, 0.6), w - 0.35, 0.6, d - 0.09, 14).rotation.x = Math.PI / 2;
+      // Decorations: balloon bunches in the corners and bunting along the walls (decorated or bigger parties).
+      if (fancy) {
+        var cols = p.kind === 'wedding' ? [0xffffff, 0xd4af37, 0xf4c2c2] : [0xc0392b, 0xf2b600, 0x2f6fa0, 0x2fa36b, 0x8a5cff];
+        [[0.25, 0.25], [w - 0.25, 0.25], [0.25, d - 0.25]].forEach(function (q, k) { for (var b = 0; b < 5; b++) { var bl = new T.Mesh(new T.SphereGeometry(0.15, 12, 10), new T.MeshStandardMaterial({ color: cols[(b + k) % cols.length], roughness: 0.3, metalness: 0.1 })); bl.scale.y = 1.2; bl.position.set(q[0] + Math.cos(b * 1.3) * 0.12, 1.55 + b * 0.12, q[1] + Math.sin(b * 1.3) * 0.12); partyG.add(bl); } });
+        var tri = new T.BufferGeometry(); tri.setAttribute('position', new T.Float32BufferAttribute([-0.09, 0, 0, 0.09, 0, 0, 0, -0.18, 0], 3)); tri.computeVertexNormals();
+        for (var bx = 0.2; bx < w; bx += 0.3) { var fl = new T.Mesh(tri, new T.MeshBasicMaterial({ color: cols[Math.round(bx / 0.3) % cols.length], side: T.DoubleSide })); fl.position.set(bx, 2.15 - Math.sin(bx / w * Math.PI) * 0.18, 0.06); partyG.add(fl); }
+        for (var bz = 0.2; bz < d; bz += 0.3) { var fz = new T.Mesh(tri, new T.MeshBasicMaterial({ color: cols[Math.round(bz / 0.3) % cols.length], side: T.DoubleSide })); fz.position.set(0.06, 2.15 - Math.sin(bz / d * Math.PI) * 0.18, bz); fz.rotation.y = Math.PI / 2; partyG.add(fz); }
+        var NC = 120, cg = new T.BufferGeometry(), cp = new Float32Array(NC * 3); for (var c = 0; c < NC; c++) { cp[c * 3] = (c * 0.618 % 1) * w; cp[c * 3 + 1] = (c * 0.377 % 1) * 2.3; cp[c * 3 + 2] = (c * 0.271 % 1) * d; } cg.setAttribute('position', new T.BufferAttribute(cp, 3));
+        PT.conf = new T.Points(cg, new T.PointsMaterial({ size: 0.06, vertexColors: false, color: cols[1], transparent: true, opacity: 0.9 })); partyG.add(PT.conf);
+      }
+    }
+    function animParty(t) {
+      if (!PT) return; var beat = t * 6.6;
+      PT.guests.forEach(function (f, i) { var u = f.userData, a = Math.sin(beat + i) * 0.5; if (u.legs) u.legs.forEach(function (l, k) { l.rotation.x = k ? -a : a; }); if (u.arms) u.arms.forEach(function (l, k) { l.rotation.x = i % 3 === 0 ? -1.8 - Math.sin(beat + i + k * 3) * 0.5 : (k ? a : -a) * 0.8; }); f.position.y = Math.abs(Math.sin(beat + i)) * 0.05; f.rotation.y += 0.004; });
+      if (PT.ball) PT.ball.rotation.y = t * 1.5;
+      PT.lights.forEach(function (L0, k) { var an = t * 1.2 + k * 2.1; L0.position.set(PT.w / 2 + Math.cos(an) * PT.w * 0.35, 2.1, PT.d / 2 + Math.sin(an) * PT.d * 0.35); L0.intensity = 4 + 4 * Math.abs(Math.sin(beat * 0.5 + k)); });
+      if (PT.conf) { var a2 = PT.conf.geometry.attributes.position; for (var c = 0; c < a2.count; c++) { var y = a2.getY(c) - 0.01; a2.setY(c, y < 0 ? 2.3 : y); } a2.needsUpdate = true; }
+    }
+
     /* ---------- camera and pointer ---------- */
     var orbit = { az: -0.75, pol: 0.95, r: 9, tx: 2, tz: 1.5 }, ptrs = {}, drag = null, moved = false, pinch0 = 0;
     function place() { orbit.pol = Math.max(0.35, Math.min(1.25, orbit.pol)); orbit.r = Math.max(3, Math.min(40, orbit.r)); var s = Math.sin(orbit.pol); cam.position.set(orbit.tx + orbit.r * s * Math.sin(orbit.az + Math.PI), orbit.r * Math.cos(orbit.pol), orbit.tz - orbit.r * s * Math.cos(orbit.az + Math.PI)); cam.lookAt(orbit.tx, 0.4, orbit.tz); }
@@ -146,6 +186,7 @@
       size(); var t = reduce ? 0 : now / 1000, hr = view && view.hour != null ? view.hour : 12, night = hr >= 19 || hr < 6, lit = view && view.power;
       hemi.intensity = night ? (lit ? 0.55 : 0.18) : 0.75; sun.intensity = night ? 0.05 : 1.4; lamp.intensity = night ? (lit ? 14 : 3) : 0; lamp.color.set(lit ? 0xffd8a0 : 0xff9a40);
       if (WIN) { WIN.emissiveIntensity = night ? 0.05 : 0.7; WIN.color.set(night ? 0x1a2a4a : 0xbfe0f2); }
+      animParty(t); if (PT) { hemi.intensity *= 0.75; lamp.intensity *= 0.6; }
       fans.forEach(function (f) { f.rotation.z = lit || !night ? t * 12 : 0; }); screens.forEach(function (m) { m.emissiveIntensity = lit || !night ? 0.4 + Math.sin(t * 3) * 0.1 : 0; });
       renderer.render(S3, cam); raf = wrap.isConnected ? root.requestAnimationFrame(frame) : 0;
     }
@@ -155,6 +196,7 @@
       tilePoint: function (x, y) { var v = new T.Vector3(x + 0.5, 0, y + 0.5).project(cam); return { x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H }; },
       update: function (v) { view = v; cv.setAttribute('aria-label', 'Inside your home in 3D: ' + v.name + ', ' + (v.items || []).filter(function (i) { return i.x != null; }).length + ' items placed. Tap an item, then drag it or tap a tile to move it.');
         var k = JSON.stringify([v.size, v.type, v.paint, v.items, (v.vehicles || []).map(function (x) { return x.id; }), v.look, v.outfit]); if (k !== key) { key = k; build(); }
+        var pk = JSON.stringify([key, v.party]); if (pk !== partyKey) { partyKey = pk; buildParty(); }
         selectGlow(); if (!raf) raf = root.requestAnimationFrame(frame); }
     };
   }
