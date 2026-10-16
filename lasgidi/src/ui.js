@@ -2026,38 +2026,118 @@
   }
   /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
   var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
-  var DOMESTIC = ['Abuja', 'Port Harcourt', 'Kano', 'Enugu', 'Benin City', 'Owerri', 'Uyo', 'Ilorin'], ABROAD = ['London', 'Dubai', 'Accra', 'Johannesburg', 'Atlanta', 'Nairobi', 'Paris', 'Istanbul', 'Doha', 'Toronto'];
-  // A deterministic board for this game day: one flight about every 25 minutes, statuses from the clock.
+  var AIR_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC' };
+  // A deterministic board for this game day, between Lagos, Port Harcourt and Abuja: an airliner about every
+  // 30 minutes at gates 1–5, and a chopper shuttle about every 90 minutes from helipads H1–H4. Status follows the clock.
   function fids(kind) {
-    var dayN = Math.floor(S.t / 1440), now = S.t % 1440, here = D.CITIES[L.cityOf(S)].name, out = [];
-    for (var i = 0; i < 9; i++) {
-      var slot = Math.floor(now / 25) - 2 + i, mins = slot * 25 + (kind === 'arr' ? 10 : 0); if (mins < 300 || mins > 1410) continue;
-      var h = Math.imul(dayN * 131 + slot * 17 + (kind === 'arr' ? 7 : 0), 2654435761) >>> 0, al = AIRLINES[h % AIRLINES.length];
-      var pool = h % 3 === 0 ? ABROAD : DOMESTIC.filter(function (c) { return c !== here; }), city = pool[(h >>> 3) % pool.length], late = (h >>> 9) % 7 === 0 ? 40 : 0, diff = mins + late - now;
-      var status = kind === 'dep' ? (diff < -10 ? 'Departed' : diff < 15 ? 'Boarding' : diff < 45 ? 'Gate open' : late ? 'Delayed' : 'On time') : (diff < -5 ? 'Landed' : diff < 20 ? 'Approaching' : late ? 'Delayed' : 'Expected');
-      out.push({ at: mins + late, time: pad(Math.floor((mins + late) / 60) % 24) + ':' + pad((mins + late) % 60), code: al[0] + ' ' + (100 + (h % 800)), airline: al[1], city: city, gate: 1 + (h >>> 5) % 5, status: status });
+    var dayN = Math.floor(S.t / 1440), now = S.t % 1440, city = L.cityOf(S), out = [];
+    var others = Object.keys(AIR_CODES).filter(function (c) { return c !== city; }).map(function (c) { return D.CITIES[c].name; });
+    function row(mins, h, heli) {
+      var al = AIRLINES[h % AIRLINES.length], dest = others[(h >>> 3) % others.length], late = (h >>> 9) % 7 === 0 ? 35 : 0, at = mins + late, diff = at - now;
+      var status = kind === 'dep' ? (diff < -6 ? 'Departed' : diff < 6 ? 'Final call' : diff < 22 ? 'Boarding' : diff < 45 ? 'Gate open' : late ? 'Delayed' : 'On time') : (diff < -25 ? 'Landed' : diff < 0 ? 'Baggage' : diff < 20 ? 'Approaching' : late ? 'Delayed' : 'Expected');
+      return { at: at, time: pad(Math.floor(at / 60) % 24) + ':' + pad(at % 60), code: heli ? 'HL ' + (10 + h % 80) : al[0] + ' ' + (100 + (h % 800)), airline: heli ? 'Lagoon Heli shuttle' : al[1], city: dest, kind: heli ? 'heli' : 'jet', gate: heli ? 'H' + (1 + (h >>> 5) % 4) : 1 + (h >>> 5) % 5, status: status, diff: diff };
     }
-    return out.sort(function (x, y) { return x.at - y.at; }).slice(0, 6);
+    for (var i = 0; i < 10; i++) {
+      var slot = Math.floor(now / 30) - 2 + i, mins = slot * 30 + (kind === 'arr' ? 12 : 0) + 5; if (mins < 300 || mins > 1400) continue;
+      out.push(row(mins, Math.imul(dayN * 131 + slot * 17 + (kind === 'arr' ? 7 : 0), 2654435761) >>> 0, false));
+    }
+    for (var j = 0; j < 4; j++) {
+      var hs = Math.floor(now / 90) - 1 + j, hm = hs * 90 + (kind === 'arr' ? 40 : 20); if (hm < 360 || hm > 1260) continue;
+      out.push(row(hm, Math.imul(dayN * 977 + hs * 31 + (kind === 'arr' ? 3 : 0), 2654435761) >>> 0, true));
+    }
+    out.sort(function (x, y) { return x.at - y.at; });
+    var past = out.filter(function (r) { return r.diff < -6; }).slice(-1), rest = out.filter(function (r) { return r.diff >= -6; });
+    return past.concat(rest).slice(0, 7);
+  }
+  // Each gate's flight: the next one boarding from it, or an empty stand if its last flight just left.
+  function gateStates(dep) {
+    return [1, 2, 3, 4, 5].map(function (n) {
+      var next = dep.filter(function (r) { return r.gate === n && r.status !== 'Departed'; })[0], gone = dep.filter(function (r) { return r.gate === n && r.status === 'Departed'; })[0];
+      if (next && next.diff < 60) return { code: next.code, status: next.status };
+      return gone ? { code: gone.code, status: 'Departed' } : {};
+    });
+  }
+  function announcements(dep, arr) {
+    var out = [];
+    dep.forEach(function (r) {
+      var where = r.kind === 'heli' ? 'helipad ' + r.gate : 'gate ' + r.gate, who = r.kind === 'heli' ? 'Chopper shuttle ' + r.code : r.airline + ' flight ' + r.code;
+      if (r.status === 'Final call') out.push('Final call for passengers on ' + who + ' to ' + r.city + '. Please proceed to ' + where + ' now.');
+      else if (r.status === 'Boarding') out.push(who + ' to ' + r.city + ' is now boarding at ' + where + '.');
+      else if (r.status === 'Gate open') out.push(who + ' to ' + r.city + ': ' + where + ' is open for boarding shortly.');
+      else if (r.status === 'Delayed') out.push('We regret that ' + who + ' to ' + r.city + ' is delayed. New time ' + r.time + '.');
+    });
+    arr.forEach(function (r) { if (r.status === 'Baggage') out.push(r.code + ' from ' + r.city + ' has landed. Bags on belt ' + (1 + r.at % 4) + '.'); });
+    return out.slice(0, 4);
+  }
+  // Inside the terminal: how many people are at each stage right now, worked out from the board, plus live players here.
+  function terminalNow(dep, arr) {
+    var pax = function (r) { var n = parseInt(String(r.code).replace(/\D/g, ''), 10); return r.kind === 'heli' ? 2 + n % 4 : 40 + n % 90; }; // choppers seat a handful
+    var zones = [
+      ['🧳', 'Check-in', dep.filter(function (r) { return r.kind === 'jet' && r.diff >= 40 && r.diff < 130; }), function (r) { return Math.round(pax(r) * 0.6) + ' checking in for ' + r.code + ' to ' + r.city + ' · counters ' + (r.gate * 2 - 1) + '–' + (r.gate * 2 + 2); }],
+      ['🛂', 'Security', dep.filter(function (r) { return r.kind === 'jet' && r.diff >= 20 && r.diff < 70; }), function (r) { return Math.round(pax(r) * 0.3) + ' in the queue for ' + r.code + ' to ' + r.city; }],
+      ['🪑', 'Departure lounge', dep.filter(function (r) { return r.kind === 'jet' && r.diff >= 6 && r.diff < 45; }), function (r) { return Math.round(pax(r) * 0.5) + ' waiting near gate ' + r.gate + ' for ' + r.code; }],
+      ['🛫', 'Boarding', dep.filter(function (r) { return /Boarding|Final call/.test(r.status); }), function (r) { return (r.kind === 'heli' ? pax(r) : Math.round(pax(r) * 0.8)) + ' boarding ' + r.code + ' to ' + r.city + ' at ' + (r.kind === 'heli' ? 'helipad ' : 'gate ') + r.gate; }],
+      ['🚁', 'Heliport lounge', dep.filter(function (r) { return r.kind === 'heli' && r.diff >= -6 && r.diff < 60; }), function (r) { return pax(r) + ' VIPs for ' + r.code + ' to ' + r.city + ' · ' + r.time; }],
+      ['🛄', 'Arrivals hall', arr.filter(function (r) { return /Baggage|Landed/.test(r.status) && r.diff > -45; }), function (r) { return Math.round(pax(r) * 0.7) + ' off ' + r.code + ' from ' + r.city + (r.status === 'Baggage' ? ', at the belts' : ', heading out'); }]
+    ];
+    return zones.map(function (z) { var lines = z[2].map(z[3]), n = lines.reduce(function (a, l) { return a + (parseInt(l, 10) || 0); }, 0); return { icon: z[0], name: z[1], n: n, lines: lines.slice(0, 3) }; });
+  }
+  function airportPlayers() {
+    var apd = (D.PLACES.filter(function (p) { return p.id === (ui.airportPlace || 'airport'); })[0] || {}).district, out = [];
+    if (S.loc === apd) out.push({ label: 'You', me: true, act: ui.activity ? ACTIVITIES[ui.activity] || 'here' : 'here', female: false });
+    (online.peerList || []).filter(function (p) { return p.d === apd && !online.muted[p.by]; }).slice(0, 5).forEach(function (p) { out.push({ label: handleOf(p.by), act: p.act ? ACTIVITIES[p.act] || 'here' : 'in the terminal' }); });
+    return out;
   }
   var airportStage = null, airportKey = '';
   function airportPanel() {
-    var tab = ui.fidsTab || 'dep', rows = fids(tab), cls = { Boarding: 'st-go', 'Gate open': 'st-go', Departed: 'st-off', Landed: 'st-off', Approaching: 'st-go', Delayed: 'st-late' };
+    var tab = ui.fidsTab || 'dep', dep = fids('dep'), arr = fids('arr'), rows = tab === 'arr' ? arr : dep, cls = { Boarding: 'st-go', 'Final call': 'st-go', 'Gate open': 'st-go', Departed: 'st-off', Landed: 'st-off', Baggage: 'st-go', Approaching: 'st-go', Delayed: 'st-late' };
+    var ann = announcements(dep, arr), tabBtn = function (k, txt) { return '<button type="button" role="tab" class="dep-tab' + (tab === k ? ' on' : '') + '" id="fids-' + k + '" data-fidstab="' + k + '" aria-selected="' + (tab === k) + '">' + txt + '</button>'; };
+    var body;
+    if (tab === 'inside') {
+      var zones = terminalNow(dep, arr), pl = airportPlayers();
+      body = '<div class="term-now">' + zones.map(function (z) { return '<div class="term-zone"><b>' + z.icon + ' ' + esc(z.name) + ' <span class="muted">· ' + z.n + ' people</span></b>' + (z.lines.length ? '<ul>' + z.lines.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul>' : '<p class="muted">Quiet right now.</p>') + '</div>'; }).join('') + '</div>' +
+        '<div class="term-zone"><b>🧍 Players at the airport</b>' + (pl.length ? '<ul>' + pl.map(function (p) { return '<li><b>' + esc(p.label) + '</b> · ' + esc(p.act) + '</li>'; }).join('') + '</ul>' : '<p class="muted">No players here right now.</p>') + '</div>' +
+        '<p class="note">Counts come from the live board: people check in about two hours out, clear security, wait in the lounge and board as their flight is called.</p>';
+    } else {
+      body = '<div class="fids-wrap"><table class="fids"><thead><tr><th>Time</th><th>Flight</th><th>' + (tab === 'dep' ? 'To' : 'From') + '</th><th>Type</th><th>Gate</th><th>Status</th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td class="num">' + r.time + '</td><td class="num">' + esc(r.code) + '</td><td>' + esc(r.city) + '</td><td>' + (r.kind === 'heli' ? '🚁 Heli' : '✈️ Jet') + '</td><td class="num">' + r.gate + '</td><td class="' + (cls[r.status] || '') + '">' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    }
     return '<div class="ap-head"><b>🛬 ' + esc(ui.airportName || 'Airport') + '</b><span class="muted">' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="ap-photo" data-photo="airport" aria-label="Take a photo">📷</button><button class="btn sm ghost" id="ap-close" data-airportclose="1" aria-label="Close the airport view">✕</button></div>' +
-      '<div class="dep-tabs sm" role="tablist"><button type="button" role="tab" class="dep-tab' + (tab === 'dep' ? ' on' : '') + '" id="fids-dep" data-fidstab="dep" aria-selected="' + (tab === 'dep') + '">🛫 Departures</button><button type="button" role="tab" class="dep-tab' + (tab === 'arr' ? ' on' : '') + '" id="fids-arr" data-fidstab="arr" aria-selected="' + (tab === 'arr') + '">🛬 Arrivals</button></div>' +
-      '<div class="fids-wrap"><table class="fids"><thead><tr><th>Time</th><th>Flight</th><th>' + (tab === 'dep' ? 'To' : 'From') + '</th><th>Gate</th><th>Status</th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td class="num">' + r.time + '</td><td class="num">' + esc(r.code) + '</td><td>' + esc(r.city) + '</td><td class="num">' + r.gate + '</td><td class="' + (cls[r.status] || '') + '">' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      (ann.length ? '<div class="ap-ann" role="status" aria-live="polite">📢 ' + esc(ann[Math.floor(Date.now() / 8000) % ann.length]) + '</div>' : '') +
+      '<div class="dep-tabs sm" role="tablist">' + tabBtn('dep', '🛫 Departures') + tabBtn('arr', '🛬 Arrivals') + tabBtn('inside', '👥 Inside the terminal') + '</div>' + body +
       '<div class="inline"><button class="btn sm go" id="ap-book" data-airportgo="air">✈️ Book a flight</button><button class="btn sm" id="ap-jet" data-airportgo="jet">🛩️ My jet</button><button class="btn sm" id="ap-chop" data-airportgo="chopper">🚁 Chopper</button></div>' +
-      '<p class="note">Tap the gates, the private jets or the helipads to book. Airlines are fictional. International flights are for show; japa from the airport card.</p>';
+      '<p class="note">Tap the gates, the private jets or the helipads to book, the terminal to look inside, or the board for times. Airlines are fictional.</p>';
+  }
+  // Read new announcements aloud (sound on only), once each, after a chime.
+  function speakAnnouncement(text) {
+    if (!prefs.sound || !text || !window.speechSynthesis) return;
+    ui.spoken = ui.spoken || {}; if (ui.spoken[text]) return; ui.spoken[text] = 1;
+    try { tone(784, 0, 0.18, 'sine', 0.08); tone(988, 0.2, 0.18, 'sine', 0.08); tone(784, 0.4, 0.3, 'sine', 0.08); var u = new SpeechSynthesisUtterance(text); u.rate = 0.95; u.lang = 'en-GB'; setTimeout(function () { window.speechSynthesis.speak(u); }, 800); } catch (e) {}
   }
   function mountAirport() {
     var ov = document.getElementById('airport-view');
-    if (!ui.airportOpen || !S) { if (ov) ov.remove(); return; }
+    if (!ui.airportOpen || !S) { if (ov) ov.remove(); if (ui.apTimer) { clearInterval(ui.apTimer); ui.apTimer = null; } return; }
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'airport-view'; ov.className = 'cruise-view airport-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Live airport view');
-      if (!airportStage) airportStage = window.LasgidiAirport.create({ onTap: function (k) { if (k === 'parking') return; airportGo(k === 'departures' ? 'air' : k); } });
+      if (!airportStage) airportStage = window.LasgidiAirport.create({ onTap: function (k) {
+        if (k === 'parking') return;
+        if (k === 'terminal') { ui.fidsTab = 'inside'; mountAirport(); return; }
+        if (k === 'board') { ui.fidsTab = ui.fidsTab === 'arr' ? 'dep' : 'arr'; mountAirport(); return; }
+        airportGo(k === 'departures' ? 'air' : k);
+      } });
       var pn = document.createElement('div'); pn.className = 'cv-panel ap-panel'; pn.id = 'ap-panel'; ov.appendChild(airportStage.el); ov.appendChild(pn); document.body.appendChild(ov); airportKey = '';
+      if (!ui.apTimer) ui.apTimer = setInterval(function () { if (ui.airportOpen) mountAirport(); }, 8000); // rotate the announcements
     }
     var html = airportPanel(); if (html !== airportKey) { document.getElementById('ap-panel').innerHTML = html; airportKey = html; }
-    var h0 = L.hour(S); airportStage.update({ name: ui.airportName, night: h0 >= 19 || h0 < 6 }); airportStage.start();
+    var dep = fids('dep'), arr = fids('arr'), ann = announcements(dep, arr), city = L.cityOf(S), h0 = L.hour(S);
+    var own = function (kind) { var v = (S.vehicles || []).filter(function (x) { return D.VEHICLES[x.id] && D.VEHICLES[x.id].kind === kind; })[0]; return v ? D.VEHICLES[v.id].color || '#d4af37' : null; };
+    speakAnnouncement(ann.filter(function (a) { return /^Final call|now boarding/.test(a); })[0]);
+    airportStage.update({
+      name: city === 'lagos' ? 'Murtala Muhammed International Airport II' : ui.airportName, code: AIR_CODES[city] || 'LOS', night: h0 >= 19 || h0 < 6, clock: pad(h0) + ':' + pad(S.t % 60),
+      board: { dep: dep.slice(0, 6), arr: arr.slice(0, 6) }, gates: gateStates(dep), players: airportPlayers(),
+      nextDep: dep.filter(function (r) { return r.status !== 'Departed'; })[0] || null, nextArr: (arr.filter(function (r) { return /Approaching|Expected/.test(r.status); })[0] || {}).code || null,
+      myJet: own('jet'), myHeli: own('heli')
+    });
+    airportStage.start();
   }
   function airportGo(tab) { ui.airportOpen = false; ui.depTab = tab; clearPicks(); ui.place = ui.airportPlace || 'airport'; ui.tab = 'map'; render(); }
   /* ---------- airport departures: Air (cabins, insurance, boarding pass), My jet / charter, Chopper ---------- */

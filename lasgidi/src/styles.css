@@ -1008,3 +1008,9 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
   .venue-view .iv-spin { gap: 2px; }
   .venue-view .iv-spin .pg-zbtn { width: 34px; height: 34px; }
 }
+/* Live airport: the announcement ticker and the inside-the-terminal view. */
+.ap-ann { padding: 8px 12px; border-radius: 12px; background: #0d1420; color: #ffd23f; font: 700 13px var(--font-body); }
+.term-now { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.term-zone { padding: 10px 12px; border-radius: 14px; background: var(--sunk); }
+.term-zone ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+.term-zone p { margin: 4px 0 0; font-size: 13px; }

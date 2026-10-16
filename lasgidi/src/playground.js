@@ -511,6 +511,12 @@
       g.strokeStyle = theme.roadLine; g.lineWidth = Math.max(0.5, 0.8 * s); g.setLineDash([4 * s, 4 * s]);
       var r0 = toScreen(3.6, 1.0, 0), r1 = toScreen(9.4, 0.6, 0);
       g.beginPath(); g.moveTo(r0.x, r0.y); g.lineTo(r1.x, r1.y); g.stroke(); g.setLineDash([]);
+      // Runway 50 · 22 numbers at each end, then the apron below it: five airliners, six private jets and four helipads.
+      [[3.75, 1.0, '50'], [9.3, 0.62, '22']].forEach(function (q) { var c = toScreen(q[0], q[1], 0); g.fillStyle = '#ffffff'; g.font = '900 ' + Math.max(6, 3.2 * s) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(q[2], c.x, c.y); });
+      poly(g, [[3.6, 1.5], [9.8, 1.1], [9.85, 2.0], [3.65, 2.05]], theme.dark ? '#4a4f56' : '#b7bcc2');
+      for (var ap = 0; ap < 5; ap++) plane(g, 4.0 + ap * 0.62, 1.8 - ap * 0.035, -Math.PI / 2, ['#1d7a43', '#c0392b', '#2f6fa0', '#1d7a43', '#f2b600'][ap]);
+      for (var pj = 0; pj < 6; pj++) { var jx = 7.25 + (pj % 3) * 0.45, jy = 1.5 + Math.floor(pj / 3) * 0.32 - (pj % 3) * 0.03; plane(g, jx, jy, -Math.PI / 2, pj % 3 === 0 ? '#17181a' : '#8fa2b3'); }
+      for (var hp = 0; hp < 4; hp++) { var hc = toScreen(8.75 + (hp % 2) * 0.45, 1.45 + Math.floor(hp / 2) * 0.35, 0); g.strokeStyle = '#f2c200'; g.lineWidth = Math.max(0.6, 0.6 * s); g.beginPath(); g.ellipse(hc.x, hc.y, 2.2 * s, 1.1 * s, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#20252b'; g.beginPath(); g.ellipse(hc.x, hc.y - 0.6 * s, 1.1 * s, 0.6 * s, 0, 0, Math.PI * 2); g.fill(); }
       var sc = toScreen(STADIUM.x, STADIUM.y, 0);
       g.beginPath(); g.ellipse(sc.x, sc.y, STADIUM.rx * TW * s * 0.8, STADIUM.ry * TH * s * 0.8, 0, 0, Math.PI * 2);
       g.fillStyle = theme.dark ? '#3c6a3a' : '#6aa357'; g.fill();
