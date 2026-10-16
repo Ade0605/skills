@@ -2341,6 +2341,8 @@
     el.addEventListener('click', function (e) { if (e.target === el || (e.target.closest && e.target.closest('#rv-arrive'))) done(); });
     el.addEventListener('keydown', function (e) { if (e.key === 'Escape') done(); });
     document.body.appendChild(el);
+    // In 3D when three.js is in: the same window, with the journey built in three.js (the 2D scene stays otherwise).
+    if (window.LasgidiRide3D && window.THREE && threeState === 'ready') { var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { mode: mode, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit })) el.classList.add('rv-3dmode'); } catch (e) {} }
     var b = document.getElementById('rv-arrive'); if (b) b.focus();
     setTimeout(done, secs * 1000 + 400);
   }

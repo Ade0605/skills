@@ -1032,3 +1032,5 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .city-bar { position: absolute; right: 8px; bottom: 8px; top: auto; display: grid; gap: 4px; z-index: 2; }
 .iv.iv-3d { height: clamp(320px, 58vw, 540px); }
 .iv.iv-3d .iv-canvas { position: absolute; inset: 0; height: 100%; cursor: grab; }
+.ride-view.rv-3dmode .rv-scene { background: #9fd3ef; }
+.ride-view.rv-3dmode .rv-scene .rv-3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
