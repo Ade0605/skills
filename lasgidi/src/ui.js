@@ -2026,7 +2026,7 @@
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
-    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
+    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
     if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
@@ -2041,7 +2041,7 @@
     var html = venuePanel(pl), pn0 = document.getElementById('venue-panel');
     if (html !== venueKey) { var inp = document.getElementById('venue-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'venue-in'; pn0.innerHTML = html; venueKey = html; var ni = document.getElementById('venue-in'); if (ni) { ni.value = val; if (foc) ni.focus(); } }
     ov.classList.toggle('folded', !!ui.venueFold);
-    var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; sc.mode = pl.id === 'lekki_hyde_park' ? 'estate' : /^harbour_/.test(pl.id) ? 'harbour' : NIGHT3D(pl) ? 'club' : venueSet(pl) === 'stadium' ? 'stadium' : D.insideKind(pl) === 'market' ? 'market' : 'beach'; sc.street = pl.id === 'pitch'; sc.day = L.day(S); sc.club = pl.id === 'harbour_club'; sc.placeId = pl.id; sc.rooftop = /lounge/.test(pl.id); sc.hour = L.hour(S);
+    var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; sc.mode = pl.id === 'lekki_hyde_park' ? 'estate' : /^harbour_/.test(pl.id) ? 'harbour' : NIGHT3D(pl) ? 'club' : venueSet(pl) === 'stadium' ? 'stadium' : D.insideKind(pl) === 'market' ? 'market' : D.insideKind(pl) === 'jetty' ? 'jetty' : 'beach'; sc.street = pl.id === 'pitch'; sc.day = L.day(S); sc.club = pl.id === 'harbour_club'; sc.placeId = pl.id; sc.rooftop = /lounge/.test(pl.id); sc.hour = L.hour(S);
     var gig = (D.PLACE_ACTIONS.island || []).filter(function (x) { return x.id === 'isl_harbour_concert'; })[0]; sc.show = !!gig && L.inWindow(S, gig.when); venueStage.update(sc); venueStage.start();
     ambience(prefs.sound && !document.hidden ? AMBIENCE_OF[sc.set] || 'street' : null);
   }

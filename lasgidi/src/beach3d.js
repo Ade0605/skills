@@ -11,6 +11,7 @@
   var SPOTS_STADIUM = [[-40, -40], [-20, -41], [0, -41], [20, -41], [40, -40], [-30, -43], [10, -43], [30, -43]];
   var SPOTS_STREET = [[-16, -17], [-8, -17.5], [0, -17.5], [8, -17.5], [16, -17], [-12, -19.5], [4, -19.5], [14, -19.5]];
   var SPOTS_MARKET = [[-4, -20], [4, -20], [-5, -13], [5, -13], [-3, -6], [3, -6], [-5, 1], [5, 1]];
+  var SPOTS_JETTY = [[-8, -22], [0, -24], [8, -22], [-12, -27], [12, -27], [0, -12], [0, -2], [0, 8]];
   var SPOTS_CLUB = [[-15, -3], [-6, -7], [6, -7], [15, -3], [-17, 11], [-7, 4], [7, 4], [17, 11]];
   var SAND0 = -22, SAND_D = 38, SEA0 = 16; // sand from the lawn's edge (z -22) to the waterline (z 16)
 
@@ -96,9 +97,9 @@
       for (var c = 0; c < 5; c++) crown.add(mesh(new T.SphereGeometry(0.16, 8, 6), mat('coco', { color: 0x5a4a2a, roughness: 0.6 }), Math.cos(c * 1.3) * 0.25, -0.25, Math.sin(c * 1.3) * 0.25));
       g.add(crown); g.userData.crown = crown; dyn.add(g); palms.push(g); return g;
     }
-    function SP() { return MKT ? SPOTS_MARKET : STAD ? (sc.street ? SPOTS_STREET : SPOTS_STADIUM) : CLUB ? SPOTS_CLUB : HARBOUR ? SPOTS_HARBOUR : SPOTS; }
-    var ESTATE = false, HARBOUR = false, CLUB = false, ROOF = false, STAD = false, MKT = false; // Lekki Hyde Park: lawns and a lake; Harbour Live: a paved island in the harbour
-    function groundY(x, z) { if (CLUB || STAD || MKT) return 0.05; if (HARBOUR) return 1.2; if (ESTATE) return z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20); if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
+    function SP() { return JTY ? SPOTS_JETTY : MKT ? SPOTS_MARKET : STAD ? (sc.street ? SPOTS_STREET : SPOTS_STADIUM) : CLUB ? SPOTS_CLUB : HARBOUR ? SPOTS_HARBOUR : SPOTS; }
+    var ESTATE = false, HARBOUR = false, CLUB = false, ROOF = false, STAD = false, MKT = false, JTY = false; // Lekki Hyde Park: lawns and a lake; Harbour Live: a paved island in the harbour
+    function groundY(x, z) { if (JTY) return z > -15 ? 1.1 : 0.85; if (CLUB || STAD || MKT) return 0.05; if (HARBOUR) return 1.2; if (ESTATE) return z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20); if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
 
     /* ---------- villas with infinity pools (White Sand Beach) ---------- */
     var dyn = new T.Group(); world.add(dyn); var villas = new T.Group(), palms = []; dyn.add(villas);
@@ -524,6 +525,64 @@
       var kx = ((t * 6) % 140) - 70; MK.keke.position.set(kx, 0, -40); MK.keke.rotation.y = 0; MK.bus.position.x = -18 + Math.max(0, Math.sin(t * 0.15)) * 4;
     }
 
+
+    /* ---------- jetties and marinas: a timber pier on the lagoon, ferries and boats docking on a schedule ---------- */
+    var jetG = new T.Group(); jetG.visible = false; S3.add(jetG); var JT = {};
+    function hull(len, wid, colr, cabin, cabColr) {
+      var g = new T.Group(), sh = new T.Shape(); sh.moveTo(-len / 2, -wid / 2); sh.lineTo(len * 0.3, -wid / 2); sh.quadraticCurveTo(len / 2, -wid * 0.2, len / 2 + len * 0.08, 0); sh.quadraticCurveTo(len / 2, wid * 0.2, len * 0.3, wid / 2); sh.lineTo(-len / 2, wid / 2); sh.lineTo(-len / 2, -wid / 2);
+      var hb = mesh(new T.ExtrudeGeometry(sh, { depth: wid * 0.32, bevelEnabled: false }).rotateX(-Math.PI / 2), mat('hull' + colr, { color: colr, roughness: 0.35, metalness: 0.1 }), 0, -0.2, 0); g.add(hb);
+      g.add(mesh(new T.BoxGeometry(len * 1.02, 0.12, wid * 1.01), mat('rubb', { color: 0x1c2128 }), 0.02, wid * 0.32 - 0.36, 0)); g.add(mesh(new T.BoxGeometry(len * 0.82, 0.06, wid * 0.8), mat('boatdeck', { color: 0xc9a46a, roughness: 0.8 }), -len * 0.04, wid * 0.32 - 0.18, 0));
+      if (cabin) { g.add(mesh(new T.BoxGeometry(len * cabin, wid * 0.32, wid * 0.8), mat('cab' + cabColr, { color: cabColr, roughness: 0.4 }), -len * 0.05, wid * 0.32 + wid * 0.12, 0)); g.add(mesh(new T.BoxGeometry(len * cabin * 1.01, wid * 0.12, wid * 0.81), glassM, -len * 0.05, wid * 0.32 + wid * 0.2, 0)); }
+      jetG.add(g); return g;
+    }
+    function buildJetty() {
+      jetG.clear(); var id = sc.placeId || 'jetty', marina = /yacht|club_|vip/.test(id), makoko = id === 'makoko', r = rnd(hashStr(id)); JT = { towers: [], boats: [], wakes: [], marina: marina, makoko: makoko, lamps: [] };
+      var water = new T.Mesh(new T.PlaneGeometry(3000, 3000, 1, 1).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: makoko ? 0x4f7a6a : 0x3a8fb0, roughness: 0.2, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1 })); water.position.y = -0.4; jetG.add(water); JT.water = water;
+      // The shore: a concrete quay with a ticket kiosk, benches and a life-jacket rack.
+      jetG.add(mesh(new T.BoxGeometry(160, 2.2, 30), mat('quay', { color: 0xbdb7aa, roughness: 0.9 }), 0, -0.3, -30));
+      var kioskT = canvasTex(512, 128, function (g, w, h) { g.fillStyle = '#1f5fa0'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 52px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(sc.name || 'Jetty').toUpperCase(), w / 2, h * 0.42, w - 20); g.font = '700 26px system-ui, sans-serif'; g.fillText(marina ? 'MARINA · MEMBERS AND GUESTS' : makoko ? 'WATER TAXI · CANOES' : 'FERRY · WATER TAXI · TICKETS', w / 2, h * 0.8); });
+      jetG.add(mesh(new T.BoxGeometry(8, 3.4, 4), mat('kiosk', { color: 0xf4f3ec, roughness: 0.7 }), -14, 2.5, -20)); var ks = new T.Mesh(new T.PlaneGeometry(8, 2), new T.MeshBasicMaterial({ map: kioskT })); ks.position.set(-14, 5.1, -17.98); jetG.add(ks);
+      [-4, 4].forEach(function (x) { jetG.add(mesh(new T.BoxGeometry(5, 0.3, 0.9), mat('bench', { color: 0x8a6a3a, roughness: 0.8 }), x, 1.3, -18)); });
+      for (var lj = 0; lj < 8; lj++) jetG.add(mesh(new T.BoxGeometry(0.7, 0.9, 0.25), mat('lifej', { color: 0xff7a1a, roughness: 0.6 }), 12 + (lj % 4) * 0.8, 1.6 + Math.floor(lj / 4) * 1.0, -17.8));
+      // The pier: planks on pilings out into the water, a T-head for the ferry, cleats and lamps.
+      var deckM = mat('pierdeck', { map: deckTex, roughness: 0.85 }); jetG.add(mesh(new T.BoxGeometry(6, 0.4, 46), deckM, 0, 0.9, 6)); jetG.add(mesh(new T.BoxGeometry(34, 0.4, 6), deckM, 0, 0.9, 30));
+      for (var pz = -14; pz <= 30; pz += 4) [-2.8, 2.8].forEach(function (x) { jetG.add(mesh(new T.CylinderGeometry(0.22, 0.25, 4, 8), mat('piling', { color: 0x4a3a2a, roughness: 0.9 }), x, -0.9, pz)); });
+      for (var px = -16; px <= 16; px += 4) [27.2, 32.8].forEach(function (z) { jetG.add(mesh(new T.CylinderGeometry(0.22, 0.25, 4, 8), mat('piling', {}), px, -0.9, z)); });
+      for (var lp = -10; lp <= 26; lp += 9) [-3, 3].forEach(function (x) { jetG.add(mesh(new T.CylinderGeometry(0.08, 0.08, 3.2, 6), frameM, x, 2.7, lp)); var bm = new T.MeshBasicMaterial({ color: 0x6b6458 }), b = new T.Mesh(new T.SphereGeometry(0.25, 8, 6), bm); b.position.set(x, 4.4, lp); jetG.add(b); JT.lamps.push(bm); });
+      [-14, -6, 6, 14].forEach(function (x) { jetG.add(mesh(new T.CylinderGeometry(0.18, 0.22, 0.5, 8), mat('cleat', { color: 0x2b2f36, metalness: 0.6 }), x, 1.35, 32.6)); });
+      // Moored boats: yachts at a marina, canoes and speedboats at a public jetty, stilt houses at Makoko.
+      for (var mb = 0; mb < (marina ? 7 : 5); mb++) { var side = mb % 2 ? 1 : -1, zz = -6 + Math.floor(mb / 2) * 9, b2 = marina ? hull(14 + r() * 6, 4.2, 0xf7f7f5, 0.5, 0xeef1f3) : hull(6, 1.8, [0x2f6fa0, 0xc0392b, 0x2fa36b, 0xf2b600][mb % 4], 0, 0); b2.position.set(side * (marina ? 10 : 6), 0, zz); b2.rotation.y = Math.PI / 2 + (r() - 0.5) * 0.1; JT.boats.push({ o: b2, ph: r() * 6 }); }
+      if (makoko) { for (var sh2 = 0; sh2 < 26; sh2++) { var hx = -70 + (sh2 % 9) * 16 + r() * 6, hz = 30 + Math.floor(sh2 / 9) * 22 + r() * 6; if (Math.abs(hx) < 20 && hz < 40) continue; var hg = new T.Group(); hg.position.set(hx, 0, hz); for (var st = 0; st < 4; st++) hg.add(mesh(new T.CylinderGeometry(0.15, 0.15, 3, 6), mat('piling', {}), (st % 2 ? 2.4 : -2.4), 0.6, (st < 2 ? 2 : -2))); hg.add(mesh(new T.BoxGeometry(6, 3, 5), mat('plank' + (sh2 % 3), { color: [0x7a5a3a, 0x6b5038, 0x8a6a48][sh2 % 3], roughness: 1 }), 0, 3.6, 0)); var rf = mesh(new T.BoxGeometry(6.6, 0.15, 5.6), mat('zinc', { color: 0x9a8a78, metalness: 0.4, roughness: 0.6 }), 0, 5.3, 0); rf.rotation.z = 0.12; hg.add(rf); jetG.add(hg); } }
+      // The far shore's skyline across the water.
+      var rs = rnd(61); for (var tb = 0; tb < 30; tb++) towerBlock(-260 + tb * 18 + rs() * 8, 260 + rs() * 80, 12 + rs() * 12, makoko ? 10 + rs() * 30 : 30 + rs() * 120, 12 + rs() * 10, jetG, 0, JT.towers);
+      // The movers: a ferry, a speedboat and a canoe on a 60-second round.
+      JT.ferry = hull(22, 6, 0xf4f3ec, 0.62, 0x1f5fa0); JT.speed = hull(8, 2.4, 0xffffff, 0.3, 0x17181a); JT.canoe = hull(7, 1.2, 0x6b4a2b, 0, 0);
+      var paddler = person(5, false); paddler.position.set(0, 0.2, 0); paddler.scale.setScalar(0.9); JT.canoe.add(paddler);
+      [JT.ferry, JT.speed].forEach(function (o) { var wk = new T.Mesh(new T.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false })); jetG.add(wk); JT.wakes.push({ m: wk, o: o }); });
+      JT.labels = [sprite('', 'rgba(23,24,26,.8)', '#fff', 18), sprite('', 'rgba(23,24,26,.8)', '#fff', 12)]; JT.labels.forEach(function (l) { jetG.add(l); });
+      // Passengers waiting on the quay and the pier.
+      var NW = 46, wr = rnd(29), wb = []; for (var w = 0; w < NW; w++) wb.push(w < 26 ? [-10 + wr() * 20, -24 + wr() * 8, wr() * 6] : [(wr() - 0.5) * 4, -8 + wr() * 36, wr() * 6]);
+      JT.people = squad(NW, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec][i % 7]; }, 1, jetG); JT.peopleBase = wb;
+    }
+    // A 60-second round: the ferry comes in and ties up at the T-head, a speedboat zips past, a canoe paddles along the shore.
+    function jettyFrame(t, night) {
+      var u = (t % 60) / 60, fx, fz, fyaw = Math.PI / 2;
+      if (u < 0.35) { var a = u / 0.35, e = 1 - Math.pow(1 - a, 2); fx = -140 + e * 140; fz = 37 + (1 - e) * 30; fyaw = -Math.atan2(-30 * 2 * (1 - a), 140) ; }
+      else if (u < 0.65) { fx = 0; fz = 37; fyaw = 0; }
+      else { var d = (u - 0.65) / 0.35; fx = d * d * 160; fz = 37 + d * d * 40; fyaw = -Math.atan2(40 * d, 160 * d + 0.01); }
+      JT.ferry.position.set(fx, Math.sin(t * 1.3) * 0.08, fz); JT.ferry.rotation.y = fyaw;
+      var su = ((t + 20) % 30) / 30, sx = -200 + su * 400; JT.speed.position.set(sx, Math.sin(t * 4) * 0.12, 70); JT.speed.rotation.y = 0; JT.speed.rotation.z = 0.05;
+      var cu = ((t + 7) % 80) / 80; JT.canoe.position.set(60 - cu * 120, Math.sin(t * 2) * 0.05, -12); JT.canoe.rotation.y = Math.PI;
+      JT.wakes.forEach(function (w) { var o = w.o, moving = o === JT.speed || u < 0.35 || u > 0.65; w.m.visible = moving; w.m.position.set(o.position.x - Math.cos(o.rotation.y) * (o === JT.ferry ? 14 : 6), -0.3, o.position.z + Math.sin(o.rotation.y) * (o === JT.ferry ? 14 : 6)); w.m.rotation.y = o.rotation.y; w.m.scale.set(o === JT.ferry ? 16 : 10, 1, o === JT.ferry ? 5 : 2.4); w.m.material.opacity = 0.35 + Math.sin(t * 5) * 0.1; });
+      var dest = ['Ikorodu', 'CMS', 'Falomo', 'Ebute-Ero', 'Tarkwa Bay'][Math.floor(t / 60) % 5], docked = u >= 0.35 && u < 0.65;
+      label(JT.labels[0], docked ? '⛴ Boarding · to ' + dest : u < 0.35 ? '⛴ Arriving from ' + dest : '⛴ Departed · to ' + dest, docked ? '#1d7a43' : 'rgba(23,24,26,.8)', '#fff'); JT.labels[0].position.set(fx, 9, fz);
+      label(JT.labels[1], '🚤 Water taxi', 'rgba(23,24,26,.8)', '#fff'); JT.labels[1].position.set(JT.speed.position.x, 5, 70);
+      JT.boats.forEach(function (b) { b.o.position.y = Math.sin(t * 1.2 + b.ph) * 0.1; b.o.rotation.z = Math.sin(t * 0.9 + b.ph) * 0.02; });
+      var P = JT.people, m4 = new T.Matrix4(); for (var i = 0; i < P.n; i++) { var pb = JT.peopleBase[i], boarding = docked && i >= 26 && (u - 0.35) / 0.3 > (i - 26) / 20; var pz = boarding ? 37 : pb[1], py = boarding ? -50 : (i >= 26 ? 1.1 : 0.85); m4.makeTranslation(pb[0], py + Math.abs(Math.sin(t * 2 + pb[2])) * 0.03, pz); P.body.setMatrixAt(i, m4); P.head.setMatrixAt(i, m4); }
+      P.body.instanceMatrix.needsUpdate = P.head.instanceMatrix.needsUpdate = true;
+      JT.lamps.forEach(function (m) { m.color.set(night ? 0xffd27a : 0x6b6458); }); JT.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); JT.water.material.color.set(night ? 0x0b2236 : JT.makoko ? 0x4f7a6a : 0x3a8fb0);
+    }
+
     /* ---------- people, signs, the gem ---------- */
     var SKIN = [0x6b4029, 0x8a5a3c, 0x4a2c1c, 0x9b6a4b], CL = [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec, 0x17181a];
     function person(i, female) {
@@ -562,14 +621,14 @@
     var built = '';
     function build() {
       var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.rooftop ? 'r' : '') + (sc.name || ''); if (key === built) return; built = key;
-      ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; MKT = sc.mode === 'market'; if (MKT) buildMarket(); if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
-      harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; mktG.visible = MKT; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
+      ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; MKT = sc.mode === 'market'; JTY = sc.mode === 'jetty'; if (MKT) buildMarket(); if (JTY) buildJetty(); if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
+      harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; mktG.visible = MKT; jetG.visible = JTY; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
       // Frame: the estate uses a wider lens so the pool below and the skyline above both fit, as in a terrace photo.
-      if (MKT) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.16; orbit.r = 36; orbit.tx = 0; orbit.tz = 4; } else if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 84; orbit.tx = 0; orbit.tz = sc.street ? 2 : 4; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
+      if (JTY) { cam.fov = 52; orbit.az = 0.35; orbit.pol = 1.2; orbit.r = 52; orbit.tx = 0; orbit.tz = 8; } else if (MKT) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.16; orbit.r = 36; orbit.tx = 0; orbit.tz = 4; } else if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 84; orbit.tx = 0; orbit.tz = sc.street ? 2 : 4; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
       cam.updateProjectionMatrix(); place();
-      estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB && !STAD && !MKT; });
+      estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB && !STAD && !MKT && !JTY; });
       dyn.clear(); palms = []; villas = new T.Group(); beachBits = new T.Group(); dyn.add(villas, beachBits);
-      if (CLUB || STAD || MKT) return;
+      if (CLUB || STAD || MKT || JTY) return;
       if (HARBOUR) { [[-80, -20], [-60, 50], [70, 60], [85, -20], [-30, -50], [40, -50], [-95, 90], [95, 95]].forEach(function (q, i) { palm(q[0], q[1], 9 + (i % 3), (i % 2 ? -0.2 : 0.2)); }); return; }
       if (ESTATE) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); [[-30, 3, 9, 0.3], [-4, 5, 8.5, 0.4], [20, 4, 9.5, 0.2], [44, 2, 9, -0.3], [-25, -24, 12, 0.1], [28, -24, 12, 0.15], [-2, -21, 9, 0.35], [30, 22, 10, -0.2], [-50, 18, 11, 0.25]].forEach(function (q) { palm(q[0], q[1], q[2], q[3]); }); return; }
       if (sc.villas) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); } // the view is from the -12 villa's terrace
@@ -606,7 +665,7 @@
     function frame(now) {
       size(); var t = reduce ? 3 : now / 1000, night = sc.night ? 1 : 0, rain = sc.weather === 'rain' || sc.weather === 'storm';
       var nv = night ? 0.85 : 0; if (Math.abs(skyU.night.value - nv) > 0.01) { skyU.night.value += (nv - skyU.night.value) * 0.1; if (Math.abs(skyU.night.value - nv) <= 0.01) { skyU.night.value = nv; bakeEnv(); } } hemi.intensity = night ? 0.25 : rain ? 0.6 : 0.85; sun.intensity = night ? 0.15 : rain ? 0.7 : 2.2; sun.color.set(night ? 0x8fa8ff : 0xffe2b8); hemi.color.set(0xfff1dd);
-      S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD || MKT ? 0.45 : 1);
+      S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD || MKT || JTY ? 0.45 : 1);
       poolM.emissive.set(night ? 0x1fa9c9 : 0x000000); poolM.emissiveIntensity = night ? 0.9 : 0; // underwater lights after dark
       if (HARBOUR) {
         var beat = Math.abs(Math.sin(t * 2.2)), lit = night ? 1 : 0.35, show = sc.show !== false, fshow = sc.hour == null || (sc.hour >= 19 && sc.hour < 23), jk = fshow ? 1 : 0.45;
@@ -617,6 +676,8 @@
         (HB.towers || []).forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); HB.boards.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0.2; }); HB.clubGlass.emissiveIntensity = night ? 0.6 : 0;
         HB.water.material.color.set(night ? 0x0b2236 : 0x1b4f6e); HB.lights.forEach(function (L0) { L0.intensity = night ? L0.userData.max * 3 : 0; }); if (night) hemi.intensity = 0.55;
         var mx = new T.Matrix4(); for (var ci = 0; ci < HB.crowdN; ci++) { var cb = HB.crowdBase[ci], jump = show && (night || reduce) ? Math.max(0, Math.sin(t * 6 + cb[2])) * 0.6 * beat : 0; mx.makeTranslation(cb[0], 1.2 + jump, cb[1]); HB.crowd.setMatrixAt(ci, mx); HB.heads.setMatrixAt(ci, mx); } HB.crowd.count = HB.heads.count = show ? HB.crowdN : 40; HB.crowd.instanceMatrix.needsUpdate = true; HB.heads.instanceMatrix.needsUpdate = true;
+      } else if (JTY) {
+        jettyFrame(reduce ? 30 : t, !!night); if (night) hemi.intensity = 0.45;
       } else if (MKT) {
         var mopen = sc.hour == null ? !night : sc.hour >= 6 && sc.hour < 20;
         marketFrame(reduce ? 20 : t, mopen);
@@ -648,7 +709,7 @@
       crowd.forEach(function (p, i) { if (!p.visible || !p.userData.home) return; var hx = p.userData.home[0], hz = p.userData.home[1], u = reduce ? 0 : Math.sin(t * 0.25 + i), x = hx + u * 2.5, z = hz + Math.cos(t * 0.2 + i) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = Math.cos(t * 0.25 + i) > 0 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
       if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
       if (gem && sc.gem) { var gq = SP()[sc.gem.slot % SP().length]; gem.position.set(gq[0] - 2.5, groundY(gq[0] - 2.5, gq[1] + 2) + 1.2 + Math.sin(t * 2) * 0.25, gq[1] + 2); gem.rotation.y = t * 1.5; }
-      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
+      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
       signs.forEach(function (s) { s.visible = s.visible && !sc.clean; });
       renderer.render(S3, cam);
