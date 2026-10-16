@@ -379,6 +379,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--sunk); border: 1px solid var(--line); border-radius: 999px; padding: 4px; margin: 6px 0; }
 .seg-b { border: 0; background: transparent; color: var(--ink); border-radius: 999px; padding: 10px 8px; font: 700 14px var(--font-body); cursor: pointer; }
 .seg-b.sel { background: var(--ink); color: var(--paper); }
+.seg.venue-tabs { grid-auto-flow: column; grid-auto-columns: 1fr; grid-template-columns: none; }
 /* Car dealer */
 .dl-head { font-size: 14px; margin: 2px 0 4px; }
 .dl-sum { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--muted); margin: 4px 0 8px; }

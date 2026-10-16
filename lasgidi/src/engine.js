@@ -38,7 +38,9 @@
   // 15 keeps the once-a-day room limits (catch-ups, room nights) across visits, so leaving and re-entering does not reset them.
   // 16 closes the loopholes found in an audit: stock buys over the cap, manager hire/fire visits, interest-free
   // week loans, uncapped tournaments and street mini-games, old gem dates, cruise re-boarding, forged gifts, job re-applies.
-  var RULES = 16;
+  // 17 opens every place INSIDE (everyday acts by kind of place) and makes trekking open: no distance cap in a city,
+  // never too tired to set off (you arrive spent, slower and stressed, but never below 5 energy).
+  var RULES = 17;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -190,7 +192,7 @@
 
   // Spending and income categories for the weekly report.
   var FOOD_LABELS = {}, GIG_LABELS = {};
-  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; })).forEach(function (list) {
+  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; })).forEach(function (list) {
     list.forEach(function (a) {
       if ((a.fx && a.fx.hunger > 0) || a.special === 'pantry7') FOOD_LABELS[a.label] = true;
       if (a.gig) GIG_LABELS[a.label] = true;
@@ -427,6 +429,7 @@
         s.needs.stress = clamp(s.needs.stress - 2 * h, 0, 100);
       } else {
         NEEDS.forEach(function (k) { s.needs[k] = clamp(s.needs[k] - DECAY[k] * h, 0, 100); });
+        if (mode.floor && s.needs.energy < mode.floor) s.needs.energy = mode.floor; // a slow trek with rests on the way
       }
       var m = minuteOfDay(s);
       if (m % 60 === 0) onHour(s);
@@ -695,6 +698,14 @@
     return roundTo(v, 50);
   }
 
+  // INSIDE acts for every kind of place in a district (rules 17), once each.
+  var INSIDE_AT = {};
+  function insideActions(d) {
+    if (INSIDE_AT[d]) return INSIDE_AT[d];
+    var seen = {}, out = [];
+    D.PLACES.forEach(function (p) { if (p.district !== d) return; var k = D.insideKind(p); if (seen[k]) return; seen[k] = true; out = out.concat(D.INSIDE[k] || []); });
+    return (INSIDE_AT[d] = out);
+  }
   // retired actions are hidden from players but still run, so lives that used them replay.
   function availableActions(s, withRetired) {
     var list = [];
@@ -705,6 +716,7 @@
       if (a.needsVehicle && !(s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === a.needsVehicle; })) return;
       list.push(a);
     });
+    if (s.rules >= 17) list = list.concat(insideActions(s.loc));
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
@@ -1376,7 +1388,7 @@
       else if (m.stops === 'brt' && (D.BRT_STOPS.indexOf(from) < 0 || D.BRT_STOPS.indexOf(dest) < 0)) o.disabled = 'No BRT on this route';
       else if (m.stops === 'rail' && !railLine(from, dest)) o.disabled = 'No train on this route';
       else if (m.noBridge && crossing) o.disabled = 'Keke cannot use the bridges';
-      else if (km > m.maxKm) o.disabled = 'Too far (' + km + ' km)';
+      else if (km > m.maxKm && !(id === 'trek' && s.rules >= 17)) o.disabled = 'Too far (' + km + ' km)';
       else if (wx === 'storm' && (id === 'okada' || id === 'keke')) o.disabled = 'Riders have parked till the storm passes';
       else if (wx === 'storm' && (id === 'ferry' || id === 'boat')) o.disabled = 'Boats are not sailing in this storm';
       var f = 1;
@@ -1404,7 +1416,10 @@
       if (!o.disabled && s.japa) o.disabled = 'You have japa-ed';
       if (!o.disabled && s.pending.length) o.disabled = 'Decide on the open event first';
       if (!o.disabled && o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost);
-      if (!o.disabled && id === 'trek' && s.needs.energy - o.energy - DECAY.energy * o.mins / 60 <= 5) o.disabled = 'Too tired to trek that far';
+      if (!o.disabled && id === 'trek' && s.needs.energy - o.energy - DECAY.energy * o.mins / 60 <= 5) {
+        if (s.rules < 17) o.disabled = 'Too tired to trek that far';
+        else { o.mins = ceilTo(o.mins * 1.5, STEP); o.energy = Math.max(0, Math.floor(s.needs.energy - 5 - DECAY.energy * o.mins / 60)); o.tired = true; }
+      }
       return o;
     });
   }
@@ -1417,8 +1432,9 @@
     if (o.disabled) return fail(o.disabled);
     if (o.cost && !pay(s, o.cost, D.MODES[mode].name + ' to ' + D.DISTRICTS[dest].name)) return fail('Not enough for the fare.');
     var night = hour(s) >= 21 || hour(s) < 5;
-    advance(s, o.mins);
+    advance(s, o.mins, o.tired ? { floor: 5 } : null);
     if (o.energy) applyFx(s, { energy: -o.energy, hygiene: -o.km * 2 });
+    if (o.tired) applyFx(s, { stress: 8 });
     var m = D.MODES[mode];
     if (m.stress) applyFx(s, { stress: m.stress * o.traffic * o.mins / 60 });
     if (mode === 'cab' || mode === 'ferry') applyFx(s, { stress: -3 });

@@ -866,7 +866,7 @@ test('cities: districts on land in their own city; same-city travel only; fly an
   assert.ok(L.travelOptions(s, 'abj_wuse').every(o => o.disabled), 'no danfo to Abuja');
   assert.match(L.intercityOptions(s, 'abuja').find(o => o.mode === 'flight').disabled || '', /Leaves from Ikeja/);
   // Get to the airport, then fly.
-  if (s.loc !== 'ikeja') { const o = L.travelOptions(s, 'ikeja').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(s, 'ikeja', o.mode).ok); }
+  if (s.loc !== 'ikeja') { const o = L.travelOptions(s, 'ikeja').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(s, 'ikeja', o.mode).ok); }
   while (s.pending.length) L.resolveChoice(s, 1);
   const before = s.cash + s.bank, r = L.intercity(s, 'abuja', 'flight');
   assert.ok(r.ok, r.msg);
@@ -2145,7 +2145,7 @@ test('lagoon cruise: board in Ikoyi, spots only while aboard, the deck tires, De
   const s = L.newGame({ seed: 91, origin: 'nepo', goal: 'freestyle' });
   while (s.pending.length) L.resolveChoice(s, 1);
   assert.equal(L.cruiseSpot(s, 'party').ok, false, 'not aboard');
-  if (s.loc !== 'ikoyi') { const o = L.travelOptions(s, 'ikoyi').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(s, 'ikoyi', o.mode).ok); }
+  if (s.loc !== 'ikoyi') { const o = L.travelOptions(s, 'ikoyi').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(s, 'ikoyi', o.mode).ok); }
   while (s.pending.length) L.resolveChoice(s, 1);
   if (L.hour(s) < 9) L.wait(s, (9 - L.hour(s)) * 60);
   while (s.pending.length) L.resolveChoice(s, 1);
@@ -2182,7 +2182,7 @@ test('fishing: a rod once, three casts a day at a waterfront, sell at 80% or coo
   while (s.pending.length) L.resolveChoice(s, 1);
   assert.match(L.fishInfo(s).why, /rod/);
   assert.ok(L.buyRod(s).ok); assert.equal(L.buyRod(s).ok, false);
-  if (!D.FISHING.spots[s.loc]) { const o = L.travelOptions(s, 'lekki').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(s, 'lekki', o.mode).ok); }
+  if (!D.FISHING.spots[s.loc]) { const o = L.travelOptions(s, 'lekki').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(s, 'lekki', o.mode).ok); }
   for (let i = 0; i < 3; i++) { while (s.pending.length) L.resolveChoice(s, 1); assert.ok(L.fish(s).ok); }
   while (s.pending.length) L.resolveChoice(s, 1);
   assert.match(L.fishInfo(s).why, /Three casts/);
@@ -2211,7 +2211,7 @@ test('live rooms: beach entry and spots, Tidewater members only, boosts taper, r
   s.pending = []; assert.ok(L.roomEnter(s, 'tidewater').ok); s.pending = []; assert.ok(L.roomSpot(s, 'tidewater', 'oven').ok);
   const r = L.newGame({ seed: 100, origin: 'nepo', goal: 'freestyle' });
   while (r.pending.length) L.resolveChoice(r, 1);
-  if (r.loc !== 'ajah') { const o = L.travelOptions(r, 'ajah').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'ajah', o.mode).ok); }
+  if (r.loc !== 'ajah') { const o = L.travelOptions(r, 'ajah').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'ajah', o.mode).ok); }
   while (r.pending.length) L.resolveChoice(r, 1);
   if (L.hour(r) < 7) L.wait(r, (7 - L.hour(r)) * 60);
   while (r.pending.length) L.resolveChoice(r, 1);
@@ -2256,13 +2256,13 @@ test('live rooms: Abuja and PH rooms open in their own city, keep their hours, a
   // A real life: fly to Abuja, go to Wuse market and walk the stalls; it replays to the same seal.
   const r = L.newGame({ seed: 78, origin: 'nepo', goal: 'freestyle' });
   while (r.pending.length) L.resolveChoice(r, 1);
-  const go = L.travelOptions(r, 'ikeja').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0];
+  const go = L.travelOptions(r, 'ikeja').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0];
   assert.ok(L.travel(r, 'ikeja', go.mode).ok); while (r.pending.length) L.resolveChoice(r, 1);
   const o = L.intercityOptions(r, 'abuja').find(o => o.mode === 'flight' && !o.disabled);
   assert.ok(o && L.intercity(r, 'abuja', 'flight').ok, 'fly to Abuja');
   {
     while (r.pending.length) L.resolveChoice(r, 1);
-    if (r.loc !== 'abj_wuse') { const t = L.travelOptions(r, 'abj_wuse').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; if (t) L.travel(r, 'abj_wuse', t.mode); }
+    if (r.loc !== 'abj_wuse') { const t = L.travelOptions(r, 'abj_wuse').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; if (t) L.travel(r, 'abj_wuse', t.mode); }
     while (r.pending.length) L.resolveChoice(r, 1);
     const h = L.hour(r); if (h < 8 || h >= 16) L.wait(r, ((32 - h) % 24) * 60);
     while (r.pending.length) L.resolveChoice(r, 1);
@@ -2285,7 +2285,7 @@ test('room nights: join once on the right weekday and hours, past midnight too, 
   const r = L.newGame({ seed: 92, origin: 'nepo', goal: 'freestyle' }); while (r.pending.length) L.resolveChoice(r, 1);
   assert.match(L.roomNightInfo(r, 'park').why, /Fris 18:00–23:00|Go in first/);
   // A real life on the island that waits for Friday evening at Freedom Park replays to its seal.
-  if (r.loc !== 'island') { const o = L.travelOptions(r, 'island').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'island', o.mode).ok); }
+  if (r.loc !== 'island') { const o = L.travelOptions(r, 'island').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'island', o.mode).ok); }
   while (r.pending.length) L.resolveChoice(r, 1);
   for (let i = 0; i < 20 && !(L.roomNightInfo(r, 'park').live); i++) { L.wait(r, 60 * 6); while (r.pending.length) L.resolveChoice(r, 1); }
   while (!L.roomNightInfo(r, 'park').live) { L.wait(r, 60); while (r.pending.length) L.resolveChoice(r, 1); }
@@ -2307,7 +2307,7 @@ test('room friends: hang out once a day with a friend who is in the room, and re
   assert.ok(L.roomHang(s, 'market', 'bisi').ok);
   // A real life: go to Lagos Island, walk into Balogun and catch up with Mama Bisi.
   const r = L.newGame({ seed: 94, origin: 'nepo', goal: 'freestyle' }); while (r.pending.length) L.resolveChoice(r, 1);
-  if (r.loc !== 'island') { const o = L.travelOptions(r, 'island').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'island', o.mode).ok); }
+  if (r.loc !== 'island') { const o = L.travelOptions(r, 'island').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'island', o.mode).ok); }
   while (r.pending.length) L.resolveChoice(r, 1);
   while (L.roomBlock(r, 'market')) { L.wait(r, 60); while (r.pending.length) L.resolveChoice(r, 1); }
   assert.ok(L.roomEnter(r, 'market').ok); while (r.pending.length) L.resolveChoice(r, 1);
@@ -2398,9 +2398,9 @@ test('local friends: catch up once a day in Abuja and PH rooms, perks at 40 unde
   w.pending = []; assert.ok(L.roomSpot(w, 'wuse_mkt', 'phones').ok); w.pending = []; b = w.cash + w.bank; assert.ok(L.roomSpot(w, 'wuse_mkt', 'buka').ok); assert.equal(b - (w.cash + w.bank), L.price(w, 1500));
   // A real life: fly to Port Harcourt, ride to D-Line, catch up with Ibiere at Mile 1; it replays to its seal.
   const r = L.newGame({ seed: 99, origin: 'nepo', goal: 'freestyle' }); while (r.pending.length) L.resolveChoice(r, 1);
-  const go = L.travelOptions(r, 'ikeja').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; if (r.loc !== 'ikeja') assert.ok(L.travel(r, 'ikeja', go.mode).ok); while (r.pending.length) L.resolveChoice(r, 1);
+  const go = L.travelOptions(r, 'ikeja').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; if (r.loc !== 'ikeja') assert.ok(L.travel(r, 'ikeja', go.mode).ok); while (r.pending.length) L.resolveChoice(r, 1);
   assert.ok(L.intercity(r, 'ph', 'flight').ok); while (r.pending.length) L.resolveChoice(r, 1);
-  const t = L.travelOptions(r, 'ph_dline').filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'ph_dline', t.mode).ok); while (r.pending.length) L.resolveChoice(r, 1);
+  const t = L.travelOptions(r, 'ph_dline').filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; assert.ok(L.travel(r, 'ph_dline', t.mode).ok); while (r.pending.length) L.resolveChoice(r, 1);
   while (L.roomBlock(r, 'mile1')) { L.wait(r, 60); while (r.pending.length) L.resolveChoice(r, 1); }
   assert.ok(L.roomEnter(r, 'mile1').ok); while (r.pending.length) L.resolveChoice(r, 1);
   assert.ok(L.roomHang(r, 'mile1', 'ibiere').ok, L.roomHangBlock(r, 'mile1', 'ibiere'));
@@ -2503,7 +2503,7 @@ test('Abuja and PH: new careers, homes and business sites are valid and live in 
 test('Port Harcourt life: dock job, a shift, the D-Line flat and a D-Line business, replayed to its seal', () => {
   const r = L.newGame({ seed: 101, origin: 'nepo', goal: 'freestyle' }); const done = () => { while (r.pending.length) L.resolveChoice(r, 1); };
   done();
-  const go = (d) => { if (r.loc === d) return; const o = L.travelOptions(r, d).filter(o => !o.disabled).sort((a, b) => a.cost - b.cost)[0]; assert.ok(o && L.travel(r, d, o.mode).ok, 'to ' + d); done(); };
+  const go = (d) => { if (r.loc === d) return; const o = L.travelOptions(r, d).filter(o => !o.disabled && !(o.mode === 'trek' && (o.tired || o.km > 45))).sort((a, b) => a.cost - b.cost)[0]; assert.ok(o && L.travel(r, d, o.mode).ok, 'to ' + d); done(); };
   go('ikeja'); assert.ok(L.intercity(r, 'ph', 'flight').ok); done();
   go('ph_borokiri'); assert.ok(L.applyJob(r, 'ph_docks').ok, L.jobEligibility(r, 'ph_docks').reason); done();
   for (let i = 0; i < 48 && !L.availableActions(r).some(a => a.id === 'work_shift' && !a.disabled); i++) { L.wait(r, 60); done(); if (r.loc !== 'ph_borokiri') go('ph_borokiri'); }
@@ -2514,4 +2514,32 @@ test('Port Harcourt life: dock job, a shift, the D-Line flat and a D-Line busine
   assert.ok(mv.ok, mv.msg); assert.equal(r.home, 'ph_dline_flat');
   assert.ok(biz.ok, biz.msg); assert.equal(r.businesses[0].site, 'ph_dline');
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});
+
+test('rules 17: every place has INSIDE acts on the 15-minute grid that never pay out; hidden under rules 16', () => {
+  const ids = new Set(Object.values(D.PLACE_ACTIONS).flat().map(a => a.id));
+  for (const [k, list] of Object.entries(D.INSIDE)) for (const a of list) {
+    assert.ok(a.mins > 0 && a.mins % 15 === 0, a.id); assert.ok(!ids.has(a.id), 'duplicate id ' + a.id); ids.add(a.id);
+    assert.ok(!a.earn && !a.gig, a.id + ' pays nothing out');
+  }
+  for (const p of D.PLACES) assert.ok((D.INSIDE[D.insideKind(p)] || []).length >= 3, p.id + ' has at least 3 things to do inside');
+  const s = L.newGame({ seed: 71, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 17);
+  const here = L.availableActions(s).filter(a => a.inside);
+  assert.ok(here.length >= 3, 'inside acts where you start');
+  const a = here.find(x => !x.disabled); const r = L.doAction(s, a.id); assert.ok(r.ok, r.msg); sane(s);
+  const old = L.newGame({ seed: 71, origin: 'mid', goal: 'freestyle', rules: 16 });
+  assert.ok(!L.availableActions(old).some(x => x.inside), 'no INSIDE acts under rules 16');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});
+
+test('rules 17: trekking is free and open across a city, even when tired; rules 16 keeps its limits', () => {
+  const s = L.newGame({ seed: 72, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  s.loc = 'festac'; s.needs.energy = 20;
+  const o = L.travelOptions(s, 'ajah').find(x => x.mode === 'trek');
+  assert.ok(o.km > 45, 'a long way'); assert.ok(!o.disabled, o.disabled); assert.equal(o.cost, 0); assert.ok(o.tired);
+  const r = L.travel(s, 'ajah', 'trek'); assert.ok(r.ok, r.msg); assert.equal(s.loc, 'ajah'); assert.ok(s.needs.energy >= 0); sane(s);
+  const old = L.newGame({ seed: 72, origin: 'mid', goal: 'freestyle', rules: 16 }); old.loc = 'festac'; old.needs.energy = 20;
+  assert.match(L.travelOptions(old, 'ajah').find(x => x.mode === 'trek').disabled || '', /Too far|Too tired/);
+  assert.match(L.travelOptions(s, 'abj_wuse').find(x => x.mode === 'trek').disabled || '', /Fly or take a bus/);
 });

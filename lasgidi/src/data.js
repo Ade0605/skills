@@ -1604,6 +1604,45 @@
   };
 
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  // INSIDE (rules 17): everyday things to do once you walk into a place, by the kind of place. They cost a little
+  // or nothing and pay nothing out, so they make the city fuller without making money easier.
+  var INSIDE = {
+    eatery:    [{ label: 'Order a plate of rice and stew', mins: 30, cost: 2500, fx: { hunger: 35, fun: 2 } }, { label: 'Buy a cold zobo to go', mins: 15, cost: 500, fx: { hunger: 5, stress: -2 } }, { label: 'Gist with the cook', mins: 15, fx: { social: 5, fun: 2 } }],
+    market:    [{ label: 'Haggle for foodstuff', mins: 45, cost: 3000, fx: { hunger: 20, stress: 2 }, xp: { hustle: 1 } }, { label: 'Look through the ankara stalls', mins: 30, fx: { fun: 4, energy: -3 } }, { label: 'Eat at the buka inside', mins: 30, cost: 1800, fx: { hunger: 30 } }, { label: 'Help a trader pack up', mins: 30, fx: { social: 6, energy: -5 } }],
+    cinema:    [{ label: 'Buy popcorn and a drink', mins: 15, cost: 2500, fx: { hunger: 8, fun: 3 } }, { label: 'Watch the trailers in the lobby', mins: 15, fx: { fun: 3 } }, { label: 'Play the arcade machines', mins: 30, cost: 1500, fx: { fun: 8, stress: -3 } }],
+    culture:   [{ label: 'Walk the gallery rooms', mins: 45, fx: { fun: 6, stress: -4 } }, { label: 'Join a guided talk', mins: 60, cost: 1000, fx: { fun: 5, social: 4 } }, { label: 'Buy a print at the gift shop', mins: 15, cost: 3000, fx: { fun: 3 } }],
+    music:     [{ label: 'Catch the soundcheck', mins: 30, fx: { fun: 6, stress: -3 } }, { label: 'Dance at the front', mins: 60, fx: { fun: 10, energy: -8 }, xp: { fitness: 1 }, when: { from: 18, to: 24 } }, { label: 'Buy a drink at the bar', mins: 15, cost: 2000, fx: { fun: 3, social: 2 } }],
+    park:      [{ label: 'Take a slow walk round', mins: 30, fx: { stress: -6, energy: -3 } }, { label: 'Sit in the shade and people-watch', mins: 30, fx: { stress: -5, fun: 2 } }, { label: 'Picnic with a meat pie', mins: 30, cost: 1200, fx: { hunger: 12, fun: 4 } }],
+    campus:    [{ label: 'Read in the library', mins: 60, fx: { stress: -2, energy: -4 }, xp: { tech: 1 } }, { label: 'Sit in on a lecture', mins: 90, fx: { energy: -6 }, xp: { charisma: 1 } }, { label: 'Eat at the cafeteria', mins: 30, cost: 1200, fx: { hunger: 28 } }],
+    tech:      [{ label: 'Work from the hot desks', mins: 60, cost: 1500, fx: { energy: -4 }, xp: { tech: 1 } }, { label: 'Join a meetup talk', mins: 60, fx: { social: 6, fun: 3 }, xp: { tech: 1 } }, { label: 'Free coffee at the pantry', mins: 15, fx: { energy: 4 } }],
+    workshop:  [{ label: 'Watch the artisans at work', mins: 30, fx: { fun: 3 }, xp: { craft: 1 } }, { label: 'Get your phone screen fixed', mins: 45, cost: 4000, fx: { stress: -4 } }, { label: 'Lend a hand for an hour', mins: 60, fx: { energy: -6, social: 4 }, xp: { craft: 1 } }],
+    dealer:    [{ label: 'Test-sit the new arrivals', mins: 30, fx: { fun: 5 } }, { label: 'Talk prices with a salesman', mins: 30, fx: { social: 3 }, xp: { hustle: 1 } }, { label: 'Free water and AC in the lounge', mins: 15, fx: { stress: -3 } }],
+    airport:   [{ label: 'Watch the planes from the gallery', mins: 30, fx: { fun: 5, stress: -2 } }, { label: 'Coffee at the terminal café', mins: 15, cost: 2500, fx: { energy: 4 } }, { label: 'Browse duty-free', mins: 30, fx: { fun: 3 } }],
+    jetty:     [{ label: 'Watch the boats come in', mins: 30, fx: { stress: -5 } }, { label: 'Buy fresh fish off a canoe', mins: 30, cost: 3500, fx: { hunger: 10 } }, { label: 'Chat with the boatmen', mins: 15, fx: { social: 5 } }],
+    motorpark: [{ label: 'Buy gala and a sachet of water', mins: 15, cost: 400, fx: { hunger: 10 } }, { label: 'Listen to the touts and preachers', mins: 15, fx: { fun: 3, stress: 2 } }, { label: 'Ask about the next bus out', mins: 15, fx: { social: 2 } }],
+    salon:     [{ label: 'Wash and blow-dry', mins: 60, cost: 3500, fx: { hygiene: 25, stress: -4 } }, { label: 'Get a quick shape-up', mins: 30, cost: 1500, fx: { hygiene: 10, fun: 2 } }, { label: 'Catch up on the gist under the dryer', mins: 30, fx: { social: 6 } }],
+    stadium:   [{ label: 'Jog the track', mins: 30, fx: { energy: -8, stress: -5 }, xp: { fitness: 1 } }, { label: 'Play five-a-side with the boys', mins: 60, fx: { energy: -12, fun: 8, social: 5 }, xp: { fitness: 1 } }, { label: 'Buy a jersey from the stand', mins: 15, cost: 6000, fx: { fun: 4 } }],
+    hospital:  [{ label: 'Free blood pressure check', mins: 30, fx: { stress: -2 } }, { label: 'Buy vitamins at the pharmacy', mins: 15, cost: 2500, fx: { energy: 3 } }, { label: 'Visit the sick ward', mins: 30, fx: { social: 5, stress: 2 } }],
+    church:    [{ label: 'Pray quietly', mins: 30, fx: { stress: -8 } }, { label: 'Give an offering', mins: 15, cost: 1000, fx: { stress: -3, social: 2 } }, { label: 'Sit in on choir practice', mins: 60, fx: { fun: 4, social: 5 }, xp: { music: 1 } }],
+    mosque:    [{ label: 'Pray in the hall', mins: 30, fx: { stress: -8 } }, { label: 'Give sadaqah at the gate', mins: 15, cost: 1000, fx: { stress: -3, social: 2 } }, { label: 'Join the study circle', mins: 60, fx: { social: 5 }, xp: { charisma: 1 } }],
+    govt:      [{ label: 'Queue to renew your documents', mins: 90, cost: 2000, fx: { stress: 6, energy: -5 } }, { label: 'Read the notice boards', mins: 15, fx: { fun: 1 } }, { label: 'Tour the old building', mins: 45, fx: { fun: 5 } }],
+    bank:      [{ label: 'Update your account details', mins: 45, fx: { stress: 3 } }, { label: 'Ask about savings plans', mins: 30, fx: { stress: -1 }, xp: { hustle: 1 } }, { label: 'Cool off in the banking hall AC', mins: 15, fx: { stress: -2 } }],
+    gym:       [{ label: 'Do a full workout', mins: 60, cost: 2000, fx: { energy: -12, stress: -6, hygiene: -10 }, xp: { fitness: 1 } }, { label: 'Use the sauna', mins: 30, cost: 1500, fx: { stress: -6, hygiene: 5 } }, { label: 'Buy a protein shake', mins: 15, cost: 2500, fx: { hunger: 12 } }],
+    lounge:    [{ label: 'Order small chops', mins: 30, cost: 6000, fx: { hunger: 18, fun: 3 } }, { label: 'Take a table with a view', mins: 60, cost: 8000, fx: { fun: 8, social: 6 }, when: { from: 17, to: 24 } }, { label: 'Dance by the DJ', mins: 60, fx: { fun: 10, energy: -8 }, when: { from: 20, to: 24 } }],
+    beach:     [{ label: 'Walk barefoot on the sand', mins: 30, fx: { stress: -7, energy: -3 } }, { label: 'Hire a chair and umbrella', mins: 60, cost: 3000, fx: { stress: -8, fun: 4 } }, { label: 'Eat roasted corn and coconut', mins: 15, cost: 1000, fx: { hunger: 12 } }, { label: 'Paddle in the shallows', mins: 30, fx: { fun: 6, hygiene: -4 } }],
+    estate:    [{ label: 'Stroll the boulevard', mins: 30, fx: { stress: -5 } }, { label: 'Look round the show home', mins: 45, fx: { fun: 5 } }, { label: 'Sit by the lagoon', mins: 30, fx: { stress: -6 } }],
+    refinery:  [{ label: 'Take the visitors\' tour', mins: 60, fx: { fun: 5, energy: -4 }, xp: { craft: 1 } }, { label: 'Eat at the canteen', mins: 30, cost: 1500, fx: { hunger: 28 } }, { label: 'Read the safety boards', mins: 15, fx: { stress: 1 } }]
+  };
+  var INSIDE_BY_GLYPH = { bowl: 'eatery', basket: 'market', film: 'cinema', mask: 'culture', frame: 'culture', note: 'music', tree: 'park', cap: 'campus', phone: 'tech', laptop: 'tech', tool: 'workshop', car: 'dealer', plane: 'airport', boat: 'jetty', yacht: 'jetty', bus: 'motorpark', scissors: 'salon', ball: 'stadium', stadium: 'stadium', cross: 'hospital', mosque: 'mosque', hall: 'church', naira: 'bank', dumbbell: 'gym', glass: 'lounge', club: 'lounge', wave: 'beach', umbrella: 'beach', estate: 'estate' };
+  function insideKind(pl) {
+    if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
+    if (pl.glyph === 'dome') return pl.type === 'services' ? 'church' : 'govt';
+    if (pl.glyph === 'club' && pl.type === 'outdoors') return 'jetty';
+    if (pl.glyph === 'hall' && pl.type === 'learn') return 'campus';
+    if (pl.glyph === 'frame' && pl.type === 'outdoors') return 'park';
+    return INSIDE_BY_GLYPH[pl.glyph] || 'park';
+  }
+  Object.keys(INSIDE).forEach(function (k) { INSIDE[k].forEach(function (a, i) { a.id = 'in_' + k + '_' + (i + 1); a.inside = k; }); });
   var DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   var DATA = {
@@ -1613,7 +1652,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, insideKind: insideKind
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;

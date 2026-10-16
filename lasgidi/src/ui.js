@@ -1391,7 +1391,7 @@
   /* ---------- car dealer: showroom and my garage ---------- */
   // A vehicle's picture when one exists, else its emoji.
   function vehPic(id) { return pic('veh:' + id, D.VEHICLES[id].name, '<div class="dl-ic">' + D.VEHICLES[id].icon + '</div>', 'dl-pic'); }
-  function dealerView(note) {
+  function dealerView(note, only) {
     var tab = ui.dealerTab || 'show', wallet = S.cash + S.bank;
     var html = '<div class="dl-head"><span class="muted">Wallet</span> <b class="num">' + N(wallet) + '</b></div>' +
       '<div class="seg"><button type="button" class="seg-b' + (tab === 'show' ? ' sel' : '') + '" id="dl-show" data-dealertab="show">🔑 Showroom</button>' +
@@ -1403,6 +1403,7 @@
       html += '<div class="dl-sum"><span>' + S.vehicles.length + ' vehicle' + (S.vehicles.length === 1 ? '' : 's') + ' · ' + S.vehicles.length + '/12 spaces</span><span>Worth <b class="num">' + N(worth) + '</b> to the dealer</span></div>';
       if (!S.vehicles.length) html += '<p class="note">' + (S.car ? 'You drive the ' + esc(D.CAR.name) + '. ' : '') + 'Nothing parked yet. Pick something in the showroom.</p>';
       var groups = [['Garage', '🅿️', ['car']], ['Danfo park', '🚐', ['bus']], ['Marina', '⚓', ['boat']], ['Hangar', '🛫', ['heli', 'jet']]];
+      if (only) groups = groups.filter(function (g) { return g[2].some(function (k) { return only.indexOf(k) >= 0; }); });
       groups.forEach(function (g) {
         var rows = S.vehicles.map(function (v, i) { return { v: v, i: i, V: D.VEHICLES[v.id] }; }).filter(function (o) { return g[2].indexOf(o.V.kind) >= 0; });
         if (!rows.length) return;
@@ -1426,7 +1427,8 @@
       return html;
     }
     var kinds = [['car', '🚗 Cars'], ['bus', '🚐 Commercial'], ['boat', '🚤 Boats'], ['heli', '🚁 Helicopters'], ['jet', '🛩️ Jets']];
-    var kind = ui.vehKind || 'car';
+    if (only) kinds = kinds.filter(function (k) { return only.indexOf(k[0]) >= 0; });
+    var kind = kinds.some(function (k) { return k[0] === ui.vehKind; }) ? ui.vehKind : kinds[0][0];
     html += (note ? '<p class="note">' + esc(note) + '</p>' : '') + '<div class="pg-chips" style="padding:0">' + kinds.map(function (k) { return '<button type="button" class="pg-chip' + (k[0] === kind ? ' sel' : '') + '" id="vk-' + k[0] + '" data-vehkind="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div><div class="list">' +
       (function () { var TO = Object.keys(D.VEHICLE_TIERS), last = null; return Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind; }).sort(function (a, b) { var A = D.VEHICLES[a], B = D.VEHICLES[b]; return (A.tier ? TO.indexOf(A.tier) + 1 : 0) - (B.tier ? TO.indexOf(B.tier) + 1 : 0) || A.price - B.price; }).map(function (k) { var tr = D.VEHICLES[k].tier || '', h = tr !== last ? '<div class="dl-tier">' + esc(tr ? D.VEHICLE_TIERS[tr] : 'Classic range') + '</div>' : ''; last = tr; return [k, h]; }); })().map(function (kh) {
         var k = kh[0], V = D.VEHICLES[k], p = L.price(S, V.price), own = S.vehicles.filter(function (v) { return v.id === k; }).length;
@@ -1922,7 +1924,15 @@
       var def = (D.PLACE_ACTIONS[pl.district] || []).filter(function (x) { return x.id === aid; })[0]; if (!def) return null;
       var a = avail.filter(function (x) { return x.id === aid; })[0];
       return { id: aid, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
-    }).filter(Boolean));
+    }).filter(Boolean)).concat(S.rules >= 17 ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) {
+      var a = avail.filter(function (x) { return x.id === def.id; })[0];
+      return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled, inside: true };
+    }) : []);
+  }
+  // Which rides a place sells inside: dealers everything (null), jetties boats, airports aircraft, motor parks road vehicles; false: none.
+  function venueSells(pl) {
+    if (pl.dealer) return null;
+    return { jetty: ['boat'], airport: ['heli', 'jet'], motorpark: ['car', 'bus'] }[D.insideKind(pl)] || false;
   }
   function venueNamed(pl) {
     var out = [];
@@ -1989,10 +1999,28 @@
     return '<div class="ap-head"><b>' + esc(pl.icon || '📍') + ' ' + esc(pl.name) + '</b><span class="muted">' + esc(D.DISTRICTS[pl.district].name) + ' · ' + crowd + ' here · ' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="venue-fold" data-venuefold="1" aria-expanded="' + !ui.venueFold + '" aria-label="' + (ui.venueFold ? 'Show the panel' : 'Fold the panel away') + '">' + (ui.venueFold ? '▴' : '▾') + '</button><button class="btn sm ghost" id="venue-close" data-venueclose="1" aria-label="Leave the scene">✕</button></div>' +
       (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? '<div class="gem-here"><span>💎 A gem is hidden in this yard. Tap it' + (here ? '' : ' once you are here') + '.</span>' + (here ? '<button class="btn sm" id="vgem-' + gm.n + '" data-gem="' + gm.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '') + '</div>' : ''; })() +
       (venueNamed(pl).length ? '<p class="note">Here: ' + venueNamed(pl).map(function (n) { return '<b>' + esc(n.name) + '</b> (' + esc(n.role) + ')'; }).join(', ') + '. Tap them in the yard.</p>' : '') +
-      (here ? '<p class="note">Tap a sign in the yard, or a person to hear them. Workers and visitors come in by ' + esc({ refinery: 'staff bus', airport: 'cab' }[venueSet(pl)] || 'danfo, keke and okada') + ' all day.</p>' +
-        '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; }).join('') + '</div>'
-        : '<p class="note">You are in ' + esc(D.DISTRICTS[S.loc].name) + '. Take a ride to ' + esc(D.DISTRICTS[pl.district].name) + ': it pulls up at the gate and you walk in.</p>' + rideRow(pl.district)) +
-      hrCards(pl) + (pl.shares ? sharesCard(pl) : '') + (S.loc === pl.district ? venueChatView(pl) : '');
+      (here ? venueTabs(pl, acts) : '<p class="note">You are in ' + esc(D.DISTRICTS[S.loc].name) + '. Take a ride to ' + esc(D.DISTRICTS[pl.district].name) + ': it pulls up at the gate and you walk in.</p>' + rideRow(pl.district) + venueExtras(pl)) +
+      (S.loc === pl.district ? venueChatView(pl) : '');
+  }
+  // A place's own desks and boards: departures, clubs, the cruise, rooms, the estate office, japa, HR desks, shares.
+  function venueExtras(pl) {
+    return (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.cruise ? cruiseCard() : '') + roomCardFor(pl.id) + (pl.hydepark ? hydeParkView() : '') +
+      (pl.id === 'airport' && !S.challenge ? japaView() : '') + hrCards(pl) + (pl.shares ? sharesCard(pl) : '');
+  }
+  // Inside a place: Do (its own acts and, from rules 17, its everyday ones), Rides (buy or sell transport), Here (its desks).
+  function venueTabs(pl, acts) {
+    var sells = venueSells(pl), extra = venueExtras(pl), tabs = [['do', '🎯 Do'], ['rides', sells === false ? '🅿️ Your rides' : '🔑 Buy · sell rides']];
+    if (extra) tabs.push(['here', '🏢 Here']);
+    var tab = tabs.some(function (t) { return t[0] === ui.venueTab; }) ? ui.venueTab : (pl.dealer ? 'rides' : 'do');
+    var bar = '<div class="seg venue-tabs" role="tablist">' + tabs.map(function (t) { return '<button type="button" role="tab" aria-selected="' + (t[0] === tab) + '" class="seg-b' + (t[0] === tab ? ' sel' : '') + '" id="vt-' + t[0] + '" data-venuetab="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>';
+    if (tab === 'rides') {
+      if (sells !== false) return bar + dealerView((sells ? 'Sold here: ' + sells.map(function (k) { return { car: 'cars, keke and bikes', bus: 'danfo buses', boat: 'boats', heli: 'helicopters', jet: 'jets' }[k]; }).join(', ') + '. ' : '') + 'Selling pays half of what you paid.', sells);
+      var keep = ui.dealerTab; ui.dealerTab = 'garage'; var g = dealerView(); ui.dealerTab = keep;
+      return bar + '<p class="note">Drive or sell what you own from here. To buy, walk into a car dealer, a jetty (boats), an airport (aircraft) or a motor park.</p>' + g;
+    }
+    if (tab === 'here') return bar + extra;
+    return bar + '<p class="note">Tap a sign in the yard, or a person to hear them. Workers and visitors come in by ' + esc({ refinery: 'staff bus', airport: 'cab' }[venueSet(pl)] || 'danfo, keke and okada') + ' all day.</p>' +
+      (acts.length ? '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; }).join('') + '</div>' : '<p class="note">Nothing to do here yet. Try the other tabs.</p>');
   }
   function mountVenue() {
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
@@ -2235,8 +2263,8 @@
     return '<div class="rides" role="radiogroup" aria-label="How to get there">' + opts.map(function (o) {
       var on = sel && o.mode === sel.mode;
       return '<button type="button" class="ride' + (on ? ' sel' : '') + '" role="radio" aria-checked="' + on + '" id="ride-' + o.mode + '" data-ridemode="' + o.mode + '"' + (o.disabled ? ' disabled title="' + esc(o.disabled) + '"' : '') + '>' +
-        (icon3d(MODE_ICONS[o.mode]) || '<span class="ride-e">' + (MODE_EMOJI[o.mode] || '🚌') + '</span>') + '<b>' + esc(o.name) + '</b><span class="num">' + (o.cost ? N(o.cost) : 'Free') + '</span></button>';
-    }).join('') + '</div>' + (rush ? '<p class="why">🚦 Go-slow: the roads are slow right now.</p>' : '') + (sel && sel.risk ? '<p class="why">' + esc(sel.risk) + '</p>' : '') +
+        (icon3d(MODE_ICONS[o.mode]) || '<span class="ride-e">' + (MODE_EMOJI[o.mode] || '🚌') + '</span>') + '<b>' + esc(o.name) + '</b><span class="num">' + (o.cost ? N(o.cost) : o.mode === 'trek' && S.rules >= 17 ? 'Free · open' : 'Free') + '</span></button>';
+    }).join('') + '</div>' + (rush ? '<p class="why">🚦 Go-slow: the roads are slow right now.</p>' : '') + (sel && sel.risk ? '<p class="why">' + esc(sel.risk) + '</p>' : '') + (sel && sel.tired ? '<p class="why">🥵 A long, slow walk: you rest on the way and arrive spent and stressed.</p>' : '') +
       (sel ? '<button class="btn go big-go" id="ride-go" data-travel="' + dest + '" data-mode="' + sel.mode + '">Go · ' + (sel.cost ? N(sel.cost) : 'free') + ' · ' + dur(sel.mins) + '</button>' : '<p class="why">No way to get there right now.</p>');
   }
   function icon3d(key, alt) { var src = key && window.LASGIDI_ICONS && window.LASGIDI_ICONS[key]; return src ? '<img class="ic3d" src="' + src + '" alt="' + esc(alt || '') + '" width="32" height="32">' : ''; }
@@ -3770,7 +3798,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -4103,9 +4131,10 @@
     if (ds.fidstab) { ui.fidsTab = ds.fidstab; mountAirport(); return; }
     if (ds.layer) { var ly = mapLayers(); ly[ds.layer] = !ly[ds.layer]; try { localStorage.setItem(LAYER_KEY, JSON.stringify(ly)); } catch (e) {} render(); return; }
     if (ds.roomenter) { var re0 = ds.roomenter; run(function () { var r = L.roomEnter(S, re0); if (r.ok) { ui.roomOpen = re0; ui.cruiseOpen = false; ui.airportOpen = false; } return r; }); syncPresence(); return; }
-    if (ds.venue) { ui.venueOpen = ds.venue; ui.venueSlot = null; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
+    if (ds.venue) { ui.venueOpen = ds.venue; ui.venueSlot = null; ui.venueTab = null; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.venuesend) { var vi = document.getElementById('venue-in'); sendVenue(vi ? vi.value : ''); return; }
     if (ds.venuefold) { ui.venueFold = !ui.venueFold; mountVenue(); return; }
+    if (ds.venuetab) { ui.venueTab = ds.venuetab; mountVenue(); return; }
     if (ds.venueclose) { ui.venueOpen = null; render(); return; }
     if (ds.roomopen) { ui.roomOpen = ds.roomopen; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.roomspot) { var rsp = ds.roomspot; if (S.room && S.room.spot === rsp) return; run(function () { return L.roomSpot(S, S.room.id, rsp); }); syncPresence(); return; }
