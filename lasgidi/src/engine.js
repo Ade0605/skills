@@ -40,7 +40,9 @@
   // week loans, uncapped tournaments and street mini-games, old gem dates, cruise re-boarding, forged gifts, job re-applies.
   // 17 opens every place INSIDE (everyday acts by kind of place) and makes trekking open: no distance cap in a city,
   // never too tired to set off (you arrive spent, slower and stressed, but never below 5 energy).
-  var RULES = 17;
+  // 18 adds festivals and big days at their places, in their month (D.FESTIVALS): Christmas, Sallah, the New Yam
+  // festival, the Eko City Marathon and Eko Style Week. Their paid work is once a day each and the prizes are capped.
+  var RULES = 18;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -192,7 +194,7 @@
 
   // Spending and income categories for the weekly report.
   var FOOD_LABELS = {}, GIG_LABELS = {};
-  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; })).forEach(function (list) {
+  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; })).forEach(function (list) {
     list.forEach(function (a) {
       if ((a.fx && a.fx.hunger > 0) || a.special === 'pantry7') FOOD_LABELS[a.label] = true;
       if (a.gig) GIG_LABELS[a.label] = true;
@@ -538,6 +540,7 @@
 
     var m = monthIndex(s);
     if (m !== prevMonth) {
+      if (s.rules >= 18) { var FN = { 1: 'The Eko City Marathon runs on the second Saturday this month, from TBS.', 3: 'Sallah is this month: Eid prayers, the ram market, meat for the neighbours.', 7: 'The New Yam festival is on Saturdays at the National Theatre this month.', 10: 'Eko Style Week is on at the Eko Convention Centre on weekday evenings.', 11: 'Christmas is at the end of the month: carols at the cathedral, and the mall needs a Father Christmas.' }[m]; if (FN) log(s, FN, 'story'); }
       if (m === 11) log(s, 'Detty December is here. Prices are up, parties are everywhere, short-lets are booked out.', 'story');
       if (m === 0) {
         if (prevMonth === 11) unlock(s, 'detty');
@@ -642,6 +645,7 @@
     if (when.days && when.days.indexOf(dow(s)) < 0) return false;
     if (when.months && when.months.indexOf(monthIndex(s)) < 0) return false;
     if (when.lastDay && !(week(s) % 4 === 3 && dow(s) === 6)) return false; // the month's last day
+    if (when.wk && when.wk.indexOf(week(s) % 4) < 0) return false;          // the week of the month (rules 18 festivals)
     var h = hour(s);
     if (when.from != null && h < when.from) return false;
     if (when.to != null && h >= when.to) return false;
@@ -651,6 +655,7 @@
     if (!when) return '';
     var parts = [];
     if (when.months) parts.push(when.months.map(function (m) { return D.MONTHS[m]; }).join('/'));
+    if (when.wk) parts.push((when.wk.length === 1 && when.wk[0] === 3 ? 'last' : when.wk.map(function (k) { return ['1st', '2nd', '3rd', '4th'][k]; }).join('/')) + ' week');
     if (when.days) parts.push(when.days.map(function (d) { return D.DAYS[d]; }).join('/'));
     if (when.from != null) parts.push(String(when.from).padStart(2, '0') + ':00–' + String(when.to).padStart(2, '0') + ':00');
     return parts.join(' ');
@@ -706,6 +711,12 @@
     D.PLACES.forEach(function (p) { if (p.district !== d) return; var k = D.insideKind(p); if (seen[k]) return; seen[k] = true; out = out.concat(D.INSIDE[k] || []); });
     return (INSIDE_AT[d] = out);
   }
+  // Festival acts (rules 18) at the places in a district, shown only in their month.
+  var FEST_AT = {};
+  function festivalActions(s) {
+    var d = s.loc, all = FEST_AT[d] || (FEST_AT[d] = D.PLACES.filter(function (p) { return p.district === d && D.FESTIVALS[p.id]; }).reduce(function (o, p) { return o.concat(D.FESTIVALS[p.id]); }, [])), m = monthIndex(s);
+    return all.filter(function (a) { return !a.when || !a.when.months || a.when.months.indexOf(m) >= 0; });
+  }
   // retired actions are hidden from players but still run, so lives that used them replay.
   function availableActions(s, withRetired) {
     var list = [];
@@ -717,6 +728,7 @@
       list.push(a);
     });
     if (s.rules >= 17) list = list.concat(insideActions(s.loc));
+    if (s.rules >= 18) list = list.concat(festivalActions(s));
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
@@ -811,6 +823,8 @@
     if (cost && !canAfford(s, cost)) return 'Costs ' + naira(cost);
     if (a.minigame === 'quiz' && s.quizDay === day(s)) return 'One show a day: come back tomorrow';
     if (s.rules >= 16 && a.compete && dayCount(s, 'c:' + a.id)) return 'One entry a day: come back tomorrow';
+    if (s.rules >= 18 && a.fest && dayCount(s, 'f:' + a.id)) return 'Once a day: come back tomorrow';
+    if (s.rules >= 18 && a.special === 'casting' && s.castingWeek === week(s)) return 'One casting a week';
     if (s.rules >= 16 && (a.minigame === 'bole' || a.minigame === 'hawk' || a.minigame === 'danfo') && dayCount(s, 'm:' + a.minigame) >= 2) return 'Two runs a day: rest and come back tomorrow';
     switch (a.special) {
       case 'cook': if (s.pantry <= 0) return 'No foodstuff at home'; break;
@@ -860,6 +874,7 @@
       applyFx(s, a.fx);
     }
     if (a.event) s.stats.events = (s.stats.events || 0) + 1;
+    if (a.fest && s.rules >= 18) dayBump(s, 'f:' + a.id);
     // Sights count on rules 14 only, so older lives that visited them unlock nothing new.
     if (a.sight && s.rules >= 14) { var sg = s.stats.sights = s.stats.sights || {}; sg[a.id] = 1; if (Object.keys(sg).length >= 8) unlock(s, 'explorer'); }
     if (a.sport) { var sp = s.stats.sports = s.stats.sports || {}; sp[a.sport] = (sp[a.sport] || 0) + 1; if (Object.keys(sp).length >= 8) unlock(s, 'allrounder'); }
@@ -934,6 +949,21 @@
       return 'You parked the ' + V.name + ' right by the entrance. Phones came out.' + (s.creator ? ' Your Story got you new followers.' : '');
     },
     // Amateur tournaments: your skill against the field, with a capped prize (new actions only).
+    // The Eko City Marathon (rules 18): fit runners finish for a small prize; the very fit may place. Capped.
+    marathon: function (s) {
+      var lvl = skillLevel(s, 'fitness');
+      if (lvl < 2) return 'You walked most of it and finished after the sweep bus. The medal is still a medal.';
+      if (lvl >= 4 && rand(s) < Math.min(0.25, (lvl - 3) * 0.06)) { var top = price(s, 25000); earn(s, top, 'Prize: Eko City Marathon (top 3)'); s.stats.wins = (s.stats.wins || 0) + 1; return '🏅 Top three at the Eko City Marathon! ' + naira(top) + ' and a photo on the podium.'; }
+      if (lvl >= 4) { var fin = price(s, 5000); earn(s, fin, 'Finisher prize: Eko City Marathon'); return 'You finished strong in the top hundred: ' + naira(fin) + ' finisher prize.'; }
+      return 'You finished the Eko City Marathon. Legs like jelly, medal round your neck.';
+    },
+    // Eko Style Week casting (rules 18): once a week; booked only sometimes, for a capped fee.
+    casting: function (s) {
+      s.castingWeek = week(s);
+      var c = skillLevel(s, 'charisma');
+      if (c >= 3 && rand(s) < 0.35) { var fee = price(s, 15000); earn(s, fee, 'Runway booking: Eko Style Week'); return '✨ The designer booked you for one show: ' + naira(fee) + '.'; }
+      return 'They said "We will call you." They did not call.';
+    },
     compete: function (s, a) {
       var C = a.compete, score = skillLevel(s, C.skill) * 8 + rand(s) * 60;
       if (s.rules >= 16) dayBump(s, 'c:' + a.id);

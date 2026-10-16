@@ -1603,6 +1603,43 @@
     nepo: { name: 'Nepo Baby', cash: 800000, home: 'lekki_studio', allowance: 25000, allowanceWeeks: 8, text: 'Daddy paid for a Lekki studio, put ₦800,000 in your account and sends ₦25,000 a week. For now.' }
   };
 
+  // Festivals and big days (rules 18), keyed by place: they show at that place, and only in their month.
+  // when.wk is the week of the (4-week) month, 0–3. Paid work here is small, once a day, and the prizes are capped.
+  var FESTIVALS = {
+    worship: [
+      { id: 'fest_xmas_carols', label: 'Christmas carol night at the cathedral', mins: 120, fx: { fun: 12, social: 10, stress: -8 }, event: true, dec: true, fest: true, when: { months: [11], wk: [3], from: 18, to: 22 } },
+      { id: 'fest_eid_prayer', label: 'Eid prayers at the praying ground (Sallah)', mins: 120, fx: { social: 12, stress: -10, fun: 4 }, event: true, fest: true, when: { months: [3], wk: [1], days: [5, 6], from: 7, to: 11 } }
+    ],
+    ikeja_mall: [
+      { id: 'fest_xmas_santa', label: 'Play Father Christmas at the mall grotto', mins: 240, earn: 3000, fx: { energy: -14, fun: 4 }, xp: { charisma: 1 }, req: { charisma: 1 }, gig: true, fest: true, when: { months: [11], wk: [2, 3], from: 10, to: 18 } }
+    ],
+    palms: [
+      { id: 'fest_xmas_shop', label: 'Christmas shopping for the family', mins: 90, cost: 15000, fx: { social: 15, fun: 6, stress: 3 }, dec: true, fest: true, when: { months: [11], from: 10, to: 21 } }
+    ],
+    oshodi_market: [
+      { id: 'fest_xmas_rice', label: 'Buy a live chicken and the Christmas rice things', mins: 120, cost: 12000, fx: { hunger: 40, social: 20, fun: 10 }, dec: true, fest: true, when: { months: [11], wk: [3], from: 7, to: 19 } },
+      { id: 'fest_eid_ram', label: 'Help at the Sallah ram market', mins: 240, earn: 2500, fx: { energy: -20, hygiene: -10 }, xp: { hustle: 2 }, gig: true, fest: true, when: { months: [3], wk: [0, 1], from: 7, to: 18 } }
+    ],
+    mushin_market: [
+      { id: 'fest_eid_meat', label: 'Share Sallah meat with the neighbours', mins: 90, cost: 4000, fx: { social: 18, fun: 6, hunger: 10 }, fest: true, when: { months: [3], wk: [1], from: 9, to: 19 } }
+    ],
+    theatre: [
+      { id: 'fest_yam_festival', label: 'Iri Ji: the New Yam festival', mins: 180, cost: 2000, fx: { fun: 14, social: 12, hunger: 15 }, event: true, fest: true, when: { months: [7], days: [5], from: 10, to: 18 } },
+      { id: 'fest_yam_dance', label: 'Dance to the ogene drums', mins: 60, fx: { fun: 10, energy: -8 }, xp: { fitness: 1 }, fest: true, when: { months: [7], days: [5], from: 10, to: 18 } }
+    ],
+    tbs: [
+      { id: 'fest_marathon_run', label: 'Run the Eko City Marathon', mins: 300, cost: 5000, fx: { energy: -45, stress: -10, fun: 10, hygiene: -20 }, xp: { fitness: 3 }, special: 'marathon', event: true, sport: 'marathon', fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 9 } }
+    ],
+    link_bridge: [
+      { id: 'fest_marathon_water', label: 'Hand out water at a marathon station', mins: 240, fx: { social: 12, energy: -10 }, xp: { charisma: 1 }, fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 12 } },
+      { id: 'fest_marathon_cheer', label: 'Cheer the runners on the bridge', mins: 60, fx: { fun: 6, social: 4 }, fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 12 } }
+    ],
+    eko_convention: [
+      { id: 'fest_style_watch', label: 'Watch the Eko Style Week runway', mins: 180, cost: 8000, fx: { fun: 14, social: 8 }, event: true, fest: true, when: { months: [10], days: [0, 1, 2, 3, 4], from: 18, to: 23 } },
+      { id: 'fest_style_dresser', label: 'Work backstage as a dresser', mins: 300, earn: 3500, fx: { energy: -16 }, xp: { craft: 1 }, req: { craft: 1 }, gig: true, fest: true, when: { months: [10], days: [0, 1, 2, 3, 4], from: 14, to: 20 } },
+      { id: 'fest_style_casting', label: 'Go to the runway model casting', mins: 120, fx: { stress: 6, energy: -6 }, xp: { charisma: 1 }, req: { charisma: 2 }, special: 'casting', fest: true, when: { months: [10], days: [0, 2], from: 10, to: 16 } }
+    ]
+  };
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   // INSIDE (rules 17): everyday things to do once you walk into a place, by the kind of place. They cost a little
   // or nothing and pay nothing out, so they make the city fuller without making money easier.
@@ -1652,7 +1689,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, insideKind: insideKind
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;

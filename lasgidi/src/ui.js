@@ -1992,6 +1992,9 @@
     }).filter(Boolean)).concat(S.rules >= 17 ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled, inside: true };
+    }) : []).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return !def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0; }).map(function (def) {
+      var a = avail.filter(function (x) { return x.id === def.id; })[0];
+      return { id: def.id, def: def, a: a || null, icon: '🎊', short: venueShort(def.label), off: !a || a.disabled, fest: true };
     }) : []);
   }
   // Which rides a place sells inside: dealers everything (null), jetties boats, airports aircraft, motor parks road vehicles; false: none.
@@ -2107,7 +2110,7 @@
     var html = venuePanel(pl), pn0 = document.getElementById('venue-panel');
     if (html !== venueKey) { var inp = document.getElementById('venue-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'venue-in'; pn0.innerHTML = html; venueKey = html; var ni = document.getElementById('venue-in'); if (ni) { ni.value = val; if (foc) ni.focus(); } }
     ov.classList.toggle('folded', !!ui.venueFold);
-    var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; sc.mode = pl.id === 'lekki_hyde_park' ? 'estate' : /^harbour_/.test(pl.id) ? 'harbour' : NIGHT3D(pl) ? 'club' : venueSet(pl) === 'stadium' ? 'stadium' : D.insideKind(pl) === 'market' ? 'market' : D.insideKind(pl) === 'jetty' ? 'jetty' : D.insideKind(pl) === 'park' ? 'park' : /^(church|mosque|govt)$/.test(D.insideKind(pl)) || /^(theatre|abj_tower_pl)$/.test(pl.id) ? 'plaza' : pl.id === 'abj_crafts_pl' ? 'market' : D.insideKind(pl) === 'culture' ? 'gallery' : PLACE3D[D.insideKind(pl)] || 'beach'; sc.kind = D.insideKind(pl); if (pl.id === 'freedom') sc.mode = 'park'; if (sc.kind === 'campus') sc.mode = 'plaza'; sc.street = pl.id === 'pitch'; sc.day = L.day(S); sc.club = pl.id === 'harbour_club'; sc.placeId = pl.id; sc.rooftop = /lounge/.test(pl.id); sc.hour = L.hour(S);
+    var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; sc.mode = pl.id === 'lekki_hyde_park' ? 'estate' : /^harbour_/.test(pl.id) ? 'harbour' : NIGHT3D(pl) ? 'club' : venueSet(pl) === 'stadium' ? 'stadium' : D.insideKind(pl) === 'market' ? 'market' : D.insideKind(pl) === 'jetty' ? 'jetty' : D.insideKind(pl) === 'park' ? 'park' : /^(church|mosque|govt)$/.test(D.insideKind(pl)) || /^(theatre|abj_tower_pl)$/.test(pl.id) ? 'plaza' : pl.id === 'abj_crafts_pl' ? 'market' : D.insideKind(pl) === 'culture' ? 'gallery' : PLACE3D[D.insideKind(pl)] || 'beach'; sc.kind = D.insideKind(pl); if (pl.id === 'freedom') sc.mode = 'park'; if (sc.kind === 'campus') sc.mode = 'plaza'; sc.street = pl.id === 'pitch'; sc.day = L.day(S); sc.club = pl.id === 'harbour_club'; sc.placeId = pl.id; sc.month = L.monthIndex(S); sc.rooftop = /lounge/.test(pl.id); sc.hour = L.hour(S);
     var gig = (D.PLACE_ACTIONS.island || []).filter(function (x) { return x.id === 'isl_harbour_concert'; })[0]; sc.show = !!gig && L.inWindow(S, gig.when); venueStage.update(sc); venueStage.start();
     ambience(prefs.sound && !document.hidden ? AMBIENCE_OF[sc.set] || 'street' : null);
   }

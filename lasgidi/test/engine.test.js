@@ -2524,7 +2524,7 @@ test('rules 17: every place has INSIDE acts on the 15-minute grid that never pay
   }
   for (const p of D.PLACES) assert.ok((D.INSIDE[D.insideKind(p)] || []).length >= 3, p.id + ' has at least 3 things to do inside');
   const s = L.newGame({ seed: 71, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 17);
+  assert.ok(s.rules >= 17);
   const here = L.availableActions(s).filter(a => a.inside);
   assert.ok(here.length >= 3, 'inside acts where you start');
   const a = here.find(x => !x.disabled); const r = L.doAction(s, a.id); assert.ok(r.ok, r.msg); sane(s);
@@ -2542,4 +2542,51 @@ test('rules 17: trekking is free and open across a city, even when tired; rules 
   const old = L.newGame({ seed: 72, origin: 'mid', goal: 'freestyle', rules: 16 }); old.loc = 'festac'; old.needs.energy = 20;
   assert.match(L.travelOptions(old, 'ajah').find(x => x.mode === 'trek').disabled || '', /Too far|Too tired/);
   assert.match(L.travelOptions(s, 'abj_wuse').find(x => x.mode === 'trek').disabled || '', /Fly or take a bus/);
+});
+
+// Rules 18: festivals and big days.
+function atMonth(s, month, wk, dowN, hr) { // month is the game month index (lives start in October = 9)
+  const weeks = (((month - 9) % 12) + 12) % 12 * 4 + wk;
+  s.t = (weeks * 7 + dowN) * 1440 + hr * 60;
+}
+test('rules 18: festival acts sit on the 15-minute grid with unique ids, and pay little', () => {
+  const ids = new Set(Object.values(D.PLACE_ACTIONS).flat().map(a => a.id));
+  for (const [pid, list] of Object.entries(D.FESTIVALS)) {
+    assert.ok(D.PLACES.some(p => p.id === pid), 'festival place ' + pid + ' exists');
+    for (const a of list) {
+      assert.ok(a.mins > 0 && a.mins % 15 === 0, a.id); assert.ok(!ids.has(a.id), 'duplicate id ' + a.id); ids.add(a.id);
+      assert.ok(a.fest && a.when && a.when.months, a.id + ' is a festival with a month');
+      if (a.earn) assert.ok(a.gig && a.earn <= 4000, a.id + ' pays a small gig');
+    }
+  }
+});
+test('rules 18: Christmas at the cathedral only in the last week of December; hidden under rules 17; replays', () => {
+  const s = L.newGame({ seed: 81, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 18); s.loc = 'island';
+  atMonth(s, 11, 1, 2, 19); assert.ok(!L.availableActions(s).some(a => a.id === 'fest_xmas_carols') || L.availableActions(s).find(a => a.id === 'fest_xmas_carols').disabled, 'not open in week 2');
+  atMonth(s, 11, 3, 2, 19); const a = L.availableActions(s).find(x => x.id === 'fest_xmas_carols');
+  assert.ok(a && !a.disabled, a ? a.disabled : 'missing'); const r = L.doAction(s, 'fest_xmas_carols'); assert.ok(r.ok, r.msg); sane(s);
+  atMonth(s, 10, 3, 2, 19); assert.ok(!L.availableActions(s).some(x => x.id === 'fest_xmas_carols'), 'not shown in November');
+  const old = L.newGame({ seed: 81, origin: 'mid', goal: 'freestyle', rules: 17 }); old.loc = 'island'; atMonth(old, 11, 3, 2, 19);
+  assert.ok(!L.availableActions(old).some(x => x.fest), 'no festivals under rules 17');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});
+test('rules 18: festival gigs are once a day; the marathon and casting prizes are capped', () => {
+  const s = L.newGame({ seed: 82, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  s.loc = 'oshodi'; atMonth(s, 3, 0, 1, 8); s.needs.energy = 100;
+  const r1 = L.doAction(s, 'fest_eid_ram'); assert.ok(r1.ok, r1.msg);
+  s.needs.energy = 100; const again = L.availableActions(s).find(x => x.id === 'fest_eid_ram'); assert.match(again.disabled || '', /Once a day/);
+  // The marathon: only fit runners get paid, never more than the cap.
+  let maxPrize = 0;
+  for (let i = 0; i < 40; i++) {
+    const m = L.newGame({ seed: 900 + i, origin: 'nepo', goal: 'freestyle' }); while (m.pending.length) L.resolveChoice(m, 0);
+    m.loc = 'island'; atMonth(m, 1, 1, 5, 7); m.skills.fitness = 9999; m.needs.energy = 100;
+    const r = L.doAction(m, 'fest_marathon_run'); assert.ok(r.ok, r.msg); const won = (r.msg.match(/₦([\d,]+)/) || [0, '0'])[1].replace(/,/g, ''); maxPrize = Math.max(maxPrize, +won);
+    sane(m);
+  }
+  assert.ok(maxPrize <= L.price(s, 25000) * 1.01 + 1, 'marathon prize capped: ' + maxPrize);
+  const c = L.newGame({ seed: 83, origin: 'nepo', goal: 'freestyle' }); while (c.pending.length) L.resolveChoice(c, 0);
+  c.loc = 'vi'; atMonth(c, 10, 0, 0, 11); c.skills.charisma = 9999; c.needs.energy = 100;
+  assert.ok(L.doAction(c, 'fest_style_casting').ok); atMonth(c, 10, 0, 2, 11);
+  assert.match(L.availableActions(c).find(x => x.id === 'fest_style_casting').disabled || '', /One casting a week/);
 });

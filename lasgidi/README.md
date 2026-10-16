@@ -551,6 +551,26 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **By water:** ferries and boats cross the lagoon with a wake.
   - **By air:** a helicopter (glass nose, tail boom, skids, main and tail rotors) or a business jet (swept wings, winglets, T-tail, tail engines), with blinking navigation lights, over clouds and the city below. At night the city is lit.
   - **Landmarks:** each one you pass rises beside the road with its green sign. On flights they rise from the city below, with the sign above the roof.
+- **Festivals and big days (rules 18):** new lives get these at their own places and only in their month. Months are 4 weeks long and a life starts in October.
+  - **Christmas (December):**
+    - carol night at the cathedral in the last week;
+    - Christmas shopping at the Lekki mall;
+    - a live chicken and the Christmas rice things at Oshodi market;
+    - a Father Christmas gig at the Ikeja mall grotto (Charisma 1).
+  - **Sallah (April):**
+    - Eid prayers at the praying ground;
+    - helping at the ram market (a small gig);
+    - sharing Sallah meat with the neighbours.
+  - **Iri Ji, the New Yam festival (August, Saturdays at the National Theatre):** the festival itself and the ogene drum dance.
+  - **Eko City Marathon (the second Saturday of February):**
+    - **The run:** it starts from TBS. You need Fitness 4 to finish in the money (₦5,000), and only the very fit can place in the top three (₦25,000).
+    - **Also that day:** hand out water at a station on the Link Bridge (no pay, but Charisma) or cheer the runners.
+  - **Eko Style Week (November weekday evenings at the Eko Convention Centre):**
+    - watch the runway;
+    - work backstage as a dresser (Craft 1, small pay);
+    - a model casting (Charisma 2, once a week; you're only sometimes booked, for ₦15,000).
+  - **Limits and prices:** festival work and prizes are once a day each, and prizes rise with prices like everything else. Rules-17 lives don't see any of this.
+  - **In the walk-ins:** each place shows the season. There's a lit Christmas tree, rams in a pen under a "Sallah ram market" banner, the marathon start arch with bunting, a pile of new yams, and the Style Week runway.
 - **Walk around in 3D:** in every walk-in your avatar walks. Tap the ground to walk there, use WASD or the arrow keys, or the joystick at the bottom-left on touch screens. The camera follows you in. Walk up to a sign and it lights up with a ▶ Do it button. Tapping a sign walks you over and then does it. 🚶 turns walking off, and the choice is remembered.
 - **Music and game sounds (`src/music.js`):** with 🔊 sound on, original beats made in the browser play. Nothing is copied, and there are no audio files.
   - **Afrobeats:** a 3-3-2 kick, shaker, claps, log-drum bass and chord stabs, for the dance-off at the game's own 112 BPM, clubs and stages at night, and parties at home.

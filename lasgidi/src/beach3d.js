@@ -1007,6 +1007,47 @@
     el.appendChild(bar);
     bar.addEventListener('click', function (e) { var b = e.target.closest('[data-b3]'); if (!b) return; var a = b.getAttribute('data-b3'); if (a === 'photo') { if (opts.onPhoto) opts.onPhoto(cv); return; } if (a === 'walk') { setWalk(!WK.on); if (opts.onWalk) opts.onWalk(WK.on); return; } if (a === 'in') orbit.r *= 0.8; else if (a === 'out') orbit.r *= 1.25; else orbit.az += (a === 'l' ? 1 : -1) * Math.PI / 6; place(); });
 
+    /* ---------- the season: a Christmas tree, Sallah rams, the marathon arch, the New Yam pile, Style Week's runway ---------- */
+    var seasG = new T.Group(); world.add(seasG); var seasKey = '', SEAS = { bulbs: [] };
+    function seasonal() {
+      var k = built + '|' + sc.month + '|' + (sc.placeId || ''); if (k === seasKey) return; seasKey = k; seasG.clear(); SEAS = { bulbs: [] };
+      var m = sc.month, q = SP(), cx = 0, cz = 0, x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; if (m == null) return; q.forEach(function (p) { cx += p[0] / q.length; cz += p[1] / q.length; x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); });
+      var K = Math.max(1, Math.min(2.6, Math.max(x1 - x0, z1 - z0) / 22)), front = z1 + 3 * K; // bigger in the big squares, in front of the signs
+      var at = function (dx, dz) { var x = cx + dx * K, z = front + dz * K - 6 * K; return [x, groundY(x, z), z]; }, id = sc.placeId || '';
+      var big = function (g, x) { g.scale.setScalar(K * (x || 1)); return g; };
+      // A festival banner on two posts, readable from the camera.
+      var banner = function (g, text, col, y, w) { w = w || 7; [-w / 2, w / 2].forEach(function (x) { g.add(mesh(new T.BoxGeometry(0.2, y + 0.6, 0.2), mat('banP', { color: 0x5a3f2b }), x, (y + 0.6) / 2, 0)); }); var bt = canvasTex(512, 96, function (c, ww, hh) { c.fillStyle = col; c.fillRect(0, 0, ww, hh); c.fillStyle = '#fff'; c.font = '900 46px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, ww / 2, hh / 2 + 3, ww - 20); }); var b = new T.Mesh(new T.PlaneGeometry(w, w * 0.19), new T.MeshBasicMaterial({ map: bt, side: T.DoubleSide })); b.position.set(0, y, 0); b.rotation.y = Math.PI; g.add(b); };
+      if (m === 11 && (PLZ || GAL || STR || MKT || PRK)) { // a Christmas tree with lights and a star
+        var p0 = at(-7, 4), tr = big(new T.Group()); tr.position.set(p0[0], p0[1], p0[2]); seasG.add(tr);
+        tr.add(mesh(new T.CylinderGeometry(0.35, 0.45, 1.4, 10), mat('xtrunk', { color: 0x6b4a2b }), 0, 0.7, 0));
+        [[3.2, 3, 1.6], [2.5, 2.6, 3.4], [1.7, 2.2, 5.0]].forEach(function (c) { tr.add(mesh(new T.ConeGeometry(c[0], c[1], 14), mat('xtree', { color: 0x1f6b3a, roughness: 0.8 }), 0, c[2], 0)); });
+        tr.add(mesh(new T.OctahedronGeometry(0.45), new T.MeshBasicMaterial({ color: 0xffd34d }), 0, 6.5, 0));
+        for (var b = 0; b < 36; b++) { var h = 1.6 + (b % 12) * 0.38, rr = 3 * (1 - (h - 1.2) / 5.6), an = b * 2.4, bl = mesh(new T.SphereGeometry(0.13, 8, 6), new T.MeshBasicMaterial({ color: [0xff3b30, 0xffd34d, 0x3bc9ff, 0xffffff][b % 4] }), Math.cos(an) * rr, h, Math.sin(an) * rr); bl.castShadow = false; tr.add(bl); SEAS.bulbs.push(bl); }
+      }
+      if (m === 3 && MKT) { // Sallah rams in a pen
+        var pn = at(-5, 8), pen = big(new T.Group(), 1.7); pen.position.set(pn[0], pn[1], pn[2]); seasG.add(pen); pn = [0, 0, 0]; banner(pen, '🐏 SALLAH RAM MARKET', '#1d7a43', 2.6, 7); for (var r = 0; r < 6; r++) { var ram = new T.Group(); ram.position.set(pn[0] + (r % 3) * 1.8, pn[1], pn[2] + Math.floor(r / 3) * 1.6); ram.rotation.y = r * 1.1; pen.add(ram);
+          var wool = mat('wool', { color: 0xefe9dc, roughness: 1 }); var bd = mesh(new T.SphereGeometry(0.6, 12, 10), wool, 0, 0.75, 0); bd.scale.set(1.4, 0.9, 0.9); ram.add(bd); ram.add(mesh(new T.SphereGeometry(0.3, 10, 8), mat('ramface', { color: 0x3a2a20 }), 0.85, 0.95, 0));
+          [-0.18, 0.18].forEach(function (zz) { var hn = mesh(new T.TorusGeometry(0.16, 0.05, 6, 12, Math.PI * 1.4), mat('horn', { color: 0x8a7a5a }), 0.8, 1.15, zz); hn.rotation.y = Math.PI / 2; ram.add(hn); });
+          [[-0.4, -0.25], [-0.4, 0.25], [0.4, -0.25], [0.4, 0.25]].forEach(function (l) { ram.add(mesh(new T.CylinderGeometry(0.07, 0.07, 0.5, 6), mat('ramface', {}), l[0], 0.25, l[1])); }); }
+        for (var f = 0; f < 12; f++) pen.add(mesh(new T.BoxGeometry(0.1, 0.9, 0.1), mat('fence', { color: 0x8a6a4a }), pn[0] - 1 + (f % 6) * 1.2, pn[1] + 0.45, pn[2] - 1 + Math.floor(f / 6) * 4.2));
+      }
+      if (m === 1 && (id === 'tbs' || id === 'link_bridge' || PLZ)) { // the marathon start arch and bunting
+        var pa = at(0, 5), arch = big(new T.Group()); arch.position.set(pa[0], pa[1], pa[2]); seasG.add(arch);
+        [-5, 5].forEach(function (x) { arch.add(mesh(new T.BoxGeometry(0.6, 5, 0.6), mat('archP', { color: 0x1d7a43 }), x, 2.5, 0)); });
+        var bt = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#1d7a43'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 52px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('EKO CITY MARATHON', w / 2, h / 2 + 3); });
+        var ban = new T.Mesh(new T.PlaneGeometry(10.6, 1.4), new T.MeshBasicMaterial({ map: bt, side: T.DoubleSide })); ban.position.set(0, 5.2, 0); ban.rotation.y = Math.PI; arch.add(ban);
+        for (var fl = 0; fl < 30; fl++) arch.add(mesh(new T.ConeGeometry(0.2, 0.45, 3), new T.MeshBasicMaterial({ color: [0x1d7a43, 0xffffff][fl % 2] }), -7 + fl * 0.48, 4.3 - Math.sin(fl / 29 * Math.PI) * 0.6, 0.2));
+      }
+      if (m === 7 && id === 'theatre') { // the New Yam pile
+        var yg = big(new T.Group(), 1.8), py = at(-7, 6); yg.position.set(py[0], py[1], py[2]); seasG.add(yg); py = [0, 0, 0]; banner(yg, 'IRI JI · NEW YAM FESTIVAL', '#7a3a10', 2.8, 6); yg.add(mesh(new T.BoxGeometry(4, 0.9, 2), mat('yamTbl', { color: 0x7a5233 }), py[0], py[1] + 0.45, py[2]));
+        for (var y2 = 0; y2 < 18; y2++) { var row = y2 < 8 ? 0 : y2 < 14 ? 1 : 2, yam = mesh(new T.CapsuleGeometry(0.16, 0.7, 4, 8), mat('yam', { color: 0x8a5a33, roughness: 1 }), py[0] - 1.4 + (y2 % (8 - row * 2)) * 0.4 + row * 0.4, py[1] + 1.05 + row * 0.3, py[2]); yam.rotation.z = Math.PI / 2; yg.add(yam); }
+      }
+      if (m === 10 && id === 'eko_convention') { // Eko Style Week's runway
+        var pr = at(0, 4); pr[2] = cz; seasG.add(mesh(new T.BoxGeometry(2.4, 0.6, 18), mat('runway', { color: 0xf4f3ec, roughness: 0.25, metalness: 0.2 }), pr[0], pr[1] + 0.3, pr[2]));
+        for (var lt = 0; lt < 12; lt++) { var rl = mesh(new T.SphereGeometry(0.1, 6, 4), new T.MeshBasicMaterial({ color: 0xfff2c0 }), pr[0] + (lt % 2 ? 1.25 : -1.25), pr[1] + 0.62, pr[2] - 8.5 + Math.floor(lt / 2) * 3.4); rl.castShadow = false; seasG.add(rl); }
+      }
+    }
+
     /* ---------- walking: tap the ground, WASD or the arrows, or the joystick; the camera follows ---------- */
     var WK = { on: opts.walk !== false, x: 0, z: 0, yaw: 0, tx: null, tz: null, act: null, keys: {}, joy: null, key: '', moving: 0, near: -1, follow: false };
     function walkBox() { var q = SP(), x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; q.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }); var pad = HARBOUR ? 14 : CLUB || GAL ? 4 : 7; return { x0: x0 - pad, x1: x1 + pad, z0: z0 - pad, z1: Math.min(z1 + pad, (!ESTATE && !HARBOUR && !CLUB && !STAD && !MKT && !JTY && !PRK && !PLZ && !GAL && !STR) ? SEA0 + 3 : 1e9) }; }
@@ -1112,13 +1153,14 @@
       strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STR ? -2 + (i % 3) * 0.5 : GAL ? -16 + (i % 3) * 1.2 : PLZ ? -34 + (i % 3) * 1.2 : PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation[p.userData.axis || 'z'] = a; p.userData.legs[1].rotation[p.userData.axis || 'z'] = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
       weatherFrame(t, now);
+      SEAS.bulbs.forEach(function (b, i) { b.visible = reduce || Math.floor(t * 2 + i * 0.37) % 3 !== 0; });
       signs.forEach(function (s) { s.visible = s.visible && !sc.clean; });
       renderer.render(S3, cam);
       raf = el.isConnected ? root.requestAnimationFrame(frame) : 0;
     }
     return {
       el: el, canvas: cv, is3d: true,
-      update: function (next) { sc = next || sc; build(); syncSigns(); syncPeople(); if (WK.reset && me) { WK.reset = false; walkStart(); WK.near = -2; } cv.setAttribute('aria-label', (sc.name || 'The beach') + ' in 3D. Drag to look around, tap a sign to do it.'); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
+      update: function (next) { sc = next || sc; build(); seasonal(); syncSigns(); syncPeople(); if (WK.reset && me) { WK.reset = false; walkStart(); WK.near = -2; } cv.setAttribute('aria-label', (sc.name || 'The beach') + ' in 3D. Drag to look around, tap a sign to do it.'); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
       start: function () { if (!raf) raf = root.requestAnimationFrame(frame); },
       stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; },
       walk: function () { return { on: WK.on, x: WK.x, z: WK.z, near: WK.near }; }, // for tests
