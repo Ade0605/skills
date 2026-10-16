@@ -61,6 +61,12 @@
       "description": "Social SDK integration skill by OpenCore (vendored from github.com/opencoredev/social-sdk @ a76fb61): mock-first publishing, account connection flow, delivery outcome rendering, verified webhooks, integration tests.",
       "source": "./plugins/social-sdk",
       "strict": true
+    },
+    {
+      "name": "llm-council",
+      "description": "Multi-model LLM council via OpenRouter (method after github.com/karpathy/llm-council): independent answers, anonymized peer review and ranking, chairman synthesis.",
+      "source": "./plugins/llm-council",
+      "strict": true
     }
   ]
 }
