@@ -23,10 +23,14 @@
   var ISLAND = [[14.4, 21], [17.8, 19.9], [21.6, 19.8], [25.6, 21.4], [33, 22.4], [43, 22.6], [51.4, 22.4], [51.8, 25.8], [43, 26.6], [33, 26.9], [24, 26.9], [20.6, 27.1], [17.6, 26.4], [16, 24.2], [14.2, 22.6]];
   // Lekki Hyde Park's private islet in the lagoon, joined to Billionaire Row by a bridge.
   var HP_ISLET = [[31.9, 21.75], [32.5, 21.55], [33.0, 21.75], [33.0, 22.2], [32.4, 22.35], [31.95, 22.2]];
+  // Harbour Live: a man-made island in the harbour, linked to the mainland, Lagos Island and Eko Atlantic by three bridges.
+  var HARBOUR_ISLE = [[10.6, 23.4], [13.6, 23.3], [14.1, 24.6], [13.8, 26.5], [11.0, 26.7], [10.4, 25.0]];
+  // Its three cable-stayed bridges: [island end, landfall], each with a single pylon a third of the way out.
+  var HARBOUR_BRIDGES = [[[11.2, 23.45], [10.4, 21.0]], [[14.0, 24.2], [16.3, 23.9]], [[13.4, 26.6], [14.3, 28.2]]];
   var CREEK = [[17.2, 23.1], [21.4, 22.6], [21.6, 23.3], [17.4, 23.8]]; // Five Cowries creek between the Island and VI
   // Each city in its own frame: land polygons, water carved out of them, and the drawing box.
   var GEO = {
-    lagos: { box: [-2, 52, -1, 31], land: [MAINLAND, ISLAND, EKO, BEACH, HP_ISLET], water: [CREEK], label: [] },
+    lagos: { box: [-2, 52, -1, 31], land: [MAINLAND, ISLAND, EKO, BEACH, HP_ISLET, HARBOUR_ISLE], water: [CREEK], label: [] },
     abuja: { box: [-3, 35, -3, 28], land: [[[-3, -3], [35, -3], [35, 28], [-3, 28]]],
       water: [[[4.6, 12.8], [6.4, 12.4], [8.8, 12.9], [9.4, 14.0], [8.2, 15.0], [5.6, 14.9], [4.4, 14.0]]], label: [['Jabi Lake', 6.9, 13.8]] },
     ph: { box: [-2, 32, -2, 26], land: [[[-2, -2], [32, -2], [32, 8], [28, 12.5], [25, 17.5], [20.5, 21], [16.5, 21.6], [12, 21.2], [6, 19.8], [-2, 19]]],
@@ -288,7 +292,7 @@
   var STADIUM = { x: 9.2, y: 16.6, rx: 0.9, ry: 0.7 };
   // Tap areas for places, in world km: the big landmarks use their drawn shape; every other place gets a circle round its pin.
   var AREAS = {
-    white_sand_beach: { r: [41.0, 26.85, 50.8, 29.95] }, refinery_site: { r: [44.2, 22.8, 51.0, 24.9] }, new_airport_site: { r: [0.9, 2.1, 7.9, 4.3] },
+    white_sand_beach: { r: [41.0, 26.85, 50.8, 29.95] }, harbour_club: { r: [11.9, 25.9, 13.2, 27.4] }, harbour_live: { p: [[10.6, 23.4], [13.6, 23.3], [14.1, 24.6], [13.8, 25.9], [11.9, 25.9], [11.0, 26.7], [10.4, 25.0]] }, refinery_site: { r: [44.2, 22.8, 51.0, 24.9] }, new_airport_site: { r: [0.9, 2.1, 7.9, 4.3] },
     airport: { p: [[3.2, 0.6], [9.6, 0.2], [9.8, 1.0], [3.4, 1.4]] }, stadium: { e: [9.2, 16.6, 0.95, 0.75] },
     eko_atlantic_city: { p: [[13.6, 27.9], [19.4, 27.9], [19.8, 28.4], [19.8, 30.6], [13.4, 30.6], [13.2, 28.4]] }
   };
@@ -528,7 +532,7 @@
       g.beginPath(); g.ellipse(hp.x, hp.y, 0.22 * TW * s, 0.22 * TH * s, 0, 0, Math.PI * 2); g.fillStyle = '#3d4248'; g.fill();
       g.lineWidth = Math.max(0.6, 0.8 * s); g.strokeStyle = '#f5c518'; g.stroke();
       g.fillStyle = '#ffffff'; g.font = '700 ' + Math.max(6, 7 * s) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('H', hp.x, hp.y);
-      drawRefinery(g, s); drawNewAirport(g, s); drawEko(g, s); drawBeach(g, s);
+      drawRefinery(g, s); drawNewAirport(g, s); drawEko(g, s); drawHarbour(g, s); drawBeach(g, s);
       drawHydePark(g, s);
       // Members' clubs: a timber jetty into the water with boats tied up.
       [[21.4, 20.6, -1], [19.9, 20.7, -1], [14.2, 29.4, 1], [18.9, 29.6, 1]].forEach(function (c) {
@@ -870,6 +874,30 @@
       g.beginPath(); g.ellipse(ps.x - 6 * s, ps.y - 24 * s, 5 * s, 2.4 * s, 0, Math.PI, 0); g.fillStyle = '#ff4d8d'; g.fill();
       [[42.4, 30.4, '#ff8a3d'], [42.9, 30.6, '#ffd23f']].forEach(function (k) { var c = toScreen(k[0], k[1], 0); g.fillStyle = k[2]; g.beginPath(); g.ellipse(c.x, c.y, 2.6 * s, 0.7 * s, -0.3, 0, Math.PI * 2); g.fill(); });
     }
+    // Harbour Live: plaza, fountain, concert lawn and stage, food court, the private club with its jetty, and the bridges.
+    function bridgeGeom(b) { var a = b[0], c = b[1], px = a[0] + (c[0] - a[0]) * 0.32, py = a[1] + (c[1] - a[1]) * 0.32; return { a: a, c: c, p: [px, py] }; }
+    function drawHarbour(g, s) {
+      if (CITY !== 'lagos') return;
+      HARBOUR_BRIDGES.forEach(function (b) {
+        var G = bridgeGeom(b), A = toScreen(G.a[0], G.a[1], 0.4), C = toScreen(G.c[0], G.c[1], 0.4), P0 = toScreen(G.p[0], G.p[1], 0.4), ph = 34 * s;
+        g.strokeStyle = theme.dark ? '#8a9097' : '#c9ced3'; g.lineWidth = Math.max(2, 3.2 * s); g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(C.x, C.y); g.stroke();
+        g.strokeStyle = theme.dark ? '#5d636b' : '#9aa0a6'; g.lineWidth = Math.max(0.6, 0.8 * s); g.beginPath(); g.moveTo(A.x, A.y + 1.6 * s); g.lineTo(C.x, C.y + 1.6 * s); g.stroke();
+        g.strokeStyle = theme.dark ? '#d9dde1' : '#eef1f3'; g.lineWidth = Math.max(1.5, 2.2 * s); g.beginPath(); g.moveTo(P0.x, P0.y); g.lineTo(P0.x, P0.y - ph); g.stroke();
+        g.strokeStyle = theme.dark ? 'rgba(220,225,230,.55)' : 'rgba(120,128,136,.6)'; g.lineWidth = Math.max(0.4, 0.45 * s);
+        for (var k = 1; k <= 7; k++) [G.a, G.c].forEach(function (end) { var u = k / 8, q = toScreen(G.p[0] + (end[0] - G.p[0]) * u, G.p[1] + (end[1] - G.p[1]) * u, 0.4); g.beginPath(); g.moveTo(P0.x, P0.y - ph * (0.95 - k * 0.04)); g.lineTo(q.x, q.y); g.stroke(); });
+      });
+      poly(g, [[10.9, 23.7], [13.5, 23.6], [13.8, 24.6], [13.5, 26.2], [11.2, 26.4], [10.8, 25.0]], theme.dark ? '#5e5a52' : '#e3dccd');
+      var fc = toScreen(11.6, 24.4, 0); g.fillStyle = theme.dark ? '#7d8288' : '#c9ccd1'; g.beginPath(); g.ellipse(fc.x, fc.y, 0.42 * TW * s * 0.5 * 2, 0.42 * TH * s * 0.5 * 2, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = theme.dark ? '#1f6f8f' : '#3fb6d8'; g.beginPath(); g.ellipse(fc.x, fc.y, 0.36 * TW * s, 0.36 * TH * s, 0, 0, Math.PI * 2); g.fill();
+      poly(g, [[12.3, 24.4], [13.55, 24.4], [13.55, 25.9], [12.3, 25.9]], theme.dark ? '#33493a' : '#86b863');
+      for (var r2 = 0; r2 < 5; r2++) poly(g, [[12.4 + r2 * 0.05, 24.5 + r2 * 0.28], [13.0 + r2 * 0.05, 24.5 + r2 * 0.28], [13.0 + r2 * 0.05, 24.6 + r2 * 0.28], [12.4 + r2 * 0.05, 24.6 + r2 * 0.28]], theme.dark ? '#2b3d30' : '#76a856');
+      drawBuilding(g, { x: 13.35, y: 25.15, w: 0.35, dep: 0.9, h: 9, wall: '#1f2329', roof: '#2b2f36' }, s, 0, true);
+      var st = toScreen(13.17, 25.15, 6), sw = 0.9 * TW * s * 0.25; g.fillStyle = '#7b5cff'; g.fillRect(st.x - sw * 0.2, st.y - 5 * s, sw * 0.4, 6 * s);
+      [[11.4, 25.6], [11.7, 25.8], [12.0, 25.95]].forEach(function (q, i) { drawBuilding(g, { x: q[0], y: q[1], w: 0.16, dep: 0.16, h: 3, wall: ['#e2652b', '#2fa36b', '#f2b600'][i], roof: '#f4f1ea', pitch: true, rise: 2 }, s, 0, true); });
+      poly(g, [[12.0, 26.45], [13.1, 26.4], [13.1, 26.9], [12.0, 26.95]], theme.dark ? '#5a4632' : '#a07a4f');
+      poly(g, [[12.45, 26.9], [12.6, 26.9], [12.6, 27.4], [12.45, 27.4]], theme.dark ? '#5a4632' : '#a07a4f');
+      drawBuilding(g, { x: 12.55, y: 26.15, w: 0.9, dep: 0.32, h: 8, wall: '#e9edf1', roof: '#cfd6dc', glass: true }, s, 0, true);
+    }
     function drawEko(g, s) {
       // The boulevard and cross streets, the sea wall promenade, then the bridge to VI.
       poly(g, [[13.4, 28.95], [19.8, 28.95], [19.8, 29.3], [13.4, 29.3]], theme.road);
@@ -1089,6 +1117,18 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       var s = base.s * cam.z, night = nightLevel(scene.hour, scene.minute);
 
+      // Harbour Live: the bridges' LED cables cycle colour after dusk, and the fountain throws coloured jets.
+      if (CITY === 'lagos') {
+        var hn = Math.max(0.25, night), tn = (reduce ? 0 : performance.now()) / 1000;
+        HARBOUR_BRIDGES.forEach(function (b, bi) {
+          var G = bridgeGeom(b), P0 = toScreen(G.p[0], G.p[1], 0.4), ph = 34 * s;
+          for (var k = 1; k <= 7; k++) [G.a, G.c].forEach(function (end, ei) { var u = k / 8, q = toScreen(G.p[0] + (end[0] - G.p[0]) * u, G.p[1] + (end[1] - G.p[1]) * u, 0.4); ctx.strokeStyle = 'hsla(' + Math.round((tn * 40 + k * 22 + bi * 90 + ei * 30) % 360) + ',90%,60%,' + (0.18 + hn * 0.6) + ')'; ctx.lineWidth = Math.max(0.6, 0.7 * s); ctx.beginPath(); ctx.moveTo(P0.x, P0.y - ph * (0.95 - k * 0.04)); ctx.lineTo(q.x, q.y); ctx.stroke(); });
+          var A = toScreen(G.a[0], G.a[1], 0.4), C = toScreen(G.c[0], G.c[1], 0.4); for (var l = 0; l <= 12; l++) { var lx = A.x + (C.x - A.x) * l / 12, ly = A.y + (C.y - A.y) * l / 12; ctx.fillStyle = 'rgba(255,226,140,' + (0.25 + hn * 0.7) + ')'; ctx.beginPath(); ctx.arc(lx, ly - 1.5 * s, Math.max(1, 0.9 * s), 0, Math.PI * 2); ctx.fill(); }
+        });
+        var fq = toScreen(11.6, 24.4, 0);
+        for (var j = 0; j < 9; j++) { var ang = j / 9 * Math.PI * 2, hh = (6 + 6 * Math.abs(Math.sin(tn * 2 + j))) * s, jx = fq.x + Math.cos(ang) * 0.2 * TW * s, jy = fq.y + Math.sin(ang) * 0.2 * TH * s; ctx.strokeStyle = 'hsla(' + Math.round((tn * 60 + j * 40) % 360) + ',80%,' + (night > 0.4 ? 65 : 92) + '%,.85)'; ctx.lineWidth = Math.max(1, 1.2 * s); ctx.beginPath(); ctx.moveTo(jx, jy); ctx.lineTo(jx, jy - hh); ctx.stroke(); }
+        ctx.strokeStyle = 'rgba(240,250,255,.9)'; ctx.lineWidth = Math.max(1.5, 1.8 * s); ctx.beginPath(); ctx.moveTo(fq.x, fq.y); ctx.lineTo(fq.x, fq.y - (14 + 5 * Math.sin(tn * 3)) * s); ctx.stroke();
+      }
       // Traffic: slower in rush hour, fewer at night.
       var rush = (scene.hour >= 6 && scene.hour < 10) || (scene.hour >= 16 && scene.hour < 21);
       var speed = (rush ? 0.012 : 0.04) * (scene.fuel ? 0.6 : 1);

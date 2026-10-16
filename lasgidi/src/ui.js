@@ -1996,7 +1996,7 @@
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
-    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park') && !!window.LasgidiBeach3D; // beaches, and the lakeside estate
+    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || pl.id === 'harbour_live' || pl.id === 'harbour_club') && !!window.LasgidiBeach3D; // beaches, and the lakeside estate
     if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
@@ -2011,7 +2011,7 @@
     var html = venuePanel(pl), pn0 = document.getElementById('venue-panel');
     if (html !== venueKey) { var inp = document.getElementById('venue-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'venue-in'; pn0.innerHTML = html; venueKey = html; var ni = document.getElementById('venue-in'); if (ni) { ni.value = val; if (foc) ni.focus(); } }
     ov.classList.toggle('folded', !!ui.venueFold);
-    var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; sc.mode = pl.id === 'lekki_hyde_park' ? 'estate' : 'beach'; venueStage.update(sc); venueStage.start();
+    var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; sc.mode = pl.id === 'lekki_hyde_park' ? 'estate' : /^harbour_/.test(pl.id) ? 'harbour' : 'beach'; sc.club = pl.id === 'harbour_club'; venueStage.update(sc); venueStage.start();
     ambience(prefs.sound && !document.hidden ? AMBIENCE_OF[sc.set] || 'street' : null);
   }
   var beachStage = null, flatStage = null;

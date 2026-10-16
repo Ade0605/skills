@@ -684,7 +684,13 @@
       { id: 'island_museum', sight: true, label: 'Visit the National Museum', mins: 90, cost: 500, fx: { fun: 12, stress: -5 }, xp: { charisma: 1 }, when: { days: [0,1,2,3,4,5], from: 9, to: 17 } },
       { id: 'island_dec_tbs', label: 'Homecoming concert at Tafawa Balewa Square', mins: 300, cost: 30000, fx: { fun: 85, social: 50, energy: -35, hygiene: -15 }, xp: { music: 1 }, special: 'club', event: true, dec: true, when: { months: [11], days: [4, 5, 6], from: 18, to: 24 } },
       { id: 'island_dec_food', label: 'December food village: jollof, suya, ofada and small chops', mins: 90, cost: 7000, fx: { hunger: 70, fun: 25, social: 15 }, event: true, dec: true, when: { months: [11], from: 12, to: 22 } },
-      { id: 'island_ewa', label: 'Ewa agoyin and bread', mins: 30, cost: 1300, fx: { hunger: 45 } }
+      { id: 'island_ewa', label: 'Ewa agoyin and bread', mins: 30, cost: 1300, fx: { hunger: 45 } },
+      // Harbour Live: the fountain and concert ground on its own island in the harbour (linked by three bridges).
+      { id: 'isl_harbour_concert', label: 'Headline concert at Harbour Live', mins: 240, cost: 35000, fx: { fun: 35, social: 15, stress: -10, energy: -20 }, when: { days: [4, 5], from: 20, to: 24 } },
+      { id: 'isl_harbour_fountain', label: 'Watch the musical fountain show', mins: 30, fx: { fun: 10, stress: -6 }, when: { from: 19, to: 23 } },
+      { id: 'isl_harbour_bridges', label: 'Walk the lit link bridges at night', mins: 60, fx: { fun: 8, stress: -5, energy: -5 }, when: { from: 18, to: 24 } },
+      { id: 'isl_harbour_food', label: 'Suya and chapman at the Harbour food court', mins: 45, cost: 4500, fx: { hunger: 35, fun: 4 } },
+      { id: 'isl_harbour_club', label: 'Lagoon-view lounge at the Harbour private club', mins: 120, cost: 60000, fx: { fun: 20, social: 20, stress: -12 }, when: { from: 18, to: 24 } }
     ],
     vi: [
       { id: 'vi_eko_walk', label: 'Walk the Eko Atlantic sea wall at sunset', mins: 90, cost: 0, fx: { fun: 18, stress: -14, energy: -6 }, sight: true, when: { from: 16, to: 19 } },
@@ -839,6 +845,8 @@
     { id: 'museum', icon: '🏛️', name: 'National Museum, Onikan', type: 'culture', glyph: 'mask', district: 'island', x: 16.9, y: 21.6, acts: ['island_museum'], text: 'Bronzes, masks and Nigerian history.' },
     { id: 'gen_hosp', icon: '🏥', name: 'General Hospital', type: 'services', glyph: 'cross', district: 'island', x: 15.8, y: 22.9, acts: ['island_checkup', 'island_welfare'], text: 'Check-ups, and where you wake up if you collapse.' },
     { id: 'worship', icon: '🛐', name: 'Cathedral and Central Mosque', type: 'services', glyph: 'dome', district: 'island', x: 16.6, y: 21.0, acts: ['island_worship'], text: 'Prayer, peace and free welfare meals when you are broke.' },
+    { id: 'harbour_live', icon: '⛲', name: 'Harbour Live: fountain and concert ground', type: 'nightlife', glyph: 'note', district: 'island', x: 12.2, y: 24.6, acts: ['isl_harbour_concert', 'isl_harbour_fountain', 'isl_harbour_bridges', 'isl_harbour_food'], nogem: true, text: 'A new island in the harbour with a musical fountain, an open-air concert ground and a food court, linked to the mainland, Lagos Island and Eko Atlantic by three lit cable-stayed bridges. Big Afrobeats headliners on Friday and Saturday nights.' },
+    { id: 'harbour_club', icon: '🥂', name: 'The Harbour private club', type: 'nightlife', glyph: 'glass', district: 'island', x: 12.5, y: 26.0, acts: ['isl_harbour_club'], nogem: true, text: 'Members and their guests, on the far side of Harbour Live: a glass lounge, a pool deck and a jetty looking out over the lagoon.' },
     { id: 'cms', icon: '⛴️', name: 'CMS jetty', type: 'transport', glyph: 'boat', district: 'island', x: 15.0, y: 22.3, acts: [], text: 'Ferries to Ikorodu and Lekki.' },
     { id: 'ewa', icon: '🫘', name: 'Ewa agoyin stall', type: 'food', glyph: 'bowl', district: 'island', x: 15.4, y: 21.1, acts: ['island_ewa'], text: 'Mashed beans and pepper sauce with agege bread.' },
     { id: 'falomo', icon: '⛴️', name: 'Falomo jetty', type: 'transport', glyph: 'boat', district: 'ikoyi', x: 20.8, y: 20.4, acts: [], text: 'Ferry stop for Ikorodu and Lekki.' },
@@ -1145,6 +1153,9 @@
   // Ad boards at high-traffic spots. Players rent them with in-game naira.
   var BILLBOARDS = [
     { id: 'tmb', traffic: 1.8, name: 'Third Mainland Bridge, Yaba end', district: 'yaba', x: 16.3, y: 16.8 },
+    { id: 'harbour_n', traffic: 2.0, name: 'Harbour Live, mainland bridge', district: 'island', x: 11.4, y: 23.7 },
+    { id: 'harbour_e', traffic: 2.0, name: 'Harbour Live, Island bridge', district: 'island', x: 13.7, y: 24.1 },
+    { id: 'harbour_s', traffic: 1.9, name: 'Harbour Live, Eko Atlantic bridge', district: 'island', x: 13.3, y: 26.2 },
     { id: 'oshodi', traffic: 1.5, name: 'Oshodi interchange', district: 'oshodi', x: 9.6, y: 9.9 },
     { id: 'allen', traffic: 1.3, name: 'Allen roundabout, Ikeja', district: 'ikeja', x: 10.2, y: 5.4 },
     { id: 'ikorodu_rd', traffic: 0.8, name: 'Ikorodu Road', district: 'ikorodu', x: 23.5, y: 4.3 },
