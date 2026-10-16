@@ -1749,5 +1749,8 @@
     };
   }
 
-  root.LasgidiPlayground = { create: create, isWater: isWater, nearestDistrict: nearestDistrict, ESTATES: ESTATES, GEO: GEO };
+  // For the 3D city map (src/city3d.js): the same generated world, landmarks and tap areas the 2D map draws.
+  function worldFor(city) { if (CITY !== city) buildWorld(city); return { tiles: tiles, buildings: buildings, trees: trees, GEO: GEO, AREAS: AREAS, FERRIES: city === 'lagos' ? FERRIES : [], HARBOUR_BRIDGES: city === 'lagos' ? HARBOUR_BRIDGES : [], RUNWAY: RUNWAY, STADIUM: STADIUM }; }
+  function placeAt(city, x, y) { return placeAreaAt(D.PLACES.filter(function (p) { return cityOfDistrict(p.district) === city; }), { x: x, y: y }); }
+  root.LasgidiPlayground = { create: create, isWater: isWater, nearestDistrict: nearestDistrict, ESTATES: ESTATES, GEO: GEO, worldFor: worldFor, placeAt: placeAt };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

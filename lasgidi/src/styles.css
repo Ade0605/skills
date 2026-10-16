@@ -1022,3 +1022,11 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .term-zone { padding: 10px 12px; border-radius: 14px; background: var(--sunk); }
 .term-zone ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
 .term-zone p { margin: 4px 0 0; font-size: 13px; }
+
+/* The city map in 3D, layered over the 2D map */
+.city-3d { position: absolute; inset: 0; z-index: 1; background: #9fd3ef; }
+.city-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+.pg.pg-3d > .pg-canvas { visibility: hidden; }
+.pg.pg-3d > .pg-zoom { display: none; }
+.pg.pg-3d > .pg-hud, .pg.pg-3d > .map-dock, .pg.pg-3d > .map-pop { z-index: 2; }
+.city-bar { position: absolute; right: 8px; bottom: 8px; top: auto; display: grid; gap: 4px; z-index: 2; }

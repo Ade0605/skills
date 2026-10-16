@@ -10,7 +10,7 @@ const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 const html = read('index.html');
 const fonts = html.match(/<link rel="stylesheet" href="https:\/\/fonts[^>]+>/)[0];
 const body = html.slice(html.indexOf('<body>') + 6, html.indexOf('<script'));
-const js = ['src/data.js', 'src/engine.js', 'src/icons.js', 'src/playground.js', 'src/interior.js', 'src/avatar.js', 'src/images.js', 'src/danfo.js', 'src/danceoff.js', 'src/hawker.js', 'src/bole.js', 'src/quiz.js', 'src/gov.js', 'src/chat.js', 'src/cruise.js', 'src/airport.js', 'src/airport3d.js', 'src/beach3d.js', 'src/venue.js', 'src/ui.js'].map(read).join('\n');
+const js = ['src/data.js', 'src/engine.js', 'src/icons.js', 'src/playground.js', 'src/interior.js', 'src/avatar.js', 'src/images.js', 'src/danfo.js', 'src/danceoff.js', 'src/hawker.js', 'src/bole.js', 'src/quiz.js', 'src/gov.js', 'src/chat.js', 'src/cruise.js', 'src/airport.js', 'src/airport3d.js', 'src/city3d.js', 'src/beach3d.js', 'src/venue.js', 'src/ui.js'].map(read).join('\n');
 // Minify when terser is installed (npm install); otherwise ship the readable source as before.
 // Only local names are shortened: globals and every property name stay as written.
 function minifyCss(css) {

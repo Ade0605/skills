@@ -2443,7 +2443,29 @@
     });
     slot.appendChild(playground.el); window.__pg = playground;
     playground.update(sceneFor());
+    mountCity3D();
     mountMapUI(narrow);
+  }
+  // The city map in 3D: a three.js layer over the 2D map (which stays underneath as the fallback), with the same callbacks.
+  var city3d = null;
+  function mountCity3D() {
+    var wrap = playground && playground.el; if (!wrap) return;
+    var want = prefs.map3d !== false && !!window.LasgidiCity3D;
+    if (want && threeState !== 'ready' && threeState !== 'failed') { loadThree(function () { if (playground) mountCity3D(); }); return; }
+    if (want && window.THREE && !city3d) {
+      city3d = window.LasgidiCity3D.create({
+        onSelect: function (k) { ui.sel = k === S.loc ? null : k; ui.place = null; ui.board = null; render(); },
+        onSelectPlace: function (id) { clearPicks(); ui.mapPop = null; ui.place = id; render(); },
+        onToggle: function () { prefs.map3d = false; writeJSON(PREF_KEY, prefs); render(); }
+      });
+      if (!city3d) want = false;
+    }
+    var on = want && !!city3d;
+    wrap.classList.toggle('pg-3d', on);
+    if (on) { if (city3d.el.parentNode !== wrap) wrap.insertBefore(city3d.el, wrap.firstChild.nextSibling); city3d.update(sceneFor()); city3d.start(); }
+    else if (city3d && city3d.el.parentNode) { city3d.stop(); city3d.el.remove(); }
+    var zb = wrap.querySelector('.pg-zoom');
+    if (zb && !zb.querySelector('[data-map3d]') && window.LasgidiCity3D) { var b = document.createElement('button'); b.type = 'button'; b.className = 'pg-zbtn'; b.setAttribute('data-map3d', '1'); b.setAttribute('aria-label', 'Switch to the 3D map'); b.title = '3D map'; b.textContent = '🌐'; b.addEventListener('click', function () { prefs.map3d = true; writeJSON(PREF_KEY, prefs); render(); }); zb.insertBefore(b, zb.firstChild); }
   }
   // On-map controls: the map fills the window, a 📋 Do button opens what you can do here, and tapping a pin
   // (a place, a home or a billboard) opens its card as a pop-up over the map.
