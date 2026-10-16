@@ -106,13 +106,34 @@
       var drive = new T.Mesh(new T.PlaneGeometry(6, Math.max(d, 6)).rotateX(-Math.PI / 2), M(0x8a8d84, 0.9)); drive.position.set(w + 3.5, -0.05, d / 2); drive.receiveShadow = true; home.add(drive);
       (view.vehicles || []).slice(0, 6).forEach(function (v, i) { var V = D.VEHICLES[v.id]; if (!V) return; var vm = vehicleModel(V); vm.position.set(w + 3.5, 0, 1.6 + i * 2.6); vm.rotation.y = Math.PI / 2 * (i % 2 ? 1 : -1) * 0 + Math.PI / 2; home.add(vm); });
       // You, standing in the room.
-      if (root.LasgidiAvatar3D && view.look) { var me = root.LasgidiAvatar3D.figure(T, view.look, view.outfit || {}, null); me.scale.setScalar(0.95); var free = freeTile(); me.position.set(free[0] + 0.5, 0, free[1] + 0.5); me.rotation.y = 0.6; home.add(me); }
+      ME = null; if (root.LasgidiAvatar3D && view.look) { var me = root.LasgidiAvatar3D.figure(T, view.look, view.outfit || {}, null); me.scale.setScalar(0.95); var free = freeTile(), occ0 = occupied(), keep = WKH && !occ0[Math.floor(WKH.x) + ',' + Math.floor(WKH.z)] && WKH.x < (view.size || [4])[0] && WKH.z < (view.size || [4, 3])[1]; if (!keep) WKH = { x: free[0] + 0.5, z: free[1] + 0.5, yaw: 0.6 }; WKH.path = []; me.position.set(WKH.x, 0, WKH.z); me.rotation.y = WKH.yaw; home.add(me); ME = me; }
       HOMEW = w; HOMED = d; orbit.tx = w / 2 + 0.8; orbit.tz = d / 2; orbit.r = Math.max(7, Math.max(w, d) * 1.25); place();
       sun.position.set(w / 2 + 8, 12, d / 2 + 10); sun.target.position.set(w / 2, 0, d / 2); lamp.position.set(w / 2, 2.5, d / 2);
       WIN = glass;
     }
-    var HOMEW = 4, HOMED = 3, WIN = null;
-    function occupied() { var occ = {}; (view.items || []).forEach(function (it) { if (it.x == null) return; var f = D.FURNITURE[it.id]; if (!f) return; var dm = it.r ? [f.d, f.w] : [f.w, f.d]; for (var a = 0; a < dm[0]; a++) for (var b = 0; b < dm[1]; b++) occ[(it.x + a) + ',' + (it.y + b)] = 1; }); return occ; }
+    var HOMEW = 4, HOMED = 3, WIN = null, ME = null, WKH = null;
+    // Walking in your home: the shortest way over free tiles (a small grid, so a breadth-first search).
+    function walkPath(to) {
+      if (!WKH) return; var w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1], occ = occupied(true), k = function (x, y) { return x + ',' + y; };
+      var s0 = [Math.floor(WKH.x), Math.floor(WKH.z)], prev = {}, q = [s0]; prev[k(s0[0], s0[1])] = null;
+      while (q.length) { var c = q.shift(); if (c[0] === to[0] && c[1] === to[1]) break; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (dv) { var nx = c[0] + dv[0], ny = c[1] + dv[1], kk = k(nx, ny); if (nx < 0 || ny < 0 || nx >= w || ny >= d || occ[kk] || kk in prev) return; prev[kk] = c; q.push([nx, ny]); }); }
+      if (!(k(to[0], to[1]) in prev)) return false; var path = [], cur = to; while (cur) { path.unshift([cur[0] + 0.5, cur[1] + 0.5]); cur = prev[k(cur[0], cur[1])]; } WKH.path = path.slice(1); return true;
+    }
+    // The free tile next to an item, nearest to you.
+    function besideItem(i) {
+      var it = view.items[i], f = it && D.FURNITURE[it.id]; if (!f || it.x == null) return null; var dm = it.r ? [f.d, f.w] : [f.w, f.d], occ = occupied(), w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1], best = null, bd = 1e9;
+      for (var a = -1; a <= dm[0]; a++) for (var b = -1; b <= dm[1]; b++) { var x = it.x + a, y = it.y + b; if (x < 0 || y < 0 || x >= w || y >= d || occ[x + ',' + y]) continue; var dd = Math.hypot(x + 0.5 - WKH.x, y + 0.5 - WKH.z); if (dd < bd) { bd = dd; best = [x, y]; } }
+      return best ? { tile: best, face: [it.x + dm[0] / 2, it.y + dm[1] / 2] } : null;
+    }
+    function walkFrame(dt, t) {
+      if (!ME || !WKH) return; var moving = false;
+      if (WKH.path && WKH.path.length) { var n = WKH.path[0], dx = n[0] - WKH.x, dz = n[1] - WKH.z, dd = Math.hypot(dx, dz), st = 2.4 * dt; if (dd <= st) { WKH.x = n[0]; WKH.z = n[1]; WKH.path.shift(); } else { WKH.x += dx / dd * st; WKH.z += dz / dd * st; } if (dd > 0.01) WKH.yaw = Math.atan2(dx, dz); moving = true; }
+      else if (WKH.face) { WKH.yaw = Math.atan2(WKH.face[0] - WKH.x, WKH.face[1] - WKH.z); WKH.face = null; }
+      ME.position.set(WKH.x, 0, WKH.z); var dy = ((WKH.yaw - ME.rotation.y + Math.PI * 3) % (Math.PI * 2)) - Math.PI; ME.rotation.y += dy * Math.min(1, dt * 10);
+      var lg = ME.userData.legs, sw = moving ? Math.sin(t * 9) * 0.55 : 0; if (lg) lg.forEach(function (l, k) { l.rotation.x = k ? -sw : sw; });
+      var ar = ME.userData.arms; if (ar) ar.forEach(function (l, k) { l.rotation.x = moving ? (k ? sw : -sw) * 0.7 : 0; });
+    }
+    function occupied(walk) { var occ = {}; (view.items || []).forEach(function (it) { if (it.x == null) return; var f = D.FURNITURE[it.id]; if (!f || (walk && f.shape === 'rug')) return; /* you can walk over a rug */ var dm = it.r ? [f.d, f.w] : [f.w, f.d]; for (var a = 0; a < dm[0]; a++) for (var b = 0; b < dm[1]; b++) occ[(it.x + a) + ',' + (it.y + b)] = 1; }); return occ; }
     function freeTile() { var occ = occupied(), w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1]; for (var y = d - 1; y >= 0; y--) for (var x = w - 1; x >= 0; x--) if (!occ[x + ',' + y]) return [x, y]; return [w - 1, d - 1]; }
     function selectGlow() { items3.forEach(function (g, i) { if (!g) return; g.traverse(function (o) { if (o.isMesh && o.material && o.material.emissive && !o.userData.keepEmissive) { o.material = o.material.clone(); o.material.emissive.set(i === view.sel ? 0xffb000 : 0x000000); o.material.emissiveIntensity = i === view.sel ? 0.35 : 0; } }); }); }
 
@@ -173,8 +194,9 @@
     cv.addEventListener('pointerup', function (e) { var d0 = drag, mv = moved; up(e); drag = null; if (!view) return;
       if (d0 && d0.item != null && d0.to) { var it = view.items[d0.item]; opts.onPlace && opts.onPlace(d0.item, d0.to[0], d0.to[1], it.r); return; }
       if (mv) return; var p = pick(e);
-      if (p.item != null) { opts.onSelect && opts.onSelect(p.item); return; }
+      if (p.item != null) { var bi = WKH && besideItem(p.item); if (bi && walkPath(bi.tile)) WKH.face = bi.face; opts.onSelect && opts.onSelect(p.item); return; }
       if (p.tile && view.sel != null && p.tile[0] >= 0 && p.tile[1] >= 0) { opts.onPlace && opts.onPlace(view.sel, p.tile[0], p.tile[1], view.items[view.sel].r); return; }
+      if (p.tile && WKH && walkPath(p.tile)) return; // nothing selected: walk there
       opts.onSelect && opts.onSelect(null); });
     cv.addEventListener('pointercancel', up); cv.addEventListener('wheel', function (e) { e.preventDefault(); orbit.r *= Math.exp(e.deltaY * 0.0012); place(); }, { passive: false });
     bar.addEventListener('click', function (e) { var b = e.target.closest('[data-h3]'); if (!b || !view) return; var a = b.getAttribute('data-h3');
@@ -188,6 +210,7 @@
       size(); var t = reduce ? 0 : now / 1000, hr = view && view.hour != null ? view.hour : 12, night = hr >= 19 || hr < 6, lit = view && view.power;
       hemi.intensity = night ? (lit ? 0.55 : 0.18) : 0.75; sun.intensity = night ? 0.05 : 1.4; lamp.intensity = night ? (lit ? 14 : 3) : 0; lamp.color.set(lit ? 0xffd8a0 : 0xff9a40);
       if (WIN) { WIN.emissiveIntensity = night ? 0.05 : 0.7; WIN.color.set(night ? 0x1a2a4a : 0xbfe0f2); }
+      var wnow = performance.now(), wdt = Math.min(0.25, (wnow - (WKH && WKH.last || wnow)) / 1000); if (WKH) WKH.last = wnow; walkFrame(wdt, wnow / 1000);
       animParty(t); if (PT) { hemi.intensity *= 0.75; lamp.intensity *= 0.6; }
       fans.forEach(function (f) { f.rotation.z = lit || !night ? t * 12 : 0; }); screens.forEach(function (m) { m.emissiveIntensity = lit || !night ? 0.4 + Math.sin(t * 3) * 0.1 : 0; });
       renderer.render(S3, cam); raf = wrap.isConnected ? root.requestAnimationFrame(frame) : 0;
@@ -196,6 +219,7 @@
       el: wrap, is3d: true,
       dispose: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (root.LasgidiGL) root.LasgidiGL.free(renderer); else renderer.dispose(); }, 
       // Screen point (relative to the canvas) of a floor tile's centre, for tests and keyboard help.
+      walker: function () { return WKH ? { x: WKH.x, z: WKH.z, walking: !!(WKH.path && WKH.path.length) } : null; }, // for tests
       tilePoint: function (x, y) { var v = new T.Vector3(x + 0.5, 0, y + 0.5).project(cam); return { x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H }; },
       update: function (v) { view = v; cv.setAttribute('aria-label', 'Inside your home in 3D: ' + v.name + ', ' + (v.items || []).filter(function (i) { return i.x != null; }).length + ' items placed. Tap an item, then drag it or tap a tile to move it.');
         var k = JSON.stringify([v.size, v.type, v.paint, v.items, (v.vehicles || []).map(function (x) { return x.id; }), v.look, v.outfit]); if (k !== key) { key = k; build(); }

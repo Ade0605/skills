@@ -1715,7 +1715,7 @@
       pn.innerHTML = html; cruisePanelKey = html;
       var ni = document.getElementById('deck-in'); if (ni) { ni.value = val; if (foc) ni.focus(); }
     }
-    cruiseStage.update(deckScene()); cruiseStage.start();
+    cruiseStage.update(deckScene()); cruiseStage.start(); window.__cruise = cruiseStage; // handle for tests
   }
   function sendDeck(text) {
     var r = CH.clean(text);

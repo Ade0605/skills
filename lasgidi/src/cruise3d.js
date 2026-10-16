@@ -71,12 +71,13 @@
     function syncPeople() {
       var room = scene.layout || scene.room || 'cruise', SP = LAYOUTS[room] || SPOTS, key = JSON.stringify((scene.players || []).map(function (p) { return [p.by, p.spot, p.look, p.outfit, p.label]; }));
       if (key !== peopleKey) {
+        var was = {}; (DYN.figs || []).forEach(function (f) { was[f.pl.by] = f.g.position.clone(); }); // where everyone stood, so they walk to their new spot
         peopleKey = key; people.clear(); DYN.figs = []; var placed = {};
         (scene.players || []).forEach(function (pl, i) {
           var base = SP[pl.spot] || SP[Object.keys(SP)[0]], n = placed[pl.spot] = (placed[pl.spot] || 0) + 1, ang = n * 2.4, rad = n === 1 ? 0 : 0.6 + 0.2 * Math.floor(n / 4), p = P(base[0] + Math.cos(ang) * rad, base[1] + Math.sin(ang) * rad * 0.8);
           var g = new T.Group(); g.position.copy(p); var fig = root.LasgidiAvatar3D ? root.LasgidiAvatar3D.figure(T, pl.look || { skin: 2, hair: 0, shape: 1 }, pl.outfit || {}, pl.extra) : new T.Mesh(new T.CapsuleGeometry(0.3, 1.1, 4, 8), M(0x2f6fa0)); fig.rotation.y = (i * 1.7) % 6.28; g.add(fig);
           var tg = tag((pl.me ? '★ ' : '') + (pl.label || ''), pl.me ? (pl.tagc || '#2f6fd0') : pl.crew ? 'rgba(23,24,26,.75)' : '#ffffff', pl.me ? (pl.tagi || '#ffffff') : pl.crew ? '#ffffff' : '#17181a', 4.2); tg.position.y = 2.5; g.add(tg);
-          g.traverse(function (o) { if (!pl.me && (!pl.crew || pl.npc)) o.userData.by = pl.by; }); people.add(g); DYN.figs.push({ g: g, fig: fig, pl: pl, ph: i * 0.9 });
+          g.traverse(function (o) { if (!pl.me && (!pl.crew || pl.npc)) o.userData.by = pl.by; }); people.add(g); var fw = { g: g, fig: fig, pl: pl, ph: i * 0.9, to: p.clone() }; if (was[pl.by] && was[pl.by].distanceTo(p) > 0.3 && !reduce) { fw.from = was[pl.by].clone(); fw.from.y = 0; fw.t0 = performance.now(); fw.dur = Math.min(2200, 500 + was[pl.by].distanceTo(p) * 140); g.position.copy(fw.from); fig.rotation.y = Math.atan2(p.x - fw.from.x, p.z - fw.from.z); } DYN.figs.push(fw);
         });
       }
       DYN.spots.forEach(function (s) { var mine = s.k === scene.spot; s.ring.material.color.set(mine ? 0xf2b600 : 0xffffff); s.ring.material.opacity = mine ? 0.95 : 0.5; });
@@ -107,12 +108,12 @@
       DYN.lights.forEach(function (l, i) { if (l.isLight) l.intensity = 5 + Math.abs(Math.sin(t * 3 + i)) * 6; else l.color.set(night ? 0xffd27a : 0x6b6458); });
       if (DYN.fire) DYN.fire.scale.set(1, 0.8 + Math.abs(Math.sin(t * 8)) * 0.4, 1);
       if (DYN.confetti) { var cp = DYN.confetti.geometry.attributes.position; for (var c = 0; c < cp.count; c++) cp.setY(c, ((cp.getY(c) - 0.03) + 8) % 8); cp.needsUpdate = true; }
-      DYN.figs.forEach(function (f) { var dancing = room === 'club' || (room === 'cruise' && f.pl.spot === 'party'); f.g.position.y = dancing && !reduce ? Math.abs(Math.sin(t * 4 + f.ph)) * 0.15 : 0; var arms = f.fig.userData && f.fig.userData.arms; if (arms && dancing && !reduce) { arms[0].rotation.z = -0.6 - Math.sin(t * 4 + f.ph) * 0.8; arms[1].rotation.z = 0.6 + Math.sin(t * 4 + f.ph) * 0.8; } });
+      DYN.figs.forEach(function (f) { if (f.from) { var k = Math.min(1, (now - f.t0) / f.dur), e = k * k * (3 - 2 * k), lg = f.fig.userData && f.fig.userData.legs, sw = Math.sin(now / 1000 * 9) * 0.55; f.g.position.lerpVectors(f.from, f.to, e); if (lg) lg.forEach(function (l, j) { l.rotation.x = k < 1 ? (j ? -sw : sw) : 0; }); if (k >= 1) f.from = null; return; } var dancing = room === 'club' || (room === 'cruise' && f.pl.spot === 'party'); f.g.position.y = dancing && !reduce ? Math.abs(Math.sin(t * 4 + f.ph)) * 0.15 : 0; var arms = f.fig.userData && f.fig.userData.arms; if (arms && dancing && !reduce) { arms[0].rotation.z = -0.6 - Math.sin(t * 4 + f.ph) * 0.8; arms[1].rotation.z = 0.6 + Math.sin(t * 4 + f.ph) * 0.8; } });
       renderer.render(S3, cam); raf = el.isConnected ? root.requestAnimationFrame(frame) : 0;
     }
     function update(s) { scene = s || scene; var room = scene.layout || scene.room || 'cruise', bk = room + '|' + (scene.sign || '') + '|' + (scene.event ? 1 : 0); if (bk !== built) { built = bk; peopleKey = ''; build(room); } syncPeople(); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); }
     function start() { if (!raf) raf = root.requestAnimationFrame(frame); }
-    return { el: el, update: update, start: start, spots: SPOTS, is3d: true, dispose: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (root.LasgidiGL) root.LasgidiGL.free(renderer); else renderer.dispose(); } };
+    return { el: el, update: update, start: start, spots: SPOTS, is3d: true, mePos: function () { var f = (DYN.figs || []).filter(function (x) { return x.pl.me; })[0]; return f ? { x: f.g.position.x, z: f.g.position.z, walking: !!f.from } : null; }, /* for tests */ dispose: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (root.LasgidiGL) root.LasgidiGL.free(renderer); else renderer.dispose(); } };
   }
   root.LasgidiCruise3D = { create: create };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

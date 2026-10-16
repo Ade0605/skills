@@ -939,7 +939,7 @@
     function label(s, text, bg, fg) { var k = text + bg; if (s.userData.k === k) return; s.userData.k = k; var c = s.userData.c, g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.font = '800 40px system-ui, sans-serif'; var tw = Math.min(c.width - 6, g.measureText(text).width + 40); g.fillStyle = bg; g.beginPath(); if (g.roundRect) g.roundRect((c.width - tw) / 2, 14, tw, 64, 32); else g.rect((c.width - tw) / 2, 14, tw, 64); g.fill(); g.fillStyle = fg || '#17181a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, c.width / 2, 47); s.userData.t.needsUpdate = true; s.scale.set(s.userData.w, s.userData.w * 96 / 512, 1); }
     var signs = [], crowd = [], me = null, meTag = null, gem = null, bubble = null, bubbleAt = 0;
     // Strollers along the waterline: scenery, not tappable.
-    var strollers = []; for (var si = 0; si < 10; si++) { var sp0 = person(20 + si, si % 2 === 1); sp0.traverse(function (o) { o.userData.scenery = true; }); S3.add(sp0); strollers.push(sp0); }
+    var strollers = []; for (var si = 0; si < 10; si++) { var sp0 = !LITE && root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('stroller', si), 20 + si) : person(20 + si, si % 2 === 1); sp0.traverse(function (o) { o.userData.scenery = true; }); S3.add(sp0); strollers.push(sp0); }
     function syncSigns() {
       var acts = sc.acts || [];
       while (signs.length < Math.min(8, acts.length)) { var s = sprite('', '#fff'); world.add(s); signs.push(s); }
@@ -948,6 +948,7 @@
     // A person in their own look and outfit (the 3D avatar) when we know it, else the plain figure. Wrapped so it
     // faces +x like person(), with its legs swinging about x.
     function avatarFor(d, i) {
+      if (d && !d.look && root.LasgidiGames3D && root.LasgidiAvatar3D) { var st0 = root.LasgidiGames3D.stranger((sc.placeId || 'yard') + ':' + (d.label || ''), i); d = Object.assign({}, d, { look: st0.look, outfit: st0.outfit }); } // strangers get a real 3D look too
       if (!d || !d.look || !root.LasgidiAvatar3D) return person(i, i % 2 === 1);
       var outer = new T.Group(), f = root.LasgidiAvatar3D.figure(T, d.look, d.outfit, d.extra); f.rotation.y = Math.PI / 2; f.scale.setScalar(1.05); outer.add(f);
       outer.userData.legs = f.userData.legs; outer.userData.axis = 'x'; outer.userData.key = JSON.stringify([d.look, d.outfit, d.extra]); return outer;
@@ -1082,6 +1083,16 @@
       me.position.set(WK.x, groundY(WK.x, WK.z), WK.z); me.rotation.y = WK.yaw;
       var lg = me.userData.legs, sw = Math.sin(t * 9) * 0.6 * WK.moving; if (lg) lg.forEach(function (l, k) { l.rotation[me.userData.axis || 'z'] = k ? -sw : sw; });
       if (WK.follow) { var WR = CLUB || GAL ? 12 : HARBOUR ? 34 : 24; orbit.tx += (WK.x - orbit.tx) * Math.min(1, dt * 3); orbit.tz += (WK.z - orbit.tz) * Math.min(1, dt * 3); if (orbit.r > WR) orbit.r += (WR - orbit.r) * Math.min(1, dt * 1.5); place(); if (WK.moving === 0 && Math.hypot(WK.x - orbit.tx, WK.z - orbit.tz) < 0.2) WK.follow = false; }
+      // People notice you: regulars and crew with a line turn to you and say it (once until you walk away); others wave.
+      var seen = WK.seen || (WK.seen = {});
+      crowd.forEach(function (p, i) {
+        var d = (sc.people || [])[i]; if (!p.visible || !d) return; var ddx = WK.x - p.position.x, ddz = WK.z - p.position.z, dist = Math.hypot(ddx, ddz);
+        if (dist > 6) { seen[i] = false; return; } if (dist > 3.2) return;
+        p.rotation.y = Math.atan2(-ddz, ddx); // face you
+        var inner = p.children && p.children[0], arms = inner && inner.userData && inner.userData.arms;
+        if (d.line && !seen[i]) { seen[i] = true; if (!bubble) { bubble = sprite('', '#fff', '#17181a', 9); world.add(bubble); } label(bubble, ((d.label || '') + ': ' + d.line).slice(0, 48), '#ffffff', '#17181a'); bubble.position.copy(p.position).add(new T.Vector3(0, 3.2, 0)); bubble.visible = true; bubbleAt = performance.now(); WK.greeted = (WK.greeted || 0) + 1; }
+        else if (!d.line && arms && arms[1]) arms[1].rotation.x = -2.6 + Math.sin(t * 10) * 0.35; // a wave
+      });
       // The nearest sign within reach lights up, with a "Do it" button.
       var near = -1, best = 3.6; (sc.acts || []).slice(0, 8).forEach(function (a, i) { if (!a) return; var q = SP()[i]; var dd2 = Math.hypot(q[0] - WK.x, q[1] - WK.z); if (dd2 < best) { best = dd2; near = i; } });
       if (near !== WK.near) { WK.near = near; var a2 = near >= 0 ? sc.acts[near] : null; doBtn.hidden = !a2 || !!sc.clean; if (a2) { doBtn.textContent = '▶ ' + (a2.icon || '') + ' ' + a2.short; doBtn.disabled = !!a2.off; } signs.forEach(function (sg, i) { sg.material.color.set(i === near ? 0xffe27a : 0xffffff); }); }
@@ -1163,7 +1174,8 @@
       update: function (next) { sc = next || sc; build(); seasonal(); syncSigns(); syncPeople(); if (WK.reset && me) { WK.reset = false; walkStart(); WK.near = -2; } cv.setAttribute('aria-label', (sc.name || 'The beach') + ' in 3D. Drag to look around, tap a sign to do it.'); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
       start: function () { if (!raf) raf = root.requestAnimationFrame(frame); },
       stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; },
-      walk: function () { return { on: WK.on, x: WK.x, z: WK.z, near: WK.near }; }, // for tests
+      walk: function () { return { on: WK.on, x: WK.x, z: WK.z, near: WK.near, greeted: WK.greeted || 0 }; },
+      peopleAt: function () { return crowd.map(function (p, i) { var d = (sc.people || [])[i]; return p.visible && d ? { x: p.position.x, z: p.position.z, line: !!d.line } : null; }); }, // for tests
       screenOf: function (x, z) { var v = new T.Vector3(x, groundY(x, z), z).project(cam), r = cv.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }, // for tests
     };
   }

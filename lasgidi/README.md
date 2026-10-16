@@ -31,6 +31,8 @@ node tools/build-single.js       # writes dist/lasgidi.html
   - **Walking:** tap the ground to walk there, use WASD or the arrow keys, or the joystick at the bottom-left on touch screens. The camera follows you.
   - **Doing things:** walk up to a sign and press ▶ Do it, or tap a sign to walk over and do it.
   - **Buttons:** 🚶 turns walking off; ⟲ ⟳ turn the view; + and − zoom; 📷 takes a photo.
+- **At home:** tap bare floor to walk there; your avatar walks round the furniture and over rugs. Tap a piece of furniture to walk up to it and select it, then tap a tile to move it there. ⤾ turns it.
+- **On the cruise and in live rooms:** tap a spot ring and your avatar walks across to it. Other players walk too when they change spots.
 - **Mini-games:**
   - **Danfo Run:** ◀ ▶ (or swipe) to change lanes, and hold BRAKE (or ↓/space).
   - **Dance-off:** tap a lane, or press ← ↓ ↑ → or D F J K.
@@ -590,6 +592,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
     - a model casting (Charisma 2, once a week; you're only sometimes booked, for ₦15,000).
   - **Limits and prices:** festival work and prizes are once a day each, and prizes rise with prices like everything else. Rules-17 lives don't see any of this.
   - **In the walk-ins:** each place shows the season. There's a lit Christmas tree, rams in a pen under a "Sallah ram market" banner, the marathon start arch with bunting, a pile of new yams, and the Style Week runway.
+- **People notice you:** walk up to a named regular or a crew member and they turn and say their line, once until you walk away. This costs no game time; tap them to gist properly. Strangers wave, and every stranger and passer-by is a full 3D avatar in their own clothes.
 - **Walk around in 3D:** in every walk-in your avatar walks. Tap the ground to walk there, use WASD or the arrow keys, or the joystick at the bottom-left on touch screens. The camera follows you in. Walk up to a sign and it lights up with a ▶ Do it button. Tapping a sign walks you over and then does it. 🚶 turns walking off, and the choice is remembered.
 - **Music and game sounds (`src/music.js`):** with 🔊 sound on, original beats made in the browser play. Nothing is copied, and there are no audio files.
   - **Afrobeats:** a 3-3-2 kick, shaker, claps, log-drum bass and chord stabs, for the dance-off at the game's own 112 BPM, clubs and stages at night, and parties at home.
