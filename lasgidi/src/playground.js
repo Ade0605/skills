@@ -286,6 +286,23 @@
   // Landmarks drawn into the static layer.
   var RUNWAY = [[3.2, 0.6], [9.6, 0.2], [9.8, 1.0], [3.4, 1.4]];
   var STADIUM = { x: 9.2, y: 16.6, rx: 0.9, ry: 0.7 };
+  // Tap areas for places, in world km: the big landmarks use their drawn shape; every other place gets a circle round its pin.
+  var AREAS = {
+    white_sand_beach: { r: [41.0, 26.85, 50.8, 29.95] }, refinery_site: { r: [44.2, 22.8, 51.0, 24.9] }, new_airport_site: { r: [0.9, 2.1, 7.9, 4.3] },
+    airport: { p: [[3.2, 0.6], [9.6, 0.2], [9.8, 1.0], [3.4, 1.4]] }, stadium: { e: [9.2, 16.6, 0.95, 0.75] },
+    eko_atlantic_city: { p: [[13.6, 27.9], [19.4, 27.9], [19.8, 28.4], [19.8, 30.6], [13.4, 30.6], [13.2, 28.4]] }
+  };
+  var AREA_R = { outdoors: 0.55, transport: 0.45, culture: 0.4, food: 0.4, nightlife: 0.35, learn: 0.35, services: 0.35 };
+  function inPoly(x, y, pts) { var c = false; for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) { var a = pts[i], b = pts[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
+  function inArea(A, x, y) { return A.r ? x >= A.r[0] && x <= A.r[2] && y >= A.r[1] && y <= A.r[3] : A.p ? inPoly(x, y, A.p) : A.e ? Math.pow((x - A.e[0]) / A.e[2], 2) + Math.pow((y - A.e[1]) / A.e[3], 2) <= 1 : false; }
+  // The place whose area holds world point w: a drawn landmark first, else the nearest pin whose circle holds it.
+  function placeAreaAt(places, w) {
+    var hit = null, bd = 1e9;
+    places.forEach(function (pl) { if (AREAS[pl.id] && inArea(AREAS[pl.id], w.x, w.y)) hit = hit || pl.id; });
+    if (hit) return hit;
+    places.forEach(function (pl) { var d = Math.hypot(pl.x - w.x, pl.y - w.y); if (d <= (AREA_R[pl.type] || 0.35) && d < bd) { bd = d; hit = pl.id; } });
+    return hit;
+  }
   // The Ibeju-Lekki refinery east of Ajah, and the new international airport (laid out here, drawn in Ikeja).
   var REFINERY = { x0: 44.2, y0: 22.8, x1: 51.0, y1: 24.9 }, NEW_AIRPORT = { x0: 44.2, y0: 25.1, x1: 51.2, y1: 27.3 }, AIRPORT_AT = { x: 0.9, y: 2.1 };
 
@@ -1155,6 +1172,14 @@
       });
       ctx.textBaseline = 'alphabetic';
 
+      // The open place's tap area, outlined so you can see what counts as inside it.
+      var openPl = scene.place && (scene.places || []).filter(function (pl) { return pl.id === scene.place; })[0];
+      if (openPl) {
+        var OA = AREAS[openPl.id]; ctx.save(); ctx.setLineDash([6, 5]); ctx.lineWidth = 2; ctx.strokeStyle = theme.dark ? 'rgba(255,214,0,.85)' : 'rgba(214,150,0,.9)'; ctx.fillStyle = 'rgba(255,214,0,.08)'; ctx.beginPath();
+        var pts = OA && OA.r ? [[OA.r[0], OA.r[1]], [OA.r[2], OA.r[1]], [OA.r[2], OA.r[3]], [OA.r[0], OA.r[3]]] : OA && OA.p ? OA.p : null;
+        if (!pts) { var rr = OA && OA.e ? null : AREA_R[openPl.type] || 0.35; pts = []; for (var ai = 0; ai < 24; ai++) { var an = ai / 24 * Math.PI * 2; pts.push(OA && OA.e ? [OA.e[0] + Math.cos(an) * OA.e[2], OA.e[1] + Math.sin(an) * OA.e[3]] : [openPl.x + Math.cos(an) * rr, openPl.y + Math.sin(an) * rr]); } }
+        pts.forEach(function (c, i) { var q = toScreen(c[0], c[1], 0); if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y); }); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+      }
       // Key places: a coloured badge per category with a small vector glyph.
       placeHits = [];
       var pr = Math.max(7.5, Math.min(13, 7.2 * Math.sqrt(cam.z) * Math.min(1.3, Math.max(0.85, base.s))));
@@ -1603,8 +1628,11 @@
         if (!hitPlace) { opts.onSelectPlot(row * E.cols + col); return; }
       }
       placeHits.forEach(function (p) { var dd = Math.hypot(p.x - x, p.y - y); if (dd < bp) { bp = dd; bestPlace = p.id; } });
-      if (bestPlace && opts.onSelectPlace) opts.onSelectPlace(bestPlace);
-      else if (best && opts.onSelect) opts.onSelect(best);
+      // Anywhere inside a place's area counts as tapping it; tapping the open place again, or empty map, closes it.
+      if (!bestPlace) bestPlace = placeAreaAt(scene.places || [], w);
+      if (bestPlace && opts.onSelectPlace) { opts.onSelectPlace(bestPlace === scene.place ? null : bestPlace); return; }
+      if (scene.place && opts.onSelectPlace) { opts.onSelectPlace(null); return; }
+      if (best && opts.onSelect) opts.onSelect(best);
     });
     // Spin to any angle, keeping the middle of the screen in the middle and the scale steady.
     var spinning = null;
@@ -1659,6 +1687,7 @@
       // Fly the camera to the Sea Plots grid.
       focusAt: function (x, y, z) { cam.z = z || 3; cam.px = 0; cam.py = 0; var p = toScreen(x, y, 0); cam.px = W / 2 - p.x; cam.py = H / 2 - p.y; clampCam(); staticKey = ''; kick(); },
       focusSea: function () { var S = D.SEA; cam.z = Math.max(cam.z, W < 600 ? 3 : 2.4); cam.px = 0; cam.py = 0; var p = toScreen(S.x0 + S.cols * S.gap / 2, S.y0 + S.rows * S.gap / 2, 0); cam.px = W / 2 - p.x; cam.py = H / 2 - p.y; clampCam(); staticKey = ''; kick(); },
+      worldPoint: function (x, y) { var p = toScreen(x, y, 0); return { x: p.x, y: p.y }; }, // screen point of a world spot (for tests)
       seaPoint: function (c, r) { var S = D.SEA, p = toScreen(S.x0 + (c + 0.5) * S.gap, S.y0 + (r + 0.5) * S.gap, 0); return { x: p.x, y: p.y }; },
       update: function (next) {
         if ((next.city || 'lagos') !== CITY) { buildWorld(next.city || 'lagos'); rebuildTraffic(); W = 0; cam = { z: 1, px: 0, py: 0 }; staticKey = ''; }
