@@ -1650,8 +1650,13 @@
     if (S && S.cruise && L.cruiseAboard(S) && S.loc !== D.CRUISE.district) { L.cruiseLeave(S); ui.cruiseOpen = false; save(); }
     var want = S && S.cruise && L.cruiseAboard(S) && ui.cruiseOpen;
     if (!want) { if (ov) ov.remove(); return; }
+    if (!ov && window.LasgidiCruise3D && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountCruise); return; } // the deck opens in 3D
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'cruise-view'; ov.className = 'cruise-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Lagoon Boat Cruise');
+      if (!cruiseStage && window.LasgidiCruise3D && window.THREE) cruiseStage = window.LasgidiCruise3D.create({
+        onSpot: function (k) { if (k !== S.cruise.spot) run(function () { return L.cruiseSpot(S, k); }); },
+        onPlayer: function (by) { ui.cruiseOpen = false; clearPicks(); ui.chatWith = by; online.unread[by] = 0; ui.tab = 'map'; render(); }
+      });
       if (!cruiseStage) cruiseStage = window.LasgidiCruise.create({
         onSpot: function (k) { if (k !== S.cruise.spot) run(function () { return L.cruiseSpot(S, k); }); },
         onPlayer: function (by) { ui.cruiseOpen = false; clearPicks(); ui.chatWith = by; online.unread[by] = 0; ui.tab = 'map'; render(); }
@@ -1832,8 +1837,14 @@
     var id = S && S.room && L.roomIn(S, S.room.id) && ui.roomOpen === S.room.id ? S.room.id : null;
     if (!id) { if (ov) ov.remove(); return; }
     if (ov && ov.getAttribute('data-room') !== id) { ov.remove(); ov = null; }
+    if (!ov && window.LasgidiCruise3D && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountRoom); return; } // live rooms open in 3D
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'room-view'; ov.className = 'cruise-view room-view room-' + id; ov.setAttribute('data-room', id); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', D.ROOMS[id].name);
+      var roomCb = {
+        onSpot: function (k) { if (S.room && k !== S.room.spot) run(function () { return L.roomSpot(S, S.room.id, k); }); },
+        onPlayer: function (by) { if (by.indexOf('npc:') === 0) { var nk = by.slice(4); run(function () { return L.roomHang(S, S.room.id, nk); }); return; } ui.roomOpen = null; clearPicks(); ui.chatWith = by; online.unread[by] = 0; ui.tab = 'map'; render(); }
+      };
+      if (!roomStage && window.LasgidiCruise3D && window.THREE) roomStage = window.LasgidiCruise3D.create(roomCb);
       if (!roomStage) roomStage = window.LasgidiCruise.create({
         onSpot: function (k) { if (S.room && k !== S.room.spot) run(function () { return L.roomSpot(S, S.room.id, k); }); },
         onPlayer: function (by) { if (by.indexOf('npc:') === 0) { var nk = by.slice(4); run(function () { return L.roomHang(S, S.room.id, nk); }); return; } ui.roomOpen = null; clearPicks(); ui.chatWith = by; online.unread[by] = 0; ui.tab = 'map'; render(); }
