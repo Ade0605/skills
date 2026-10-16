@@ -239,15 +239,17 @@
     }
 
     /* ---------- camera: orbit with drag, zoom with wheel or pinch ---------- */
-    var orbit = { az: -0.62, pol: 0.95, r: 26, tx: 12, tz: 8.2 }, ptrs = {}, drag = null, pinch0 = 0, moved = false;
-    function place() { orbit.pol = Math.max(0.25, Math.min(1.35, orbit.pol)); orbit.r = Math.max(5, Math.min(48, orbit.r)); var sp = Math.sin(orbit.pol); camera.position.set(orbit.tx + orbit.r * sp * Math.sin(orbit.az), orbit.r * Math.cos(orbit.pol), orbit.tz + orbit.r * sp * Math.cos(orbit.az)); camera.lookAt(orbit.tx, 0, orbit.tz); }
+    var orbit = { az: -0.62, pol: 0.95, r: 26, tx: 12, ty: 0, tz: 8.2 }, ptrs = {}, drag = null, pinch0 = 0, moved = false, follow = !reduce;
+    function place() { orbit.pol = Math.max(0.25, Math.min(1.35, orbit.pol)); orbit.r = Math.max(5, Math.min(48, orbit.r)); var sp = Math.sin(orbit.pol); camera.position.set(orbit.tx + orbit.r * sp * Math.sin(orbit.az), orbit.ty + orbit.r * Math.cos(orbit.pol), orbit.tz + orbit.r * sp * Math.cos(orbit.az)); camera.lookAt(orbit.tx, orbit.ty, orbit.tz); }
+    // The follow-cam tracks each movement; any drag, zoom or turn hands the camera back to you.
+    function setFollow(on) { follow = on; var fb = bar && bar.querySelector('[data-a3="follow"]'); if (fb) { fb.setAttribute('aria-pressed', String(on)); fb.classList.toggle('on', on); } }
     place();
     cv.addEventListener('pointerdown', function (e) { ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; drag = { x: e.clientX, y: e.clientY }; moved = false; if (Object.keys(ptrs).length === 2) { var a = Object.values(ptrs); pinch0 = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); } try { cv.setPointerCapture(e.pointerId); } catch (x) {} });
     cv.addEventListener('pointermove', function (e) {
       if (!ptrs[e.pointerId]) return; ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
       var a = Object.values(ptrs);
-      if (a.length === 2 && pinch0) { var d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); orbit.r *= pinch0 / Math.max(1, d); pinch0 = d; moved = true; place(); return; }
-      if (!drag) return; var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+      if (a.length === 2 && pinch0) { var d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); orbit.r *= pinch0 / Math.max(1, d); pinch0 = d; moved = true; setFollow(false); place(); return; }
+      if (!drag) return; var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; if (follow) setFollow(false); }
       if (e.shiftKey || e.buttons === 2) { var k = orbit.r / 600; orbit.tx -= (dx * Math.cos(orbit.az) - dy * Math.sin(orbit.az)) * k; orbit.tz -= (-dx * Math.sin(orbit.az) - dy * Math.cos(orbit.az)) * k * -1; }
       else { orbit.az -= dx * 0.006; orbit.pol -= dy * 0.005; }
       drag = { x: e.clientX, y: e.clientY }; place();
@@ -255,7 +257,7 @@
     function up(e) { delete ptrs[e.pointerId]; if (Object.keys(ptrs).length < 2) pinch0 = 0; if (!Object.keys(ptrs).length) drag = null; }
     cv.addEventListener('pointerup', function (e) { var wasMoved = moved; up(e); if (!wasMoved) tap(e); });
     cv.addEventListener('pointercancel', up); cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-    cv.addEventListener('wheel', function (e) { e.preventDefault(); orbit.r *= Math.exp(e.deltaY * 0.0012); place(); }, { passive: false });
+    cv.addEventListener('wheel', function (e) { e.preventDefault(); setFollow(false); orbit.r *= Math.exp(e.deltaY * 0.0012); place(); }, { passive: false });
     var ray = new T.Raycaster(), ndc = new T.Vector2();
     function tap(e) {
       if (!opts.onTap) return; var r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera);
@@ -263,9 +265,9 @@
     }
     // Buttons: turn and zoom.
     var bar = document.createElement('div'); bar.className = 'iv-spin';
-    bar.innerHTML = '<button type="button" class="pg-zbtn" data-a3="in" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-a3="out" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-a3="l" aria-label="Turn left">⟲</button><button type="button" class="pg-zbtn" data-a3="r" aria-label="Turn right">⟳</button>';
+    bar.innerHTML = '<button type="button" class="pg-zbtn' + (follow ? ' on' : '') + '" data-a3="follow" aria-pressed="' + follow + '" aria-label="Follow the aircraft" title="Follow the aircraft">🎥</button><button type="button" class="pg-zbtn" data-a3="in" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-a3="out" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-a3="l" aria-label="Turn left">⟲</button><button type="button" class="pg-zbtn" data-a3="r" aria-label="Turn right">⟳</button>';
     el.appendChild(bar);
-    bar.addEventListener('click', function (e) { var b = e.target.closest('[data-a3]'); if (!b) return; var a = b.getAttribute('data-a3'); if (a === 'in') orbit.r *= 0.8; else if (a === 'out') orbit.r *= 1.25; else orbit.az += (a === 'l' ? 1 : -1) * Math.PI / 4; place(); });
+    bar.addEventListener('click', function (e) { var b = e.target.closest('[data-a3]'); if (!b) return; var a = b.getAttribute('data-a3'); if (a === 'follow') { setFollow(!follow); if (!follow) { orbit.tx = 12; orbit.ty = 0; orbit.tz = 8.2; orbit.r = 26; orbit.pol = 0.95; place(); } return; } setFollow(false); if (a === 'in') orbit.r *= 0.8; else if (a === 'out') orbit.r *= 1.25; else orbit.az += (a === 'l' ? 1 : -1) * Math.PI / 4; place(); });
 
     /* ---------- frame ---------- */
     var last = 0;
@@ -298,6 +300,10 @@
         if (mv.kind === 'heli') { obj.userData.rotor.rotation.y = s * 16 * mv.rotor; obj.userData.trotor.rotation.z = s * 30 * mv.rotor; }
         var lb = mv.phase === 'arr' ? landLabel : depLabel; lb.visible = true; lb.position.set(mv.x, mv.h + (mv.kind === 'airliner' ? 1.1 : 0.8), mv.y); setSpriteText(lb, mv.label);
         smoke.forEach(function (p, k) { var a = mv.smoke ? Math.max(0, mv.smoke - k * 0.12) : 0; p.visible = a > 0; if (!a) return; p.position.set(mv.x - 0.5 - a * (0.6 + k * 0.3), 0.08 + a * 0.15, mv.y + (k % 2 ? 0.12 : -0.12)); p.scale.setScalar(0.6 + a * 2.2); p.material.opacity = 0.6 * (1 - a); });
+        if (follow) {
+          var home = mv.u > 0.93, ft = home ? [12, 0, 8.2] : [mv.x, mv.h * 0.8, mv.y], fr = home ? 22 : mv.kind === 'airliner' ? 9 : mv.kind === 'jet' ? 7 : 6, k = 1 - Math.exp(-dt * (home ? 1.2 : 2.2));
+          orbit.tx += (ft[0] - orbit.tx) * k; orbit.ty += (ft[1] - orbit.ty) * k; orbit.tz += (ft[2] - orbit.tz) * k; orbit.r += (fr - orbit.r) * k; orbit.pol += ((home ? 0.95 : 1.12) - orbit.pol) * k; place();
+        }
         if (lastSlot !== mv.n) { lastSlot = mv.n; if (opts.onMovement) { try { opts.onMovement(mv); } catch (e) {} } }
       }
       // Traffic and walkers.

@@ -8,6 +8,8 @@
   'use strict';
   var SPOTS = [[-16, -6], [-6, -4], [4, -5], [14, -4], [-12, 4], [-2, 6], [8, 5], [18, 4]];
   var SPOTS_HARBOUR = [[-42, -32], [0, -42], [42, -32], [-58, 34], [58, 38], [-34, 58], [34, 60], [0, -62]];
+  var SPOTS_STADIUM = [[-40, -48], [-20, -49], [0, -49], [20, -49], [40, -48], [-30, -52], [10, -52], [30, -52]];
+  var SPOTS_STREET = [[-16, -17], [-8, -17.5], [0, -17.5], [8, -17.5], [16, -17], [-12, -19.5], [4, -19.5], [14, -19.5]];
   var SPOTS_CLUB = [[-15, -3], [-6, -7], [6, -7], [15, -3], [-17, 11], [-7, 4], [7, 4], [17, 11]];
   var SAND0 = -22, SAND_D = 38, SEA0 = 16; // sand from the lawn's edge (z -22) to the waterline (z 16)
 
@@ -93,9 +95,9 @@
       for (var c = 0; c < 5; c++) crown.add(mesh(new T.SphereGeometry(0.16, 8, 6), mat('coco', { color: 0x5a4a2a, roughness: 0.6 }), Math.cos(c * 1.3) * 0.25, -0.25, Math.sin(c * 1.3) * 0.25));
       g.add(crown); g.userData.crown = crown; dyn.add(g); palms.push(g); return g;
     }
-    function SP() { return CLUB ? SPOTS_CLUB : HARBOUR ? SPOTS_HARBOUR : SPOTS; }
-    var ESTATE = false, HARBOUR = false, CLUB = false, ROOF = false; // Lekki Hyde Park: lawns and a lake; Harbour Live: a paved island in the harbour
-    function groundY(x, z) { if (CLUB) return 0.05; if (HARBOUR) return 1.2; if (ESTATE) return z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20); if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
+    function SP() { return STAD ? (sc.street ? SPOTS_STREET : SPOTS_STADIUM) : CLUB ? SPOTS_CLUB : HARBOUR ? SPOTS_HARBOUR : SPOTS; }
+    var ESTATE = false, HARBOUR = false, CLUB = false, ROOF = false, STAD = false; // Lekki Hyde Park: lawns and a lake; Harbour Live: a paved island in the harbour
+    function groundY(x, z) { if (CLUB || STAD) return 0.05; if (HARBOUR) return 1.2; if (ESTATE) return z < -28 ? 1.0 : 1.0 + Math.sin(x * 0.031) * Math.cos(z * 0.027) * 0.45 * Math.min(1, (z + 28) / 20); if (z < SAND0 + 2) return 1.0; var slope = Math.min(1.1, (z - SAND0) / SAND_D), fade = Math.min(1, (z - SAND0) / 6); return 0.95 - slope * 1.5 + (Math.sin(x * 0.21) * Math.cos(z * 0.33) * 0.1 + Math.sin(x * 0.05 + z * 0.1) * 0.2) * fade; }
 
     /* ---------- villas with infinity pools (White Sand Beach) ---------- */
     var dyn = new T.Group(); world.add(dyn); var villas = new T.Group(), palms = []; dyn.add(villas);
@@ -354,6 +356,113 @@
       dancers(36, r, function (rr) { return [-26 + rr() * 52, -20 + rr() * 34]; });
     }
 
+
+    /* ---------- stadiums: a floodlit bowl with a live match, or a street five-a-side pitch ---------- */
+    var stadG = new T.Group(); stadG.visible = false; S3.add(stadG); var ST = {};
+    var TEAMS = [['LAGOS LIONS', 0x1d7a43, 0xf4f3ec], ['EKO RANGERS', 0xc0392b, 0x17181a]];
+    function pitchTex(w, h, stripes) {
+      return canvasTex(1024, Math.round(1024 * h / w), function (g, cw, ch) {
+        for (var i = 0; i < stripes; i++) { g.fillStyle = i % 2 ? '#3f8f3a' : '#4a9c42'; g.fillRect(i * cw / stripes, 0, cw / stripes + 1, ch); }
+        var k = cw / w; g.strokeStyle = 'rgba(255,255,255,.92)'; g.lineWidth = Math.max(2, 0.12 * k);
+        g.strokeRect(2 * k, 2 * k, cw - 4 * k, ch - 4 * k); g.beginPath(); g.moveTo(cw / 2, 2 * k); g.lineTo(cw / 2, ch - 2 * k); g.stroke();
+        g.beginPath(); g.arc(cw / 2, ch / 2, 9.15 * k * (w / 105), 0, Math.PI * 2); g.stroke();
+        [0, 1].forEach(function (sd) { var bw = 16.5 * k * (w / 105), bh = 40.3 * k * (h / 68), sw = 5.5 * k * (w / 105), sh = 18.3 * k * (h / 68), x0 = sd ? cw - 2 * k - bw : 2 * k, xs = sd ? cw - 2 * k - sw : 2 * k; g.strokeRect(x0, (ch - bh) / 2, bw, bh); g.strokeRect(xs, (ch - sh) / 2, sw, sh); g.fillStyle = '#fff'; g.beginPath(); g.arc(sd ? cw - 2 * k - 11 * k * (w / 105) : 2 * k + 11 * k * (w / 105), ch / 2, 0.3 * k + 2, 0, Math.PI * 2); g.fill(); });
+        g.fillStyle = '#fff'; g.beginPath(); g.arc(cw / 2, ch / 2, 0.3 * k + 2, 0, Math.PI * 2); g.fill();
+      });
+    }
+    function goal(x, w, hgt, dir) {
+      var g = new T.Group(); g.position.set(x, 0, 0); var pm = mat('post', { color: 0xffffff, roughness: 0.4 });
+      [-w / 2, w / 2].forEach(function (z) { g.add(mesh(new T.CylinderGeometry(0.07, 0.07, hgt, 8), pm, 0, hgt / 2, z)); }); var bar = mesh(new T.CylinderGeometry(0.07, 0.07, w, 8), pm, 0, hgt, 0); bar.rotation.x = Math.PI / 2; g.add(bar);
+      var netT = canvasTex(128, 64, function (c, cw, ch) { c.clearRect(0, 0, cw, ch); c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 1; for (var i = 0; i <= cw; i += 6) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, ch); c.stroke(); } for (var j = 0; j <= ch; j += 6) { c.beginPath(); c.moveTo(0, j); c.lineTo(cw, j); c.stroke(); } });
+      var netM = new T.MeshBasicMaterial({ map: netT, transparent: true, side: T.DoubleSide, depthWrite: false }), back = new T.Mesh(new T.PlaneGeometry(w, hgt), netM); back.rotation.y = Math.PI / 2; back.position.set(dir * 1.8, hgt / 2, 0); g.add(back);
+      [-w / 2, w / 2].forEach(function (z) { var sd = new T.Mesh(new T.PlaneGeometry(1.8, hgt), netM); sd.position.set(dir * 0.9, hgt / 2, z); g.add(sd); }); var top = new T.Mesh(new T.PlaneGeometry(1.8, w), netM); top.rotation.x = Math.PI / 2; top.position.set(dir * 0.9, hgt, 0); g.add(top);
+      stadG.add(g); return g;
+    }
+    function squad(n, colrs, size) {
+      var bodyG = new T.CapsuleGeometry(0.3 * size, 1.0 * size, 4, 8); bodyG.translate(0, 1.0 * size, 0); var headG = new T.SphereGeometry(0.24 * size, 10, 8); headG.translate(0, 2.05 * size, 0);
+      var body = new T.InstancedMesh(bodyG, new T.MeshStandardMaterial({ roughness: 0.55 }), n), head = new T.InstancedMesh(headG, new T.MeshStandardMaterial({ color: 0x5a341f, roughness: 0.7 }), n), c = new T.Color();
+      for (var i = 0; i < n; i++) body.setColorAt(i, c.set(colrs(i))); body.castShadow = true; stadG.add(body, head); return { body: body, head: head, n: n };
+    }
+    // 4-3-3 for each side, attacking left to right for the home team.
+    var FORM = [[-48, 0], [-34, -22], [-36, -8], [-36, 8], [-34, 22], [-20, -14], [-22, 0], [-20, 14], [-8, -22], [-6, 0], [-8, 22]];
+    function buildStadium() {
+      stadG.clear(); ST = { street: !!sc.street, towers: [], lights: [], banks: [] }; var r = rnd(hashStr((sc.placeId || 'stadium') + ':' + (sc.day || 0)));
+      if (ST.street) return buildStreetPitch(r);
+      var PW = 105, PH = 68; ST.PW = PW; ST.PH = PH; ST.scale = 1;
+      var ground = mesh(new T.PlaneGeometry(600, 600).rotateX(-Math.PI / 2), mat('stadOut', { color: 0x8a8d84, roughness: 0.95 }), 0, -0.05, 0); ground.castShadow = false; stadG.add(ground);
+      var track = mesh(new T.PlaneGeometry(132, 92).rotateX(-Math.PI / 2), mat('track', { color: 0xb5492f, roughness: 0.9 }), 0, 0.0, 0); track.castShadow = false; stadG.add(track);
+      for (var ln = 1; ln <= 6; ln++) { var lr = mesh(new T.PlaneGeometry(132 - ln * 2.4, 0.08).rotateX(-Math.PI / 2), mat('lane', { color: 0xf4efe6 }), 0, 0.01, -46 + ln * 1.2); lr.castShadow = false; stadG.add(lr); var lr2 = lr.clone(); lr2.position.z = 46 - ln * 1.2; stadG.add(lr2); }
+      var pitch = mesh(new T.PlaneGeometry(PW + 6, PH + 6).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: pitchTex(PW + 6, PH + 6, 18), roughness: 0.92 }), 0, 0.03, 0); pitch.castShadow = false; stadG.add(pitch);
+      goal(-PW / 2, 7.32, 2.44, -1); goal(PW / 2, 7.32, 2.44, 1);
+      // The bowl: a lathe profile of tiers, squashed into an oval round the track.
+      var prof = []; for (var ti = 0; ti <= 22; ti++) { prof.push(new T.Vector2(74 + ti * 1.7, 1 + ti * 1.25)); prof.push(new T.Vector2(74 + ti * 1.7 + 1.7, 1 + ti * 1.25)); }
+      prof.push(new T.Vector2(74 + 23 * 1.7 + 2, 0));
+      var seatT = canvasTex(1024, 128, function (g, cw, ch) { for (var x = 0; x < cw; x += 32) { g.fillStyle = (x / 32) % 3 === 0 ? '#f4f3ec' : '#1d7a43'; g.fillRect(x, 0, 32, ch); } for (var y = 0; y < ch; y += 6) { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, y, cw, 1); } }, [6, 1]);
+      var bowl = new T.Mesh(new T.LatheGeometry(prof, 96), new T.MeshStandardMaterial({ map: seatT, roughness: 0.8, side: T.DoubleSide })); bowl.scale.set(1, 1, 0.66); bowl.receiveShadow = true; stadG.add(bowl);
+      var rim = new T.Mesh(new T.CylinderGeometry(115.5, 115.5, 6, 96, 1, true), mat('rimwall', { color: 0xd9d4ca, roughness: 0.7, side: T.DoubleSide })); rim.scale.set(1, 1, 0.66); rim.position.y = 30; stadG.add(rim);
+      // A canopy over the far stand, on slim supports.
+      var canopy = new T.Mesh(new T.RingGeometry(84, 118, 64, 1, Math.PI * 0.18, Math.PI * 0.64).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ color: 0xeef1f3, roughness: 0.4, metalness: 0.3, side: T.DoubleSide, transparent: true, opacity: 0.92 })); canopy.scale.set(1, 1, 0.66); canopy.position.y = 40; canopy.rotation.y = 0; stadG.add(canopy);
+      for (var cs = 0; cs < 9; cs++) { var ca = Math.PI * (0.2 + cs * 0.075), cx = Math.cos(ca) * 116, cz = Math.sin(ca) * 116 * 0.66; stadG.add(mesh(new T.CylinderGeometry(0.6, 0.8, 40, 8), mat('rimwall', {}), cx, 20, cz)); }
+      // Floodlight masts at the four corners, light banks facing the pitch.
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) {
+        var x = q[0] * 96, z = q[1] * 64; stadG.add(mesh(new T.CylinderGeometry(0.9, 1.4, 62, 10), mat('mast', { color: 0x9aa0a6, metalness: 0.6, roughness: 0.4 }), x, 31, z));
+        var bankM = new T.MeshBasicMaterial({ color: 0x555a60 }), bank = new T.Mesh(new T.BoxGeometry(12, 6, 1), bankM); bank.position.set(x, 64, z); bank.lookAt(0, 0, 0); stadG.add(bank); ST.banks.push(bankM);
+        var sl = new T.SpotLight(0xf4f7ff, 0, 260, 0.55, 0.5, 1.2); sl.position.set(x, 64, z); sl.target.position.set(-x * 0.2, 0, -z * 0.2); stadG.add(sl, sl.target); ST.lights.push(sl);
+      });
+      // The scoreboard above the far stand.
+      ST.board = screenTex(1024, 320, function (g, w, h) {
+        g.fillStyle = '#0b0f16'; g.fillRect(0, 0, w, h); g.textAlign = 'center'; g.textBaseline = 'middle';
+        if (!ST.live) { g.fillStyle = '#ffd23f'; g.font = '900 72px system-ui, sans-serif'; g.fillText(ST.title || 'NATIONAL STADIUM', w / 2, h * 0.38, w - 40); g.fillStyle = '#fff'; g.font = '700 38px system-ui, sans-serif'; g.fillText('TRAINING · KICK-OFF 6PM', w / 2, h * 0.72); return; }
+        g.fillStyle = '#fff'; g.font = '800 46px system-ui, sans-serif'; g.fillText(TEAMS[0][0], w * 0.25, h * 0.3); g.fillText(TEAMS[1][0], w * 0.75, h * 0.3);
+        g.fillStyle = '#ffd23f'; g.font = '900 120px system-ui, sans-serif'; g.fillText(ST.score[0] + ' – ' + ST.score[1], w / 2, h * 0.62);
+        g.fillStyle = ST.flash ? '#ffd23f' : '#9fb2c2'; g.font = '800 40px system-ui, sans-serif'; g.fillText(ST.flash ? 'GOAL!' : ST.min + "'", w / 2, h * 0.9);
+      });
+      var bm = new T.Mesh(new T.PlaneGeometry(36, 11.25), new T.MeshBasicMaterial({ map: ST.board })); bm.position.set(0, 48, 82); bm.rotation.y = Math.PI; stadG.add(bm); stadG.add(mesh(new T.BoxGeometry(37, 12.2, 1), mat('bframe', { color: 0x1c2128 }), 0, 48, 82.7));
+      ST.title = String(sc.name || 'Stadium').toUpperCase();
+      ST.players = squad(22, function (i) { return i === 0 ? 0xf2b600 : i === 11 ? 0x2f6fa0 : TEAMS[i < 11 ? 0 : 1][1]; }, 1);
+      var fans = 1400, fr = rnd(57), fb = []; ST.fans = squad(fans, function () { var v = fr(); return v < 0.45 ? TEAMS[0][1] : v < 0.7 ? TEAMS[0][2] : v < 0.85 ? TEAMS[1][1] : 0x2b2f36; }, 0.9);
+      for (var f = 0; f < fans; f++) { var a = fr() * Math.PI * 2, tier = Math.floor(fr() * 22), rad = 74 + tier * 1.7 + 0.8; fb.push([Math.cos(a) * rad, 1 + (tier + 1) * 1.25, Math.sin(a) * rad * 0.66, fr() * 6]); } ST.fanBase = fb;
+      ST.ball = mesh(new T.SphereGeometry(0.35, 14, 10), mat('ball', { color: 0xffffff, roughness: 0.5 }), 0, 0.35, 0); stadG.add(ST.ball);
+    }
+    function buildStreetPitch(r) {
+      var PW = 40, PH = 24; ST.PW = PW; ST.PH = PH; ST.scale = 0.38;
+      var dustT = canvasTex(256, 256, function (g, w, h) { var rr = rnd(9); g.fillStyle = '#c8a878'; g.fillRect(0, 0, w, h); for (var i = 0; i < 9000; i++) { g.fillStyle = rr() < 0.5 ? 'rgba(150,115,75,.25)' : 'rgba(235,215,180,.25)'; g.fillRect(rr() * w, rr() * h, 2, 2); } for (var k = 0; k < 20; k++) { g.fillStyle = 'rgba(95,140,60,.35)'; g.beginPath(); g.arc(rr() * w, rr() * h, 6 + rr() * 14, 0, Math.PI * 2); g.fill(); } }, [8, 6]);
+      var ground = mesh(new T.PlaneGeometry(300, 300).rotateX(-Math.PI / 2), mat('street', { color: 0x9a9184, roughness: 0.95 }), 0, -0.05, 0); ground.castShadow = false; stadG.add(ground);
+      var dirt = mesh(new T.PlaneGeometry(PW + 8, PH + 8).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: dustT, roughness: 1 }), 0, 0.02, 0); dirt.castShadow = false; stadG.add(dirt);
+      var lines = canvasTex(512, 320, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 4; g.strokeRect(8, 8, w - 16, h - 16); g.beginPath(); g.moveTo(w / 2, 8); g.lineTo(w / 2, h - 8); g.stroke(); g.beginPath(); g.arc(w / 2, h / 2, 34, 0, Math.PI * 2); g.stroke(); });
+      var lp = mesh(new T.PlaneGeometry(PW, PH).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ map: lines, transparent: true, depthWrite: false }), 0, 0.04, 0); lp.castShadow = false; stadG.add(lp);
+      goal(-PW / 2, 4, 1.8, -1); goal(PW / 2, 4, 1.8, 1);
+      // Chain-link fence on posts, benches, and the area's low buildings around.
+      var fenceT = canvasTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(200,205,210,.8)'; g.lineWidth = 1.2; for (var i = -h; i < w; i += 8) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); g.beginPath(); g.moveTo(i + h, 0); g.lineTo(i, h); g.stroke(); } }, [24, 2]);
+      var fM = new T.MeshBasicMaterial({ map: fenceT, transparent: true, side: T.DoubleSide, depthWrite: false });
+      [[0, -(PH / 2 + 4), PW + 8, 0], [0, PH / 2 + 4, PW + 8, 0], [-(PW / 2 + 4), 0, PH + 8, Math.PI / 2], [PW / 2 + 4, 0, PH + 8, Math.PI / 2]].forEach(function (q) { var fp = new T.Mesh(new T.PlaneGeometry(q[2], 3.2), fM); fp.position.set(q[0], 1.6, q[1]); fp.rotation.y = q[3]; stadG.add(fp); for (var k = -q[2] / 2; k <= q[2] / 2; k += 4) { var px = q[3] ? q[0] : q[0] + k, pz = q[3] ? q[1] + k : q[1]; stadG.add(mesh(new T.CylinderGeometry(0.06, 0.06, 3.3, 6), frameM, px, 1.65, pz)); } });
+      [-12, 0, 12].forEach(function (x) { stadG.add(mesh(new T.BoxGeometry(5, 0.3, 0.9), mat('bench', { color: 0x8a6a3a, roughness: 0.8 }), x, 0.6, -(PH / 2 + 6))); });
+      var rs = rnd(33); for (var b = 0; b < 22; b++) { var a = rs() * Math.PI * 2, d = 40 + rs() * 50; towerBlock(Math.cos(a) * d * 1.3, Math.sin(a) * d + (Math.sin(a) < 0 ? -10 : 10), 10 + rs() * 10, 6 + rs() * 14, 10 + rs() * 8, stadG, 0, ST.towers); }
+      ST.players = squad(10, function (i) { return i === 0 || i === 5 ? 0xf2b600 : i < 5 ? 0xf4f3ec : 0x2f6fa0; }, 1);
+      var fr = rnd(58), fb = []; ST.fans = squad(24, function () { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22][Math.floor(fr() * 6)]; }, 1);
+      for (var f = 0; f < 24; f++) { var sdz = f % 2 ? 1 : -1; fb.push([-PW / 2 + fr() * PW, 0, sdz * (PH / 2 + 5.5 + fr() * 1.5), fr() * 6]); } ST.fanBase = fb;
+      ST.ball = mesh(new T.SphereGeometry(0.3, 12, 8), mat('ball', { color: 0xffffff, roughness: 0.5 }), 0, 0.3, 0); stadG.add(ST.ball);
+      ST.title = 'STREET';
+    }
+    // The match: players hold a shape that slides with the ball; the ball passes along arcs; a goal every 90 seconds.
+    function matchFrame(t, live) {
+      var P = ST.players, mx = new T.Matrix4(), PW = ST.PW, sc2 = ST.scale, n = P.n, half = n / 2;
+      var step = Math.floor(t / 1.6), u = (t / 1.6) % 1, hr = function (k) { var h = Math.imul(k ^ 0x9e3779b9, 2654435761) >>> 0; return (h >>> 8) / 16777216; };
+      var gcyc = Math.floor(t / 90), gu = (t % 90) / 90, scoring = live && gu > 0.94, side = hr(gcyc * 7) < 0.55 ? 0 : 1;
+      var pos = function (i, bx, bz) { var home = i < half, f = FORM[Math.floor((home ? i : i - half) * 11 / half)] || FORM[0], fx = (home ? f[0] : -f[0]) * sc2, fz = f[1] * sc2 * (ST.street ? 1.1 : 1); var shift = Math.max(-PW * 0.3, Math.min(PW * 0.3, bx * 0.45)); return [fx + shift + Math.sin(t * 0.6 + i * 2.1) * 2.5 * sc2 + (live ? 0 : Math.sin(t * 0.3 + i) * 20 * sc2), fz + Math.cos(t * 0.45 + i * 1.3) * 3 * sc2 + bz * 0.15]; };
+      var carrier = Math.floor(hr(step) * n), recv = Math.floor(hr(step + 1) * n), bx0, bz0;
+      var ballGuess = pos(carrier, 0, 0); bx0 = ballGuess[0]; bz0 = ballGuess[1];
+      var a = pos(carrier, bx0, bz0), b = pos(Math.floor(hr(step + 1) * n), bx0, bz0), bx = a[0] + (b[0] - a[0]) * u, bz = a[1] + (b[1] - a[1]) * u, by = 0.35 + Math.sin(u * Math.PI) * (hr(step * 3) < 0.3 ? 4 : 0.8) * sc2;
+      if (scoring) { var gx = (side ? -1 : 1) * PW / 2 + (side ? -1 : 1) * 1.2, k2 = Math.min(1, (gu - 0.94) / 0.03); bx = a[0] + (gx - a[0]) * k2; bz = a[1] * (1 - k2); by = 0.35 + Math.sin(k2 * Math.PI) * 1.2; }
+      ST.ball.position.set(bx, by, bz); ST.ball.visible = live || ST.street;
+      for (var i = 0; i < n; i++) { var p = live ? pos(i, bx, bz) : [Math.cos(t * 0.25 + i * 0.6) * PW * 0.42, Math.sin(t * 0.25 + i * 0.6) * ST.PH * 0.42]; var chase = i === carrier || i === recv; if (chase && live) { p[0] += (bx - p[0]) * 0.7; p[1] += (bz - p[1]) * 0.7; } mx.makeTranslation(p[0], Math.abs(Math.sin(t * 9 + i)) * 0.12, p[1]); P.body.setMatrixAt(i, mx); P.head.setMatrixAt(i, mx); }
+      P.body.count = P.head.count = live || ST.street ? n : 6; P.body.instanceMatrix.needsUpdate = P.head.instanceMatrix.needsUpdate = true;
+      var goals = [0, 0]; for (var g = 0; g < gcyc; g++) goals[hr(g * 7) < 0.55 ? 0 : 1]++; if (gu > 0.97) goals[side]++;
+      ST.score = goals; ST.min = Math.min(90, Math.floor((t % 5400) / 60)); ST.flash = gu > 0.97; ST.live = live;
+      var F = ST.fans, jump = ST.flash ? 1 : 0.15; for (var fi = 0; fi < F.n; fi++) { var fq = ST.fanBase[fi]; mx.makeTranslation(fq[0], fq[1] + Math.max(0, Math.sin(t * (ST.flash ? 9 : 2) + fq[3])) * jump * 0.6, fq[2]); F.body.setMatrixAt(fi, mx); F.head.setMatrixAt(fi, mx); }
+      F.body.count = F.head.count = live ? F.n : ST.street ? 8 : 0; F.body.instanceMatrix.needsUpdate = F.head.instanceMatrix.needsUpdate = true;
+    }
+
     /* ---------- people, signs, the gem ---------- */
     var SKIN = [0x6b4029, 0x8a5a3c, 0x4a2c1c, 0x9b6a4b], CL = [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec, 0x17181a];
     function person(i, female) {
@@ -392,14 +501,14 @@
     var built = '';
     function build() {
       var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.rooftop ? 'r' : '') + (sc.name || ''); if (key === built) return; built = key;
-      ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub();
-      harbourG.visible = HARBOUR; clubG.visible = CLUB; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
+      ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
+      harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
       // Frame: the estate uses a wider lens so the pool below and the skyline above both fit, as in a terrace photo.
-      if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
+      if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 118; orbit.tx = 0; orbit.tz = sc.street ? 2 : 6; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
       cam.updateProjectionMatrix(); place();
-      estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB; });
+      estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB && !STAD; });
       dyn.clear(); palms = []; villas = new T.Group(); beachBits = new T.Group(); dyn.add(villas, beachBits);
-      if (CLUB) return;
+      if (CLUB || STAD) return;
       if (HARBOUR) { [[-80, -20], [-60, 50], [70, 60], [85, -20], [-30, -50], [40, -50], [-95, 90], [95, 95]].forEach(function (q, i) { palm(q[0], q[1], 9 + (i % 3), (i % 2 ? -0.2 : 0.2)); }); return; }
       if (ESTATE) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); [[-30, 3, 9, 0.3], [-4, 5, 8.5, 0.4], [20, 4, 9.5, 0.2], [44, 2, 9, -0.3], [-25, -24, 12, 0.1], [28, -24, 12, 0.15], [-2, -21, 9, 0.35], [30, 22, 10, -0.2], [-50, 18, 11, 0.25]].forEach(function (q) { palm(q[0], q[1], q[2], q[3]); }); return; }
       if (sc.villas) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); } // the view is from the -12 villa's terrace
@@ -436,7 +545,7 @@
     function frame(now) {
       size(); var t = reduce ? 3 : now / 1000, night = sc.night ? 1 : 0, rain = sc.weather === 'rain' || sc.weather === 'storm';
       var nv = night ? 0.85 : 0; if (Math.abs(skyU.night.value - nv) > 0.01) { skyU.night.value += (nv - skyU.night.value) * 0.1; if (Math.abs(skyU.night.value - nv) <= 0.01) { skyU.night.value = nv; bakeEnv(); } } hemi.intensity = night ? 0.25 : rain ? 0.6 : 0.85; sun.intensity = night ? 0.15 : rain ? 0.7 : 2.2; sun.color.set(night ? 0x8fa8ff : 0xffe2b8); hemi.color.set(0xfff1dd);
-      S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF ? 0.45 : 1);
+      S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD ? 0.45 : 1);
       poolM.emissive.set(night ? 0x1fa9c9 : 0x000000); poolM.emissiveIntensity = night ? 0.9 : 0; // underwater lights after dark
       if (HARBOUR) {
         var beat = Math.abs(Math.sin(t * 2.2)), lit = night ? 1 : 0.35, show = sc.show !== false, fshow = sc.hour == null || (sc.hour >= 19 && sc.hour < 23), jk = fshow ? 1 : 0.45;
@@ -447,6 +556,12 @@
         (HB.towers || []).forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); HB.boards.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0.2; }); HB.clubGlass.emissiveIntensity = night ? 0.6 : 0;
         HB.water.material.color.set(night ? 0x0b2236 : 0x1b4f6e); HB.lights.forEach(function (L0) { L0.intensity = night ? L0.userData.max * 3 : 0; }); if (night) hemi.intensity = 0.55;
         var mx = new T.Matrix4(); for (var ci = 0; ci < HB.crowdN; ci++) { var cb = HB.crowdBase[ci], jump = show && (night || reduce) ? Math.max(0, Math.sin(t * 6 + cb[2])) * 0.6 * beat : 0; mx.makeTranslation(cb[0], 1.2 + jump, cb[1]); HB.crowd.setMatrixAt(ci, mx); HB.heads.setMatrixAt(ci, mx); } HB.crowd.count = HB.heads.count = show ? HB.crowdN : 40; HB.crowd.instanceMatrix.needsUpdate = true; HB.heads.instanceMatrix.needsUpdate = true;
+      } else if (STAD) {
+        var live = !!(sc.hour != null ? sc.hour >= 16 && sc.hour < 22 : sc.night), flood = live && !!night;
+        matchFrame(reduce ? 30 : t, live || !!ST.street);
+        ST.lights.forEach(function (L0) { L0.intensity = flood ? 900 : 0; }); ST.banks.forEach(function (m) { m.color.set(flood ? 0xffffff : 0x555a60); });
+        ST.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); if (night && flood) hemi.intensity = 0.45;
+        if (ST.board) { var cb = ST.board.userData.canvas; ST.board.userData.redraw(cb.getContext('2d'), cb.width, cb.height, t); ST.board.needsUpdate = true; }
       } else if (CLUB) {
         var open = !!(ROOF || night), A = CB.pal[0], B = CB.pal[1], kick = Math.pow(Math.abs(Math.sin(t * 3.9)), 3), cc = new T.Color(); CB.open = open;
         if (!ROOF) { hemi.intensity = open ? 0.16 : 1.4; hemi.color.copy(open ? B : new T.Color(0xffffff)); sun.intensity = 0; S3.fog.color.copy(open ? CB.pal[2] : new T.Color(0x24262c)); S3.fog.density = open ? 0.014 : 0.004; }
@@ -468,7 +583,7 @@
       crowd.forEach(function (p, i) { if (!p.visible || !p.userData.home) return; var hx = p.userData.home[0], hz = p.userData.home[1], u = reduce ? 0 : Math.sin(t * 0.25 + i), x = hx + u * 2.5, z = hz + Math.cos(t * 0.2 + i) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = Math.cos(t * 0.25 + i) > 0 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
       if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
       if (gem && sc.gem) { var gq = SP()[sc.gem.slot % SP().length]; gem.position.set(gq[0] - 2.5, groundY(gq[0] - 2.5, gq[1] + 2) + 1.2 + Math.sin(t * 2) * 0.25, gq[1] + 2); gem.rotation.y = t * 1.5; }
-      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
+      strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STAD ? (sc.street ? -21 : -55) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
       signs.forEach(function (s) { s.visible = s.visible && !sc.clean; });
       renderer.render(S3, cam);
