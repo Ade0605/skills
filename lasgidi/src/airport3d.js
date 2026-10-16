@@ -15,9 +15,9 @@
     var T = root.THREE; if (!T) return null;
     var el = document.createElement('div'); el.className = 'airport-stage airport-3d';
     var renderer;
-    try { renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch (e) { return null; }
-    var LITE = (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
-    renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1));
+    try { renderer = root.LasgidiGL ? root.LasgidiGL.make({ preserve: true }) : new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch (e) { return null; } if (!renderer) return null;
+    var LITE = root.LasgidiGL ? root.LasgidiGL.lite() : (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
+    if (!root.LasgidiGL) renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
     var cv = renderer.domElement; cv.className = 'airport-canvas'; cv.setAttribute('role', 'img');
@@ -274,6 +274,8 @@
     var last = 0;
     function size() { var w = el.clientWidth || 360, h = el.clientHeight || 400; if (w === W && h === H) return; W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; camera.aspect = W / H; camera.updateProjectionMatrix(); }
     function frame(t) {
+      if (root.LasgidiGL && !root.LasgidiGL.live(el)) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // hidden or under another view: skip the frame
+      root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var dt = last ? Math.min(0.1, (t - last) / 1000) : 0; last = t; var s = reduce ? 0 : t / 1000;
       var night = !!state.night; hemi.intensity = night ? 0.6 : 0.9; sun.intensity = night ? 0.4 : 1.6; sun.color.set(night ? 0x9fb7ff : 0xffffff); scene3.background = new T.Color(night ? 0x0d1a2e : 0x9fd3ef); scene3.fog.color.set(night ? 0x0d1a2e : 0x9fd3ef);
       glass.emissive = new T.Color(night ? 0x6a5a2a : 0x000000); glass.emissiveIntensity = night ? 0.6 : 0;
@@ -323,7 +325,7 @@
       if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame);
     }
     function start() { if (!raf) raf = root.requestAnimationFrame(frame); }
-    return { el: el, update: update, start: start, canvas: cv, is3d: true };
+    return { el: el, update: update, start: start, canvas: cv, is3d: true, dispose: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (root.LasgidiGL) root.LasgidiGL.free(renderer); else renderer.dispose(); } };
   }
   root.LasgidiAirport3D = { create: create };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

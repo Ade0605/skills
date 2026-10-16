@@ -11,15 +11,15 @@
     opts = opts || {};
     var T = root.THREE, PG = root.LasgidiPlayground, D = root.LASGIDI_DATA; if (!T || !PG || !PG.worldFor || !D) return null;
     var el = document.createElement('div'); el.className = 'city-3d';
-    var renderer; try { renderer = new T.WebGLRenderer({ antialias: true }); } catch (e) { return null; }
-    var LITE = (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
-    renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = !LITE; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({}) : new T.WebGLRenderer({ antialias: true }); } catch (e) { return null; } if (!renderer) return null;
+    var LITE = root.LasgidiGL ? root.LasgidiGL.lite() : (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
+    if (!root.LasgidiGL) renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = !LITE; renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
     var cv = renderer.domElement; cv.className = 'city-canvas'; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'The city in 3D. Drag to move, pinch or scroll to zoom, two fingers to turn. Tap a pin to open a place.'); el.appendChild(cv);
     var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var S3 = new T.Scene(), cam = new T.PerspectiveCamera(45, 1, 1, 4000), raf = 0, W = 0, H = 0, sc = {}, city = '', last = 0;
     S3.background = new T.Color(0x9fd3ef); S3.fog = new T.Fog(0x9fd3ef, 500, 1400);
-    var hemi = new T.HemisphereLight(0xf2f6ff, 0x6b7f4a, 0.9), sun = new T.DirectionalLight(0xfff1dc, 1.7); sun.castShadow = !LITE; sun.shadow.mapSize.set(2048, 2048);
+    var hemi = new T.HemisphereLight(0xf2f6ff, 0x6b7f4a, 0.9), sun = new T.DirectionalLight(0xfff1dc, 1.7); sun.castShadow = !LITE; sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048);
     var shc = sun.shadow.camera; shc.left = -320; shc.right = 320; shc.top = 220; shc.bottom = -220; shc.near = 10; shc.far = 1200; sun.shadow.bias = -0.0006; S3.add(hemi, sun, sun.target);
     var world = new T.Group(); S3.add(world);
 
@@ -196,6 +196,8 @@
     /* ---------- frame ---------- */
     function size() { var w = el.clientWidth || 360, h = el.clientHeight || 400; if (w === W && h === H) return; W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cam.aspect = W / H; cam.updateProjectionMatrix(); }
     function frame(now) {
+      if (root.LasgidiGL && !root.LasgidiGL.live(el)) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // hidden or under another view: skip the frame
+      root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var t = reduce ? 5 : now / 1000, dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
       var hr = sc.hour == null ? 12 : sc.hour, night = hr >= 19 || hr < 6, dusk = hr >= 17 && hr < 19, w = sc.weather, wet = w === 'rain' || w === 'storm';
       var sky = night ? 0x0d1a2e : wet ? 0x9aa6b0 : w === 'harmattan' ? 0xd9c49a : dusk ? 0xf0c9a0 : 0x9fd3ef; S3.background.set(sky); S3.fog.color.set(sky); S3.fog.near = w === 'harmattan' ? 220 : 500; S3.fog.far = w === 'harmattan' ? 800 : 1400;

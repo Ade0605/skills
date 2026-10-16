@@ -26,9 +26,9 @@
     opts = opts || {};
     var T = root.THREE; if (!T) return null;
     var wrap = document.createElement('div'); wrap.className = 'iv iv-3d';
-    var renderer; try { renderer = new T.WebGLRenderer({ antialias: true }); } catch (e) { return null; }
-    var LITE = (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
-    renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.toneMapping = T.ACESFilmicToneMapping;
+    var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({}) : new T.WebGLRenderer({ antialias: true }); } catch (e) { return null; } if (!renderer) return null;
+    var LITE = root.LasgidiGL ? root.LasgidiGL.lite() : (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
+    if (!root.LasgidiGL) renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.toneMapping = T.ACESFilmicToneMapping;
     var cv = renderer.domElement; cv.className = 'iv-canvas'; cv.setAttribute('role', 'img'); wrap.appendChild(cv);
     var bar = document.createElement('div'); bar.className = 'iv-spin';
     bar.innerHTML = '<button type="button" class="pg-zbtn" data-h3="turn" aria-label="Turn the picked item" title="Turn the item">⤾</button><button type="button" class="pg-zbtn" data-h3="l" aria-label="Look left">⟲</button><button type="button" class="pg-zbtn" data-h3="r" aria-label="Look right">⟳</button><button type="button" class="pg-zbtn" data-h3="in" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-h3="out" aria-label="Zoom out">−</button>';
@@ -183,6 +183,8 @@
 
     function size() { var w = wrap.clientWidth || 360, h = wrap.clientHeight || 360; if (w === W && h === H) return; W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cam.aspect = W / H; cam.updateProjectionMatrix(); }
     function frame(now) {
+      if (root.LasgidiGL && !root.LasgidiGL.live(wrap)) { raf = wrap.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // hidden or under another view: skip the frame
+      root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var t = reduce ? 0 : now / 1000, hr = view && view.hour != null ? view.hour : 12, night = hr >= 19 || hr < 6, lit = view && view.power;
       hemi.intensity = night ? (lit ? 0.55 : 0.18) : 0.75; sun.intensity = night ? 0.05 : 1.4; lamp.intensity = night ? (lit ? 14 : 3) : 0; lamp.color.set(lit ? 0xffd8a0 : 0xff9a40);
       if (WIN) { WIN.emissiveIntensity = night ? 0.05 : 0.7; WIN.color.set(night ? 0x1a2a4a : 0xbfe0f2); }
@@ -192,6 +194,7 @@
     }
     return {
       el: wrap, is3d: true,
+      dispose: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (root.LasgidiGL) root.LasgidiGL.free(renderer); else renderer.dispose(); }, 
       // Screen point (relative to the canvas) of a floor tile's centre, for tests and keyboard help.
       tilePoint: function (x, y) { var v = new T.Vector3(x + 0.5, 0, y + 0.5).project(cam); return { x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H }; },
       update: function (v) { view = v; cv.setAttribute('aria-label', 'Inside your home in 3D: ' + v.name + ', ' + (v.items || []).filter(function (i) { return i.x != null; }).length + ' items placed. Tap an item, then drag it or tap a tile to move it.');

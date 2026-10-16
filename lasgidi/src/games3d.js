@@ -26,8 +26,9 @@
   function view(kind, o) {
     var T = root.THREE; o = o || {};
     if (!T || !BUILD[kind]) return null;
-    var renderer; try { renderer = new T.WebGLRenderer({ antialias: !o.lite, alpha: false }); } catch (e) { return null; }
-    renderer.setPixelRatio(Math.min(o.lite ? 1 : 1.75, root.devicePixelRatio || 1)); renderer.toneMapping = T.ACESFilmicToneMapping; renderer.outputColorSpace = T.SRGBColorSpace;
+    var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({ antialias: !o.lite, maxRatio: 1.75 }) : new T.WebGLRenderer({ antialias: !o.lite, alpha: false }); } catch (e) { return null; } if (!renderer) return null;
+    if (o.lite || (root.LasgidiGL && root.LasgidiGL.lite())) o.lite = true;
+    if (!root.LasgidiGL) renderer.setPixelRatio(Math.min(o.lite ? 1 : 1.75, root.devicePixelRatio || 1)); renderer.toneMapping = T.ACESFilmicToneMapping; renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.shadowMap.enabled = !o.lite; renderer.shadowMap.type = T.PCFSoftShadowMap;
     var gl = renderer.domElement; gl.className = 'g3d-gl'; gl.setAttribute('aria-hidden', 'true');
     var scene = new T.Scene(), cam = new T.PerspectiveCamera(50, 1, 0.1, 400), ray = new T.Raycaster(), stack = null, hud = null, raf = 0, dead = false, t0 = performance.now(), lastT = 0, lastSt = null, lastG = null, W = 0, H = 0;
@@ -40,6 +41,7 @@
       if (hud) sizeTo(hud.clientWidth || (g && g.W) || 360, hud.clientHeight || (g && g.H) || 480);
       else if (stack) sizeTo(stack.clientWidth || 360, stack.clientHeight || 240);
       B.update(st, g || {}, now, dt);
+      if (root.LasgidiGL) { if (!root.LasgidiGL.live(gl)) return; root.LasgidiGL.pace(renderer); }
       renderer.render(scene, cam);
     }
     var api = {
@@ -59,7 +61,7 @@
         var p = new T.Vector3(); if (!ray.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), -B.pick.y), p)) return null;
         return B.pick.toGame(p, lastG || {});
       },
-      dispose: function () { if (dead) return; dead = true; if (raf) root.cancelAnimationFrame(raf); raf = 0; scene.traverse(function (x) { if (x.geometry) x.geometry.dispose(); }); renderer.dispose(); if (renderer.forceContextLoss) renderer.forceContextLoss(); },
+      dispose: function () { if (dead) return; dead = true; if (raf) root.cancelAnimationFrame(raf); raf = 0; scene.traverse(function (x) { if (x.geometry) x.geometry.dispose(); }); if (root.LasgidiGL) root.LasgidiGL.free(renderer); else { renderer.dispose(); if (renderer.forceContextLoss) renderer.forceContextLoss(); } },
       scene: scene, camera: cam
     };
     return api;

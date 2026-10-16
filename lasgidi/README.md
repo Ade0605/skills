@@ -551,6 +551,12 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **By water:** ferries and boats cross the lagoon with a wake.
   - **By air:** a helicopter (glass nose, tail boom, skids, main and tail rotors) or a business jet (swept wings, winglets, T-tail, tail engines), with blinking navigation lights, over clouds and the city below. At night the city is lit.
   - **Landmarks:** each one you pass rises beside the road with its green sign. On flights they rise from the city below, with the sign above the roof.
+- **Walk around in 3D:** in every walk-in your avatar walks. Tap the ground to walk there, use WASD or the arrow keys, or the joystick at the bottom-left on touch screens. The camera follows you in. Walk up to a sign and it lights up with a ▶ Do it button. Tapping a sign walks you over and then does it. 🚶 turns walking off, and the choice is remembered.
+- **Faster on phones (`src/gl3d.js`):**
+  - **One low-end setting:** every 3D view follows the same rule (Lite mode, a small screen, 4 or fewer cores, or 4GB or less memory). Lite mode now turns on by itself on low-end phones, and you can still switch it off in Settings.
+  - **Pausing:** a view stops drawing when the tab is hidden or another full-screen view sits over it. For example, the city map pauses under a walk-in.
+  - **Resolution:** it drops one step at a time when frames run slow, and comes back up when they're quick again.
+  - **Memory:** rooms, the airport and friends' homes give their 3D memory back when they close.
 - **The mini-games in 3D:** Danfo Run, the owambe dance-off, the go-slow hawker, the bole grill and the Naija Quiz play in 3D (`src/games3d.js`). The game's own logic, seed and result are unchanged, so a run pays exactly as in 2D. Only the picture is new, and the 2D HUD stays on top.
   - **Danfo Run:** a chase camera follows your yellow danfo, with the conductor hanging out of the door. Buildings, palms and lamps stream past. Bus stops have green shelters and people waiting, and LASTMA zones have an officer at the kerb. Potholes, okadas and cars are in the lanes. Brake lights glow when you brake, and a hit shakes the camera.
   - **Dance-off:** an owambe stage with you dancing to the beat, the DJ and guests around you. Four glowing lanes carry arrow notes to the hit rings. Lights pulse to the beat, and every ten-note streak rains naira on the stage.

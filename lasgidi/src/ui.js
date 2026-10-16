@@ -164,10 +164,12 @@
       if (k && PCM.hasOwnProperty(k) && PCM[k] !== k) n.nodeValue = v.replace(k, PCM[k]);
     }
   }
+  // Lite mode: the player's choice, or on by default for low-end phones (4 or fewer cores, or 4GB or less memory).
+  function liteOn() { return prefs.lite != null ? !!prefs.lite : !!(window.LasgidiGL && window.LasgidiGL.lowEnd()); }
   function applyPrefs() {
     var h = document.documentElement;
     h.classList.toggle('big-text', !!prefs.big);
-    h.classList.toggle('lite', !!prefs.lite);
+    h.classList.toggle('lite', liteOn());
     h.setAttribute('lang', prefs.lang === 'pcm' ? 'pcm' : 'en');
   }
   applyPrefs();
@@ -176,7 +178,7 @@
     return '<div class="section"><h3>Settings</h3><div class="list">' +
       opt('lang', '🗣️ Naija Pidgin', prefs.lang === 'pcm', 'Tabs, app names, headings and buttons in Pidgin. Story text stays in English.') +
       opt('big', '🔠 Large text', prefs.big, 'Bigger text everywhere.') +
-      opt('lite', '🪶 Lite mode', prefs.lite, 'Fewer animations and no moving traffic on the map, for cheap phones and low data. The page reloads.') +
+      opt('lite', '🪶 Lite mode', liteOn(), 'Fewer animations and no moving traffic on the map, for cheap phones and low data. The page reloads.') +
       '</div></div>';
   }
 
@@ -1092,6 +1094,7 @@
       '<p class="note">' + v.items.length + ' pieces of furniture · ' + v.vehicles.length + ' vehicles. You can look, not touch.</p></div>';
   }
   function mountVisit() {
+    if (!ui.visit && visitInterior && visitInterior.dispose) { visitInterior.dispose(); visitInterior = null; } // the visit is over: free its 3D
     if (!ui.visit || !window.LasgidiInterior) return;
     var slot = document.querySelector('.visit-slot'), v = checkHome(online.homes[ui.visit]);
     if (!slot || !v) return;
@@ -1849,7 +1852,7 @@
     var ov = document.getElementById('room-view');
     if (S && S.room && L.roomIn(S, S.room.id) && S.loc !== D.PLACES.filter(function (p) { return p.id === D.ROOMS[S.room.id].place; })[0].district) { L.roomLeave(S); ui.roomOpen = null; save(); }
     var id = S && S.room && L.roomIn(S, S.room.id) && ui.roomOpen === S.room.id ? S.room.id : null;
-    if (!id) { if (ov) ov.remove(); return; }
+    if (!id) { if (ov) ov.remove(); if (roomStage && roomStage.dispose) { roomStage.dispose(); roomStage = null; } return; } // free the room's 3D once it has closed
     if (ov && ov.getAttribute('data-room') !== id) { ov.remove(); ov = null; }
     if (!ov && window.LasgidiCruise3D && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountRoom); return; } // live rooms open in 3D
     if (!ov) {
@@ -2062,6 +2065,7 @@
     if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
+    window.__venue = kind === '3d' ? beachStage : flatStage; // handle for tests
     if (kind === '3d' && !beachStage) kind = '2d';
     if (ov && ov.getAttribute('data-kind') !== kind) { if (venueStage) venueStage.stop(); ov.remove(); ov = null; }
     if (kind === '2d' && !flatStage) flatStage = window.LasgidiVenue.create(venueCallbacks());
@@ -2080,6 +2084,7 @@
   var beachStage = null, flatStage = null;
   function venueCallbacks() {
     return {
+        walk: prefs.walk3d !== false, onWalk: function (on) { prefs.walk3d = !!on; writeJSON(PREF_KEY, prefs); }, // walking in 3D (🚶), remembered
         onPhoto: function (cv) { var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0]; ui.photoFrom = 'venue'; takePhoto(cv, p0 ? p0.name : 'Lasgidi'); },
         onGem: function (n) {
           var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0];
@@ -2215,7 +2220,7 @@
   function mountAirport() {
     var ov = document.getElementById('airport-view');
     if (ui.airportOpen && S && !ov && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountAirport); return; }
-    if (!ui.airportOpen || !S) { if (ov) ov.remove(); if (ui.apTimer) { clearInterval(ui.apTimer); ui.apTimer = null; } return; }
+    if (!ui.airportOpen || !S) { if (ov) ov.remove(); if (ui.apTimer) { clearInterval(ui.apTimer); ui.apTimer = null; } if (airportStage && airportStage.dispose) { airportStage.dispose(); airportStage = null; } return; }
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'airport-view'; ov.className = 'cruise-view airport-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Live airport view');
       if (!airportStage) airportStage = (window.LasgidiAirport3D && window.THREE && window.LasgidiAirport3D.create({ onTap: airportTap, onMovement: airportMovement })) || window.LasgidiAirport.create({ onTap: airportTap, onMovement: airportMovement });
@@ -4273,7 +4278,7 @@
     }
     if (ds.setpref) {
       var k = ds.setpref;
-      if (k === 'lang') prefs.lang = prefs.lang === 'pcm' ? 'en' : 'pcm'; else prefs[k] = !prefs[k];
+      if (k === 'lang') prefs.lang = prefs.lang === 'pcm' ? 'en' : 'pcm'; else if (k === 'lite') prefs.lite = !liteOn(); else prefs[k] = !prefs[k];
       writeJSON(PREF_KEY, prefs); applyPrefs();
       if (k === 'lite') { location.reload(); return; }
       render(); return;

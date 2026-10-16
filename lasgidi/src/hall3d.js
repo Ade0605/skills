@@ -15,8 +15,8 @@
     var T = root.THREE, W = D.WHITE_WEDDING; if (!T || !cv || !W) return false;
     var p; try { p = JSON.parse(cv.getAttribute('data-wwplan')); } catch (e) { return false; }
     if (!R) {
-      var renderer; try { renderer = new T.WebGLRenderer({ antialias: !lite() }); } catch (e) { return false; }
-      renderer.setPixelRatio(Math.min(lite() ? 1 : 1.75, root.devicePixelRatio || 1)); renderer.toneMapping = T.ACESFilmicToneMapping; renderer.outputColorSpace = T.SRGBColorSpace; renderer.shadowMap.enabled = !lite();
+      var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({ maxRatio: 1.75 }) : new T.WebGLRenderer({ antialias: !lite() }); } catch (e) { return false; } if (!renderer) return false;
+      if (!root.LasgidiGL) renderer.setPixelRatio(Math.min(lite() ? 1 : 1.75, root.devicePixelRatio || 1)); renderer.toneMapping = T.ACESFilmicToneMapping; renderer.outputColorSpace = T.SRGBColorSpace; renderer.shadowMap.enabled = !lite();
       var box = document.createElement('div'); box.className = 'ww-hall ww-hall-3d'; box.appendChild(renderer.domElement); renderer.domElement.setAttribute('aria-hidden', 'true');
       R = { renderer: renderer, box: box, key: '', raf: 0, yaw: 0.25, pitch: 0.3, dist: 15.5, drag: null, t0: performance.now() };
       box.addEventListener('pointerdown', function (e) { R.drag = { x: e.clientX, y: e.clientY, yaw: R.yaw, pitch: R.pitch }; box.setPointerCapture && box.setPointerCapture(e.pointerId); });
@@ -34,6 +34,8 @@
   }
   function frame() {
     R.raf = 0; if (!R.box.isConnected) return; // the page moved on; mount() restarts it
+    if (root.LasgidiGL && !root.LasgidiGL.live(R.box)) { R.raf = root.requestAnimationFrame(frame); return; }
+    if (root.LasgidiGL) root.LasgidiGL.pace(R.renderer);
     var T = root.THREE, w = R.box.clientWidth || 640, h = R.box.clientHeight || 300, t = (performance.now() - R.t0) / 1000;
     if (w !== R.w || h !== R.h) { R.w = w; R.h = h; R.renderer.setSize(w, h, false); R.renderer.domElement.style.width = w + 'px'; R.renderer.domElement.style.height = h + 'px'; R.cam.aspect = w / h; R.cam.updateProjectionMatrix(); }
     var reduce = lite() || (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches), yaw = R.yaw + (R.drag || reduce ? 0 : Math.sin(t * 0.12) * 0.25);

@@ -14,9 +14,9 @@
     var T = root.THREE, C2 = root.LasgidiCruise; if (!T || !C2) return null;
     var LAYOUTS = C2.LAYOUTS, SPOTS = C2.SPOTS;
     var el = document.createElement('div'); el.className = 'cruise-stage cruise-3d';
-    var renderer; try { renderer = new T.WebGLRenderer({ antialias: true }); } catch (e) { return null; }
-    var LITE = (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
-    renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.toneMapping = T.ACESFilmicToneMapping;
+    var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({}) : new T.WebGLRenderer({ antialias: true }); } catch (e) { return null; } if (!renderer) return null;
+    var LITE = root.LasgidiGL ? root.LasgidiGL.lite() : (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
+    if (!root.LasgidiGL) renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.toneMapping = T.ACESFilmicToneMapping;
     var cv = renderer.domElement; cv.className = 'cruise-canvas'; cv.setAttribute('role', 'img'); el.appendChild(cv);
     var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var S3 = new T.Scene(), cam = new T.PerspectiveCamera(42, 1, 0.1, 1500), scene = { players: [] }, raf = 0, W = 0, H = 0, built = '', peopleKey = '';
@@ -96,6 +96,8 @@
 
     function size() { var w = el.clientWidth || 360, h = el.clientHeight || 400; if (w === W && h === H) return; W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cam.aspect = W / H; cam.updateProjectionMatrix(); }
     function frame(now) {
+      if (root.LasgidiGL && !root.LasgidiGL.live(el)) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // hidden or under another view: skip the frame
+      root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var t = reduce ? 2 : now / 1000, night = !!scene.night, room = scene.layout || scene.room || 'cruise';
       var sky = night ? 0x0d1733 : room === 'club' ? 0x0d0d14 : 0xbfe3f7; S3.background = new T.Color(sky); S3.fog.color.set(sky);
       hemi.intensity = night ? 0.35 : 0.9; sun.intensity = night ? 0.15 : 1.6;
@@ -110,7 +112,7 @@
     }
     function update(s) { scene = s || scene; var room = scene.layout || scene.room || 'cruise', bk = room + '|' + (scene.sign || '') + '|' + (scene.event ? 1 : 0); if (bk !== built) { built = bk; peopleKey = ''; build(room); } syncPeople(); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); }
     function start() { if (!raf) raf = root.requestAnimationFrame(frame); }
-    return { el: el, update: update, start: start, spots: SPOTS, is3d: true };
+    return { el: el, update: update, start: start, spots: SPOTS, is3d: true, dispose: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; if (root.LasgidiGL) root.LasgidiGL.free(renderer); else renderer.dispose(); } };
   }
   root.LasgidiCruise3D = { create: create };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

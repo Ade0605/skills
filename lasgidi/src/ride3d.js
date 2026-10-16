@@ -8,8 +8,8 @@
   'use strict';
   function play(box, o) {
     var T = root.THREE; if (!T || !box) return false;
-    var renderer; try { renderer = new T.WebGLRenderer({ antialias: true }); } catch (e) { return false; }
-    renderer.setPixelRatio(Math.min(1.5, root.devicePixelRatio || 1)); renderer.toneMapping = T.ACESFilmicToneMapping; renderer.shadowMap.enabled = true;
+    var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({ maxRatio: 1.5 }) : new T.WebGLRenderer({ antialias: true }); } catch (e) { return false; } if (!renderer) return false;
+    if (!root.LasgidiGL) renderer.setPixelRatio(Math.min(1.5, root.devicePixelRatio || 1)); renderer.toneMapping = T.ACESFilmicToneMapping; renderer.shadowMap.enabled = true;
     var cv = renderer.domElement; cv.className = 'rv-3d'; box.innerHTML = ''; box.appendChild(cv);
     var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches, secs = o.secs || 5.5, night = !!o.night, dusk = !!o.dusk, water = !!o.water, air = !!o.air, mode = o.mode || 'car';
     var S3 = new T.Scene(), cam = new T.PerspectiveCamera(50, 2, 0.1, 900), sky = night ? 0x0d1733 : dusk ? 0xf0b98a : 0x9fd3ef; S3.background = new T.Color(sky); S3.fog = new T.Fog(sky, 60, 260);
@@ -77,7 +77,8 @@
     cam.position.set(air ? 10 : 6, air ? 5 : 4.5, air ? 16 : 11); cam.lookAt(0, air ? 0 : 1, -6);
     var t0 = performance.now(), raf = 0, W = 0, H = 0;
     function frame(now) {
-      if (!cv.isConnected) { renderer.dispose(); return; }
+      if (!cv.isConnected) { if (root.LasgidiGL) root.LasgidiGL.free(renderer); else renderer.dispose(); return; }
+      if (root.LasgidiGL) root.LasgidiGL.pace(renderer);
       var w = box.clientWidth || 320, h = box.clientHeight || 160; if (w !== W || h !== H) { W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cam.aspect = W / H; cam.updateProjectionMatrix(); }
       var t = (now - t0) / 1000, run = reduce ? 0 : t;
       groundTex.offset.y = -(run * SPEED / (air ? 13 : 33)) % 1;

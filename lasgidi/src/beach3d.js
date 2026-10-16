@@ -23,10 +23,10 @@
     opts = opts || {};
     var T = root.THREE; if (!T) return null;
     var el = document.createElement('div'); el.className = 'cruise-stage venue-stage beach-3d';
-    var renderer; try { renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch (e) { return null; }
+    var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({ preserve: true }) : new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch (e) { return null; } if (!renderer) return null;
     // Lighter on phones and small machines: a lower pixel ratio and a smaller shadow map keep the frame rate up.
-    var LITE = (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
-    renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    var LITE = root.LasgidiGL ? root.LasgidiGL.lite() : (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
+    if (!root.LasgidiGL) renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
     var cv = renderer.domElement; cv.className = 'cruise-canvas'; cv.setAttribute('role', 'img'); el.appendChild(cv);
     var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -967,7 +967,7 @@
     /* ---------- build per place ---------- */
     var built = '';
     function build() {
-      var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.rooftop ? 'r' : '') + (sc.name || ''); if (key === built) return; built = key;
+      var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.rooftop ? 'r' : '') + (sc.name || ''); if (key === built) return; built = key; WK.reset = true;
       ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; MKT = sc.mode === 'market'; JTY = sc.mode === 'jetty'; PRK = sc.mode === 'park'; PLZ = sc.mode === 'plaza'; GAL = sc.mode === 'gallery' || sc.mode === 'hall'; STR = sc.mode === 'street'; if (sc.mode === 'gallery') buildGallery(); if (sc.mode === 'hall') buildHall(); if (STR) buildStreet(); if (PLZ) buildPlaza(); if (PRK) buildPark(); if (MKT) buildMarket(); if (JTY) buildJetty(); if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
       harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; mktG.visible = MKT; jetG.visible = JTY; parkG.visible = PRK; plzG.visible = PLZ; galG.visible = GAL; strG.visible = STR; sky.visible = !(CLUB && !ROOF) && !GAL; S3.environment = (CLUB && !ROOF) || GAL ? null : envRT.texture; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
       // Frame: the estate uses a wider lens so the pool below and the skyline above both fit, as in a terrace photo.
@@ -997,19 +997,60 @@
     var ray = new T.Raycaster(), ndc = new T.Vector2();
     function tap(e) {
       var r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam);
-      var sh = ray.intersectObjects(signs.filter(function (s) { return s.visible; }), false)[0]; if (sh && opts.onAct) { opts.onAct(sh.object.userData.act); return; }
+      var sh = ray.intersectObjects(signs.filter(function (s) { return s.visible; }), false)[0]; if (sh && opts.onAct) { if (WK.on && me) { walkTo(sh.object.userData.act); return; } opts.onAct(sh.object.userData.act); return; }
       var hit = ray.intersectObjects(world.children, true).filter(function (h) { return h.object.userData.gem || h.object.userData.person != null; })[0];
-      if (!hit) return; if (hit.object.userData.gem) { if (opts.onGem && sc.gem) opts.onGem(sc.gem.n); return; }
+      if (!hit) { if (WK.on && me) { var gp = new T.Vector3(); if (ray.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), -groundY(WK.x, WK.z)), gp)) { WK.tx = gp.x; WK.tz = gp.z; WK.act = null; } } return; } if (hit.object.userData.gem) { if (opts.onGem && sc.gem) opts.onGem(sc.gem.n); return; }
       var d = (sc.people || [])[hit.object.userData.person]; if (d) { if (d.npc && opts.onNpc) opts.onNpc(d.npc); if (!bubble) { bubble = sprite('', '#fff', '#17181a', 9); world.add(bubble); } label(bubble, (d.label + ': ' + (d.line || '')).slice(0, 48), '#ffffff', '#17181a'); bubble.position.copy(crowd[hit.object.userData.person].position).add(new T.Vector3(0, 3.2, 0)); bubble.visible = true; bubbleAt = performance.now(); }
     }
     var bar = document.createElement('div'); bar.className = 'iv-spin';
-    bar.innerHTML = '<button type="button" class="pg-zbtn" data-b3="photo" aria-label="Take a photo">📷</button><button type="button" class="pg-zbtn" data-b3="in" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-b3="out" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-b3="l" aria-label="Turn left">⟲</button><button type="button" class="pg-zbtn" data-b3="r" aria-label="Turn right">⟳</button>';
+    bar.innerHTML = '<button type="button" class="pg-zbtn" data-b3="photo" aria-label="Take a photo">📷</button><button type="button" class="pg-zbtn" data-b3="in" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-b3="out" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-b3="l" aria-label="Turn left">⟲</button><button type="button" class="pg-zbtn" data-b3="r" aria-label="Turn right">⟳</button><button type="button" class="pg-zbtn b3-walk" data-b3="walk" aria-label="Walk around" aria-pressed="true">🚶</button>';
     el.appendChild(bar);
-    bar.addEventListener('click', function (e) { var b = e.target.closest('[data-b3]'); if (!b) return; var a = b.getAttribute('data-b3'); if (a === 'photo') { if (opts.onPhoto) opts.onPhoto(cv); return; } if (a === 'in') orbit.r *= 0.8; else if (a === 'out') orbit.r *= 1.25; else orbit.az += (a === 'l' ? 1 : -1) * Math.PI / 6; place(); });
+    bar.addEventListener('click', function (e) { var b = e.target.closest('[data-b3]'); if (!b) return; var a = b.getAttribute('data-b3'); if (a === 'photo') { if (opts.onPhoto) opts.onPhoto(cv); return; } if (a === 'walk') { setWalk(!WK.on); if (opts.onWalk) opts.onWalk(WK.on); return; } if (a === 'in') orbit.r *= 0.8; else if (a === 'out') orbit.r *= 1.25; else orbit.az += (a === 'l' ? 1 : -1) * Math.PI / 6; place(); });
+
+    /* ---------- walking: tap the ground, WASD or the arrows, or the joystick; the camera follows ---------- */
+    var WK = { on: opts.walk !== false, x: 0, z: 0, yaw: 0, tx: null, tz: null, act: null, keys: {}, joy: null, key: '', moving: 0, near: -1, follow: false };
+    function walkBox() { var q = SP(), x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; q.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }); var pad = HARBOUR ? 14 : CLUB || GAL ? 4 : 7; return { x0: x0 - pad, x1: x1 + pad, z0: z0 - pad, z1: Math.min(z1 + pad, (!ESTATE && !HARBOUR && !CLUB && !STAD && !MKT && !JTY && !PRK && !PLZ && !GAL && !STR) ? SEA0 + 3 : 1e9) }; }
+    function walkStart() { var b = walkBox(), q = SP()[(sc.meSlot || 5) % SP().length]; WK.x = q[0] + 1.6; WK.z = Math.min(b.z1 - 1, q[1] + 2.5); WK.tx = WK.tz = null; WK.act = null; WK.yaw = Math.PI / 2; }
+    function walkTo(i) { var q = SP()[i % SP().length]; WK.tx = q[0] + 1.6; WK.tz = q[1] + 2.2; WK.act = i; }
+    function setWalk(on) { WK.on = !!on; var b = bar.querySelector('.b3-walk'); if (b) { b.setAttribute('aria-pressed', String(WK.on)); b.classList.toggle('on', WK.on); } joy.style.display = WK.on && coarse ? '' : 'none'; doBtn.hidden = true; if (WK.on) walkStart(); }
+    var coarse = !!(root.matchMedia && root.matchMedia('(pointer: coarse)').matches);
+    // The on-screen joystick (touch screens).
+    var joy = document.createElement('div'); joy.className = 'b3-joy'; joy.setAttribute('aria-hidden', 'true'); joy.innerHTML = '<i></i>'; el.appendChild(joy);
+    var knob = joy.firstChild, joyId = null;
+    function joyAt(e) { var r = joy.getBoundingClientRect(), dx = (e.clientX - r.left - r.width / 2) / (r.width / 2), dy = (e.clientY - r.top - r.height / 2) / (r.height / 2), m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; } WK.joy = { x: dx, y: dy }; knob.style.transform = 'translate(' + (dx * 26) + 'px,' + (dy * 26) + 'px)'; }
+    joy.addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); joyId = e.pointerId; try { joy.setPointerCapture(e.pointerId); } catch (x) {} joyAt(e); });
+    joy.addEventListener('pointermove', function (e) { if (e.pointerId === joyId) joyAt(e); });
+    ['pointerup', 'pointercancel'].forEach(function (ev) { joy.addEventListener(ev, function () { joyId = null; WK.joy = null; knob.style.transform = ''; }); });
+    // "Do it" when you stand by a sign.
+    var doBtn = document.createElement('button'); doBtn.type = 'button'; doBtn.className = 'btn go b3-do'; doBtn.hidden = true; el.appendChild(doBtn);
+    joy.style.display = WK.on && coarse ? '' : 'none';
+    doBtn.addEventListener('click', function () { if (WK.near >= 0 && opts.onAct) opts.onAct(WK.near); });
+    var KEYS = { w: 'f', arrowup: 'f', s: 'b', arrowdown: 'b', a: 'l', arrowleft: 'l', d: 'r', arrowright: 'r' };
+    function onKey(e) { if (!el.isConnected || !WK.on) return; var t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return; var k = KEYS[String(e.key).toLowerCase()]; if (!k) return; WK.keys[k] = e.type === 'keydown'; if (e.type === 'keydown') { WK.tx = WK.tz = null; WK.act = null; e.preventDefault(); } }
+    root.addEventListener('keydown', onKey); root.addEventListener('keyup', onKey);
+    function walkFrame(dt, t) {
+      if (!me || !sc.me) return;
+      var b = walkBox(), cfx = cam.position.x - orbit.tx, cfz = cam.position.z - orbit.tz, cl = Math.hypot(cfx, cfz) || 1, fx = -cfx / cl, fz = -cfz / cl; // camera forward on the ground
+      var rx = -fz, rz = fx, mx = 0, mz = 0, K = WK.keys;
+      if (K.f) { mx += fx; mz += fz; } if (K.b) { mx -= fx; mz -= fz; } if (K.r) { mx += rx; mz += rz; } if (K.l) { mx -= rx; mz -= rz; }
+      if (WK.joy) { mx += rx * WK.joy.x - fx * WK.joy.y; mz += rz * WK.joy.x - fz * WK.joy.y; }
+      if (!mx && !mz && WK.tx != null) { var ddx = WK.tx - WK.x, ddz = WK.tz - WK.z, dd = Math.hypot(ddx, ddz); if (dd < 0.35) { WK.tx = WK.tz = null; if (WK.act != null && opts.onAct) { var a = WK.act; WK.act = null; opts.onAct(a); } } else { mx = ddx / dd; mz = ddz / dd; } }
+      var m = Math.hypot(mx, mz), sp = (CLUB || GAL ? 4 : 6.5) * dt;
+      if (m > 0.01) { mx /= Math.max(1, m); mz /= Math.max(1, m); WK.x = Math.max(b.x0, Math.min(b.x1, WK.x + mx * sp)); WK.z = Math.max(b.z0, Math.min(b.z1, WK.z + mz * sp)); var want = Math.atan2(-mz, mx), dy = ((want - WK.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI; WK.yaw += dy * Math.min(1, dt * 10); WK.moving = Math.min(1, WK.moving + dt * 6); WK.follow = true; }
+      else WK.moving = Math.max(0, WK.moving - dt * 6);
+      me.position.set(WK.x, groundY(WK.x, WK.z), WK.z); me.rotation.y = WK.yaw;
+      var lg = me.userData.legs, sw = Math.sin(t * 9) * 0.6 * WK.moving; if (lg) lg.forEach(function (l, k) { l.rotation[me.userData.axis || 'z'] = k ? -sw : sw; });
+      if (WK.follow) { var WR = CLUB || GAL ? 12 : HARBOUR ? 34 : 24; orbit.tx += (WK.x - orbit.tx) * Math.min(1, dt * 3); orbit.tz += (WK.z - orbit.tz) * Math.min(1, dt * 3); if (orbit.r > WR) orbit.r += (WR - orbit.r) * Math.min(1, dt * 1.5); place(); if (WK.moving === 0 && Math.hypot(WK.x - orbit.tx, WK.z - orbit.tz) < 0.2) WK.follow = false; }
+      // The nearest sign within reach lights up, with a "Do it" button.
+      var near = -1, best = 3.6; (sc.acts || []).slice(0, 8).forEach(function (a, i) { if (!a) return; var q = SP()[i]; var dd2 = Math.hypot(q[0] - WK.x, q[1] - WK.z); if (dd2 < best) { best = dd2; near = i; } });
+      if (near !== WK.near) { WK.near = near; var a2 = near >= 0 ? sc.acts[near] : null; doBtn.hidden = !a2 || !!sc.clean; if (a2) { doBtn.textContent = '▶ ' + (a2.icon || '') + ' ' + a2.short; doBtn.disabled = !!a2.off; } signs.forEach(function (sg, i) { sg.material.color.set(i === near ? 0xffe27a : 0xffffff); }); }
+    }
 
     /* ---------- frame ---------- */
     function size() { var w = el.clientWidth || 360, h = el.clientHeight || 400; if (w === W && h === H) return; W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cam.aspect = W / H; cam.updateProjectionMatrix(); }
     function frame(now) {
+      if (root.LasgidiGL && !root.LasgidiGL.live(el)) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // hidden or under another view: skip the frame
+      root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var t = reduce ? 3 : now / 1000, night = sc.night ? 1 : 0, rain = sc.weather === 'rain' || sc.weather === 'storm';
       var nv = night ? 0.85 : 0; if (Math.abs(skyU.night.value - nv) > 0.01) { skyU.night.value += (nv - skyU.night.value) * 0.1; if (Math.abs(skyU.night.value - nv) <= 0.01) { skyU.night.value = nv; bakeEnv(); } } hemi.intensity = night ? 0.25 : rain ? 0.6 : 0.85; sun.intensity = night ? 0.15 : rain ? 0.7 : 2.2; sun.color.set(night ? 0x8fa8ff : 0xffe2b8); hemi.color.set(0xfff1dd); hemi.groundColor.set(GAL ? 0xf4f1ea : 0x8a9a6a);
       S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD || MKT || JTY || PRK || PLZ || STR ? 0.45 : 1);
@@ -1064,7 +1105,9 @@
       jetski.position.set(-60 + ((t * 9) % 140), -0.2 + Math.sin(t * 3) * 0.15, SEA0 + 30); jetski.rotation.y = 0; sail.position.set(80 - ((t * 1.5) % 200), -0.3, 180); sail.rotation.z = Math.sin(t) * 0.04;
       palms.forEach(function (o) { o.userData.crown.rotation.z = Math.sin(t * 0.9 + o.position.x) * 0.04; });
       crowd.forEach(function (p, i) { if (!p.visible || !p.userData.home) return; var hx = p.userData.home[0], hz = p.userData.home[1], u = reduce ? 0 : Math.sin(t * 0.25 + i), x = hx + u * 2.5, z = hz + Math.cos(t * 0.2 + i) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = Math.cos(t * 0.25 + i) > 0 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation[p.userData.axis || 'z'] = a; p.userData.legs[1].rotation[p.userData.axis || 'z'] = -a; });
-      if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); if (me.userData.axis) me.rotation.y = Math.PI / 2; label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
+      var wdt = Math.min(0.25, Math.max(0, (now - (WK.last || now)) / 1000)); WK.last = now;
+      if (me && sc.me && WK.on) { walkFrame(wdt, t); label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(WK.x, me.position.y + 2.7, WK.z); }
+      else if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); if (me.userData.axis) me.rotation.y = Math.PI / 2; label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
       if (gem && sc.gem) { var gq = SP()[sc.gem.slot % SP().length]; gem.position.set(gq[0] - 2.5, groundY(gq[0] - 2.5, gq[1] + 2) + 1.2 + Math.sin(t * 2) * 0.25, gq[1] + 2); gem.rotation.y = t * 1.5; }
       strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STR ? -2 + (i % 3) * 0.5 : GAL ? -16 + (i % 3) * 1.2 : PLZ ? -34 + (i % 3) * 1.2 : PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation[p.userData.axis || 'z'] = a; p.userData.legs[1].rotation[p.userData.axis || 'z'] = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
@@ -1075,9 +1118,11 @@
     }
     return {
       el: el, canvas: cv, is3d: true,
-      update: function (next) { sc = next || sc; build(); syncSigns(); syncPeople(); cv.setAttribute('aria-label', (sc.name || 'The beach') + ' in 3D. Drag to look around, tap a sign to do it.'); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
+      update: function (next) { sc = next || sc; build(); syncSigns(); syncPeople(); if (WK.reset && me) { WK.reset = false; walkStart(); WK.near = -2; } cv.setAttribute('aria-label', (sc.name || 'The beach') + ' in 3D. Drag to look around, tap a sign to do it.'); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
       start: function () { if (!raf) raf = root.requestAnimationFrame(frame); },
-      stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; }
+      stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; },
+      walk: function () { return { on: WK.on, x: WK.x, z: WK.z, near: WK.near }; }, // for tests
+      screenOf: function (x, z) { var v = new T.Vector3(x, groundY(x, z), z).project(cam), r = cv.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }, // for tests
     };
   }
   root.LasgidiBeach3D = { create: create };
