@@ -10,7 +10,7 @@ const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 const html = read('index.html');
 const fonts = html.match(/<link rel="stylesheet" href="https:\/\/fonts[^>]+>/)[0];
 const body = html.slice(html.indexOf('<body>') + 6, html.indexOf('<script'));
-const js = ['src/data.js', 'src/engine.js', 'src/icons.js', 'src/playground.js', 'src/interior.js', 'src/avatar.js', 'src/images.js', 'src/danfo.js', 'src/danceoff.js', 'src/hawker.js', 'src/bole.js', 'src/quiz.js', 'src/gov.js', 'src/chat.js', 'src/cruise.js', 'src/airport.js', 'src/venue.js', 'src/ui.js'].map(read).join('\n');
+const js = ['src/data.js', 'src/engine.js', 'src/icons.js', 'src/playground.js', 'src/interior.js', 'src/avatar.js', 'src/images.js', 'src/danfo.js', 'src/danceoff.js', 'src/hawker.js', 'src/bole.js', 'src/quiz.js', 'src/gov.js', 'src/chat.js', 'src/cruise.js', 'src/airport.js', 'src/airport3d.js', 'src/venue.js', 'src/ui.js'].map(read).join('\n');
 // Minify when terser is installed (npm install); otherwise ship the readable source as before.
 // Only local names are shortened: globals and every property name stay as written.
 function minifyCss(css) {
@@ -26,10 +26,13 @@ async function main() {
     code = r.code; css = minifyCss(css);
   }
   const out = [
+    '<meta charset="utf-8">',
     '<title>Lasgidi</title>',
     fonts,
     '<style>\n' + css + '\n</style>',
     body.trim(),
+    // three.js rides along as inert text and is only run when the 3D airport first opens (see loadThree in src/ui.js).
+    '<script type="text/plain" id="lsg-three">' + read('vendor/three.min.js').replace(/<\/script/gi, '<\\/script') + '</script>',
     '<script>\n' + code.replace(/<\/script/gi, '<\\/script') + '\n</script>'
   ].join('\n');
   const dest = process.argv.slice(2).find(a => !a.startsWith('--')) || path.join(root, 'dist', 'lasgidi.html');

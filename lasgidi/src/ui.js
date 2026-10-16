@@ -2113,17 +2113,32 @@
     ui.spoken = ui.spoken || {}; if (ui.spoken[text]) return; ui.spoken[text] = 1;
     try { tone(784, 0, 0.18, 'sine', 0.08); tone(988, 0.2, 0.18, 'sine', 0.08); tone(784, 0.4, 0.3, 'sine', 0.08); var u = new SpeechSynthesisUtterance(text); u.rate = 0.95; u.lang = 'en-GB'; setTimeout(function () { window.speechSynthesis.speak(u); }, 800); } catch (e) {}
   }
+  // three.js loads only when the 3D airport is first opened: from the copy inlined in the single-file build, else vendor/.
+  var threeState = window.THREE ? 'ready' : 'idle';
+  function loadThree(cb) {
+    if (threeState === 'ready' || threeState === 'failed') { cb(); return; }
+    if (threeState === 'loading') { (loadThree.q = loadThree.q || []).push(cb); return; }
+    threeState = 'loading'; loadThree.q = [cb];
+    var done = function (ok) { threeState = ok && window.THREE ? 'ready' : 'failed'; var q = loadThree.q; loadThree.q = []; q.forEach(function (f) { f(); }); };
+    try {
+      var inl = document.getElementById('lsg-three'), sc = document.createElement('script');
+      if (inl) { sc.textContent = inl.textContent; document.head.appendChild(sc); done(true); return; }
+      sc.src = 'vendor/three.min.js'; sc.onload = function () { done(true); }; sc.onerror = function () { done(false); }; document.head.appendChild(sc);
+    } catch (e) { done(false); }
+  }
   function mountAirport() {
     var ov = document.getElementById('airport-view');
+    if (ui.airportOpen && S && !ov && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountAirport); return; }
     if (!ui.airportOpen || !S) { if (ov) ov.remove(); if (ui.apTimer) { clearInterval(ui.apTimer); ui.apTimer = null; } return; }
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'airport-view'; ov.className = 'cruise-view airport-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Live airport view');
-      if (!airportStage) airportStage = window.LasgidiAirport.create({ onTap: function (k) {
+      if (!airportStage) airportStage = (window.LasgidiAirport3D && window.THREE && window.LasgidiAirport3D.create({ onTap: airportTap })) || window.LasgidiAirport.create({ onTap: airportTap });
+      function airportTap(k) {
         if (k === 'parking') return;
         if (k === 'terminal') { ui.fidsTab = 'inside'; mountAirport(); return; }
         if (k === 'board') { ui.fidsTab = ui.fidsTab === 'arr' ? 'dep' : 'arr'; mountAirport(); return; }
         airportGo(k === 'departures' ? 'air' : k);
-      } });
+      }
       var pn = document.createElement('div'); pn.className = 'cv-panel ap-panel'; pn.id = 'ap-panel'; ov.appendChild(airportStage.el); ov.appendChild(pn); document.body.appendChild(ov); airportKey = '';
       if (!ui.apTimer) ui.apTimer = setInterval(function () { if (ui.airportOpen) mountAirport(); }, 8000); // rotate the announcements
     }
