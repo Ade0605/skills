@@ -24,7 +24,9 @@
     var T = root.THREE; if (!T) return null;
     var el = document.createElement('div'); el.className = 'cruise-stage venue-stage beach-3d';
     var renderer; try { renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch (e) { return null; }
-    renderer.setPixelRatio(Math.min(2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    // Lighter on phones and small machines: a lower pixel ratio and a smaller shadow map keep the frame rate up.
+    var LITE = (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
+    renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
     var cv = renderer.domElement; cv.className = 'cruise-canvas'; cv.setAttribute('role', 'img'); el.appendChild(cv);
     var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -42,7 +44,7 @@
     function bakeEnv() { if (envRT) envRT.dispose(); envRT = pmrem.fromScene(envScene, 0.02); S3.environment = CLUB && !ROOF ? null : envRT.texture; }
     bakeEnv();
     var hemi = new T.HemisphereLight(0xfff1dd, 0x8a9a6a, 0.85), sun = new T.DirectionalLight(0xffe2b8, 2.2);
-    sun.position.set(-60, 40, -80); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); var shc = sun.shadow.camera; shc.left = -45; shc.right = 45; shc.top = 40; shc.bottom = -40; shc.near = 1; shc.far = 260; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+    sun.position.set(-60, 40, -80); sun.castShadow = true; sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); var shc = sun.shadow.camera; shc.left = -45; shc.right = 45; shc.top = 40; shc.bottom = -40; shc.near = 1; shc.far = 260; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
     sun.target.position.set(0, 0, 10); S3.add(hemi, sun, sun.target);
 
     /* ---------- procedural textures ---------- */
@@ -885,6 +887,25 @@
       GL.walkers = squad(NW, function (i) { return [0x17181a, 0xf4f3ec, 0xc0392b, 0x2f6fa0, 0x8e44ad, 0xe67e22][i % 6]; }, 1, galG); GL.walkBase = wb;
     }
 
+    /* ---------- weather: rain streaks (and lightning in a storm), harmattan dust ---------- */
+    var WX = new T.Group(); S3.add(WX); var RAIN_N = LITE ? 700 : 1600, rainPos = new Float32Array(RAIN_N * 6), rainSeed = new Float32Array(RAIN_N * 3), wr0 = rnd(97);
+    for (var ri = 0; ri < RAIN_N; ri++) { rainSeed[ri * 3] = wr0() * 140 - 70; rainSeed[ri * 3 + 1] = wr0() * 50; rainSeed[ri * 3 + 2] = wr0() * 140 - 70; }
+    var rainGeo = new T.BufferGeometry(); rainGeo.setAttribute('position', new T.BufferAttribute(rainPos, 3));
+    var rainLines = new T.LineSegments(rainGeo, new T.LineBasicMaterial({ color: 0xdfe6ee, transparent: true, opacity: 0.7, depthWrite: false })); rainLines.frustumCulled = false; WX.add(rainLines);
+    var DUST_N = LITE ? 300 : 700, dustGeo = new T.BufferGeometry(), dustPos = new Float32Array(DUST_N * 3); for (var di2 = 0; di2 < DUST_N; di2++) { dustPos[di2 * 3] = wr0() * 140 - 70; dustPos[di2 * 3 + 1] = wr0() * 30; dustPos[di2 * 3 + 2] = wr0() * 140 - 70; }
+    dustGeo.setAttribute('position', new T.BufferAttribute(dustPos, 3)); var dust = new T.Points(dustGeo, new T.PointsMaterial({ color: 0xe8d6a8, size: 0.6, transparent: true, opacity: 0.7, depthWrite: false })); dust.frustumCulled = false; WX.add(dust);
+    var flashUntil = 0, SKY0 = { top: skyU.top.value.clone(), mid: skyU.mid.value.clone(), hor: skyU.hor.value.clone() }, SKYW = { rain: [0x7d8a96, 0x9aa6b0, 0xb5bcc2], storm: [0x4a5560, 0x6b7680, 0x8a939a], harmattan: [0xcbb994, 0xdccba4, 0xe8d9b4] }, skyTmp = new T.Color();
+    function skyWeather(w) { var tgt = SKYW[w]; ['top', 'mid', 'hor'].forEach(function (k, i) { skyTmp.copy(SKY0[k]); if (tgt) skyTmp.set(tgt[i]); skyU[k].value.lerp(skyTmp, 0.05); }); }
+    function night0() { return !!sc.night; }
+    function weatherFrame(t, now) {
+      var indoor = (CLUB && !ROOF) || GAL, w = sc.weather, rainy = !indoor && (w === 'rain' || w === 'storm'), dusty = !indoor && w === 'harmattan';
+      skyWeather(indoor ? null : w); if (rainy && !night0()) { hemi.intensity = Math.min(hemi.intensity, w === 'storm' ? 0.45 : 0.6); sun.intensity = Math.min(sun.intensity, 0.5); }
+      WX.position.set(orbit.tx, 0, orbit.tz); rainLines.visible = rainy; dust.visible = dusty;
+      if (rainy) { var n = w === 'storm' ? RAIN_N : Math.round(RAIN_N * 0.6), fall = w === 'storm' ? 38 : 26, slant = w === 'storm' ? 6 : 2; for (var i = 0; i < RAIN_N; i++) { var o = i * 6; if (i >= n) { rainPos[o + 1] = rainPos[o + 4] = -100; continue; } var y = 50 - ((rainSeed[i * 3 + 1] + t * fall) % 50), x = rainSeed[i * 3] + slant * (y / 50), z = rainSeed[i * 3 + 2]; rainPos[o] = x; rainPos[o + 1] = y; rainPos[o + 2] = z; rainPos[o + 3] = x - slant * 0.04; rainPos[o + 4] = y - 1.8; rainPos[o + 5] = z; } rainGeo.attributes.position.needsUpdate = true; }
+      if (dusty) { for (var k = 0; k < DUST_N; k++) { dustPos[k * 3] = ((dustPos[k * 3] + 70 + 0.03) % 140) - 70; dustPos[k * 3 + 1] = (dustPos[k * 3 + 1] + Math.sin(t + k) * 0.01 + 30) % 30; } dustGeo.attributes.position.needsUpdate = true; }
+      if (w === 'storm' && !indoor && !reduce) { if (now > flashUntil + 4000 && Math.random() < 0.004) flashUntil = now + 160; if (now < flashUntil) { hemi.intensity = 2.4; hemi.color.set(0xdfe8ff); } }
+    }
+
     /* ---------- people, signs, the gem ---------- */
     var SKIN = [0x6b4029, 0x8a5a3c, 0x4a2c1c, 0x9b6a4b], CL = [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec, 0x17181a];
     function person(i, female) {
@@ -1021,6 +1042,7 @@
       if (gem && sc.gem) { var gq = SP()[sc.gem.slot % SP().length]; gem.position.set(gq[0] - 2.5, groundY(gq[0] - 2.5, gq[1] + 2) + 1.2 + Math.sin(t * 2) * 0.25, gq[1] + 2); gem.rotation.y = t * 1.5; }
       strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STR ? -2 + (i % 3) * 0.5 : GAL ? -16 + (i % 3) * 1.2 : PLZ ? -34 + (i % 3) * 1.2 : PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation.z = a; p.userData.legs[1].rotation.z = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
+      weatherFrame(t, now);
       signs.forEach(function (s) { s.visible = s.visible && !sc.clean; });
       renderer.render(S3, cam);
       raf = el.isConnected ? root.requestAnimationFrame(frame) : 0;

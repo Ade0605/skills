@@ -16,7 +16,8 @@
     var el = document.createElement('div'); el.className = 'airport-stage airport-3d';
     var renderer;
     try { renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch (e) { return null; }
-    renderer.setPixelRatio(Math.min(2, root.devicePixelRatio || 1));
+    var LITE = (root.innerWidth || 1000) < 700 || ((root.navigator || {}).hardwareConcurrency || 8) <= 4;
+    renderer.setPixelRatio(Math.min(LITE ? 1.25 : 2, root.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
     var cv = renderer.domElement; cv.className = 'airport-canvas'; cv.setAttribute('role', 'img');
@@ -27,7 +28,7 @@
     scene3.fog = new T.Fog(0x9fd3ef, 60, 140);
     var hemi = new T.HemisphereLight(0xdff3ff, 0x5c7a43, 0.9), sun = new T.DirectionalLight(0xffffff, 1.6);
     sun.position.set(30, 40, 22); sun.target.position.set(12, 0, 8); sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048); var sc = sun.shadow.camera; sc.left = -22; sc.right = 22; sc.top = 18; sc.bottom = -18; sc.near = 1; sc.far = 120; sun.shadow.bias = -0.0005;
+    sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); var sc = sun.shadow.camera; sc.left = -22; sc.right = 22; sc.top = 18; sc.bottom = -18; sc.near = 1; sc.far = 120; sun.shadow.bias = -0.0005;
     scene3.add(hemi, sun, sun.target);
 
     /* ---------- materials, shared geometry and helpers ---------- */
