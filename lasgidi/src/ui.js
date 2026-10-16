@@ -2156,6 +2156,17 @@
     ui.spoken = ui.spoken || {}; if (ui.spoken[text]) return; ui.spoken[text] = 1;
     try { tone(784, 0, 0.18, 'sine', 0.08); tone(988, 0.2, 0.18, 'sine', 0.08); tone(784, 0.4, 0.3, 'sine', 0.08); var u = new SpeechSynthesisUtterance(text); u.rate = 0.95; u.lang = 'en-GB'; setTimeout(function () { window.speechSynthesis.speak(u); }, 800); } catch (e) {}
   }
+  // The tower's call for each movement (every 20 s): always shown in the live banner, spoken after a chime when sound is on.
+  function speakLive(text) {
+    if (!prefs.sound || !text || !window.speechSynthesis) return;
+    try { window.speechSynthesis.cancel(); tone(659, 0, 0.16, 'sine', 0.07); tone(880, 0.18, 0.22, 'sine', 0.07); var u = new SpeechSynthesisUtterance(text); u.rate = 0.98; u.lang = 'en-GB'; setTimeout(function () { window.speechSynthesis.speak(u); }, 600); } catch (e) {}
+  }
+  function airportMovement(mv) {
+    var b = document.getElementById('ap-live'); if (!b || !mv) return;
+    b.innerHTML = '<span class="ap-live-ic" aria-hidden="true">' + ({ airliner: mv.phase === 'arr' ? '🛬' : '🛫', jet: '🛩️', heli: '🚁' }[mv.kind]) + '</span><span>' + esc(mv.text) + '</span>';
+    b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
+    speakLive(mv.text);
+  }
   // three.js loads only when the 3D airport is first opened: from the copy inlined in the single-file build, else vendor/.
   var threeState = window.THREE ? 'ready' : 'idle';
   function loadThree(cb) {
@@ -2175,14 +2186,14 @@
     if (!ui.airportOpen || !S) { if (ov) ov.remove(); if (ui.apTimer) { clearInterval(ui.apTimer); ui.apTimer = null; } return; }
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'airport-view'; ov.className = 'cruise-view airport-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Live airport view');
-      if (!airportStage) airportStage = (window.LasgidiAirport3D && window.THREE && window.LasgidiAirport3D.create({ onTap: airportTap })) || window.LasgidiAirport.create({ onTap: airportTap });
+      if (!airportStage) airportStage = (window.LasgidiAirport3D && window.THREE && window.LasgidiAirport3D.create({ onTap: airportTap, onMovement: airportMovement })) || window.LasgidiAirport.create({ onTap: airportTap, onMovement: airportMovement });
       function airportTap(k) {
         if (k === 'parking') return;
         if (k === 'terminal') { ui.fidsTab = 'inside'; mountAirport(); return; }
         if (k === 'board') { ui.fidsTab = ui.fidsTab === 'arr' ? 'dep' : 'arr'; mountAirport(); return; }
         airportGo(k === 'departures' ? 'air' : k);
       }
-      var pn = document.createElement('div'); pn.className = 'cv-panel ap-panel'; pn.id = 'ap-panel'; ov.appendChild(airportStage.el); ov.appendChild(pn); document.body.appendChild(ov); airportKey = '';
+      var pn = document.createElement('div'); pn.className = 'cv-panel ap-panel'; pn.id = 'ap-panel'; if (!airportStage.el.querySelector('#ap-live')) { var live = document.createElement('div'); live.id = 'ap-live'; live.className = 'ap-live'; live.setAttribute('role', 'status'); live.setAttribute('aria-live', 'polite'); airportStage.el.appendChild(live); } ov.appendChild(airportStage.el); ov.appendChild(pn); document.body.appendChild(ov); airportKey = '';
       if (!ui.apTimer) ui.apTimer = setInterval(function () { if (ui.airportOpen) mountAirport(); }, 8000); // rotate the announcements
     }
     var html = airportPanel(); if (html !== airportKey) { document.getElementById('ap-panel').innerHTML = html; airportKey = html; }

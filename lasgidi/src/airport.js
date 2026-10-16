@@ -47,8 +47,8 @@
       poly([pt(L / 2, 0), pt(L * 0.42, L * 0.05), pt(-L / 2, L * 0.04), pt(-L / 2, -L * 0.04), pt(L * 0.42, -L * 0.05)], body, 'rgba(0,0,0,.3)', 0.6);
       poly([pt(-L * 0.36, L * 0.03), pt(-L * 0.5, L * 0.03), pt(-L * 0.5, -L * 0.03), pt(-L * 0.36, -L * 0.03)], tail);
     }
-    function heli(x, y, t, body) {
-      var p = P(x, y, 0.15), s = p.s; g.fillStyle = body || '#20252b'; g.beginPath(); g.ellipse(p.x, p.y, s * 0.28, s * 0.14, 0, 0, Math.PI * 2); g.fill();
+    function heli(x, y, t, body, h) {
+      var p = P(x, y, 0.15 + (h || 0)), s = p.s; g.fillStyle = body || '#20252b'; g.beginPath(); g.ellipse(p.x, p.y, s * 0.28, s * 0.14, 0, 0, Math.PI * 2); g.fill();
       g.fillRect(p.x, p.y - s * 0.03, s * 0.42, s * 0.05); g.fillStyle = 'rgba(160,210,240,.85)'; g.beginPath(); g.ellipse(p.x - s * 0.12, p.y - s * 0.02, s * 0.1, s * 0.07, 0, 0, Math.PI * 2); g.fill();
       var a = reduce ? 0.6 : t / 90; g.strokeStyle = 'rgba(30,34,40,.75)'; g.lineWidth = Math.max(1, s * 0.04);
       g.beginPath(); g.moveTo(p.x - Math.cos(a) * s * 0.55, p.y - s * 0.12 - Math.sin(a) * s * 0.18); g.lineTo(p.x + Math.cos(a) * s * 0.55, p.y - s * 0.12 + Math.sin(a) * s * 0.18); g.stroke();
@@ -209,16 +209,12 @@
       });
       fence();
       board(t);
-      // The sky follows the board: the next departure takes off (a chopper lifts if it is a heli), an arrival lands.
-      if (!reduce) {
-        var cyc = (t / 1000) % 26, dep = scene.nextDep, arr = scene.nextArr;
-        if (cyc < 12) { var lu = cyc / 12, ease = 1 - Math.pow(1 - lu, 2), lx = -2 + ease * 18, lz = Math.max(0, 1.6 * (1 - lu * 2.2)); plane(lx, 1.55, lz, 0, 2.1, '#f7f7f5', '#1d7a43'); if (arr) label(lx, 1.55, lz + 0.6, arr, 'rgba(23,24,26,.7)', '#fff', 9); }
-        else if (cyc > 13) {
-          var tu = (cyc - 13) / 13;
-          if (dep && dep.kind === 'heli') { var hz = tu * 4, hx = 1.7 + tu * 6; var hp = P(hx, 4.2, hz); heli(hx, 4.2 - hz * 0.0, t); label(hx, 4.2, hz + 0.7, dep.code, 'rgba(23,24,26,.7)', '#fff', 9); }
-          else { var tx = 22 - tu * tu * 26, tz = Math.max(0, (tu - 0.45) * 3.2); plane(tx, 1.55, tz, Math.PI, 2.1, '#f7f7f5', '#c0392b'); if (dep) label(tx, 1.55, tz + 0.6, dep.code + ' → ' + dep.city, 'rgba(23,24,26,.7)', '#fff', 9); }
-        }
-      }
+      // The sky: a movement every 20 seconds (airliner, private jet, helicopter; landing then take-off), each announced.
+      var mv = skyAt(reduce ? 5 : t / 1000, scene);
+      if (mv.kind === 'heli') heli(mv.x, mv.y, reduce ? 0 : t * mv.rotor, '#1f3b63', mv.h);
+      else { var nx = skyAt((reduce ? 5 : t / 1000) + 0.08, scene), hd = Math.hypot(nx.x - mv.x, nx.y - mv.y) > 0.002 ? Math.atan2(nx.y - mv.y, nx.x - mv.x) : mv.heading; plane(mv.x, mv.y, mv.h, hd, mv.kind === 'jet' ? 1.25 : 2.1, '#f7f7f5', mv.kind === 'jet' ? '#17181a' : mv.phase === 'arr' ? '#1d7a43' : '#c0392b'); }
+      label(mv.x, mv.y, mv.h + 0.6, mv.label, 'rgba(23,24,26,.7)', '#fff', 9);
+      if (mv.n !== lastSlot) { lastSlot = mv.n; if (opts.onMovement) { try { opts.onMovement(mv); } catch (e) {} } }
       if (el.isConnected) raf = root.requestAnimationFrame(frame); else raf = 0;
     }
     cv.addEventListener('click', function (e) {
@@ -231,9 +227,53 @@
       var hit = hits.filter(function (h) { return h.x0 != null && gx >= h.x0 && gx <= h.x1 && gy >= h.y0 && gy <= h.y1; })[0];
       if (hit) opts.onTap(hit.kind);
     });
+    var lastSlot = null;
     function update(s) { scene = s || scene; if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); }
     function start() { if (!raf) raf = root.requestAnimationFrame(frame); }
     return { el: el, update: update, start: start, canvas: cv };
   }
+  /* ---------- the sky schedule, shared by the 2D and 3D airports ----------
+     Every 20 seconds a movement: an airliner lands, an airliner takes off, a private jet lands, a private jet takes off,
+     a helicopter lands on helipad 4, a helicopter lifts off; then round again (2 minutes). Positions are on the ground
+     plan (x along the runway, y across it) with h the height; the runway centreline is y 1.55. */
+  var SLOT = 20, REGS = ['5N-KBY', '5N-LSG', '5N-AJO', '5N-FOT'], PAD = [3.7, 6.0];
+  function lerp(a, b, u) { return a + (b - a) * u; }
+  function clamp01(u) { return Math.max(0, Math.min(1, u)); }
+  function pickRow(rows, heli, n) { var l = (rows || []).filter(function (r) { return (r.kind === 'heli') === heli; }); return l.length ? l[n % l.length] : null; }
+  function skyAt(sec, st) {
+    st = st || {}; var board = st.board || {}, n = Math.floor(sec / SLOT), slot = ((n % 6) + 6) % 6, u = (sec - n * SLOT) / SLOT, loop = Math.floor(n / 6);
+    var kind = slot < 2 ? 'airliner' : slot < 4 ? 'jet' : 'heli', phase = slot % 2 ? 'dep' : 'arr', o = { n: n, slot: slot, u: u, kind: kind, phase: phase, heading: 0, pitch: 0, rotor: 1, smoke: 0 };
+    var row = kind === 'jet' ? null : pickRow(phase === 'arr' ? board.arr : board.dep, kind === 'heli', loop);
+    var cities = (board.dep || []).concat(board.arr || []).map(function (r) { return r.city; }).filter(function (c, i, a) { return c && a.indexOf(c) === i; });
+    if (kind === 'airliner') { o.code = row ? row.code : 'EA ' + (302 + loop % 9); o.city = row ? row.city : cities[loop % Math.max(1, cities.length)] || 'Abuja'; o.who = (row && row.airline ? row.airline + ' flight ' : 'Flight ') + o.code; }
+    else if (kind === 'jet') { o.code = REGS[loop % REGS.length]; o.city = cities.filter(function (c) { return !/Eko|Lekki/.test(c); })[loop % Math.max(1, cities.length)] || (loop % 2 ? 'Port Harcourt' : 'Abuja'); o.who = 'Private jet ' + o.code; }
+    else { o.code = row ? row.code : 'HL ' + (12 + loop % 70); o.city = row ? row.city : (phase === 'arr' ? 'Lekki' : 'Eko Atlantic'); o.who = 'Chopper shuttle ' + o.code; }
+    o.label = o.code + (phase === 'arr' ? ' · from ' : ' · to ') + o.city;
+    if (kind === 'airliner' && phase === 'arr') o.text = 'Ladies and gentlemen, ' + o.who + ' from ' + o.city + ' is now landing on runway 22.';
+    else if (kind === 'airliner') o.text = o.who + ' to ' + o.city + ' is cleared for take-off, runway 22.';
+    else if (kind === 'jet' && phase === 'arr') o.text = o.who + ' from ' + o.city + ' is landing on runway 22. Welcome to the private terminal.';
+    else if (kind === 'jet') o.text = o.who + ' is departing for ' + o.city + ' from runway 22.';
+    else if (phase === 'arr') o.text = o.who + ' from ' + o.city + ' is landing on helipad 4.';
+    else o.text = o.who + ' to ' + o.city + ' is lifting off from helipad 4.';
+    var e;
+    if (kind === 'airliner' && phase === 'arr') { // final approach, touchdown at u .45, roll-out
+      e = 1 - Math.pow(1 - u, 2); o.x = -6 + e * 22; o.y = 1.55; o.h = Math.max(0, 2.6 * (1 - u / 0.45)); o.pitch = o.h > 0 ? 0.05 : 0; o.smoke = u > 0.44 && u < 0.6 ? (u - 0.44) / 0.16 : 0;
+    } else if (kind === 'airliner') { // roll, rotate at u .5, climb out
+      o.x = 22 - u * u * 30; o.y = 1.55; o.h = Math.max(0, (u - 0.5) * 5.2); o.heading = Math.PI; o.pitch = o.h > 0 ? 0.13 : 0;
+    } else if (phase === 'arr') { // a steeper approach, touchdown at u .38, then taxi off to the jet apron
+      if (u < 0.7) { e = 1 - Math.pow(1 - u / 0.7, 2); o.x = -3 + e * 17; o.y = 1.55; o.h = Math.max(0, 2.4 * (1 - u / 0.38)); o.pitch = o.h > 0 ? 0.07 : 0; o.smoke = u > 0.37 && u < 0.5 ? (u - 0.37) / 0.13 : 0; }
+      else { e = (u - 0.7) / 0.3; o.x = lerp(14, 17.9, e); o.y = lerp(1.55, 3.4, e * e); o.h = 0; o.heading = -Math.atan2(1.85 * 2 * e, 3.9); }
+    } else { // taxi from the apron to the runway's far end, then roll and climb out
+      if (u < 0.3) { e = u / 0.3; o.x = lerp(19.8, 21.6, e); o.y = lerp(3.4, 1.55, e); o.h = 0; o.heading = Math.PI - 0.8 * (1 - e); }
+      else { e = (u - 0.3) / 0.7; o.x = 21.6 - e * e * 27; o.y = 1.55; o.h = Math.max(0, (e - 0.42) * 5); o.heading = Math.PI; o.pitch = o.h > 0 ? 0.16 : 0; }
+    }
+    if (kind === 'heli' && phase === 'arr') { // in over the lagoon, flare and settle; the rotor winds down
+      e = clamp01(u / 0.72); var q = 1 - Math.pow(1 - e, 2); o.x = lerp(-6, PAD[0], q); o.y = lerp(-3, PAD[1], q); o.h = 0.03 + 6 * Math.pow(1 - e, 1.6); o.heading = -0.6; o.pitch = e < 1 ? 0.12 * (1 - e) : 0; o.rotor = u < 0.72 ? 1 : Math.max(0.15, 1 - (u - 0.72) / 0.28 * 0.85);
+    } else if (kind === 'heli') { // spool up, hover, climb away toward the coast
+      o.rotor = Math.min(1, 0.2 + u / 0.2 * 0.8); e = clamp01((u - 0.2) / 0.8); o.x = PAD[0] + e * e * 12; o.y = PAD[1] - e * 7; o.h = 0.03 + (u < 0.2 ? 0 : Math.min(1, (u - 0.2) / 0.15) * 0.8 + e * e * 5.5); o.heading = -0.6; o.pitch = e > 0.15 ? -0.12 : 0;
+    }
+    return o;
+  }
+  root.LasgidiSky = { at: skyAt, SLOT: SLOT };
   root.LasgidiAirport = { create: create };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

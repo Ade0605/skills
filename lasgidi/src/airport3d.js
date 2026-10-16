@@ -224,7 +224,9 @@
     /* ---------- moving things ---------- */
     var landing = airliner(0x1d7a43, 2.1); world.add(landing); var depPlane = airliner(0xc0392b, 2.1); world.add(depPlane);
     var landLabel = sprite('', 'rgba(23,24,26,.8)', '#fff', 0.8); world.add(landLabel); var depLabel = sprite('', 'rgba(23,24,26,.8)', '#fff', 0.8); world.add(depLabel);
-    var flyHeli = helicopter(0x1f3b63); world.add(flyHeli);
+    var flyHeli = helicopter(0x1f3b63); world.add(flyHeli); var flyJet = bizjet(0xf7f7f5, 0x1d7a43); world.add(flyJet);
+    var smoke = []; for (var sm = 0; sm < 5; sm++) { var pf = mesh(geo('puff', function () { return new T.SphereGeometry(0.12, 8, 6); }), new T.MeshBasicMaterial({ color: 0xf4f4f4, transparent: true, opacity: 0, depthWrite: false }), 0, 0.1, 1.55, false); world.add(pf); smoke.push(pf); }
+    var lastSlot = null;
     var traffic = []; for (var m = 0; m < 6; m++) { var tc = car(CARC[m % CARC.length]); world.add(tc); traffic.push({ o: tc, k: 'kerb', u: m / 6 }); }
     for (var n2 = 0; n2 < 5; n2++) { var ac = car(CARC[(n2 + 3) % CARC.length]); world.add(ac); traffic.push({ o: ac, k: 'access', u: n2 / 5, lane: n2 % 2 }); }
     var bus = car(0x2f6fd0, true); world.add(bus); traffic.push({ o: bus, k: 'kerb', u: 0.5, speed: 0.6 });
@@ -285,15 +287,19 @@
         var boarding = /Boarding|Final/.test(gs.status);
         go.walkers.forEach(function (p, b) { p.visible = boarding; if (!boarding) return; var u = (s / 2.6 + b / 3) % 1; p.position.set(GATES[gi] + 0.37, 0.43, 6.8 - u * 1.4); p.rotation.y = Math.PI; swing(p, s + b); });
       });
-      // The sky: an arrival lands left to right; the next departure takes off the other way, or a chopper lifts off.
-      var cyc = reduce ? 5 : s % 26, dep = state.nextDep;
-      if (cyc < 12) { var lu = cyc / 12, ease = 1 - Math.pow(1 - lu, 2), lx = -4 + ease * 20, ly = Math.max(0, 2.2 * (1 - lu * 2.2)); landing.visible = true; landing.position.set(lx, ly + 0.02, 1.55); landing.rotation.set(0, 0, ly > 0 ? 0.06 : 0); landLabel.visible = !!state.nextArr; landLabel.position.set(lx, ly + 1.1, 1.55); if (state.nextArr) setSpriteText(landLabel, state.nextArr + ' landing'); }
-      else { landing.visible = false; landLabel.visible = false; }
-      if (cyc > 13) {
-        var tu = (cyc - 13) / 13;
-        if (dep && dep.kind === 'heli') { depPlane.visible = false; flyHeli.visible = true; var hy = tu * 5; flyHeli.position.set(1.7 + tu * tu * 10, 0.03 + hy, 4.2 - tu * 4); flyHeli.userData.rotor.rotation.y = s * 16; flyHeli.rotation.y = -0.6; depLabel.visible = true; depLabel.position.set(flyHeli.position.x, flyHeli.position.y + 1.0, flyHeli.position.z); setSpriteText(depLabel, dep.code + ' → ' + dep.city); }
-        else { flyHeli.visible = false; depPlane.visible = true; var tx = 22 - tu * tu * 28, ty = Math.max(0, (tu - 0.45) * 4); depPlane.position.set(tx, ty + 0.02, 1.55); depPlane.rotation.set(0, Math.PI, ty > 0 ? 0.12 : 0); depLabel.visible = !!dep; depLabel.position.set(tx, ty + 1.1, 1.55); if (dep) setSpriteText(depLabel, dep.code + ' → ' + dep.city); }
-      } else { depPlane.visible = false; flyHeli.visible = false; depLabel.visible = false; }
+      // The sky: a movement every 20 seconds (airliner, private jet, helicopter; landing then take-off), each announced.
+      var sec = reduce ? 5 : s, Sky = root.LasgidiSky, mv = Sky ? Sky.at(sec, state) : null;
+      [landing, depPlane, flyJet, flyHeli].forEach(function (o) { o.visible = false; }); landLabel.visible = depLabel.visible = false; helis[3].visible = false;
+      if (mv) {
+        var obj = mv.kind === 'airliner' ? (mv.phase === 'arr' ? landing : depPlane) : mv.kind === 'jet' ? flyJet : flyHeli, nx = Sky.at(sec + 0.08, state), dx = nx.x - mv.x, dz = nx.y - mv.y;
+        obj.visible = true; obj.position.set(mv.x, mv.h + 0.02, mv.y);
+        var yaw = mv.kind === 'heli' ? 0.6 : Math.hypot(dx, dz) > 0.002 ? Math.atan2(-dz, dx) : obj.rotation.y;
+        obj.rotation.set(0, yaw, mv.pitch);
+        if (mv.kind === 'heli') { obj.userData.rotor.rotation.y = s * 16 * mv.rotor; obj.userData.trotor.rotation.z = s * 30 * mv.rotor; }
+        var lb = mv.phase === 'arr' ? landLabel : depLabel; lb.visible = true; lb.position.set(mv.x, mv.h + (mv.kind === 'airliner' ? 1.1 : 0.8), mv.y); setSpriteText(lb, mv.label);
+        smoke.forEach(function (p, k) { var a = mv.smoke ? Math.max(0, mv.smoke - k * 0.12) : 0; p.visible = a > 0; if (!a) return; p.position.set(mv.x - 0.5 - a * (0.6 + k * 0.3), 0.08 + a * 0.15, mv.y + (k % 2 ? 0.12 : -0.12)); p.scale.setScalar(0.6 + a * 2.2); p.material.opacity = 0.6 * (1 - a); });
+        if (lastSlot !== mv.n) { lastSlot = mv.n; if (opts.onMovement) { try { opts.onMovement(mv); } catch (e) {} } }
+      }
       // Traffic and walkers.
       traffic.forEach(function (c) { var u = reduce ? c.u : (c.u + s * 0.09 * (c.speed || 1)) % 1; if (c.k === 'kerb') { c.o.position.set(5.6 + u * 11.2, 0.02, 8.98); c.o.rotation.y = 0; } else { c.o.position.set(22.8 - u * 17, 0.02, 12.93 + c.lane * 0.25); c.o.rotation.y = Math.PI; } });
       walkers.forEach(function (w) { var u = reduce ? w.u : (w.u + s * 0.11) % 1, z = w.out ? 9.5 + u * 2.9 : 12.4 - u * 2.9; w.o.position.set(w.x, 0.02, z); w.o.rotation.y = w.out ? 0 : Math.PI; swing(w.o, s + w.i); });

@@ -989,6 +989,12 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 /* Live airport */
 .airport-view { background: #3a9fcc; }
 .airport-stage { position: relative; min-height: 0; }
+.ap-live { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); max-width: min(92%, 640px); display: flex; gap: 8px; align-items: center; padding: 8px 14px; border-radius: 14px; background: rgba(15,18,24,.82); color: #fff; font: 700 13px/1.35 var(--font-body); box-shadow: 0 6px 20px rgba(0,0,0,.25); pointer-events: none; opacity: 0; z-index: 3; }
+.ap-live:empty { display: none; }
+.ap-live.on { animation: ap-live-in 0.5s ease-out forwards; }
+.ap-live-ic { font-size: 18px; }
+@keyframes ap-live-in { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .ap-live.on { animation: none; opacity: 1; } }
 .airport-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; }
 .ap-head { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; }
 .fids { width: 100%; border-collapse: collapse; font: 600 12px var(--font-body); background: #0d1420; color: #ffd23f; border-radius: 12px; overflow: hidden; }
