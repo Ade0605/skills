@@ -31,6 +31,7 @@
     }
     var rowY = function (r) { return 90 + r * ((H - 150) / ROWS) + 30; };
     function say(m) { st.msg = m; st.msgT = 1.8; }
+    function fx(n, a) { if (opts && opts.sfx) { try { opts.sfx(n, a); } catch (e) {} } } // sound only; never touches the game
     function step(dt) {
       if (st.over) return;
       st.t += dt; st.lightT -= dt;
@@ -44,10 +45,10 @@
       });
       // The task force van: hide (hold) or lose part of your goods.
       st.vanNext -= dt;
-      if (!st.van && st.vanNext <= 0) { st.van = { x: -120, warned: false }; say('🚨 Task force is coming! Hold HIDE!'); }
+      if (!st.van && st.vanNext <= 0) { st.van = { x: -120, warned: false }; say('🚨 Task force is coming! Hold HIDE!'); fx('siren'); }
       if (st.van) {
         st.van.x += 150 * dt;
-        if (st.van.x > W / 2 - 40 && st.van.x < W / 2 + 40 && !st.van.done) { st.van.done = true; if (!st.hiding) { var lose = Math.min(st.goods, 8); st.goods -= lose; st.seized += lose; say('They seized ' + lose + ' of your goods!'); } else say('You hid. They passed.'); }
+        if (st.van.x > W / 2 - 40 && st.van.x < W / 2 + 40 && !st.van.done) { st.van.done = true; if (!st.hiding) { var lose = Math.min(st.goods, 8); st.goods -= lose; st.seized += lose; fx('seized'); say('They seized ' + lose + ' of your goods!'); } else say('You hid. They passed.'); }
         if (st.van.x > W + 140) { st.van = null; st.vanNext = 10 + rnd() * 10; }
       }
       st.pops.forEach(function (p) { p.y -= 40 * dt; p.t -= dt; }); st.pops = st.pops.filter(function (p) { return p.t > 0; });
@@ -62,8 +63,8 @@
       if (!best.want) { say('That driver no want anything.'); return; }
       if (st.pick == null) { say('Pick an item from your tray first.'); return; }
       var g = GOODS[st.pick];
-      if (g.id === best.want.id) { st.sales += g.price; st.served++; st.goods--; st.pops.push({ x: best.x + 30, y: rowY(best.row) - 30, t: 0.8, text: '+₦' + g.price }); best.want = null; }
-      else { st.wrong++; say('"I said ' + best.want.name + '!"'); best.patience -= 1.5; }
+      if (g.id === best.want.id) { fx('sale'); st.sales += g.price; st.served++; st.goods--; st.pops.push({ x: best.x + 30, y: rowY(best.row) - 30, t: 0.8, text: '+₦' + g.price }); best.want = null; }
+      else { st.wrong++; fx('wrong'); say('"I said ' + best.want.name + '!"'); best.patience -= 1.5; }
     }
     function draw() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

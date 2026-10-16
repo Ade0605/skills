@@ -552,6 +552,17 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **By air:** a helicopter (glass nose, tail boom, skids, main and tail rotors) or a business jet (swept wings, winglets, T-tail, tail engines), with blinking navigation lights, over clouds and the city below. At night the city is lit.
   - **Landmarks:** each one you pass rises beside the road with its green sign. On flights they rise from the city below, with the sign above the roof.
 - **Walk around in 3D:** in every walk-in your avatar walks. Tap the ground to walk there, use WASD or the arrow keys, or the joystick at the bottom-left on touch screens. The camera follows you in. Walk up to a sign and it lights up with a ▶ Do it button. Tapping a sign walks you over and then does it. 🚶 turns walking off, and the choice is remembered.
+- **Music and game sounds (`src/music.js`):** with 🔊 sound on, original beats made in the browser play. Nothing is copied, and there are no audio files.
+  - **Afrobeats:** a 3-3-2 kick, shaker, claps, log-drum bass and chord stabs, for the dance-off at the game's own 112 BPM, clubs and stages at night, and parties at home.
+  - **Highlife:** bell, walking bass and a guitar-like arpeggio, in the owambe hall and the wedding hall.
+  - **Fuji and a soft pad:** two more styles in the engine, not used anywhere yet.
+  - **Mini-game sounds:** the five games make their own sounds:
+    - **Danfo Run:** fares, the LASTMA whistle, potholes, crashes and the brake squeal, plus the conductor shouting the next stop.
+    - **Dance-off:** notes and money spraying.
+    - **Hawker:** sales, a wrong item, the task force siren and goods seized.
+    - **Bole grill:** the sizzle, serving and burning.
+    - **Naija Quiz:** a game-show sting, a ding or buzz for each answer, and a cheer.
+  - **No effect on play:** game results are the same with sound on or off. Music stops when you leave, close the game or hide the tab.
 - **Faster on phones (`src/gl3d.js`):**
   - **One low-end setting:** every 3D view follows the same rule (Lite mode, a small screen, 4 or fewer cores, or 4GB or less memory). Lite mode now turns on by itself on low-end phones, and you can still switch it off in Settings.
   - **Pausing:** a view stops drawing when the tab is hidden or another full-screen view sits over it. For example, the city map pauses under a walk-in.

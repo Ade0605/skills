@@ -37,14 +37,15 @@
       W = w; H = h; canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     }
     var lineY = function () { return H - 70; }, laneX = function (l) { return W * (l + 0.5) / LANES; };
+    function fx(n, a) { if (opts && opts.sfx) { try { opts.sfx(n, a); } catch (e) {} } } // sound only; never touches the game
     function hit(lane) {
       if (!st || st.over) return;
       st.flash[lane] = 0.15;
       var best = null, bd = 0.2;
       st.notes.forEach(function (n) { if (n.lane === lane && !n.hit && !n.gone) { var d = Math.abs(n.t - st.t); if (d < bd) { bd = d; best = n; } } });
-      if (!best) { st.combo = 0; return; }
-      best.hit = true; st.hits++; st.combo++; if (st.combo > st.best) st.best = st.combo;
-      if (st.combo % 10 === 0) { st.msg = HYPE[Math.floor(rnd() * HYPE.length)] + ' Guests are spraying!'; st.msgT = 1.6; for (var i = 0; i < 6; i++) st.cash.push({ x: rnd() * W, y: -20 - rnd() * 80, v: 120 + rnd() * 80, r: rnd() * 6 }); }
+      if (!best) { st.combo = 0; fx('miss'); return; }
+      best.hit = true; fx('hit', lane); st.hits++; st.combo++; if (st.combo > st.best) st.best = st.combo;
+      if (st.combo % 10 === 0) { st.msg = HYPE[Math.floor(rnd() * HYPE.length)] + ' Guests are spraying!'; st.msgT = 1.6; fx('spray'); for (var i = 0; i < 6; i++) st.cash.push({ x: rnd() * W, y: -20 - rnd() * 80, v: 120 + rnd() * 80, r: rnd() * 6 }); }
     }
     function step(dt) {
       if (st.over) return;

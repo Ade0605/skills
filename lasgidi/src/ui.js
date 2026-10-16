@@ -86,6 +86,7 @@
   var AMBIENCE_OF = { beach: 'surf', jetty: 'surf', food: 'crowd', mall: 'crowd', stadium: 'crowd', transport: 'crowd', nightlife: 'pulse', music: 'pulse', refinery: 'hum', workshop: 'hum', airport: 'hum' };
   var amb = { kind: null, stop: null };
   function ambience(kind) {
+    if (kind === 'pulse' && musicWanted()) kind = null; // music plays instead
     if (amb.kind === kind) return;
     if (amb.stop) { try { amb.stop(); } catch (e) {} } amb = { kind: null, stop: null };
     if (!kind) return;
@@ -105,7 +106,35 @@
       amb = { kind: kind, stop: function () { var t = a.currentTime; gn.gain.cancelScheduledValues(t); gn.gain.setValueAtTime(gn.gain.value, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.4); if (og0) og0.gain.setValueAtTime(0, t + 0.4); parts.forEach(function (p) { try { p.stop(t + 0.45); } catch (e) {} }); } };
     } catch (e) { amb = { kind: null, stop: null }; }
   }
-  document.addEventListener('visibilitychange', function () { if (document.hidden) ambience(null); else if (ui && ui.venueOpen) { try { mountVenue(); } catch (e) {} } });
+  // Music (src/music.js): the dance-off, the owambe hall and clubs at night, the wedding hall, and parties.
+  function musicWanted() {
+    if (!prefs.sound || document.hidden || !window.LasgidiMusic || !S) return null;
+    if (mini) return mini.kind === 'dance' ? { style: 'afro', bpm: 112 } : null;
+    if (ui.venueOpen) {
+      var pl = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0], hr = L.hour(S), night = hr >= 19 || hr < 5;
+      if (!pl) return null; if (pl.id === 'owambe_hall') return { style: 'highlife' };
+      return (pl.type === 'nightlife' || pl.type === 'music') && night ? { style: 'afro' } : null;
+    }
+    if (ui.cruiseOpen || ui.roomOpen || ui.airportOpen) return null;
+    if (document.querySelector('.ww-hall-3d')) return { style: 'highlife', vol: 0.14 };
+    if (ui.visit && partyOf(ui.visit)) return { style: 'afro', vol: 0.16 };
+    if (ui.tab === 'home' && myParty()) return { style: 'afro', vol: 0.16 };
+    return null;
+  }
+  function syncMusic() {
+    var Mu = window.LasgidiMusic; if (!Mu) return;
+    var w = musicWanted(); if (!w) { if (Mu.playing()) Mu.stop(); return; }
+    if (amb.kind === 'pulse') ambience(null); // the music replaces the club's pulse
+    Mu.play(ctx(), w.style, w);
+  }
+  // A mini-game's sound: an effect, or the conductor calling the next stop.
+  var cryAt = 0;
+  function miniSfx(n, a) {
+    if (!prefs.sound || !window.LasgidiMusic) return;
+    if (n === 'cry') { if (!window.speechSynthesis || Date.now() - cryAt < 4000) return; cryAt = Date.now(); try { var u = new SpeechSynthesisUtterance(a + '! ' + a + '! Enter with your change!'); u.rate = 1.15; u.pitch = 1.1; u.lang = 'en-GB'; window.speechSynthesis.speak(u); } catch (e) {} return; }
+    window.LasgidiMusic.sfx(ctx(), n, a);
+  }
+  document.addEventListener('visibilitychange', function () { syncMusic(); if (document.hidden) ambience(null); else if (ui && ui.venueOpen) { try { mountVenue(); } catch (e) {} } });
 
   function esc(v) {
     return String(v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
@@ -226,6 +255,7 @@
     if (focusId) { var f = document.getElementById(focusId); if (f) f.focus(); }
     translateDom(app);
     syncPresence();
+    syncMusic();
   }
 
   /* ---------- Lagos online: shared hall of fame and live presence ----------
@@ -2711,7 +2741,7 @@
     var reduce = document.documentElement.classList.contains('lite');
     // The 3D stage only changes the picture: the game's own state, seed and result are the same as in 2D.
     var view3d = prefs.mini3d !== false && threeState === 'ready' && window.LasgidiGames3D ? window.LasgidiGames3D.view(kind, { look: S.look, outfit: S.outfit, lite: reduce, reduce: reduce }) : null;
-    m.game = window[g.lib].create({ seed: (S.seed ^ S.t ^ g.salt) | 0, reduce: reduce, view: view3d, onDone: function (r) {
+    m.game = window[g.lib].create({ seed: (S.seed ^ S.t ^ g.salt) | 0, reduce: reduce, view: view3d, sfx: miniSfx, onDone: function (r) {
       m.result = r;
       ov.querySelector('#mini-live').textContent = g.done(r) + ' Press ' + g.collect + '.';
       ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">' + g.collect + '</button></div>';
@@ -2722,7 +2752,7 @@
     // A spoken score for screen readers: the canvas label follows the game, once a second.
     var cv = m.game.el.querySelector('canvas');
     if (g.live && cv && m.game.state) m.timer = setInterval(function () { var st = m.game.state(); if (st && !st.over) cv.setAttribute('aria-label', g.label + ': ' + g.live(st)); }, 1000);
-    m.game.start();
+    m.game.start(); syncMusic();
     // Focus the sheet, not a button: space and the arrows belong to the game.
     ov.querySelector('.danfo-sheet').focus();
     m.onKey = function (e) {
@@ -2747,7 +2777,7 @@
   }
   function closeMinigame() {
     var m = mini; mini = null;
-    if (m) { if (m.game) m.game.stop(); clearInterval(m.timer); document.removeEventListener('keydown', m.onKey, true); m.ov.remove(); refocusPlay(m.kind); }
+    if (m) { if (m.game) m.game.stop(); clearInterval(m.timer); document.removeEventListener('keydown', m.onKey, true); m.ov.remove(); refocusPlay(m.kind); syncMusic(); }
     var ov = document.getElementById('danfo-overlay'); if (ov) ov.remove();
   }
   // Back to the Play button that opened the game (the page re-rendered behind the overlay).

@@ -59,15 +59,16 @@
         }).join('') + '</div></div>';
       if (view) view.frame(st, { n: N, per: PER });
     }
+    function fx(n, a) { if (opts && opts.sfx) { try { opts.sfx(n, a); } catch (e) {} } } // sound only; never touches the game
     function answer(k) {
       if (!st || st.over || st.chosen != null) return;
-      st.chosen = k; if (k === st.qs[st.i].ans) st.correct++;
+      st.chosen = k; if (k === st.qs[st.i].ans) { st.correct++; fx('correct'); } else fx('buzz');
       render();
       setTimeout(next, 900);
     }
     function next() {
       st.i++; st.chosen = null; st.left = PER;
-      if (st.i >= N) { st.over = true; stopTimer(); render(); if (opts && opts.onDone) opts.onDone({ correct: st.correct, total: N }); return; }
+      if (st.i >= N) { st.over = true; stopTimer(); fx(st.correct >= 5 ? 'cheer' : 'buzz'); render(); if (opts && opts.onDone) opts.onDone({ correct: st.correct, total: N }); return; }
       render();
     }
     function stopTimer() { if (timer) clearInterval(timer); timer = 0; }
@@ -78,8 +79,9 @@
       el: wrap,
       start: function () {
         st = { qs: pickQs(), i: 0, correct: 0, chosen: null, left: PER, over: false };
+        fx('sting');
         render(); stopTimer();
-        timer = setInterval(function () { if (!wrap.isConnected) { stopTimer(); return; } if (st.chosen != null || st.over) return; st.left -= 0.25; if (st.left <= 0) { st.chosen = -1; render(); setTimeout(next, 700); } else if (Math.abs(st.left - Math.round(st.left)) < 0.01) render(); }, 250);
+        timer = setInterval(function () { if (!wrap.isConnected) { stopTimer(); return; } if (st.chosen != null || st.over) return; st.left -= 0.25; if (st.left <= 0) { st.chosen = -1; fx('buzz'); render(); setTimeout(next, 700); } else if (Math.abs(st.left - Math.round(st.left)) < 0.01) render(); }, 250);
       },
       state: function () { return st; },
       stop: function () { stopTimer(); root.removeEventListener('keydown', onKey); if (view) view.dispose(); },

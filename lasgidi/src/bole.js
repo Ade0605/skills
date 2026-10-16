@@ -30,6 +30,7 @@
     function slotXY(i) { var cols = 3, gw = W - 40, gx = 20 + (i % cols + 0.5) * gw / cols, gy = H * 0.45 + Math.floor(i / cols) * 90; return { x: gx, y: gy }; }
     function stage(s) { var f = FOODS[s.f], age = st.t - s.at; return age < f.cook ? 'raw' : age < f.cook + GOLD ? 'gold' : 'burnt'; }
     function say(m) { st.msg = m; st.msgT = 1.8; }
+    function fx(n, a) { if (opts && opts.sfx) { try { opts.sfx(n, a); } catch (e) {} } } // sound only; never touches the game
     function step(dt) {
       if (st.over) return;
       st.t += dt;
@@ -37,7 +38,7 @@
       if (st.nextCust <= 0 && st.queue.length < 4) { st.queue.push({ f: Math.floor(rnd() * FOODS.length), wait: 14 + rnd() * 6 }); st.nextCust = 2.5 + rnd() * 2.5; }
       st.queue.forEach(function (c) { c.wait -= dt; });
       if (st.queue.length && st.queue[0].wait <= 0) { st.queue.shift(); say('The customer got tired and left!'); }
-      st.slots.forEach(function (s, i) { if (s && stage(s) === 'burnt' && !s.burnNoted) { s.burnNoted = true; st.burnt++; say('It burnt! Scrape it off.'); } });
+      st.slots.forEach(function (s, i) { if (s && stage(s) === 'burnt' && !s.burnNoted) { s.burnNoted = true; st.burnt++; fx('burnt'); say('It burnt! Scrape it off.'); } });
       st.pops.forEach(function (p) { p.y -= 40 * dt; p.t -= dt; }); st.pops = st.pops.filter(function (p) { return p.t > 0; });
       if (st.msgT > 0) st.msgT -= dt;
       if (st.t >= RUN) { st.over = true; if (opts && opts.onDone) opts.onDone({ sales: st.sales, served: st.served, burnt: st.burnt }); }
@@ -45,13 +46,13 @@
     function tapSlot(i) {
       if (!st || st.over) return;
       var s = st.slots[i];
-      if (!s) { st.slots[i] = { f: st.pick, at: st.t }; return; }
+      if (!s) { st.slots[i] = { f: st.pick, at: st.t }; fx('sizzle'); return; }
       var sg = stage(s);
       if (sg === 'burnt') { st.slots[i] = null; return; }
       if (sg === 'raw') { say('Not ready yet. Wait for golden.'); return; }
       var qi = st.queue.findIndex(function (c) { return c.f === s.f; });
       if (qi < 0) { say('Nobody ordered ' + FOODS[s.f].name.toLowerCase() + ' right now.'); return; }
-      var f = FOODS[s.f]; st.queue.splice(qi, 1); st.slots[i] = null; st.sales += f.price; st.served++;
+      var f = FOODS[s.f]; st.queue.splice(qi, 1); st.slots[i] = null; st.sales += f.price; st.served++; fx('served');
       var p = slotXY(i); st.pops.push({ x: p.x, y: p.y - 30, t: 0.8, text: '+₦' + f.price });
     }
     function draw() {

@@ -54,12 +54,14 @@
       }
     }
     function say(m) { st.msg = m; st.msgT = 2.4; }
+    function fx(n, a) { if (opts && opts.sfx) { try { opts.sfx(n, a); } catch (e) {} } } // sound only; never touches the game
     function cry(name) { return CRIES[Math.floor(rnd() * CRIES.length)].replace(/\{s\}/g, name); }
 
     function step(dt) {
       if (st.over) return;
       st.t += dt;
       var max = 260, brake = keys.brake;
+      if (brake && !st.braking && st.speed > 80) fx('brake'); st.braking = brake;
       st.speed += (brake ? -520 : 120) * dt; st.speed = Math.max(0, Math.min(max, st.speed));
       var dy = st.speed * dt; st.dist += dy;
       st.x += (st.lane - st.x) * Math.min(1, dt * 12);
@@ -79,19 +81,20 @@
             var drop = st.pax.filter(function (p) { return p.to === o.idx; });
             st.pax = st.pax.filter(function (p) { return p.to !== o.idx; });
             var paid = drop.reduce(function (a, p) { return a + p.fare; }, 0);
-            st.fares += paid; st.served += drop.length;
+            st.fares += paid; st.served += drop.length; if (paid) fx('fare'); fx('cry', STOPS[(o.idx + 1) % STOPS.length]);
             var room = SEATS - st.pax.length, load = Math.min(room, o.wait);
             for (var i = 0; i < load; i++) st.pax.push({ to: o.idx + 1 + Math.floor(rnd() * 3), fare: 200 + Math.floor(rnd() * 4) * 100 });
             say((drop.length ? drop.length + ' down, ₦' + paid.toLocaleString('en') + '. ' : '') + (load ? load + ' in. ' : 'Bus full! ') + cry(STOPS[(o.idx + 1) % STOPS.length]));
           }
         }
         if (o.k === 'lastma' && slow && st.speed < 30 && o.y > busY - o.len && o.y < busY + 30 && !st.fined[o.y | 0]) {
-          st.fined[o.y | 0] = 1; o.hit = true; st.fines += 2000; st.shake = 0.4; say('LASTMA! "Park well! No stopping here!" ₦2,000 fine.');
+          st.fined[o.y | 0] = 1; o.hit = true; st.fines += 2000; st.shake = 0.4; fx('whistle'); say('LASTMA! "Park well! No stopping here!" ₦2,000 fine.');
         }
         if ((o.k === 'hole' || o.k === 'car' || o.k === 'okada') && Math.abs(o.y - busY) < (o.k === 'car' ? 52 : 26)) {
           var ox = o.k === 'okada' ? o.fx : laneX(o.lane);
           if (Math.abs(ox - busX) < roadW() / LANES * 0.55) {
             o.hit = true; st.shake = 0.5;
+            fx(o.k === 'hole' ? 'pothole' : 'crash');
             if (o.k === 'hole') { st.speed *= 0.4; st.fines += 300; say('Pothole! Shock absorber: ₦300.'); }
             else { st.speed *= 0.2; st.fines += 1500; if (st.pax.length) st.pax.pop(); say(o.k === 'okada' ? 'Okada scraped you! ₦1,500 and a passenger came down to argue.' : 'You jammed a car! ₦1,500 to settle.'); }
           }
