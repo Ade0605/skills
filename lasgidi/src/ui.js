@@ -1088,6 +1088,7 @@
     if (!ui.visit || !window.LasgidiInterior) return;
     var slot = document.querySelector('.visit-slot'), v = checkHome(online.homes[ui.visit]);
     if (!slot || !v) return;
+    if (window.LasgidiHome3D && window.THREE && threeState === 'ready' && (!visitInterior || !visitInterior.is3d)) { var v3 = window.LasgidiHome3D.create({ onSelect: function () {}, onPlace: function () {} }); if (v3) visitInterior = v3; }
     if (!visitInterior) visitInterior = window.LasgidiInterior.create({ onSelect: function () {}, onPlace: function () {} });
     slot.appendChild(visitInterior.el);
     visitInterior.update({ size: v.size, type: v.h.type || 'room', name: v.h.name, items: v.items, vehicles: v.vehicles, sel: null, power: true, hour: 12,
@@ -1303,13 +1304,17 @@
     if (!S || ui.tab !== 'home' || !window.LasgidiInterior) return;
     var slot = document.querySelector('.tab-body .iv-slot');
     if (!slot) return;
-    if (!interior) interior = window.LasgidiInterior.create({
+    var ivCb = {
       onSelect: function (i) { ui.itemSel = i; render(); },
       onPlace: function (i, x, y, r) { run(function () { var res = L.placeItem(S, i, x, y, r); if (res.ok) ui.itemSel = i; return res.ok ? { ok: true, msg: '' } : res; }); }
-    });
-    slot.appendChild(interior.el);
+    };
+    // Your home opens in 3D once three.js is in (the 2D room shows meanwhile, and if 3D is unavailable).
+    if (window.LasgidiHome3D && threeState !== 'ready' && threeState !== 'failed') loadThree(function () { if (ui.tab === 'home') mountInterior(); });
+    if (window.LasgidiHome3D && window.THREE && threeState === 'ready' && (!interior || !interior.is3d)) { var i3 = window.LasgidiHome3D.create(ivCb); if (i3) interior = i3; }
+    if (!interior) interior = window.LasgidiInterior.create(ivCb);
+    slot.appendChild(interior.el); window.__iv = interior;
     var h = L.homeDef(S);
-    interior.update({ paint: myPaint(), size: L.roomSize(S), type: h.type || 'room', name: h.name, items: S.items, vehicles: S.vehicles, sel: ui.itemSel, power: S.power, hour: L.hour(S),
+    interior.update({ paint: myPaint(), size: L.roomSize(S), type: h.type || 'room', name: h.name, items: S.items, vehicles: S.vehicles, sel: ui.itemSel, power: S.power, hour: L.hour(S), look: S.look, outfit: S.outfit,
       dark: document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) });
   }
   var FX_NAMES = { sleep: 'sleep', power: 'light', gen: 'gen cost', fun: 'enjoyment', stress: 'stress', social: 'social', hunger: 'belle', energy: 'energy', hygiene: 'hygiene' };

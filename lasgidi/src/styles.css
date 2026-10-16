@@ -1030,3 +1030,5 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .pg.pg-3d > .pg-zoom { display: none; }
 .pg.pg-3d > .pg-hud, .pg.pg-3d > .map-dock, .pg.pg-3d > .map-pop { z-index: 2; }
 .city-bar { position: absolute; right: 8px; bottom: 8px; top: auto; display: grid; gap: 4px; z-index: 2; }
+.iv.iv-3d { height: clamp(320px, 58vw, 540px); }
+.iv.iv-3d .iv-canvas { position: absolute; inset: 0; height: 100%; cursor: grab; }
