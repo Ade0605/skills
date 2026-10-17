@@ -2676,3 +2676,10 @@ test('rules 19: Ikoyi Golf Club: ₦1bn gate, a six-hole Club Cup played by choi
   }
   assert.ok(best <= 20000000 * 1.5, 'prize capped: ' + best); assert.ok(won > 0, 'somebody places');
 });
+test('rules 19: club radio slots are paid in game naira, 1 to 10 at a time; rules-18 lives cannot book; replays', () => {
+  const s = L.newGame({ seed: 1500, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const before = s.cash + s.bank; assert.equal(L.radioBook(s, 0).ok, false); assert.equal(L.radioBook(s, 11).ok, false);
+  const r = L.radioBook(s, 2); assert.ok(r.ok, r.msg); assert.equal(before - (s.cash + s.bank), L.radioCost(s, 2)); sane(s);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  const old = L.newGame({ seed: 1501, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (old.pending.length) L.resolveChoice(old, 0); assert.equal(L.radioBook(old, 1).ok, false);
+});

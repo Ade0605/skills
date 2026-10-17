@@ -110,6 +110,46 @@
     } catch (e) { amb = { kind: null, stop: null }; }
   }
   // Music (src/music.js): the dance-off, the owambe hall and clubs at night, the wedding hall, and parties.
+  /* ---------- Club radio (rules 19): 7-minute slots, every club at once. Paid in game naira (recorded), the schedule is shared. ---------- */
+  var RADIO_MS = 7 * 60000, RADIO_STYLES = [['afro', 'Afrobeats'], ['highlife', 'Highlife'], ['fuji', 'Fuji']];
+  function radioSlotNow() { return Math.floor(Date.now() / RADIO_MS); }
+  function radioClean(raw) {
+    if (!raw || typeof raw.title !== 'string' || !Array.isArray(raw.slots)) return null;
+    var t = CH.clean(raw.title.slice(0, 40)); if (!t.ok) return null;
+    var st = RADIO_STYLES.some(function (x) { return x[0] === raw.style; }) ? raw.style : 'afro', now = radioSlotNow();
+    return { title: t.text, style: st, slots: raw.slots.filter(function (n) { return typeof n === 'number' && n >= now - 1 && n < now + 400; }).slice(0, 40) };
+  }
+  function radioAll() { var out = []; (online.radio || []).forEach(function (r) { if (online.muted[r.id]) return; var c = radioClean(r.raw); if (c) c.slots.forEach(function (n) { out.push({ n: n, id: r.id, title: c.title, style: c.style }); }); }); return out.sort(function (a, b) { return a.n - b.n; }); }
+  function radioPlaying() { var now = radioSlotNow(); return radioAll().filter(function (x) { return x.n === now; })[0] || null; }
+  function slotTime(n) { var d = new Date(n * RADIO_MS); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function radioView() {
+    var all = radioAll(), now = radioSlotNow(), mine = all.filter(function (x) { return x.id === online.me; }), np = radioPlaying();
+    var n = Math.max(1, Math.min(L.RADIO_MAX, ui.radioN || 3)), cost = L.radioCost(S, n);
+    var html = '<div class="section radio"><div class="ph-promo"><b>📻 Your song, in every club in Lasgidi</b><span>Pick your slots: one every 7 minutes, between the club radio. A banner calls your name each time it plays.</span><span><b>' + N(L.price(S, 2500)) + '</b> a slot, in game naira</span></div>' +
+      (np ? '<p class="note">🔊 Now playing: <b>“' + esc(np.title) + '”</b> · ' + esc(handleOf(np.id)) + '</p>' : '<p class="note">The club radio is on its own mix right now.</p>') + '</div>';
+    if (S.rules < 19) return html + '<p class="note">Club radio opens in new lives.</p>';
+    html += '<div class="section"><h3>1 · Your song</h3><label class="label" for="radio-title">Song title and artist (your own name)</label><input id="radio-title" maxlength="40" placeholder="e.g. Lagos Dey Sweet · ' + esc(handleOf(online.me || 'me')) + '" value="' + esc(ui.radioTitle || '') + '">' +
+      '<div class="pg-chips" style="padding:0">' + RADIO_STYLES.map(function (x) { return '<button type="button" class="pg-chip' + ((ui.radioStyle || 'afro') === x[0] ? ' sel' : '') + '" id="rs-' + x[0] + '" data-radiostyle="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+      '<p class="note">Your beat plays in the style you pick; the title is what every player sees. No uploads: keep the title clean.</p></div>' +
+      '<div class="section"><h3>2 · How many slots</h3><div class="inline"><button class="btn sm ghost" id="radio-minus" data-radion="-1">−</button><b class="num">' + n + '</b><button class="btn sm ghost" id="radio-plus" data-radion="1">+</button><span class="muted">spread across the next ' + (n * 3 * 7) + ' minutes</span></div>' +
+      '<button class="btn go" id="radio-book" data-radiobook="' + n + '"' + (online.db && online.me && cost <= S.cash + S.bank ? '' : ' disabled') + '>Book ' + n + ' slot' + (n > 1 ? 's' : '') + ' · ' + N(cost) + '</button>' +
+      (online.db ? '' : '<p class="note">Booking needs the shared board (open the game on claude.ai).</p>') + (online.radioStatus ? '<p class="note">' + esc(online.radioStatus) + '</p>' : '') + '</div>';
+    html += '<div class="section"><h3>Coming up</h3>' + (all.length ? '<div class="list">' + all.filter(function (x) { return x.n >= now; }).slice(0, 12).map(function (x) {
+      return '<div class="item"><div><h3>' + slotTime(x.n) + ' · “' + esc(x.title) + '”</h3><div class="meta"><span>' + esc(x.id === online.me ? 'Yours' : handleOf(x.id)) + '</span><span>' + esc(x.style) + '</span></div></div>' + (x.n === now ? '<b class="num">🔊 Live</b>' : '') + '</div>'; }).join('') + '</div>' : '<p class="note">Nothing booked yet. Be the first.</p>') +
+      (mine.length ? '<p class="note">You have ' + mine.length + ' slot' + (mine.length > 1 ? 's' : '') + ' coming up.</p>' : '') + '</div>';
+    return html;
+  }
+  // Book: pay in the engine first, then add free slots (every third one, skipping taken ones) to your shared doc.
+  function radioBookNow(n) {
+    var ti = document.getElementById('radio-title'), title = (ti ? ti.value : ui.radioTitle || '').trim(), c = CH.clean(title.slice(0, 40));
+    if (!title) { online.radioStatus = 'Give your song a title first.'; render(); return; }
+    if (!c.ok) { online.radioStatus = 'That title is not allowed. Keep it clean.'; render(); return; }
+    var taken = {}; radioAll().forEach(function (x) { taken[x.n] = 1; }), now = radioSlotNow(), picks = [];
+    for (var k = now + 1; picks.length < n && k < now + 400; k += 3) { while (taken[k] && k < now + 400) k++; picks.push(k); }
+    var r = L.radioBook(S, n); if (!r.ok) { online.radioStatus = r.msg; render(); return; }
+    save(); var mineOld = ((online.radio || []).filter(function (x) { return x.id === online.me; })[0] || {}).raw, keep = mineOld && Array.isArray(mineOld.slots) ? mineOld.slots.filter(function (k2) { return k2 >= now; }) : [];
+    online.db.doc('clubradio/' + online.me).set({ title: c.text, style: ui.radioStyle || 'afro', slots: keep.concat(picks).slice(-40), at: Date.now() }).then(function () { online.radioStatus = r.msg + ' First play at ' + slotTime(picks[0]) + '.'; render(); }, function () { online.radioStatus = 'Paid, but the schedule could not be saved. Try again in a moment.'; render(); });
+  }
   function musicWanted() {
     if (!prefs.sound || document.hidden || !window.LasgidiMusic || !S) return null;
     if (ui.huntListenUntil && Date.now() < ui.huntListenUntil) return { style: huntNow().style }; // the hunt's single
@@ -117,7 +157,7 @@
     if (ui.venueOpen) {
       var pl = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0], hr = L.hour(S), night = hr >= 19 || hr < 5;
       if (!pl) return null; if (pl.id === 'owambe_hall') return { style: 'highlife' };
-      if ((pl.type === 'nightlife' || pl.type === 'music') && night) return { style: 'afro' };
+      if ((pl.type === 'nightlife' || pl.type === 'music') && night) { var rp = radioPlaying(); return { style: rp ? rp.style : 'afro' }; }
       var ik = D.insideKind(pl); return (ik === 'market' || ik === 'motorpark') && hr >= 7 && hr < 19 ? { style: 'fuji', vol: 0.1 } : null; // fuji from a stall's speaker by day
     }
     if (ui.cruiseOpen || ui.roomOpen || ui.airportOpen) return null;
@@ -430,6 +470,7 @@
         });
         db.collection('govvote').limit(1000).onSnapshot(function (snap) { online.govvote = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); scheduleRender(); }, function () { online.govvote = []; });
         db.collection('votes').limit(1000).onSnapshot(function (snap) { online.votes = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); scheduleRender(); }, function () { online.votes = []; });
+        db.collection('clubradio').limit(300).onSnapshot(function (snap) { online.radio = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); scheduleRender(); }, function () { online.radio = []; });
         db.collection('seaimg').limit(500).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.seaimg = m; scheduleRender(); }, function () { online.seaimg = {}; });
         // Profile photos: only editor-approved pictures are stored here; a player can switch theirs off.
         db.collection('photo').limit(500).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { var v = d.data(); if (v && okImg(v.img)) m[d.id] = v.img; }); online.photos = m; scheduleRender(); }, function () { online.photos = {}; });
@@ -2154,7 +2195,7 @@
   // A place's own desks and boards: departures, clubs, the cruise, rooms, the estate office, japa, HR desks, shares.
   function venueExtras(pl) {
     return (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.cruise ? cruiseCard() : '') + roomCardFor(pl.id) + (pl.hydepark ? hydeParkView() : '') +
-      (pl.id === 'airport' && !S.challenge ? japaView() : '') + hrCards(pl) + (pl.shares ? sharesCard(pl) : '') + clubBanner(pl) + civicView(pl);
+      (pl.id === 'airport' && !S.challenge ? japaView() : '') + hrCards(pl) + (pl.shares ? sharesCard(pl) : '') + clubBanner(pl) + radioBanner(pl) + civicView(pl);
   }
   /* ---------- Police divisions and polling units (rules 19): live boards, drawn only ---------- */
   var CASE_KINDS = ['Phone theft', 'Fake bank alert', 'Car break-in', 'Fight at a bus stop', 'Land dispute', 'Missing goat', 'Noise complaint', 'Okada accident', 'Burglary', 'Shop lifting', 'Online fraud', 'Unpaid debt'];
@@ -2188,6 +2229,10 @@
   function clubMoment(id) {
     if (/^club_.*_(rain|bottle|vip|shutdown)$/.test(id)) ui.rainUntil = Date.now() + (/_shutdown$/.test(id) ? 120000 : 25000);
     if (/^club_.*_shutdown$/.test(id)) ui.shutdown = { at: Date.now(), place: ui.venueOpen };
+  }
+  function radioBanner(pl) {
+    var hr = L.hour(S); if (!(pl.type === 'nightlife' || pl.type === 'music') || !(hr >= 19 || hr < 5)) return '';
+    var np = radioPlaying(); return '<div class="radio-bar"><span>📻 Club radio</span>' + (np ? '<b>“' + esc(np.title) + '” · ' + esc(handleOf(np.id)) + '</b>' : '<b>House mix</b>') + '<button class="btn sm" id="radio-open" data-tab="phone" data-app="radio">Play your song here</button></div>';
   }
   function clubBanner(pl) {
     var sd = ui.shutdown && ui.shutdown.place === pl.id && Date.now() - ui.shutdown.at < 15 * 60000 ? ui.shutdown : null;
@@ -2557,6 +2602,16 @@
     return { x: r.x, y: r.y, w: r.w, h: r.h, at: typeof r.at === 'number' ? r.at : 0 };
   }
   function overlap(a, b) { return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
+  // A sea plot ad's link: https only, a real host name, no user name or password in it, 120 characters at most.
+  function adLink(u) {
+    if (typeof u !== 'string' || !u || u.length > 120 || /\s/.test(u)) return '';
+    try { var x = new URL(u); if (x.protocol !== 'https:' || x.username || x.password || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(x.hostname)) return ''; return x.href; } catch (e) { return ''; }
+  }
+  function adCap(c) { if (typeof c !== 'string' || !c.trim()) return ''; var r = CH.clean(c.slice(0, 60)); return r.ok ? r.text : ''; }
+  function adBlock(rec) {
+    var cap = rec && adCap(rec.cap), link = rec && adLink(rec.link); if (!cap && !link) return '';
+    return '<div class="sea-ad">' + (cap ? '<b>' + esc(cap) + '</b>' : '') + (link ? '<a class="btn sm" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer nofollow">Visit ↗</a><span class="muted">Opens ' + esc(new URL(link).hostname) + ', outside Lasgidi</span>' : '') + '</div>';
+  }
   function okImg(s) { return typeof s === 'string' && s.length <= L.PIC_MAX && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+\/]+={0,2}$/.test(s); }
   // Everyone's blocks, oldest claim first; a later claim that overlaps is ignored.
   function seaClaims() {
@@ -2601,7 +2656,7 @@
     var owner = sel ? claims.filter(function (k) { return k.id !== me && sel.x >= k.x && sel.x < k.x + k.w && sel.y >= k.y && sel.y < k.y + k.h; })[0] : null;
     if (owner) {
       html += '<div class="section sea-owner"><h3>' + (owner.img ? '' : '<span class="sea-dot" style="background:' + owner.color + '"></span> ') + esc(nameOf(owner.id)) + '\'s block · ' + owner.w + '×' + owner.h + '</h3>' +
-        (owner.img ? '<img class="sea-big" alt="' + esc(nameOf(owner.id)) + '\'s picture" src="' + owner.img + '">' : '<p class="note">No picture yet.</p>') +
+        (owner.img ? '<img class="sea-big" alt="' + esc(nameOf(owner.id)) + '\'s picture" src="' + owner.img + '">' : '<p class="note">No picture yet.</p>') + adBlock(online.seaimg[owner.id]) +
         '<div class="inline">' + (checkHome(online.homes[owner.id]) ? '<button class="btn sm ghost" id="sea-visit" data-visit2="' + esc(owner.id) + '">🏠 Visit their home</button>' : '') + '<button class="btn sm ghost" id="sea-pick" data-seapickfree="1">Pick a free spot</button></div></div>';
     }
     if (sel && !owner) {
@@ -2618,6 +2673,9 @@
       if (seaDropped()) html += '<p class="why" id="sea-dropped">Someone claimed part of this water before you, so your block is hidden on the shared map. Pick a free spot and move there: moving is free.</p>';
       html += '<div class="section"><h3>Your block · ' + mine.w + '×' + mine.h + ' at ' + (mine.x + 1) + '·' + (mine.y + 1) + '</h3><p class="note">' +
         (live ? '✅ Your picture is live.' : rv && !rv.status ? '⏳ Your picture is waiting for an editor.' : rv && rv.status === 'rejected' ? '❌ Your last picture was not approved. Try another.' : 'No picture yet.') + (online.db ? '' : ' Pictures need the shared board (open the game on claude.ai).') + '</p>' +
+        (online.db && online.me ? '<div class="sea-adform"><label class="label" for="sea-cap">Ad line (optional)</label><input id="sea-cap" maxlength="60" placeholder="e.g. Fresh puff-puff in Yaba, call us" value="' + esc(ui.seaCap || '') + '">' +
+          '<label class="label" for="sea-link">Link (optional, https only)</label><input id="sea-link" maxlength="120" inputmode="url" placeholder="https://" value="' + esc(ui.seaLink || '') + '"><p class="note">The line and the link go to the editor with your picture.</p></div>' : '') +
+        (live ? adBlock(si) : '') +
         (online.db && online.me ? '<label class="btn sm" for="sea-file">📷 Upload a picture</label><input type="file" id="sea-file" accept="image/jpeg,image/png,image/webp" hidden>' : '') +
         ' <button class="btn sm ghost" id="sea-release" data-searelease="1">Let it go</button>' + (online.seaStatus ? '<p class="note">' + esc(online.seaStatus) + '</p>' : '') + '</div>';
     } else if (!sel) html += '<p class="note">Tap a spot on the sea grid to pick a block.</p>';
@@ -2628,7 +2686,7 @@
     if (online.canEdit) {
       var q = (online.seareview || []).filter(function (r) { return okImg(r.raw.img) && cleanRect(r.raw); });
       html += '<div class="section"><h3>Review sea pictures <span class="muted">· ' + q.length + ' waiting</span></h3>' + (q.length ? '<div class="list">' + q.map(function (r) {
-        return '<div class="item review"><img class="sea-prev" alt="" src="' + r.raw.img + '"><div><h3>' + esc(nameOf(r.id)) + '</h3><div class="meta"><span>' + r.raw.w + '×' + r.raw.h + '</span></div><div class="inline"><button class="btn sm" id="sr-ok-' + esc(r.id) + '" data-srok="' + esc(r.id) + '">Approve</button><button class="btn sm ghost" id="sr-no-' + esc(r.id) + '" data-srno="' + esc(r.id) + '">Reject</button></div></div></div>';
+        return '<div class="item review"><img class="sea-prev" alt="" src="' + r.raw.img + '"><div><h3>' + esc(nameOf(r.id)) + '</h3><div class="meta"><span>' + r.raw.w + '×' + r.raw.h + '</span>' + (adCap(r.raw.cap) ? '<span>“' + esc(adCap(r.raw.cap)) + '”</span>' : '') + (adLink(r.raw.link) ? '<span>🔗 ' + esc(adLink(r.raw.link)) + '</span>' : '') + '</div><div class="inline"><button class="btn sm" id="sr-ok-' + esc(r.id) + '" data-srok="' + esc(r.id) + '">Approve</button><button class="btn sm ghost" id="sr-no-' + esc(r.id) + '" data-srno="' + esc(r.id) + '">Reject</button></div></div></div>';
       }).join('') + '</div>' : '<p class="note">Nothing to review.</p>') + '</div>';
     }
     return html;
@@ -3458,9 +3516,9 @@
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['home', '🏠', 'Home'], ['people', '👥', 'People'], ['jobs', '💼', 'Careers'], ['money', '💰', 'Money'], ['assets', '📊', 'Assets'], ['houses', '🏡', 'Houses'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['hunt', '🔤', 'Letter hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe'], ['style', '🎨', 'Style shop'],
-    ['news', '📰', 'News'], ['music', '🎧', 'Music'], ['calendar', '📅', 'Calendar'], ['courses', '🎓', 'Courses'], ['health', '🩺', 'Health'], ['ride', '🚕', 'Ride'], ['settings', '⚙️', 'Settings']
+    ['news', '📰', 'News'], ['music', '🎧', 'Music'], ['calendar', '📅', 'Calendar'], ['courses', '🎓', 'Courses'], ['health', '🩺', 'Health'], ['ride', '🚕', 'Ride'], ['radio', '📻', 'Club radio'], ['settings', '⚙️', 'Settings']
   ];
-  var NEW_APPS = { hunt: 1, news: 1, music: 1, calendar: 1, courses: 1, health: 1, ride: 1 };
+  var NEW_APPS = { radio: 1, hunt: 1, news: 1, music: 1, calendar: 1, courses: 1, health: 1, ride: 1 };
   var APPS_SEEN = 'lasgidi.appsseen.v1';
   function appsSeen() { return readJSON(APPS_SEEN, {}); }
   // The phone's "out now" banner: this week's letter hunt.
@@ -3912,6 +3970,7 @@
       else if (app === 'dealers') body = '<div class="panel-b"><div class="section"><h3>Car dealers</h3>' + dealerView('Buy from the phone, or visit the Berger and Lekki dealers on the map.') + '</div></div>';
       else if (app === 'gems') body = '<div class="panel-b">' + gemCard() + '</div>';
       else if (app === 'hunt') body = '<div class="panel-b">' + huntCard() + '</div>';
+      else if (app === 'radio') body = '<div class="panel-b">' + radioView() + '</div>';
       else if (app === 'news') body = '<div class="panel-b">' + newsView() + '</div>';
       else if (app === 'music') body = '<div class="panel-b">' + musicView() + '</div>';
       else if (app === 'calendar') body = '<div class="panel-b">' + calendarView() + '</div>';
@@ -4129,7 +4188,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay]');
+    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -4295,7 +4354,8 @@
       var rid = ds.srok || ds.srno, rr = (online.seareview || []).filter(function (x) { return x.id === rid; })[0];
       if (!rr || !online.db) return;
       if (ds.srno) { online.db.doc('seareview/' + rid).update({ status: 'rejected' }).then(function () { render(); }); return; }
-      online.db.doc('seaimg/' + rid).set({ img: rr.raw.img, x: rr.raw.x, y: rr.raw.y, w: rr.raw.w, h: rr.raw.h, approvedAt: Date.now() })
+      var ok0 = { img: rr.raw.img, x: rr.raw.x, y: rr.raw.y, w: rr.raw.w, h: rr.raw.h, approvedAt: Date.now() }; if (adCap(rr.raw.cap)) ok0.cap = adCap(rr.raw.cap); if (adLink(rr.raw.link)) ok0.link = adLink(rr.raw.link);
+      online.db.doc('seaimg/' + rid).set(ok0)
         .then(function () { return online.db.doc('seareview/' + rid).update({ status: 'approved' }); }).then(function () { render(); }, function () {});
       return;
     }
@@ -4538,6 +4598,9 @@
       camp0[ds.govcamp] = (camp0[ds.govcamp] || 0) + 1; cd0[ds.govcamp] = day0;
       govWrite('govrun', { camp: camp0, campDay: cd0 }, G.CAMPAIGN[ds.govcamp].name + ' done. The crowd loved it!'); return;
     }
+    if (ds.radiostyle) { ui.radioStyle = ds.radiostyle; render(); return; }
+    if (ds.radion) { ui.radioN = Math.max(1, Math.min(L.RADIO_MAX, (ui.radioN || 3) + (+ds.radion))); render(); return; }
+    if (ds.radiobook) { radioBookNow(+ds.radiobook); return; }
     if (ds.govvote) { govWrite('govvote', { cand: ds.govvote, unit: myUnit(), at: Date.now() }, 'Your vote is in.'); return; }
     if (ds.govconfirm) { var cf = ds.govconfirm.split(':'), oldc = (online.govconfirm || []).filter(function (r) { return r.id === online.me; })[0], ov = oldc && G.weekVal(oldc.raw, townWeek()); var votes0 = JSON.parse(JSON.stringify((ov && ov.week === townWeek() && ov.votes) || {})); votes0[cf[0]] = +cf[1]; govWrite('govconfirm', { votes: votes0 }, 'Assembly vote recorded.'); return; }
     if (ds.vote != null && t.hasAttribute('data-vote')) {
@@ -4586,6 +4649,9 @@
   });
 
   document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'radio-title') { ui.radioTitle = e.target.value; return; }
+    if (e.target && e.target.id === 'sea-cap') { ui.seaCap = e.target.value; return; }
+    if (e.target && e.target.id === 'sea-link') { ui.seaLink = e.target.value; return; }
     if (e.target && e.target.id === 'chat-in') { ui.chatDraft = e.target.value; return; }
     if (e.target && e.target.id === 'pname' && !S) { onb().name = e.target.value.slice(0, 24); var nb = document.getElementById('onb-next'); if (nb) nb.disabled = !onbValid(onb(), onb().step); return; }
     if (e.target && e.target.id === 'chop-q') {
@@ -4619,7 +4685,11 @@
       var sf = e.target.files && e.target.files[0], m = S.sea;
       online.seaStatus = 'Preparing your picture…'; render();
       preparePicture(sf, m.w / m.h).then(function (d) {
-        return online.db.doc('seareview/' + online.me).set({ img: d, x: m.x, y: m.y, w: m.w, h: m.h, at: Date.now() });
+        var ci = document.getElementById('sea-cap'), li = document.getElementById('sea-link'), cap = ci ? ci.value.trim() : '', link = li ? li.value.trim() : '';
+        if (cap && !adCap(cap)) throw new Error('That ad line is not allowed. Keep it clean and short.');
+        if (link && !adLink(link)) throw new Error('The link must start with https:// and be a normal web address.');
+        var rec = { img: d, x: m.x, y: m.y, w: m.w, h: m.h, at: Date.now() }; if (cap) rec.cap = adCap(cap); if (link) rec.link = adLink(link);
+        return online.db.doc('seareview/' + online.me).set(rec);
       }).then(function () { online.seaStatus = 'Sent for review. It goes live once an editor approves it.'; render(); }, function (err) { online.seaStatus = (err && err.message) || 'It could not be sent.'; render(); });
     }
     if (e.target && e.target.id === 'ad-renew') { ui.ad.renew = e.target.checked; }

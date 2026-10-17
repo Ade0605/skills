@@ -1333,6 +1333,19 @@
     return finish(s, ok(a.label + '.'));
   }
 
+  /* ---------- club radio (rules 19, recorded call cr): pay for slots in every club; the schedule itself is shared, drawn only ---------- */
+  var RADIO_SLOT = 2500, RADIO_MAX = 10;
+  function radioCost(s, n) { return price(s, RADIO_SLOT) * n; }
+  function radioBook(s, n) {
+    if (!(s.rules >= 19)) return fail('Club radio is not open in this life.');
+    n = Math.floor(+n || 0); if (n < 1 || n > RADIO_MAX) return fail('Book 1 to ' + RADIO_MAX + ' slots.');
+    if (s.pending.length) return fail('Decide on the open event first');
+    var c = radioCost(s, n); if (!canAfford(s, c)) return fail('You need ' + naira(c));
+    s.alerts = []; if (!pay(s, c, 'Club radio: ' + n + ' slot' + (n > 1 ? 's' : ''))) return fail('Not enough money.');
+    s.stats.radioSlots = (s.stats.radioSlots || 0) + n;
+    return finish(s, ok('📻 Booked ' + n + ' slot' + (n > 1 ? 's' : '') + ' on the club radio.'));
+  }
+
   /* ---------- airport departures (new recorded calls; old lives never make them) ---------- */
   function ownsJet(s) { return (s.vehicles || []).some(function (v) { return D.VEHICLES[v.id] && D.VEHICLES[v.id].kind === 'jet'; }); }
   // A cab to the airport is included when you book from elsewhere in the same city.
@@ -4842,6 +4855,7 @@
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
+    radioBook: recorded('cr', radioBook), radioCost: radioCost, RADIO_MAX: RADIO_MAX,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
     districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), roomNightInfo: roomNightInfo, roomNight: recorded('rn', roomNight), roomHangBlock: roomHangBlock, passportInfo: passportInfo, localsInfo: localsInfo, roomFee: roomFee, roomHang: recorded('rh', roomHang), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
