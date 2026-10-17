@@ -1048,3 +1048,96 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .b3-joy i { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 2px 8px rgba(0,0,0,.3); transition: transform .05s; }
 .b3-do { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 3; box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pg-zbtn.b3-walk.on, .pg-zbtn.b3-walk[aria-pressed="true"] { background: #2f6fd0; color: #fff; }
+
+/* Letter hunt (🔤): a dark card with the single's colour. */
+.hunt { background: #141012; color: #fff; border-radius: 18px; padding: 14px; display: grid; gap: 12px; }
+.hunt .note { color: #d9d2d4; }
+.hunt-h { display: flex; gap: 12px; align-items: center; }
+.hunt-h h3 { margin: 0; font-size: 1.25rem; color: #fff; }
+.hunt-h small { color: #c9bfc2; }
+.hunt-logo { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: #1f1719; border: 2px solid var(--hc); color: var(--hc); font: 900 1.6rem system-ui, sans-serif; }
+.hunt-listen { display: flex; gap: 10px; align-items: center; background: #fff; color: #17181a; border: 0; border-radius: 14px; padding: 10px 12px; text-align: left; cursor: pointer; }
+.hunt-listen small { display: block; color: #6b7280; }
+.hunt-play { width: 32px; height: 32px; border-radius: 50%; background: var(--hc); color: #fff; display: grid; place-items: center; flex: none; }
+.hunt-tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.hunt-tile { min-height: 92px; border-radius: 12px; background: #1f1a1c; border: 1px solid #2c2427; display: grid; place-items: center; text-align: center; padding: 6px 2px; color: #6b6266; }
+.hunt-tile.got { background: color-mix(in srgb, var(--hc) 22%, #1f1a1c); border-color: var(--hc); color: #fff; }
+.hunt-tile b { font: 900 1.9rem system-ui, sans-serif; color: var(--hc); line-height: 1; }
+.hunt-tile small { font-size: .62rem; line-height: 1.1; }
+.hunt-tile .btn { padding: 2px 8px; font-size: .7rem; }
+.hunt-row { border-radius: 14px; background: #1b1618; border: 1px solid #2c2427; }
+.hunt-row.cur { border-color: var(--hc); }
+.hunt-row-h { width: 100%; display: flex; gap: 10px; align-items: center; background: none; border: 0; color: #fff; padding: 12px; text-align: left; cursor: pointer; }
+.hunt-row-h:disabled { cursor: default; opacity: .7; }
+.hunt-row-h small { display: block; color: #9a8f93; font-size: .7rem; letter-spacing: .04em; }
+.hunt-row-h .chev { margin-left: auto; color: #9a8f93; }
+.hunt-dot { width: 30px; height: 30px; border-radius: 50%; background: #2a2224; flex: none; }
+.hunt-row-b { padding: 0 12px 12px 52px; }
+.hunt-riddle { font-weight: 600; line-height: 1.45; margin: 0 0 6px; }
+.hunt-done { font-weight: 700; }
+.hunt-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; background: var(--hc); color: #fff; font-weight: 800; font-size: .75rem; }
+
+/* Map bar: city picker, Names, More, and the letter-hunt badge. */
+.map-bar { position: relative; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 4px 0 8px; }
+.mb-pill { display: flex; gap: 6px; align-items: center; background: var(--card, #fff); border-radius: 999px; padding: 5px; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.mb-city { border: 0; border-radius: 999px; background: #17181a; color: #fff; font-weight: 700; padding: 8px 14px; cursor: pointer; }
+.mb-city .chev { opacity: .7; margin-left: 4px; }
+.mb-hunt { width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--hc); background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--hc) 55%, #000), #120d0f); color: #fff; display: grid; place-items: center; position: relative; cursor: pointer; box-shadow: 0 0 0 4px color-mix(in srgb, var(--hc) 25%, transparent); }
+.mb-hunt b { font: 900 1.3rem system-ui, sans-serif; line-height: 1; }
+.mb-hunt small { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); background: #17181a; color: #fff; font-size: .62rem; font-weight: 700; padding: 1px 6px; border-radius: 99px; white-space: nowrap; }
+.mb-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 6; background: var(--card, #fff); color: inherit; border-radius: 18px; padding: 8px; min-width: 250px; box-shadow: 0 10px 30px rgba(0,0,0,.22); display: grid; gap: 4px; }
+.mb-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; font-weight: 600; }
+.mb-here { color: #15803d; font-size: .8rem; font-weight: 700; }
+.mb-road { margin: 2px 10px 4px; font-size: .8rem; color: var(--muted, #6b7280); display: flex; gap: 6px; align-items: center; }
+.mb-road i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #22c55e; }
+.mb-road i.mid { background: #f59e0b; } .mb-road i.bad { background: #ef4444; }
+.mb-more { left: 120px; display: flex; flex-wrap: wrap; min-width: 0; }
+
+/* Daily gem hunt card: a clue, a hint timer and the prize ladder. */
+.gem2 .gem-h { display: flex; gap: 12px; align-items: center; }
+.gem2 .gem-h h3 { margin: 0; }
+.gem2 .gem-h small { color: var(--muted, #6b7280); }
+.gem2 .gem-ic { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: #eef4ff; font-size: 1.3rem; }
+.gem2 .gem-count { margin-left: auto; font-weight: 800; color: #6b46c1; }
+.gem-clue { background: linear-gradient(135deg, #efe9ff, #e6f0ff); border-radius: 18px; padding: 12px 14px; margin: 10px 0; color: #1f1a2e; }
+.gem-clue small { color: #6b46c1; font-weight: 800; letter-spacing: .04em; font-size: .7rem; }
+.gem-clue p { margin: 4px 0; font-weight: 700; font-size: 1.05rem; }
+.gem-clue .note { font-weight: 500; font-size: .85rem; color: #4b4560; }
+.gem-tiers { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 8px 0; }
+.gem-tier { text-align: center; background: var(--chip, #f1f2f5); border-radius: 14px; padding: 6px 2px; }
+.gem-tier small { display: block; color: var(--muted, #6b7280); font-size: .7rem; }
+.gem-tier b { font-size: .85rem; }
+.gem-tier.got { background: #dcfce7; } .gem-tier.cur { outline: 2px solid #6b46c1; }
+.gem-done { font-weight: 700; }
+
+/* Profile: header, tabs and the Goals cards. */
+.me-panel { display: grid; gap: 10px; }
+.me-head { display: flex; gap: 12px; align-items: center; }
+.me-head h2 { margin: 0; font-size: 1.25rem; }
+.me-head small { color: var(--muted, #6b7280); }
+.me-face { width: 52px; height: 52px; border-radius: 50%; background: #eef2f7; flex: none; }
+.me-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.me-tab { border: 0; border-radius: 999px; padding: 8px 14px; background: var(--chip, #eef0f4); color: inherit; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.me-tab.sel { background: #17181a; color: #fff; }
+.me-hustle { width: 100%; display: flex; gap: 12px; align-items: center; text-align: left; border: 0; border-radius: 18px; padding: 12px 14px; background: linear-gradient(135deg, #fff7d6, #ffe7a3); color: #2a2100; cursor: pointer; margin-bottom: 12px; }
+.me-hustle small { display: block; color: #6b5a1e; }
+.me-hustle .chev { margin-left: auto; font-size: 1.3rem; }
+.me-gift { width: 40px; height: 40px; border-radius: 12px; background: #fff; display: grid; place-items: center; font-size: 1.3rem; }
+.me-dream { border-radius: 22px; padding: 16px; background: linear-gradient(135deg, #3b2bb8, #6d3ae0); color: #fff; margin-bottom: 12px; position: relative; }
+.me-dream small { letter-spacing: .06em; font-weight: 800; opacity: .8; font-size: .7rem; }
+.me-dream h3 { margin: 4px 0 2px; color: #fff; }
+.me-dream p { margin: 0 0 12px; opacity: .9; }
+.me-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.25); overflow: hidden; }
+.me-bar i { display: block; height: 100%; background: #fff; border-radius: 99px; }
+.me-pct { position: absolute; right: 16px; bottom: 6px; font-size: .75rem; opacity: .85; }
+.me-origin .me-loan { display: grid; gap: 6px; margin: 8px 0; }
+.me-origin .me-bar { background: #e5e7eb; } .me-origin .me-bar i { background: #22c55e; }
+
+/* Phone: the "out now" banner, NEW badges, News. */
+.ph-promo { display: flex; align-items: center; gap: 10px; width: calc(100% - 20px); margin: 6px 10px 10px; padding: 8px 10px; border: 0; border-radius: 16px; background: #141012; color: #fff; text-align: left; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+.ph-promo small { display: block; color: #c9bfc2; font-size: .72rem; }
+.ph-promo-l { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--hc); color: var(--hc); display: grid; place-items: center; font: 900 1.1rem system-ui, sans-serif; flex: none; }
+.ph-promo-b { margin-left: auto; background: var(--hc); color: #fff; border-radius: 99px; padding: 6px 12px; font-weight: 800; font-size: .8rem; white-space: nowrap; }
+.app-ic .badge.new { background: #ef4444; font-size: .55rem; padding: 1px 4px; }
+.gist-hot { background: #fff4e5; border-radius: 14px; padding: 8px 12px; margin-bottom: 8px; color: #3a2400; }
+.gist-hot p { margin: 2px 0; font-size: .9rem; }

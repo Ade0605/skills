@@ -112,6 +112,7 @@
   // Music (src/music.js): the dance-off, the owambe hall and clubs at night, the wedding hall, and parties.
   function musicWanted() {
     if (!prefs.sound || document.hidden || !window.LasgidiMusic || !S) return null;
+    if (ui.huntListenUntil && Date.now() < ui.huntListenUntil) return { style: huntNow().style }; // the hunt's single
     if (mini) return mini.kind === 'dance' ? { style: 'afro', bpm: 112 } : null;
     if (ui.venueOpen) {
       var pl = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0], hr = L.hour(S), night = hr >= 19 || hr < 5;
@@ -849,6 +850,7 @@
   function drawAvatar() {
     var cv = document.getElementById('avatar-canvas');
     if (cv && window.LasgidiAvatar && S) window.LasgidiAvatar.draw(cv, S.look, S.outfit, myExtra());
+    var mf = document.getElementById('me-face'); if (mf && S) { try { var fc = faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit); if (fc) { var mg = mf.getContext('2d'); mg.clearRect(0, 0, 96, 96); mg.drawImage(fc, 0, 0, 96, 96); } } catch (e) {} } // the profile header face
   }
 
   function weeklyInviteView() {
@@ -992,11 +994,23 @@
   // Map layers the viewer can switch off: place names, billboards and other players. Kept on this device.
   var LAYER_KEY = 'lasgidi.layers.v1';
   function mapLayers() { if (!ui.layers) { try { ui.layers = JSON.parse(localStorage.getItem(LAYER_KEY) || 'null'); } catch (e) {} ui.layers = ui.layers || { names: true, boards: true, players: true }; } return ui.layers; }
+  // The map bar: a city picker (where you are, or ✈ Fly), Names, More (the other layers), and the letter-hunt badge.
+  var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊' };
   function layerChips() {
-    var l = mapLayers();
-    return '<div class="pg-layers" role="group" aria-label="Map layers">' + [['names', '🏷️ Names'], ['boards', '🪧 Billboards'], ['players', '👥 Players']].map(function (x) {
+    var l = mapLayers(), here = L.cityOf(S), h = huntNow(), hs = huntState(), got = hs.found.length, tf = L.traffic ? L.traffic(S) : null;
+    var road = tf == null ? '' : tf < 1.5 ? 'Free road' : tf < 2.3 ? 'Busy roads' : 'Go-slow';
+    var cityMenu = ui.cityMenu ? '<div class="mb-menu" role="menu" aria-label="Cities">' + Object.keys(D.CITIES).map(function (c) {
+      return '<div class="mb-row"><span>' + (CITY_ICON[c] || '📍') + ' ' + esc(D.CITIES[c].name) + '</span>' + (c === here ? '<span class="mb-here">📍 You\'re here</span>' : '<button type="button" class="btn sm go" id="mb-fly-' + c + '" data-tab="phone" data-app="travel">✈ Fly</button>') + '</div>';
+    }).join('') + (road ? '<p class="mb-road"><i class="' + (tf < 1.5 ? 'ok' : tf < 2.3 ? 'mid' : 'bad') + '"></i>Traffic in town: ' + road + '</p>' : '') + '</div>' : '';
+    var moreMenu = ui.moreMenu ? '<div class="mb-menu mb-more" role="group" aria-label="More map layers">' + [['boards', '🪧 Billboards'], ['players', '👥 Players']].map(function (x) {
       return '<button type="button" class="pg-chip' + (l[x[0]] ? ' sel' : '') + '" id="layer-' + x[0] + '" data-layer="' + x[0] + '" aria-pressed="' + !!l[x[0]] + '">' + x[1] + '</button>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' : '';
+    return '<div class="map-bar"><div class="mb-pill" role="group" aria-label="Map">' +
+      '<button type="button" class="mb-city" id="mb-city" data-citymenu="1" aria-expanded="' + !!ui.cityMenu + '">📍 ' + esc(D.CITIES[here].name) + ' <span class="chev">' + (ui.cityMenu ? '⌃' : '⌄') + '</span></button>' +
+      '<button type="button" class="pg-chip' + (l.names ? ' sel' : '') + '" id="layer-names" data-layer="names" aria-pressed="' + !!l.names + '">🏷️ Names</button>' +
+      '<button type="button" class="pg-chip' + (ui.moreMenu ? ' sel' : '') + '" id="mb-more" data-moremenu="1" aria-expanded="' + !!ui.moreMenu + '">▦ More</button></div>' +
+      '<button type="button" class="mb-hunt" id="mb-hunt" data-tab="phone" data-app="hunt" style="--hc:' + h.color + '" aria-label="Letter hunt: find ' + esc(h.title) + ', ' + got + ' of ' + h.pieces.length + ' found"><b>' + esc(h.title.charAt(0)) + '</b><small>' + esc(h.title) + ' ' + got + '/' + h.pieces.length + '</small></button>' +
+      cityMenu + moreMenu + '</div>';
   }
   function sceneFor() {
     var banner = '';
@@ -1140,6 +1154,47 @@
       dark: document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) });
   }
 
+  /* ---------- letter hunt: find the five letters of a fictional single, one hunt each real week ---------- */
+  // Kept on this device only (like the passport): it pays nothing and never touches a life or its seal.
+  var HUNT_KEY = 'lasgidi.hunt.v1', HUNT_HINT = 3 * 60 * 1000;
+  function huntWeek() { return Math.floor((Date.now() / 864e5 + 3) / 7); }
+  function huntNow() { var w = huntWeek(); return D.HUNTS[((w % D.HUNTS.length) + D.HUNTS.length) % D.HUNTS.length]; }
+  function huntState() {
+    var h = huntNow(), st = readJSON(HUNT_KEY, null), badges = (st && st.badges) || [];
+    if (!st || st.id !== h.id || st.week !== huntWeek()) { st = { id: h.id, week: huntWeek(), found: [], since: Date.now(), badges: badges }; writeJSON(HUNT_KEY, st); }
+    return st;
+  }
+  function placeName(id) { var p = D.PLACES.filter(function (x) { return x.id === id; })[0]; return p ? p.name : id; }
+  // The letter to catch at this place, if its riddle is the one you are on.
+  function huntLetterAt(pl) { var h = huntNow(), st = huntState(), k = st.found.length, pc = h.pieces[k]; return pc && pc.place === pl.id ? { ch: pc.ch, color: h.color, slot: vHash(pl.id, 77) % 8 } : null; }
+  function huntCatch(pl) {
+    var h = huntNow(), st = huntState(), k = st.found.length, pc = h.pieces[k];
+    if (!pc || pc.place !== pl.id) return;
+    if (S.loc !== pl.district) { ui.toasts.push({ msg: 'Ride to ' + pl.name + ' first, then catch the letter.', ok: false }); renderToasts(); return; }
+    st.found.push(k); st.since = Date.now();
+    var done = st.found.length >= h.pieces.length;
+    if (done && st.badges.indexOf(h.id) < 0) st.badges.push(h.id);
+    writeJSON(HUNT_KEY, st); play('good');
+    ui.toasts.push({ msg: done ? '🏅 You found all of ' + h.title + '! The ' + h.title + ' crew badge is yours.' : 'You caught the ' + pc.ch + ' of ' + h.title + ' (' + st.found.length + '/' + h.pieces.length + '). Your next riddle is in the 🔤 app.', ok: true });
+    render();
+  }
+  function huntCard() {
+    var h = huntNow(), st = huntState(), k = st.found.length, done = k >= h.pieces.length, open = ui.huntOpen == null ? k : ui.huntOpen;
+    var tiles = h.pieces.map(function (pc, i) { var got = i < k; return '<div class="hunt-tile' + (got ? ' got' : '') + '" style="--hc:' + h.color + '">' + (got ? '<b>' + esc(pc.ch) + '</b><small>' + esc(placeName(pc.place)) + '</small><button class="btn sm ghost" id="hunt-share-' + i + '" data-copytext="' + esc('I found the ' + pc.ch + ' of ' + h.title + ' at ' + placeName(pc.place) + ' in Lasgidi 🔥') + '">Share</button>' : '<span>?</span>') + '</div>'; }).join('');
+    var rows = h.pieces.map(function (pc, i) {
+      if (i < k) return '';
+      var cur = i === k, isOpen = cur && open === i, left = Math.max(0, HUNT_HINT - (Date.now() - st.since));
+      var head = '<button type="button" class="hunt-row-h" id="hunt-row-' + i + '" data-huntrow="' + i + '"' + (cur ? '' : ' disabled') + ' aria-expanded="' + isOpen + '"><span class="hunt-dot"></span><span><small>PIECE ' + (i + 1) + ' OF ' + h.pieces.length + '</small><b>' + (cur ? (isOpen ? 'The riddle' : 'Tap to read the riddle') : 'Find piece ' + i + ' first') + '</b></span><span class="chev">' + (isOpen ? '⌃' : '⌄') + '</span></button>';
+      var body = isOpen ? '<div class="hunt-row-b"><p class="hunt-riddle">“' + esc(pc.riddle) + '”</p>' + (left > 0 ? '<p class="note">🔒 A hint opens in ' + Math.floor(left / 60000) + ':' + String(Math.floor(left / 1000) % 60).padStart(2, '0') + '</p>' : '<p class="note">💡 Hint: it is at <b>' + esc(placeName(pc.place)) + '</b>.</p>' + (function () { var p = D.PLACES.filter(function (x) { return x.id === pc.place; })[0]; return p ? '<div class="inline">' + (S.loc === p.district ? '<button class="btn sm go" id="hunt-walk" data-venue="' + p.id + '">🚪 Walk in</button>' : '<button class="btn sm go" id="hunt-go" data-tripto="' + p.district + '" data-tab="map">Go there</button>') + '</div>' : ''; })()) + '</div>' : '';
+      return '<div class="hunt-row' + (cur ? ' cur' : '') + '" style="--hc:' + h.color + '">' + head + body + '</div>';
+    }).join('');
+    return '<div class="hunt" style="--hc:' + h.color + '"><div class="hunt-h"><span class="hunt-logo">' + esc(h.title.charAt(0)) + '</span><div><h3>Find ' + esc(h.title) + '</h3><small>' + esc(h.artist) + '\'s new single is out now 🔥</small></div></div>' +
+      '<button type="button" class="hunt-listen" id="hunt-listen" data-huntlisten="1"><span class="hunt-play">▶</span><span><b>Listen to ' + esc(h.title) + '</b><small>In the game, made in your browser (turn 🔊 sound on)</small></span></button>' +
+      '<p class="note">Five letters of <b>' + esc(h.title) + '</b> are hidden around Lagos. Solve a riddle, go there, and catch the letter when it glows (tap it, or walk into it).</p>' +
+      '<div class="hunt-tiles">' + tiles + '</div>' + (done ? '<p class="hunt-done">🏅 You found every letter. The ' + esc(h.title) + ' crew badge is yours. A new hunt starts next week.</p>' : rows) +
+      (st.badges.length ? '<p class="note">Your crew badges: ' + st.badges.map(function (b) { var hh = D.HUNTS.filter(function (x) { return x.id === b; })[0]; return hh ? '<span class="hunt-badge" style="--hc:' + hh.color + '">' + esc(hh.title) + '</span>' : ''; }).join(' ') + '</p>' : '') + '</div>';
+  }
+
   /* ---------- daily gem hunt ---------- */
   function gemToday() { return L.gemDayId(new Date()); }
   function gemsLeft() {
@@ -1147,17 +1202,29 @@
     var id = gemToday(), got = L.gemsFound(S, id);
     return L.gemsFor(id).map(function (g, n) { return { place: g.place, district: g.district, n: n }; }).filter(function (g) { return got.indexOf(g.n) < 0; });
   }
+  // The clue for a gem: the place's own description with its name hidden.
+  function gemClue(pl) {
+    var txt = String(pl.text || pl.name), words = pl.name.replace(/\(.*?\)/g, '').split(/[\s,–-]+/).filter(function (w) { return w.length > 3; });
+    words.forEach(function (w) { txt = txt.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '…'); });
+    return txt.split(/(?<=[.!?])\s/)[0].slice(0, 140);
+  }
+  var GEM_SEEN = 'lasgidi.gemseen.v1', GEM_HINT = 5 * 60 * 1000;
   function gemCard() {
     if (!S || S.challenge) return '';
-    var id = gemToday(), gems = L.gemsFor(id), got = L.gemsFound(S, id), prize = L.nextGemPrize(S, id);
-    var html = '<div class="section gem-card"><h3>💎 Daily gem hunt <span class="muted">· ' + got.length + '/' + gems.length + ' found' + (prize ? ' · next prize ' + N(prize) : ' · all found today') + '</span></h3>' +
-      '<p class="note">Everyone gets the same five gems each day. Go to the place and pick it up; each one pays more than the last. New gems at midnight (UTC).</p><div class="list">';
-    html += gems.map(function (g, n) {
-      var pl = D.PLACES.filter(function (x) { return x.id === g.place; })[0], done = got.indexOf(n) >= 0, here = S.loc === g.district;
-      return '<div class="item"><div><h3>' + (done ? '✅ ' : '💎 ') + esc(pl.name) + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[g.district].name) + '</span></div></div>' +
-        (done ? '<span class="muted">Found</span>' : here ? '<button class="btn sm" id="gem-' + n + '" data-gem="' + n + '">Pick it up</button>' : '<button class="btn sm ghost" id="gemgo-' + n + '" data-tripto="' + g.district + '">Go there</button>') + '</div>';
-    }).join('');
-    return html + '</div></div>';
+    var id = gemToday(), gems = L.gemsFor(id), got = L.gemsFound(S, id), prize = L.nextGemPrize(S, id), next = gems.map(function (g, n) { return n; }).filter(function (n) { return got.indexOf(n) < 0; })[0];
+    var seen = readJSON(GEM_SEEN, {}); if (!seen[id] && next != null) { seen = {}; seen[id] = {}; } if (seen[id] && next != null && !seen[id][next]) { seen[id][next] = Date.now(); writeJSON(GEM_SEEN, seen); }
+    var now = new Date(), mid = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1), left = mid - now.getTime(), hh = Math.floor(left / 3600000), mm = Math.floor(left / 60000) % 60;
+    var html = '<div class="section gem-card gem2"><div class="gem-h"><span class="gem-ic">💎</span><div><h3>Daily gem hunt</h3><small>New gems in ' + (hh ? hh + 'h ' : '') + mm + 'm</small></div><span class="gem-count">' + got.length + '/' + gems.length + '</span></div>';
+    if (next != null) {
+      var g = gems[next], pl = D.PLACES.filter(function (x) { return x.id === g.place; })[0], since = seen[id] && seen[id][next] || Date.now(), hl = Math.max(0, GEM_HINT - (Date.now() - since)), here = S.loc === g.district;
+      html += '<div class="gem-clue"><small>TODAY\'S CLUE · GEM ' + (next + 1) + ' OF ' + gems.length + '</small><p>“' + esc(gemClue(pl)) + '”</p>' +
+        (hl > 0 ? '<p class="note">🔒 A hint opens in ' + Math.floor(hl / 60000) + ':' + String(Math.floor(hl / 1000) % 60).padStart(2, '0') + '</p>' : '<p class="note">💡 Hint: somewhere in <b>' + esc(D.DISTRICTS[g.district].name) + '</b>' + (here ? ': it is <b>' + esc(pl.name) + '</b>.' : '.') + '</p>') +
+        '<div class="inline">' + (here ? '<button class="btn sm go" id="gem-' + next + '" data-gem="' + next + '">💎 Pick it up</button><button class="btn sm ghost" id="gemwalk-' + next + '" data-venue="' + pl.id + '">🚪 Walk in (it sparkles)</button>' : hl > 0 ? '' : '<button class="btn sm ghost" id="gemgo-' + next + '" data-tripto="' + g.district + '" data-tab="map">Go there</button>') + '</div></div>';
+      html += '<p class="note">Work out where it is, go there, and it sparkles. Each gem you find today pays more than the last.</p>';
+    } else html += '<p class="gem-done">✅ You found all five today. New gems at midnight (UTC).</p>';
+    html += '<div class="gem-tiers">' + [3000, 5000, 8000, 12000, 20000].map(function (v, i) { return '<div class="gem-tier' + (i < got.length ? ' got' : i === got.length ? ' cur' : '') + '"><small>' + ['1st', '2nd', '3rd', '4th', '5th'][i] + '</small><b>' + N(L.price(S, v)) + '</b></div>'; }).join('') + '</div>';
+    if (got.length) html += '<p class="note">Found today: ' + got.map(function (n) { var pl = D.PLACES.filter(function (x) { return x.id === gems[n].place; })[0]; return '✅ ' + esc(pl.name); }).join(' · ') + '</p>';
+    return html + '</div>';
   }
 
   /* ---------- billboards ---------- */
@@ -1994,7 +2061,10 @@
       var def = (D.PLACE_ACTIONS[pl.district] || []).filter(function (x) { return x.id === aid; })[0]; if (!def) return null;
       var a = avail.filter(function (x) { return x.id === aid; })[0];
       return { id: aid, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
-    }).filter(Boolean)).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return !def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0; }).map(function (def) {
+    }).filter(Boolean)).concat(S.rules >= 18 ? (D.BRANCH_ACTS[pl.id] || []).map(function (def) {
+      var a = avail.filter(function (x) { return x.id === def.id; })[0];
+      return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
+    }) : []).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return !def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0; }).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: '🎊', short: venueShort(def.label), off: !a || a.disabled, fest: true };
     }) : []).concat(S.rules >= 17 ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) { // festivals (in season) come before the everyday inside acts, so they get a sign
@@ -2038,6 +2108,7 @@
     var worksHere = S.job && careersAt(pl).indexOf(S.job.id) >= 0, h0 = L.hour(S), bub = ui.venueBubble && ui.venueBubble.place === pl.id && Date.now() - ui.venueBubble.at < 7000 ? ui.venueBubble.text : null;
     return {
       name: pl.name, set: set, acts: acts, people: people, commuters: commuters, night: h0 >= 19 || h0 < 6, weather: L.weatherNow(S) || 'clear',
+      letter: huntLetterAt(pl),
       gem: (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? { n: gm.n, slot: vHash(pl.id, 7 + gm.n) % 8 } : null; })(),
       sign: pl.name.toUpperCase().slice(0, 30), signBg: set === 'refinery' ? '#1f3b63' : set === 'nightlife' ? '#8e24aa' : '#1f3b63',
       shuttle: set === 'refinery' ? 'staff' : set === 'airport' || set === 'govt' || set === 'estate' || set === 'dealer' ? 'cab' : set === 'stadium' || set === 'campus' ? 'brt' : ['danfo', 'keke', 'okada', 'cab'][vHash(pl.id, 3) % 4],
@@ -2124,6 +2195,7 @@
     return {
         walk: prefs.walk3d !== false, onWalk: function (on) { prefs.walk3d = !!on; writeJSON(PREF_KEY, prefs); }, // walking in 3D (🚶), remembered
         onPhoto: function (cv) { var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0]; ui.photoFrom = 'venue'; takePhoto(cv, p0 ? p0.name : 'Lasgidi'); },
+        onLetter: function () { var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0]; if (p0) huntCatch(p0); },
         onGem: function (n) {
           var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0];
           if (!p0 || S.loc !== p0.district) { ui.toasts.push({ msg: 'Ride there first, then pick up the gem.', ok: false }); renderToasts(); return; }
@@ -3145,40 +3217,61 @@
   }
   function meView() {
     var gp = L.goalProgress(S), g = D.GOALS[S.goal];
-    var html = '<div class="panel-h"><h2>' + esc(L.titledName(S)) + '</h2><span class="muted">' + esc(D.ORIGINS[S.origin].name) + ' · ' + esc(D.HOMES[S.home].name) + '</span></div><div class="panel-b">' + labelChips(L.lagosLabels(S)) + photoView() +
+    var T = { profile: '', needs: '', goals: '', skills: '', people: '', career: '', settings: '' };
+    T.profile += labelChips(L.lagosLabels(S)) + photoView() +
       '<details class="section cv-wrap"' + (ui.cvOpen ? ' open' : '') + '><summary id="cv-open" data-cvopen="1">📄 My CV</summary>' + cvHtml(L.cv(S)) +
       '<div class="inline"><button class="btn sm" id="cv-share" data-cvshare="1">' + (online.cvs && online.cvs[online.me] ? 'Update my shared CV' : 'Share my CV with players') + '</button>' + (online.cvStatus ? '<span class="note">' + esc(online.cvStatus) + '</span>' : '') + '</div></details>';
-    if (online.shop && (online.owned || []).length) html += '<div class="section">' + purchaseHistory() + '</div>';
-    html += '<div class="section" style="padding-top:0"><h3>Goal: ' + esc(g.name) + (S.won ? ' · done' : '') + '</h3><p class="note">' + esc(g.text) + '</p>' +
+    if (online.shop && (online.owned || []).length) T.profile += '<div class="section">' + purchaseHistory() + '</div>';
+    T.goals += '<div class="section" style="padding-top:0"><h3>Goal: ' + esc(g.name) + (S.won ? ' · done' : '') + '</h3><p class="note">' + esc(g.text) + '</p>' +
       gp.parts.map(function (p) { return '<div><div class="inline" style="justify-content:space-between"><span>' + esc(p.label) + '</span><span class="num">' + Math.round(p.value * 100) + '%</span></div><div class="progress"><i style="width:' + Math.round(p.value * 100) + '%"></i></div></div>'; }).join('') + '</div>';
-    html += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
+    T.goals += '<div class="section"><h3>Net worth by week</h3>' + sparkline(S.history, 'me-spark') +
       (S.history.length ? '<details><summary>Show as table</summary><div class="stmt-wrap"><table class="stmt"><tbody>' + S.history.slice().reverse().map(function (h) { return '<tr><td>Week ' + h.w + '</td><td class="n num">' + N(h.worth) + '</td></tr>'; }).join('') + '</tbody></table></div></details>' : '') + '</div>';
-    html += titlesView();
-    html += lagosianView();
-    html += S.challenge ? weeklyMeView() : weeklyInviteView() + familyView();
-    if (!S.challenge) html += fameView();
+    T.profile += titlesView();
+    T.profile += lagosianView();
+    T.people += S.challenge ? weeklyMeView() : weeklyInviteView() + familyView();
+    if (!S.challenge) T.people += fameView();
     var sum = L.lifeSummary(S), best = lives()[0];
-    html += '<div class="section"><h3>Score so far: <span class="num">' + sum.score + '</span></h3><p class="note">Net worth ÷ ₦1,000, plus 10 a week survived, 50 an achievement, 40 a career level and 500 for your goal.' + (best ? ' Your best life scored ' + best.score + '.' : '') + '</p>' + (lives().length ? livesView(5) : '') + '</div>';
-    html += '<div class="section"><h3>Share your life</h3>' + shareBlock() + '</div>';
-    html += '<div class="section"><h3>Skills</h3><div class="skills">' + Object.keys(D.SKILLS).map(function (k) {
+    T.goals += '<div class="section"><h3>Score so far: <span class="num">' + sum.score + '</span></h3><p class="note">Net worth ÷ ₦1,000, plus 10 a week survived, 50 an achievement, 40 a career level and 500 for your goal.' + (best ? ' Your best life scored ' + best.score + '.' : '') + '</p>' + (lives().length ? livesView(5) : '') + '</div>';
+    T.profile += '<div class="section"><h3>Share your life</h3>' + shareBlock() + '</div>';
+    T.skills += '<div class="section"><h3>Skills</h3><div class="skills">' + Object.keys(D.SKILLS).map(function (k) {
       var lvl = L.skillLevel(S, k), xp = S.skills[k], lo = D.SKILL_XP[lvl], hi = D.SKILL_XP[lvl + 1] || lo;
       var pct = hi > lo ? Math.round((xp - lo) / (hi - lo) * 100) : 100;
       return '<div><div class="inline" style="justify-content:space-between"><span>' + D.SKILLS[k] + '</span><span class="num">Lv ' + lvl + '</span></div><div class="progress"><i style="width:' + pct + '%"></i></div></div>';
     }).join('') + '</div></div>';
-    html += '<div class="section"><h3>People</h3><p class="note">Gist with people where they hang out. At 60 they are your connect into their trade.</p><div class="list">' + Object.keys(D.NPCS).map(function (k) {
+    T.people += '<div class="section"><h3>People</h3><p class="note">Gist with people where they hang out. At 60 they are your connect into their trade.</p><div class="list">' + Object.keys(D.NPCS).map(function (k) {
       var n = D.NPCS[k], f = S.friends[k];
       return '<div class="item"><div><h3>' + esc(n.name) + ' <span class="muted">· ' + esc(n.role) + '</span></h3><div class="meta"><span>' + esc(D.DISTRICTS[n.district].name) + '</span><span>' + esc(D.CAREERS[n.career].name) + ' connect at 60</span></div></div><span class="num">' + f.lvl + '/100</span></div>';
     }).join('') + '</div></div>';
-    html += '<div class="section"><h3>Achievements</h3><div class="ach">' + Object.keys(L.ACHIEVEMENTS).map(function (k) {
+    T.goals += '<div class="section"><h3>Achievements</h3><div class="ach">' + Object.keys(L.ACHIEVEMENTS).map(function (k) {
       return '<div class="' + (S.ach[k] ? 'got' : 'not') + '">' + (S.ach[k] ? '✓ ' : '· ') + esc(L.ACHIEVEMENTS[k]) + '</div>';
     }).join('') + '</div></div>';
-    html += settingsView();
-    html += '<div class="section"><h3>Save</h3><p class="note">The game saves in this browser. Copy the save code to move to another device.</p>' +
+    T.settings += settingsView();
+    T.settings += '<div class="section"><h3>Save</h3><p class="note">The game saves in this browser. Copy the save code to move to another device.</p>' +
       '<div class="inline"><button class="btn sm" id="copy-save" data-copy="1">Copy save code</button><button class="btn sm ghost" id="new-game" data-new="1">New life</button></div>' +
       '<textarea id="save-code" readonly rows="3" style="width:100%" aria-label="Save code">' + esc(L.serialize(S)) + '</textarea>' +
       (ui.flash ? '<p class="note">' + esc(ui.flash) + '</p>' : '') + '</div>' +
-      '<div class="section"><h3>Keyboard</h3><p class="note">Number keys switch tabs in the order shown (1 is Do). A runs the top suggestion. Tab and Enter work everywhere, including the map.</p></div>';
-    return html + '</div>';
+      '<div class="section"><h3>Keyboard</h3><p class="note">Number keys switch tabs in the order shown (1 is Do). A runs the top suggestion. Tab and Enter work everywhere, including the map.</p></div>';    // The dream card, your start and what you owe, and today's hustle lead the Goals tab.
+    var dreamPct = Math.round((gp.parts.reduce(function (a, p) { return a + p.value; }, 0) / Math.max(1, gp.parts.length)) * 100), O = D.ORIGINS[S.origin];
+    var dream = '<div class="me-dream"><small>LIFETIME DREAM</small><h3>' + esc(g.name) + (S.won ? ' ✓' : '') + '</h3><p>' + esc(g.text) + '</p><div class="me-bar"><i style="width:' + dreamPct + '%"></i></div><span class="me-pct">' + dreamPct + '%</span></div>';
+    var owe = (S.loans || []).map(function (l, i) { return '<div class="me-loan"><div class="inline" style="justify-content:space-between"><span>' + esc(l.name) + '</span><span class="num">' + N(l.bal) + ' left' + (l.weeksLeft > 0 ? ' · ' + l.weeksLeft + ' weeks' : ' · overdue') + '</span></div><div class="me-bar thin"><i style="width:' + Math.max(4, Math.round(100 - l.bal / Math.max(l.bal, l.principal || l.bal) * 100)) + '%"></i></div><button class="btn sm go" id="me-repay-' + i + '" data-repay="' + i + '">Pay it all off</button></div>'; }).join('');
+    var origin = '<div class="section me-origin"><h3>' + esc(O.name) + '</h3><p class="note">' + esc(O.text) + '</p>' + (owe || '<p class="note">No debts. ' + (S.origin === 'lapo' ? 'Self-made hits different.' : 'Keep it that way.') + '</p>') + '</div>';
+    var qd = (D.QUESTS ? Object.keys(D.QUESTS).length : 0), qdone = S.quests ? Object.keys(S.quests).filter(function (k) { return S.quests[k] && S.quests[k].done; }).length : 0;
+    var hustle = '<button type="button" class="me-hustle" id="me-hustle" data-tab="phone" data-app="quests"><span class="me-gift">🎁</span><span><b>Today\'s hustle</b><small>' + (qd ? qdone + '/' + qd + ' missions · ' : '') + 'Quests, gems and the letter hunt</small></span><span class="chev">›</span></button>';
+    T.goals = hustle + dream + origin + T.goals;
+    // Needs: the bars with what each one means, and your health.
+    T.needs = '<div class="section">' + needsView() + (S.sick ? '<p class="why">🦟 You have ' + esc(S.sick.kind) + '. ' + (S.sick.drugs ? 'You are on drugs: rest and it will pass.' : 'Buy drugs at a chemist (Do tab) before it gets worse.') + '</p>' : '<p class="note">Healthy. Sleep under a net and keep light at home to dodge malaria.</p>') + '</div>';
+    // Career: your job now and where to look for more.
+    T.career = '<div class="section"><h3>💼 ' + (S.job ? esc(D.CAREERS[S.job.id] ? D.CAREERS[S.job.id].name : S.job.id) : 'No job yet') + '</h3><p class="note">' + (S.job ? esc(L.titledName(S)) + '. Shifts, promotions and pay are in the Careers app.' : 'Look for work in the Careers app, or start a hustle.') + '</p><div class="inline"><button class="btn sm go" id="me-jobs" data-tab="phone" data-app="jobs">Open Careers</button><button class="btn sm ghost" id="me-story" data-tab="phone" data-app="story">My story</button></div></div>';
+    var tabs = [['profile', '✏️ Profile'], ['needs', 'Needs'], ['goals', 'Goals'], ['skills', 'Skills'], ['people', 'People'], ['career', 'Career'], ['settings', '⚙️ Settings']], cur = ui.meTab && T[ui.meTab] != null ? ui.meTab : 'goals';
+    var head = '<div class="me-head"><canvas class="me-face" id="me-face" width="96" height="96" aria-hidden="true"></canvas><div><h2>' + esc(L.titledName(S)) + '</h2><small>' + esc(moodLine()) + ' · ' + esc(O.name) + ' · ' + esc(D.HOMES[S.home].name) + '</small></div></div>' +
+      '<div class="me-tabs" role="tablist">' + tabs.map(function (t) { return '<button type="button" role="tab" class="me-tab' + (t[0] === cur ? ' sel' : '') + '" id="metab-' + t[0] + '" data-metab="' + t[0] + '" aria-selected="' + (t[0] === cur) + '">' + t[1] + '</button>'; }).join('') + '</div>';
+    return '<div class="panel-h me-panel">' + head + '</div><div class="panel-b">' + T[cur] + '</div>';
+  }
+  // How you are doing, in a few words: mood from your needs, plus a sickness if you have one.
+  function moodLine() {
+    var n = S.needs, keys = Object.keys(n).filter(function (k) { return k !== 'stress'; }), avg = keys.reduce(function (a, k) { return a + n[k]; }, 0) / Math.max(1, keys.length) - (n.stress || 0) * 0.3;
+    var mood = avg >= 75 ? 'Feeling great' : avg >= 58 ? 'Good' : avg >= 42 ? 'Okay' : avg >= 28 ? 'Uneasy' : 'Struggling';
+    return mood + (S.sick ? ' · Sick (' + S.sick.kind + ')' : '');
   }
 
   /* ---------- my Lagos story: milestones and lifetime numbers ---------- */
@@ -3304,8 +3397,62 @@
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['home', '🏠', 'Home'], ['people', '👥', 'People'], ['jobs', '💼', 'Careers'], ['money', '💰', 'Money'], ['assets', '📊', 'Assets'], ['houses', '🏡', 'Houses'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe'], ['style', '🎨', 'Style shop']
+    ['gems', '💎', 'Gem hunt'], ['hunt', '🔤', 'Letter hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe'], ['style', '🎨', 'Style shop'],
+    ['news', '📰', 'News'], ['music', '🎧', 'Music'], ['calendar', '📅', 'Calendar'], ['courses', '🎓', 'Courses'], ['health', '🩺', 'Health'], ['ride', '🚕', 'Ride'], ['settings', '⚙️', 'Settings']
   ];
+  var NEW_APPS = { hunt: 1, news: 1, music: 1, calendar: 1, courses: 1, health: 1, ride: 1 };
+  var APPS_SEEN = 'lasgidi.appsseen.v1';
+  function appsSeen() { return readJSON(APPS_SEEN, {}); }
+  // The phone's "out now" banner: this week's letter hunt.
+  function huntBanner() {
+    var h = huntNow(), st = huntState();
+    return '<button type="button" class="ph-promo" id="ph-promo" data-app="hunt" style="--hc:' + h.color + '"><span class="ph-promo-l">' + esc(h.title.charAt(0)) + '</span><span><b>' + esc(h.title) + ' is out now</b><small>' + esc(h.artist) + ' · find the five letters</small></span><span class="ph-promo-b">Hunt ' + st.found.length + '/' + h.pieces.length + '</span></button>';
+  }
+  // News: what has happened to you lately and what is on this month.
+  function newsView() {
+    var items = S.log.slice(0, 14), m = L.monthIndex(S), fest = [];
+    Object.keys(D.FESTIVALS).forEach(function (pid) { D.FESTIVALS[pid].forEach(function (a) { if (S.rules >= 18 && a.when && a.when.months && a.when.months.indexOf(m) >= 0) fest.push(a.label + ' · ' + placeName(pid)); }); });
+    return '<div class="section"><h3>📰 News</h3>' + (fest.length ? '<div class="gist-hot"><b>🔥 On this month</b>' + fest.slice(0, 4).map(function (f) { return '<p>' + esc(f) + '</p>'; }).join('') + '</div>' : '') +
+      '<div class="list">' + items.map(function (l) { return '<div class="item gist-item"><div><h3>' + esc(l.text) + '</h3></div></div>'; }).join('') + '</div></div>';
+  }
+  // Music: the three in-game singles, made in your browser (sound must be on).
+  function musicView() {
+    var playing = window.LasgidiMusic && window.LasgidiMusic.playing(), h0 = huntNow();
+    return '<div class="section"><h3>🎧 Music</h3><p class="note">Original tracks made in your browser, nothing copied. Turn 🔊 sound on to listen.</p><div class="list">' + D.HUNTS.map(function (h) {
+      return '<div class="item"><div><h3>' + esc(h.title) + ' <span class="muted">· ' + esc(h.artist) + '</span></h3><div class="meta"><span>' + (h.style === 'highlife' ? 'Highlife' : 'Afrobeats') + '</span>' + (h.id === h0.id ? '<span>This week\'s letter hunt</span>' : '') + '</div></div><button class="btn sm go" id="music-' + h.id + '" data-musicplay="' + h.id + '">▶ Play</button></div>';
+    }).join('') + '</div>' + (playing ? '<p class="note">Now playing: ' + esc(playing) + '. <button class="btn sm ghost" id="music-stop" data-musicplay="stop">■ Stop</button></p>' : '') + '</div>';
+  }
+  // Calendar: festivals and dated events this month, at their places.
+  function calendarView() {
+    var m = L.monthIndex(S), rows = [];
+    var add = function (pid, a) { if (!a.when || (a.when.months && a.when.months.indexOf(m) < 0) || !(a.event || a.fest || a.dec)) return; rows.push({ a: a, where: pid }); };
+    Object.keys(D.PLACE_ACTIONS).forEach(function (d) { if (L.districtCity(d) !== L.cityOf(S)) return; D.PLACE_ACTIONS[d].forEach(function (a) { if (!a.retired) add(D.DISTRICTS[d].name, a); }); });
+    if (S.rules >= 18) Object.keys(D.FESTIVALS).forEach(function (pid) { D.FESTIVALS[pid].forEach(function (a) { add(placeName(pid), a); }); });
+    var wk = function (w) { var p = []; if (w.wk) p.push(w.wk.map(function (k) { return ['1st', '2nd', '3rd', 'last'][k]; }).join('/') + ' week'); if (w.days) p.push(w.days.map(function (d) { return D.DAYS[d]; }).join('/')); if (w.from != null) p.push(pad(w.from) + ':00–' + pad(w.to) + ':00'); return p.join(' · '); };
+    return '<div class="section"><h3>📅 ' + esc(D.MONTHS[m]) + ' in ' + esc(D.CITIES[L.cityOf(S)].name) + '</h3>' + (rows.length ? '<div class="list">' + rows.slice(0, 30).map(function (r) { return '<div class="item"><div><h3>' + esc(r.a.label) + '</h3><div class="meta"><span>' + esc(r.where) + '</span><span>' + esc(wk(r.a.when)) + '</span></div></div></div>'; }).join('') + '</div>' : '<p class="note">Nothing special this month. What\'s on has the weekly shows.</p>') + '</div>';
+  }
+  // A list of place acts matching a test, wherever they are in this city, with Do or Go there.
+  function actsApp(title, note, test) {
+    var here = L.availableActions(S), rows = [];
+    Object.keys(D.PLACE_ACTIONS).forEach(function (d) { if (L.districtCity(d) !== L.cityOf(S)) return; D.PLACE_ACTIONS[d].forEach(function (a) { if (!a.retired && test(a)) rows.push({ a: a, d: d }); }); });
+    return '<div class="section"><h3>' + title + '</h3><p class="note">' + esc(note) + '</p>' + (rows.length ? '<div class="list">' + rows.map(function (r) {
+      var av = here.filter(function (x) { return x.id === r.a.id; })[0];
+      return '<div class="item"><div><h3>' + esc(r.a.label) + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[r.d].name) + '</span>' + (r.a.cost ? '<span class="cost num">' + N(L.price(S, r.a.cost)) + '</span>' : '') + '</div></div>' +
+        (av ? '<button class="btn sm go" id="aa-' + r.a.id + '" data-act="' + r.a.id + '"' + (av.disabled ? ' disabled title="' + esc(av.disabled) + '"' : '') + '>Do</button>' : '<button class="btn sm ghost" id="aa-go-' + r.a.id + '" data-tripto="' + r.d + '" data-tab="map">Go there</button>') + '</div>';
+    }).join('') + '</div>' : '<p class="note">Nothing like that in this city.</p>') + '</div>';
+  }
+  function healthView() {
+    var sick = S.sick, n = S.needs;
+    return '<div class="section"><h3>🩺 Health</h3>' + (sick ? '<p class="why">🦟 You have ' + esc(sick.kind) + '. ' + (sick.drugs ? 'You are taking drugs: rest and it will pass.' : 'Buy drugs at a chemist before it gets worse.') + '</p>' : '<p class="note">No sickness right now. Light at home and a mosquito net keep malaria away.</p>') +
+      '<p class="note">Energy ' + Math.round(n.energy) + ' · belle ' + Math.round(n.hunger) + ' · hygiene ' + Math.round(n.hygiene) + ' · calm ' + Math.round(100 - (n.stress || 0)) + '. Health plans (HMO) are in Home → Health.</p></div>' +
+      actsApp('💊 Chemists and clinics', 'Where to get treated in this city.', function (a) { return /chemist|drug|clinic|hospital|doctor|malaria|check-?up|pharmac/i.test(a.label + ' ' + (a.special || '')); });
+  }
+  function rideView() {
+    var here = L.availableActions(S).filter(function (a) { return a.special === 'ridehail' || /ride-hail|ride hail|drive for/i.test(a.label); });
+    return '<div class="section"><h3>🚕 Ride</h3><p class="note">To go somewhere, pick a place on the map: its card shows every way to get there and the fare. With your own car you can also drive for a ride-hail app.</p>' +
+      (here.length ? '<div class="list">' + here.map(function (a) { return '<div class="item"><div><h3>' + esc(a.label) + '</h3><div class="meta"><span>' + esc(a.note || '') + '</span></div></div><button class="btn sm go" id="ride-' + a.id + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled title="' + esc(a.disabled) + '"' : '') + '>Drive</button></div>'; }).join('') + '</div>' : '<p class="note">Buy a car (Dealers) to drive for a ride-hail app.</p>') +
+      '<div class="inline"><button class="btn sm go" id="ride-map" data-tab="map">🗺️ Open the map</button><button class="btn sm ghost" id="ride-travel" data-app="travel">✈️ Other cities</button></div></div>';
+  }
   // Every festival, match and concert in every city, with when it is on.
   var GUIDE = [
     ['🧭', 'Survive the week', 'Eat, sleep and bathe, and keep stress down. Rent is due every Friday at noon. The advisor on the Do tab suggests your next move.', 'tab', 'do'],
@@ -3704,6 +3851,14 @@
       else if (app === 'bank') body = '<div class="panel-b">' + bankView() + '</div>';
       else if (app === 'dealers') body = '<div class="panel-b"><div class="section"><h3>Car dealers</h3>' + dealerView('Buy from the phone, or visit the Berger and Lekki dealers on the map.') + '</div></div>';
       else if (app === 'gems') body = '<div class="panel-b">' + gemCard() + '</div>';
+      else if (app === 'hunt') body = '<div class="panel-b">' + huntCard() + '</div>';
+      else if (app === 'news') body = '<div class="panel-b">' + newsView() + '</div>';
+      else if (app === 'music') body = '<div class="panel-b">' + musicView() + '</div>';
+      else if (app === 'calendar') body = '<div class="panel-b">' + calendarView() + '</div>';
+      else if (app === 'courses') body = '<div class="panel-b">' + actsApp('🎓 Courses', 'Learning in Lagos: enrol, lectures, exams and short courses. Go to the place to do it.', function (a) { return /enrol|lecture|ielts|course|class|lesson|exam|study|tutor/i.test((a.special || '') + ' ' + a.label); }) + '</div>';
+      else if (app === 'health') body = '<div class="panel-b">' + healthView() + '</div>';
+      else if (app === 'ride') body = '<div class="panel-b">' + rideView() + '</div>';
+      else if (app === 'settings') body = '<div class="panel-b">' + settingsView() + '</div>';
       else if (app === 'events') body = '<div class="panel-b">' + eventsView() + '</div>';
       else if (app === 'travel') body = '<div class="panel-b">' + citiesView() + '</div>';
       else if (app === 'fame') body = '<div class="panel-b">' + (fameView() || '<div class="section"><h3>Lagos Hall of Fame</h3><p class="note">The Hall of Fame is shared with everyone you share Lasgidi with. It works when the game is opened on claude.ai.</p></div>') + '</div>';
@@ -3729,9 +3884,9 @@
     return '<div class="phone-frame' + (h >= 19 || h < 6 ? ' night' : '') + '"><div class="ph-status"><span>' + pad(h) + ':' + pad(mins) + '</span><span class="ph-notch" aria-hidden="true"></span><span>' + net + ' ▮▮▮ ' + batt + '%</span></div>' +
       '<div class="ph-lock"><b>' + pad(h) + ':' + pad(mins) + '</b><span>' + esc(L.dateLabel ? L.dateLabel(S) : L.clockLabel(S)) + ' · ' + esc(D.CITIES[L.cityOf(S)].name) + '</span></div>' +
       (news.length ? '<div class="ph-news" aria-label="Latest news"><span class="ph-news-h">📰 Latest</span><div class="ph-ticker"><div>' + news.map(function (l) { return '<span>' + esc(l.text) + '</span>'; }).join('') + '</div></div></div>' : '') +
-      '<div class="apps ph-apps">' + APPS.filter(function (x) { return x[0] !== 'style' || online.shop; }).map(function (x, i) {
-      var n = badge[x[0]];
-      return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic" style="--a1:' + APP_TINTS[i % APP_TINTS.length][0] + ';--a2:' + APP_TINTS[i % APP_TINTS.length][1] + '">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';
+      huntBanner() + '<div class="apps ph-apps">' + APPS.filter(function (x) { return x[0] !== 'style' || online.shop; }).map(function (x, i) {
+      var n = badge[x[0]], fresh = NEW_APPS[x[0]] && !(appsSeen()[x[0]]);
+      return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic" style="--a1:' + APP_TINTS[i % APP_TINTS.length][0] + ';--a2:' + APP_TINTS[i % APP_TINTS.length][1] + '">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : fresh ? '<span class="badge new">NEW</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';
     }).join('') + '</div><div class="ph-home" aria-hidden="true"></div></div>';
   }
 
@@ -3914,7 +4069,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen]');
+    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -4028,7 +4183,7 @@
     if (ds.tripto) { ui.sel = ds.tripto; render(); return; }
     if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
-    if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
+    if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; if (ui.app && NEW_APPS[ui.app]) { var asn = appsSeen(); asn[ui.app] = 1; writeJSON(APPS_SEEN, asn); } render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
     if (ds.tour) { setTour(+ds.tour); render(); return; }
     if (ds.quest) { goQuest(ds.quest); return; }
     if (ds.hirestaff) { var hk = ds.hirestaff; run(function () { return L.hireStaff(S, hk); }); return; }
@@ -4256,6 +4411,23 @@
     if (ds.roomspot) { var rsp = ds.roomspot; if (S.room && S.room.spot === rsp) return; run(function () { return L.roomSpot(S, S.room.id, rsp); }); syncPresence(); return; }
     if (ds.mappop) { ui.mapPop = ui.mapPop === 'do' ? null : 'do'; if (ui.mapPop) { ui.place = null; ui.board = null; ui.homeSel = null; } render(); return; }
     if (ds.mappopclose) { ui.mapPop = null; ui.place = null; ui.board = null; ui.homeSel = null; render(); return; }
+    if (ds.musicplay) {
+      var Mu = window.LasgidiMusic; if (!Mu) return;
+      if (ds.musicplay === 'stop') { ui.huntListenUntil = 0; Mu.stop(); render(); return; }
+      if (!prefs.sound) { ui.toasts.push({ msg: 'Turn 🔊 sound on (top bar) to listen.', ok: false }); renderToasts(); return; }
+      var hh = D.HUNTS.filter(function (x) { return x.id === ds.musicplay; })[0]; if (!hh) return;
+      ui.musicTrack = hh.id; ui.huntListenUntil = Date.now() + 60000; Mu.play(ctx(), hh.style, {}); setTimeout(syncMusic, 60500);
+      ui.toasts.push({ msg: '🎧 ' + hh.title + ' by ' + hh.artist + '.', ok: true }); render(); return;
+    }
+    if (ds.metab) { ui.meTab = ds.metab; render(); return; }
+    if (ds.citymenu) { ui.cityMenu = !ui.cityMenu; ui.moreMenu = false; render(); return; }
+    if (ds.moremenu) { ui.moreMenu = !ui.moreMenu; ui.cityMenu = false; render(); return; }
+    if (ds.huntrow != null) { var hr = +ds.huntrow; ui.huntOpen = ui.huntOpen === hr ? -1 : hr; render(); return; }
+    if (ds.huntlisten) {
+      if (!prefs.sound) { ui.toasts.push({ msg: 'Turn 🔊 sound on (top bar) to listen.', ok: false }); renderToasts(); return; }
+      ui.huntListenUntil = Date.now() + 45000; syncMusic(); setTimeout(syncMusic, 45500);
+      ui.toasts.push({ msg: '🎧 Now playing ' + huntNow().title + ' by ' + huntNow().artist + ' (in the game).', ok: true }); renderToasts(); return;
+    }
     if (ds.copytext) { var ct = ds.copytext; try { navigator.clipboard.writeText(ct).then(function () { ui.toasts.push({ msg: 'Copied.', ok: true }); renderToasts(); }, function () {}); } catch (e) {} return; }
     if (ds.shopadult) { ui.shopAdult = !!t.checked; render(); return; }
     if (ds.shopbuy) { var sb = ds.shopbuy.split(':'); shopBuy(sb[0], sb[1]); return; }

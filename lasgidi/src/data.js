@@ -1603,6 +1603,53 @@
     nepo: { name: 'Nepo Baby', cash: 800000, home: 'lekki_studio', allowance: 25000, allowanceWeeks: 8, text: 'Daddy paid for a Lekki studio, put ₦800,000 in your account and sends ₦25,000 a week. For now.' }
   };
 
+  // Pulse Fitness & Pilates (fictional): seven branches around Lagos. Same rooms everywhere, but the Island
+  // costs more and Eko Atlantic the most. Their acts come in with rules 18 (BRANCH_ACTS, keyed by place).
+  var PULSE_BRANCHES = [
+    ['pulse_ikoyi', 'ikoyi', 20.7, 20.3, 1.8, 'Ikoyi'], ['pulse_vi', 'vi', 19.9, 25.9, 1.8, 'Victoria Island'], ['pulse_eko', 'vi', 17.7, 29.4, 2.5, 'Eko Atlantic'],
+    ['pulse_lekki', 'lekki', 27.5, 23.2, 1.8, 'Lekki'], ['pulse_ikeja', 'ikeja', 10.8, 4.7, 1, 'Ikeja'], ['pulse_yaba', 'yaba', 15.7, 14.4, 1, 'Yaba'], ['pulse_surulere', 'surulere', 10.7, 18.8, 1, 'Surulere']
+  ];
+  var BRANCH_ACTS = {};
+  function pulseActs(b) {
+    var id = b[0], f = b[4], c = function (v) { return Math.round(v * f / 100) * 100; };
+    return [
+      { id: id + '_weights', label: 'Weights session', mins: 60, cost: c(2500), fx: { energy: -12, stress: -6, hygiene: -10 }, xp: { fitness: 1 }, when: { from: 5, to: 23 } },
+      { id: id + '_tread', label: 'Run on the treadmills', mins: 45, cost: c(2000), fx: { energy: -10, stress: -5, hygiene: -8 }, xp: { fitness: 1 }, when: { from: 5, to: 23 } },
+      { id: id + '_pilates', label: 'Pilates class', mins: 60, cost: c(4000), fx: { energy: -8, stress: -10, hygiene: -6 }, xp: { fitness: 1 }, when: { from: 7, to: 20 } },
+      { id: id + '_yoga', label: 'Yoga studio session', mins: 60, cost: c(3500), fx: { stress: -12, energy: -4 }, when: { from: 6, to: 21 } },
+      { id: id + '_smoothie', label: 'Smoothie bar', mins: 15, cost: c(2500), fx: { hunger: 12, fun: 2 }, when: { from: 6, to: 22 } },
+      { id: id + '_shower', label: 'Showers and changing room', mins: 15, cost: c(500), fx: { hygiene: 28 }, when: { from: 5, to: 23 } },
+      { id: id + '_desk', label: 'Front-desk shift (sign members in)', mins: 240, earn: 2600, fx: { energy: -10 }, xp: { charisma: 1 }, gig: true, fest: true, when: { from: 6, to: 20 } }
+    ];
+  }
+  var PULSE_PLACES = PULSE_BRANCHES.map(function (b) { BRANCH_ACTS[b[0]] = pulseActs(b); return { id: b[0], icon: '🧘', name: 'Pulse Fitness & Pilates, ' + b[5], type: 'outdoors', glyph: 'dumbbell', district: b[1], x: b[2], y: b[3], acts: [], chain: 'pulse', tier: b[4], text: 'One of seven Pulse branches: weights, treadmills, a Pilates and yoga studio, a smoothie bar and showers.' + (b[4] > 2 ? ' Eko Atlantic prices.' : b[4] > 1 ? ' Island prices.' : ' Mainland prices.') }; });
+
+  // Letter hunts: a fictional headliner's new single, its letters hidden around Lagos. Solve a riddle, go there,
+  // catch the glowing letter in the walk-in. One hunt a real week, in turn. A badge only: no money, no game state.
+  PULSE_PLACES.forEach(function (p) { PLACES.push(p); });
+  var HUNTS = [
+    { id: 'blaze', title: 'BLAZE!', artist: 'Kayode Blaze', color: '#d0453a', style: 'afro', pieces: [
+      { ch: 'B', place: 'balogun', riddle: 'Where the whole Island haggles over every yard of ankara and lace. The first letter is folded in the fabric.' },
+      { ch: 'L', place: 'link_bridge', riddle: 'A bridge that links two rich shores across the lagoon. Walk out to the middle when the sun goes down.' },
+      { ch: 'A', place: 'theatre', riddle: 'A concrete general\'s cap in Iganmu, where plays and dancers have met since the festival of \'77.' },
+      { ch: 'Z', place: 'ojuelegba_park', riddle: 'The park where conductors shout the loudest and every danfo is full in a minute. Zigzag in.' },
+      { ch: 'E', place: 'eko_atlantic_city', riddle: 'A new city standing on sand taken back from the sea. The last letter waits on the boulevard.' }
+    ] },
+    { id: 'solar', title: 'SOLAR', artist: 'Amara Sol', color: '#f2a516', style: 'highlife', pieces: [
+      { ch: 'S', place: 'stadium', riddle: 'The old national arena in Surulere, where the whole country once held its breath for a penalty.' },
+      { ch: 'O', place: 'owambe_hall', riddle: 'Saturday jollof, aso-ebi and naira raining on the dance floor. The O is spinning in the spray.' },
+      { ch: 'L', place: 'freedom', riddle: 'Once a colonial prison, now a garden of music and poetry on the Island.' },
+      { ch: 'A', place: 'crafts', riddle: 'Carvings, beads and paintings piled high in Lekki. Look among the masks.' },
+      { ch: 'R', place: 'tbs', riddle: 'The square where the flag went up in 1960 and the parades still march.' }
+    ] },
+    { id: 'tides', title: 'TIDES', artist: 'DJ Tidewave', color: '#2f8fd0', style: 'afro', pieces: [
+      { ch: 'T', place: 'tejuosho', riddle: 'Yaba\'s market that was rebuilt in the sky: shoes, fabrics and phone cases on many floors.' },
+      { ch: 'I', place: 'ikoyi_park', riddle: 'A green, quiet corner where Ikoyi takes a slow walk under the trees.' },
+      { ch: 'D', place: 'palms', riddle: 'The big Lekki mall where December shopping starts and the cinema never sleeps.' },
+      { ch: 'E', place: 'eleko', riddle: 'A beach far east past Ajah, where the road ends and the Atlantic begins.' },
+      { ch: 'S', place: 'worship', riddle: 'A cathedral and a central mosque standing side by side on the Island.' }
+    ] }
+  ];
   // Festivals and big days (rules 18), keyed by place: they show at that place, and only in their month.
   // when.wk is the week of the (4-week) month, 0–3. Paid work here is small, once a day, and the prizes are capped.
   var FESTIVALS = {
@@ -1689,7 +1736,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, insideKind: insideKind
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;

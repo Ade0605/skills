@@ -889,9 +889,25 @@
         for (var rk = 0; rk < 3; rk++) { var rx = 6 + rk * 7; [-1.2, 1.2].forEach(function (s2) { galG.add(mesh(new T.BoxGeometry(0.3, 3.6, 0.3), mat('rack', { color: 0xc0392b, metalness: 0.5 }), rx + s2, 1.8, 6)); }); var bar = mesh(new T.CylinderGeometry(0.06, 0.06, 4, 8), mat('bar', { color: 0xc7ccd1, metalness: 0.9 }), rx, 2.4, 6); bar.rotation.z = Math.PI / 2; galG.add(bar); [-1.8, 1.8].forEach(function (s3) { var pl = mesh(new T.CylinderGeometry(0.7, 0.7, 0.2, 18), mat('plate', { color: 0x17181a }), rx + s3, 2.4, 6); pl.rotation.z = Math.PI / 2; galG.add(pl); }); }
         for (var db2 = 0; db2 < 10; db2++) galG.add(mesh(new T.CapsuleGeometry(0.15, 0.6, 4, 8).rotateZ(Math.PI / 2), mat('dumb', { color: 0x3a3f46, metalness: 0.6 }), -20 + db2 * 1.2, 0.8, -10));
         var mir = mesh(new T.BoxGeometry(RW - 4, 5, 0.1), mat('mirror', { color: 0xdfe8ee, metalness: 0.95, roughness: 0.04 }), 0, 3.5, -RD / 2 + 0.3); galG.add(mir);
+        if (/^pulse_/.test(sc.placeId || '')) { // a Pulse Fitness & Pilates branch: a studio, a smoothie bar, showers and the red sign
+          room.material.color.set(0xd9dbde); floor.material.color.set(0x22252b);
+          var mats = [0x8e44ad, 0x16a085, 0xe84393, 0x2f6fd0, 0xf39c12, 0x27ae60];
+          for (var mt = 0; mt < 6; mt++) galG.add(mesh(new T.BoxGeometry(2, 0.06, 4.4), mat('pmat' + mt, { color: mats[mt], roughness: 0.9 }), 14 + (mt % 3) * 3, 0.05, -12 + Math.floor(mt / 3) * 6));
+          galG.add(mesh(new T.BoxGeometry(12, 0.1, 14), mat('studio', { color: 0xc9a27a, roughness: 0.5 }), 17, 0.03, -9)); // the studio's wooden floor
+          for (var rf = 0; rf < 3; rf++) { var ref = new T.Group(); ref.position.set(-24, 0, -14 + rf * 5); ref.add(mesh(new T.BoxGeometry(2.4, 0.5, 4.6), mat('reformer', { color: 0xf4f3ec, roughness: 0.5 }), 0, 0.5, 0)); ref.add(mesh(new T.BoxGeometry(2.2, 0.15, 2), mat('rcar', { color: 0x2f6fd0 }), 0, 0.85, -0.6)); galG.add(ref); } // Pilates reformers
+          var bar2 = mesh(new T.BoxGeometry(3, 2.2, 12), mat('smoothie', { color: 0x16a34a, roughness: 0.4 }), -RW / 2 + 5, 1.1, 10); galG.add(bar2);
+          galG.add(mesh(new T.BoxGeometry(3.4, 0.2, 12.4), mat('smoothieTop', { color: 0xf4f3ec, roughness: 0.3 }), -RW / 2 + 5, 2.3, 10));
+          for (var st2 = 0; st2 < 4; st2++) galG.add(mesh(new T.CylinderGeometry(0.5, 0.5, 0.2, 14), mat('stool', { color: 0x17181a }), -RW / 2 + 7.6, 1.6, 6 + st2 * 2.6));
+          for (var cup = 0; cup < 5; cup++) galG.add(mesh(new T.CylinderGeometry(0.22, 0.16, 0.6, 10), mat('cup' + (cup % 3), { color: [0xff8fab, 0xffd166, 0x95d5b2][cup % 3] }), -RW / 2 + 4.6, 2.7, 6 + cup * 2));
+          var shw = new T.MeshStandardMaterial({ color: 0xcfe8f2, transparent: true, opacity: 0.35, roughness: 0.05 });
+          for (var sh2 = 0; sh2 < 3; sh2++) { galG.add(mesh(new T.BoxGeometry(4, 6, 0.1), shw, -RW / 2 + 5 + sh2 * 4.4, 3, RD / 2 - 8)); galG.add(mesh(new T.BoxGeometry(0.1, 6, 4), shw, -RW / 2 + 3 + sh2 * 4.4, 3, RD / 2 - 6)); }
+          var pt = canvasTex(512, 128, function (g, w, h) { g.fillStyle = '#d0453a'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 72px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('PULSE', w / 2, h / 2 + 4); });
+          var ps = new T.Mesh(new T.PlaneGeometry(10, 2.5), new T.MeshBasicMaterial({ map: pt })); ps.position.set(14, RH - 2.4, -RD / 2 + 0.4); galG.add(ps);
+          for (var pl2 = 0; pl2 < 3; pl2++) { galG.add(mesh(new T.CylinderGeometry(0.7, 0.55, 1.2, 12), mat('pot', { color: 0xd8c3a5 }), RW / 2 - 4, 0.6, -16 + pl2 * 14)); galG.add(mesh(new T.ConeGeometry(0.9, 2.6, 7), mat('leaf', { color: 0x2f8f4a }), RW / 2 - 4, 2.4, -16 + pl2 * 14)); } // potted plants
+        }
       } else {
         // A mall atrium: shopfronts on two levels, a gallery walkway, an escalator and the cinema's NOW SHOWING screen.
-        var SHOPS = ['SHOPRITE', 'FASHION HUB', 'PHONES & MORE', 'CHICKEN REPUBLIC', 'BOOKS', 'GAMES', 'BEAUTY', 'SPORTS'];
+        var SHOPS = ['SAVEMART', 'FASHION HUB', 'PHONES & MORE', 'CRISPY CHICK', 'BOOKS', 'GAMES', 'BEAUTY', 'SPORTS'];
         [-1, 1].forEach(function (sd) { for (var sh = 0; sh < 4; sh++) [0, 1].forEach(function (lv) { var z = -15 + sh * 10, y = lv * 8, n2 = SHOPS[(sh * 2 + lv + (sd > 0 ? 3 : 0)) % SHOPS.length]; galG.add(mesh(new T.BoxGeometry(0.2, 5, 8), glassM, sd * (RW / 2 - 6), y + 2.6, z)); var sgm = new T.MeshStandardMaterial({ map: signTex(n2, null, ['#c0392b', '#1f5fa0', '#17181a', '#d4af37'][sh % 4]), emissive: 0xffffff, emissiveIntensity: 0.15 }); sgm.emissiveMap = sgm.map; var sg2 = new T.Mesh(new T.PlaneGeometry(7, 1.3), sgm); sg2.position.set(sd * (RW / 2 - 5.8), y + 5.8, z); sg2.rotation.y = -sd * Math.PI / 2; galG.add(sg2); }); });
         [-1, 1].forEach(function (sd) { galG.add(mesh(new T.BoxGeometry(6, 0.4, RD), mat('gallery2', { color: 0xf4f3ec }), sd * (RW / 2 - 3), 8, 0)); galG.add(mesh(new T.BoxGeometry(0.1, 1.1, RD), mat('rail', { color: 0xbfd7e0, transparent: true, opacity: 0.45 }), sd * (RW / 2 - 6), 8.75, 0)); });
         var esc = mesh(new T.BoxGeometry(3, 0.6, 16), mat('escal', { color: 0xc7ccd1, metalness: 0.7 }), -8, 4, 2); esc.rotation.x = -Math.atan2(8, 16); galG.add(esc);
@@ -956,6 +972,17 @@
       outer.userData.legs = f.userData.legs; outer.userData.axis = 'x'; outer.userData.key = JSON.stringify([d.look, d.outfit, d.extra]); return outer;
     }
     function lookKey(d) { return d && d.look ? JSON.stringify([d.look, d.outfit, d.extra]) : ''; }
+    // The letter hunt: today's letter glows here when you have its riddle; tap it (or walk into it) to catch it.
+    var letter = null, letterKey = '';
+    function syncLetter() {
+      var L0 = sc.letter, k = L0 ? L0.ch + L0.color : '';
+      if (k !== letterKey) { letterKey = k; if (letter) { world.remove(letter); wipe(letter); letter = null; }
+        if (L0) { letter = new T.Group(); var lt = canvasTex(256, 256, function (g, w, h) { g.fillStyle = L0.color; g.fillRect(0, 0, w, h); g.fillStyle = '#ffffff'; g.font = '900 210px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(L0.ch, w / 2, h / 2 + 12); });
+          var face = new T.MeshStandardMaterial({ map: lt, emissive: 0xffffff, emissiveMap: lt, emissiveIntensity: 0.9, roughness: 0.3 }), side = new T.MeshStandardMaterial({ color: L0.color, emissive: L0.color, emissiveIntensity: 0.6 });
+          var bx = new T.Mesh(new T.BoxGeometry(2, 2, 0.35), [side, side, side, side, face, face]); bx.castShadow = true; letter.add(bx);
+          var glow = new T.PointLight(L0.color, 30, 12, 1.6); glow.position.y = 0.5; letter.add(glow); letter.traverse(function (o) { o.userData.letter = true; }); world.add(letter); }
+      }
+    }
     function syncPeople() {
       var list = sc.people || [];
       while (crowd.length < list.length) { var p = avatarFor(list[crowd.length], crowd.length); world.add(p); crowd.push(p); }
@@ -1001,7 +1028,8 @@
     function tap(e) {
       var r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam);
       var sh = ray.intersectObjects(signs.filter(function (s) { return s.visible; }), false)[0]; if (sh && opts.onAct) { if (WK.on && me) { walkTo(sh.object.userData.act); return; } opts.onAct(sh.object.userData.act); return; }
-      var hit = ray.intersectObjects(world.children, true).filter(function (h) { return h.object.userData.gem || h.object.userData.person != null; })[0];
+      var hit = ray.intersectObjects(world.children, true).filter(function (h) { return h.object.userData.gem || h.object.userData.letter || h.object.userData.person != null; })[0];
+      if (hit && hit.object.userData.letter) { if (opts.onLetter) opts.onLetter(); return; }
       if (!hit) { if (WK.on && me) { var gp = new T.Vector3(); if (ray.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), -groundY(WK.x, WK.z)), gp)) { WK.tx = gp.x; WK.tz = gp.z; WK.act = null; } } return; } if (hit.object.userData.gem) { if (opts.onGem && sc.gem) opts.onGem(sc.gem.n); return; }
       var d = (sc.people || [])[hit.object.userData.person]; if (d) { if (d.npc && opts.onNpc) opts.onNpc(d.npc); if (!bubble) { bubble = sprite('', '#fff', '#17181a', 9); world.add(bubble); } label(bubble, (d.label + ': ' + (d.line || '')).slice(0, 48), '#ffffff', '#17181a'); bubble.position.copy(crowd[hit.object.userData.person].position).add(new T.Vector3(0, 3.2, 0)); bubble.visible = true; bubbleAt = performance.now(); }
     }
@@ -1166,6 +1194,7 @@
       var wdt = Math.min(0.25, Math.max(0, (now - (WK.last || now)) / 1000)); WK.last = now;
       if (me && sc.me && WK.on) { walkFrame(wdt, t); label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(WK.x, me.position.y + 2.7, WK.z); }
       else if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); if (me.userData.axis) me.rotation.y = Math.PI / 2; label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
+      if (letter && sc.letter) { var lq = SP()[sc.letter.slot % SP().length], lx = lq[0] + 2.8, lz = lq[1] + 1.5; letter.position.set(lx, groundY(lx, lz) + 3.4 + (reduce ? 0 : Math.sin(t * 2) * 0.3), lz); letter.scale.setScalar(1.7); letter.rotation.y = reduce ? 0.4 : t * 0.9; if (WK.on && me && Math.hypot(WK.x - lx, WK.z - lz) < 2.4 && !letter.userData.caught) { letter.userData.caught = true; if (opts.onLetter) opts.onLetter(); } }
       if (gem && sc.gem) { var gq = SP()[sc.gem.slot % SP().length]; gem.position.set(gq[0] - 2.5, groundY(gq[0] - 2.5, gq[1] + 2) + 1.2 + Math.sin(t * 2) * 0.25, gq[1] + 2); gem.rotation.y = t * 1.5; }
       strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STR ? -2 + (i % 3) * 0.5 : GAL ? -16 + (i % 3) * 1.2 : PLZ ? -34 + (i % 3) * 1.2 : PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation[p.userData.axis || 'z'] = a; p.userData.legs[1].rotation[p.userData.axis || 'z'] = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
@@ -1177,12 +1206,13 @@
     }
     return {
       el: el, canvas: cv, is3d: true,
-      update: function (next) { sc = next || sc; build(); seasonal(); syncSigns(); syncPeople(); if (WK.reset && me) { WK.reset = false; walkStart(); WK.near = -2; } cv.setAttribute('aria-label', (sc.name || 'The beach') + ' in 3D. Drag to look around, tap a sign to do it.'); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
+      update: function (next) { sc = next || sc; build(); seasonal(); syncSigns(); syncPeople(); syncLetter(); if (WK.reset && me) { WK.reset = false; walkStart(); WK.near = -2; } cv.setAttribute('aria-label', (sc.name || 'The beach') + ' in 3D. Drag to look around, tap a sign to do it.'); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
       start: function () { if (!raf) raf = root.requestAnimationFrame(frame); },
       stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; },
       walk: function () { return { on: WK.on, x: WK.x, z: WK.z, near: WK.near, greeted: WK.greeted || 0 }; },
+      letterAt: function () { return letter ? { x: letter.position.x, z: letter.position.z } : null; }, // for tests
       peopleAt: function () { return crowd.map(function (p, i) { var d = (sc.people || [])[i]; return p.visible && d ? { x: p.position.x, z: p.position.z, line: !!d.line } : null; }); }, // for tests
-      screenOf: function (x, z) { var v = new T.Vector3(x, groundY(x, z), z).project(cam), r = cv.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }, // for tests
+      screenOf: function (x, z, dy) { var v = new T.Vector3(x, groundY(x, z) + (dy || 0), z).project(cam), r = cv.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }, // for tests
     };
   }
   root.LasgidiBeach3D = { create: create };

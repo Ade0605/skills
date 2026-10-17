@@ -194,7 +194,7 @@
 
   // Spending and income categories for the weekly report.
   var FOOD_LABELS = {}, GIG_LABELS = {};
-  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; })).forEach(function (list) {
+  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; }), Object.keys(D.BRANCH_ACTS).map(function (k) { return D.BRANCH_ACTS[k]; })).forEach(function (list) {
     list.forEach(function (a) {
       if ((a.fx && a.fx.hunger > 0) || a.special === 'pantry7') FOOD_LABELS[a.label] = true;
       if (a.gig) GIG_LABELS[a.label] = true;
@@ -714,7 +714,7 @@
   // Festival acts (rules 18) at the places in a district, shown only in their month.
   var FEST_AT = {};
   function festivalActions(s) {
-    var d = s.loc, all = FEST_AT[d] || (FEST_AT[d] = D.PLACES.filter(function (p) { return p.district === d && D.FESTIVALS[p.id]; }).reduce(function (o, p) { return o.concat(D.FESTIVALS[p.id]); }, [])), m = monthIndex(s);
+    var d = s.loc, all = FEST_AT[d] || (FEST_AT[d] = D.PLACES.filter(function (p) { return p.district === d && (D.FESTIVALS[p.id] || D.BRANCH_ACTS[p.id]); }).reduce(function (o, p) { return o.concat(D.FESTIVALS[p.id] || [], D.BRANCH_ACTS[p.id] || []); }, [])), m = monthIndex(s); // and the Pulse gym branches' acts
     return all.filter(function (a) { return !a.when || !a.when.months || a.when.months.indexOf(m) >= 0; });
   }
   // retired actions are hidden from players but still run, so lives that used them replay.
@@ -4698,7 +4698,7 @@
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
-    monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins,
+    monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins, traffic: traffic,
     buyItem: recorded('bi', buyItem), placeItem: recorded('pi', placeItem), storeItem: recorded('si', storeItem), sellItem: recorded('xi', sellItem),
     setLook: recorded('lk', setLook), buyClothes: recorded('bc2', buyClothes), wear: recorded('wr', wear), takeOff: recorded('to', takeOff), outfitTags: outfitTags,
     buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle), driveVehicle: recorded('dv', driveVehicle), vehicleUpkeep: vehicleUpkeep,

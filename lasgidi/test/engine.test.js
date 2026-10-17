@@ -2597,3 +2597,11 @@ test('rules 18: a rules-17 life can never do a festival act, even in season and 
   assert.equal(r.ok, false); assert.equal(old.ledgerHash, before);
   old.loc = 'vi'; atMonth(old, 10, 0, 0, 11); assert.equal(L.doAction(old, 'fest_style_casting').ok, false);
 });
+test('rules 18: Pulse gym branches cost more on the Island and most at Eko Atlantic; older lives never see them', () => {
+  const B = D.BRANCH_ACTS, cost = id => B[id].find(a => /_pilates$/.test(a.id)).cost;
+  assert.equal(Object.keys(B).length, 7);
+  assert.ok(cost('pulse_yaba') < cost('pulse_ikoyi') && cost('pulse_ikoyi') < cost('pulse_eko'));
+  for (const list of Object.values(B)) for (const a of list) { assert.ok(a.mins % 15 === 0, a.id); if (a.earn) assert.ok(a.gig && a.fest && a.earn <= 4000, a.id); }
+  const old = L.newGame({ seed: 85, origin: 'nepo', goal: 'freestyle', rules: 17 }); old.loc = 'vi';
+  assert.ok(!L.availableActions(old).some(a => /^pulse_/.test(a.id)));
+});
