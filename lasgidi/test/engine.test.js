@@ -2683,3 +2683,18 @@ test('rules 19: club radio slots are paid in game naira, 1 to 10 at a time; rule
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
   const old = L.newGame({ seed: 1501, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (old.pending.length) L.resolveChoice(old, 0); assert.equal(L.radioBook(old, 1).ok, false);
 });
+test('rules 19: every casino game pays back less than it takes, once a day each; high roller needs ₦50m', () => {
+  for (const [id, n] of [['casino_slots', 400], ['casino_roulette', 300], ['casino_blackjack', 300]]) {
+    let spent = 0, won = 0;
+    const s = L.newGame({ seed: 2000, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+    for (let i = 0; i < n; i++) {
+      s.loc = 'vi'; s.t = s.t - (s.t % 1440) + 1440 + 22 * 60; s.needs.energy = 100; s.needs.hunger = 80; s.cash = 1e7; s.pending = []; s.over = false;
+      const a = L.availableActions(s).find(x => x.id === id); assert.ok(a && !a.disabled, id + ' ' + (a && a.disabled));
+      const c0 = s.cash + s.bank, r = L.doAction(s, id); assert.ok(r.ok, r.msg); const d = s.cash + s.bank - c0; spent += a.cost; won += d + a.cost;
+      if (i === 0) assert.match(L.availableActions(s).find(x => x.id === id).disabled || '', /Once a day/);
+    }
+    assert.ok(won < spent, id + ' returns ' + won + ' of ' + spent);
+  }
+  const s = L.newGame({ seed: 2999, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.loc = 'vi'; s.t = s.t - (s.t % 1440) + 1440 + 22 * 60;
+  assert.match(L.availableActions(s).find(x => x.id === 'casino_highroller').disabled || '', /High rollers|Costs/);
+});

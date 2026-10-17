@@ -1688,6 +1688,50 @@
       { id: id + '_porter', label: 'Porter shift (push trolleys, run errands)', mins: 240, earn: 2400, fx: { energy: -12, hygiene: -6 }, xp: { fitness: 1 }, gig: true, fest: true, when: { from: 7, to: 19 } }
     ];
   });
+  // Rules 19: the High Court, a city library, a grand hotel, a casino (the house always wins over time) and an office tower.
+  CIVIC_PLACES.push(
+    { id: 'high_court', icon: '⚖️', name: 'Lagos High Court, Island', type: 'services', glyph: 'gavel', district: 'island', x: 16.3, y: 22.3, acts: [], civic: 'court', text: 'The judge\'s bench, the dock, the witness box, lawyers in wigs and a public gallery. Court is in session from 9.' },
+    { id: 'city_library', icon: '📚', name: 'Lagos City Library, Yaba', type: 'learn', glyph: 'book', district: 'yaba', x: 15.0, y: 15.3, acts: [], civic: 'library', text: 'Rows of shelves, reading tables, a computer room and a strict librarian.' },
+    { id: 'grand_hotel', icon: '🏨', name: 'Marina Grand Hotel, Victoria Island', type: 'nightlife', glyph: 'hotel', district: 'vi', x: 19.5, y: 25.4, acts: [], civic: 'hotel', text: 'A marble lobby, a chandelier, the pool atrium, the spa and the buffet. Rooms by the night.' },
+    { id: 'lagoon_casino', icon: '🎰', name: 'Lagoon Casino, Victoria Island', type: 'nightlife', glyph: 'dice', district: 'vi', x: 18.5, y: 24.9, acts: [], civic: 'casino', text: 'Slots, roulette and blackjack under a gold dome. 18 and over. The house always wins in the end.' },
+    { id: 'office_tower', icon: '🏢', name: 'Marina Office Towers, Island', type: 'services', glyph: 'tower', district: 'island', x: 15.5, y: 23.4, acts: [], civic: 'office', text: 'Glass towers on the Marina: a co-working floor, meeting rooms and the building\'s canteen.' }
+  );
+  CIVIC_ACTS.high_court = [
+    { id: 'court_gallery', label: 'Watch a case from the public gallery', mins: 90, fx: { fun: 6, stress: 2 }, when: { days: [0, 1, 2, 3, 4], from: 9, to: 16 } },
+    { id: 'court_affidavit', label: 'Swear an affidavit at the registry', mins: 45, cost: 1500, fx: { stress: 3 }, when: { days: [0, 1, 2, 3, 4], from: 8, to: 15 } },
+    { id: 'court_lawyer', label: 'Pay a lawyer for an hour of advice', mins: 60, cost: 25000, fx: { stress: -8 }, xp: { charisma: 1 }, when: { days: [0, 1, 2, 3, 4], from: 9, to: 17 } },
+    { id: 'court_bench', label: 'Sit on the corridor bench and wait for your matter', mins: 120, fx: { stress: 6, energy: -4 }, when: { days: [0, 1, 2, 3, 4], from: 8, to: 16 } },
+    { id: 'court_errands', label: 'Run errands for the court clerks', mins: 180, earn: 1800, fx: { energy: -8 }, gig: true, fest: true, when: { days: [0, 1, 2, 3, 4], from: 8, to: 16 } }
+  ];
+  CIVIC_ACTS.city_library = [
+    { id: 'lib_read', label: 'Read at a quiet table', mins: 90, fx: { stress: -5, energy: -4 }, xp: { tech: 1 }, when: { from: 8, to: 20 } },
+    { id: 'lib_borrow', label: 'Borrow two books (library card)', mins: 15, cost: 300, fx: { fun: 3 }, when: { from: 8, to: 20 } },
+    { id: 'lib_pc', label: 'An hour in the computer room', mins: 60, cost: 500, fx: { energy: -3 }, xp: { tech: 1 }, when: { from: 8, to: 20 } },
+    { id: 'lib_exam', label: 'Study for an exam in the reading room', mins: 180, fx: { energy: -12, stress: 4 }, xp: { tech: 1 }, when: { from: 8, to: 20 } },
+    { id: 'lib_story', label: 'Read stories to the children (Saturday)', mins: 120, earn: 1500, fx: { social: 8, energy: -5 }, xp: { charisma: 1 }, gig: true, fest: true, when: { days: [5], from: 10, to: 14 } }
+  ];
+  CIVIC_ACTS.grand_hotel = [
+    { id: 'hotel_coffee', label: 'Coffee and croissant in the lobby', mins: 30, cost: 6000, fx: { hunger: 10, fun: 4 }, when: { from: 6, to: 23 } },
+    { id: 'hotel_buffet', label: 'The Sunday buffet', mins: 90, cost: 28000, fx: { hunger: 60, fun: 15, social: 8 }, when: { days: [6], from: 11, to: 16 } },
+    { id: 'hotel_pool', label: 'Pool day pass in the atrium', mins: 180, cost: 15000, fx: { fun: 18, stress: -14, hygiene: 6 }, when: { from: 8, to: 19 } },
+    { id: 'hotel_spa', label: 'Massage at the spa', mins: 90, cost: 45000, fx: { stress: -30, energy: 10 }, when: { from: 9, to: 21 } },
+    { id: 'hotel_night', label: 'Book a room for the night (sleep in luxury)', mins: 480, cost: 130000, fx: { energy: 70, hygiene: 40, stress: -25 }, when: { from: 20, to: 24 } },
+    { id: 'hotel_bell', label: 'Bellhop shift (bags, doors, smiles)', mins: 240, earn: 2600, fx: { energy: -12 }, xp: { charisma: 1 }, gig: true, fest: true, when: { from: 7, to: 22 } }
+  ];
+  CIVIC_ACTS.lagoon_casino = [
+    { id: 'casino_slots', label: 'Slot machines (₦5,000 a pull)', mins: 15, cost: 5000, fx: { fun: 6, stress: 2 }, special: 'slots', fest: true, when: { from: 12, to: 24 } },
+    { id: 'casino_roulette', label: 'Roulette: ₦20,000 on red', mins: 15, cost: 20000, fx: { fun: 8, stress: 4 }, special: 'roulette', fest: true, when: { from: 18, to: 24 } },
+    { id: 'casino_blackjack', label: 'Blackjack: a ₦20,000 hand', mins: 15, cost: 20000, fx: { fun: 8, stress: 4 }, special: 'blackjack', fest: true, when: { from: 18, to: 24 } },
+    { id: 'casino_highroller', label: 'The high-roller table: ₦2m on one spin', mins: 30, cost: 2000000, fx: { fun: 20, stress: 15 }, special: 'highroller', fest: true, when: { from: 21, to: 24 } },
+    { id: 'casino_bar', label: 'Cocktail at the casino bar', mins: 15, cost: 8000, fx: { fun: 6 }, when: { from: 12, to: 24 } }
+  ];
+  CIVIC_ACTS.office_tower = [
+    { id: 'office_cowork', label: 'Co-working day pass', mins: 240, cost: 8000, fx: { energy: -10, stress: 3 }, xp: { tech: 1 }, when: { days: [0, 1, 2, 3, 4], from: 8, to: 18 } },
+    { id: 'office_network', label: 'After-work networking drinks', mins: 120, cost: 6000, fx: { social: 15, fun: 6 }, xp: { charisma: 1 }, when: { days: [3], from: 17, to: 21 } },
+    { id: 'office_canteen', label: 'Lunch at the building canteen', mins: 30, cost: 2500, fx: { hunger: 30 }, when: { from: 11, to: 15 } },
+    { id: 'office_view', label: 'Take the lift to the sky lobby view', mins: 30, fx: { fun: 6, stress: -3 }, when: { from: 8, to: 19 } },
+    { id: 'office_clean', label: 'Evening cleaning shift', mins: 240, earn: 2400, fx: { energy: -14, hygiene: -8 }, gig: true, fest: true, when: { from: 17, to: 23 } }
+  ];
   CIVIC_PLACES.forEach(function (p) { PLACES.push(p); });
   // Rules 19: the Lagoon party boat moored at the island jetties.
   ['cms', 'lagoon_cruise', 'lagoon_jetty'].forEach(function (pid) {
@@ -1843,7 +1887,7 @@
     estate:    [{ label: 'Stroll the boulevard', mins: 30, fx: { stress: -5 } }, { label: 'Look round the show home', mins: 45, fx: { fun: 5 } }, { label: 'Sit by the lagoon', mins: 30, fx: { stress: -6 } }],
     refinery:  [{ label: 'Take the visitors\' tour', mins: 60, fx: { fun: 5, energy: -4 }, xp: { craft: 1 } }, { label: 'Eat at the canteen', mins: 30, cost: 1500, fx: { hunger: 28 } }, { label: 'Read the safety boards', mins: 15, fx: { stress: 1 } }]
   };
-  var INSIDE_BY_GLYPH = { bowl: 'eatery', basket: 'market', film: 'cinema', mask: 'culture', frame: 'culture', note: 'music', tree: 'park', cap: 'campus', phone: 'tech', laptop: 'tech', tool: 'workshop', car: 'dealer', plane: 'airport', boat: 'jetty', yacht: 'jetty', bus: 'motorpark', scissors: 'salon', ball: 'stadium', stadium: 'stadium', cross: 'hospital', mosque: 'mosque', hall: 'church', naira: 'bank', dumbbell: 'gym', badge: 'police', ballot: 'polling', glass: 'lounge', club: 'lounge', wave: 'beach', umbrella: 'beach', estate: 'estate' };
+  var INSIDE_BY_GLYPH = { bowl: 'eatery', basket: 'market', film: 'cinema', mask: 'culture', frame: 'culture', note: 'music', tree: 'park', cap: 'campus', phone: 'tech', laptop: 'tech', tool: 'workshop', car: 'dealer', plane: 'airport', boat: 'jetty', yacht: 'jetty', bus: 'motorpark', scissors: 'salon', ball: 'stadium', stadium: 'stadium', cross: 'hospital', mosque: 'mosque', hall: 'church', naira: 'bank', dumbbell: 'gym', badge: 'police', ballot: 'polling', gavel: 'court', book: 'library', hotel: 'hotel', dice: 'casino', tower: 'office', glass: 'lounge', club: 'lounge', wave: 'beach', umbrella: 'beach', estate: 'estate' };
   function insideKind(pl) {
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
     if (pl.glyph === 'dome') return pl.type === 'services' ? 'church' : 'govt';

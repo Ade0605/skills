@@ -840,6 +840,7 @@
     if (a.special === 'casecheck' && !openCase(s)) return 'You have no open case';
     if (a.special === 'mobilise') { var oc = openCase(s); if (!oc) return 'You have no open case'; if (oc.mob) return 'You already "mobilised" for this case'; }
     if (a.special === 'accredit' && s.accredited === week(s)) return 'Accredited already this week';
+    if (a.special === 'highroller' && netWorth(s) < price(s, 50000000)) return 'High rollers only: net worth of ' + naira(price(s, 50000000));
     if (a.special === 'shutdown' && s.shutdownWeek === week(s)) return 'Once a week: the club needs to restock';
     if (s.rules >= 16 && (a.minigame === 'bole' || a.minigame === 'hawk' || a.minigame === 'danfo') && dayCount(s, 'm:' + a.minigame) >= 2) return 'Two runs a day: rest and come back tomorrow';
     switch (a.special) {
@@ -1004,6 +1005,15 @@
       }
       return '"We have a lead." The case is still open.';
     },
+    // The casino (rules 19): every game pays back less than it takes on average, and each is once a day.
+    slots: function (s) {
+      var x = rand(s), w = x < 0.002 ? price(s, 500000) : x < 0.03 ? price(s, 50000) : x < 0.15 ? price(s, 10000) : 0;
+      if (w) { earn(s, w, 'Casino winnings: slots'); return w >= price(s, 500000) ? '🎰 JACKPOT! ' + naira(w) + '! Bells, lights and a crowd round your machine.' : '🎰 Three in a row: ' + naira(w) + '.'; }
+      return '🎰 Cherry, bell, lemon. Nothing.';
+    },
+    roulette: function (s) { var n = Math.floor(rand(s) * 37), red = n > 0 && [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36].indexOf(n) >= 0; if (red) { var w = price(s, 40000); earn(s, w, 'Casino winnings: roulette'); return '🔴 ' + n + ' red! You doubled up: ' + naira(w) + ' back.'; } return (n === 0 ? '🟢 Zero. ' : '⚫ ' + n + ' black. ') + 'The croupier sweeps your chips away.'; },
+    blackjack: function (s) { var x = rand(s); if (x < 0.42) { var w = price(s, 40000); earn(s, w, 'Casino winnings: blackjack'); return '🃏 Twenty-one beats the dealer\'s nineteen. ' + naira(w) + ' back.'; } if (x < 0.5) { var b = price(s, 20000); earn(s, b, 'Casino: blackjack push'); return '🃏 A push: you both have 18. Your stake back.'; } return '🃏 Bust on 23. The dealer takes it.'; },
+    highroller: function (s) { if (rand(s) < 0.47) { var w = price(s, 4000000); earn(s, w, 'Casino winnings: high-roller table'); log(s, '🎰 You won ' + naira(w) + ' at the high-roller table.', 'good'); return '💎 The ball lands on your number. ' + naira(w) + '!'; } return '💎 One spin, ₦2m gone. The host offers you a free drink.'; },
     bottle: function (s) { return '🍾 The bottle came out with sparklers, a parade of bottle girls and the DJ calling your name.' + glamBonus(s); },
     vip: function (s) { return '🛋️ Your own booth, your own bottles, your own security. The whole room looked over.' + glamBonus(s); },
     rain: function (s) { s.stats.rained = (s.stats.rained || 0) + 1; return '💸 You made it rain. ₦1000 notes everywhere, and the hype man would not stop shouting your name.' + glamBonus(s); },

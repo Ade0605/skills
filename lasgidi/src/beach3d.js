@@ -1070,6 +1070,7 @@
         if (moving && s.d > 0.01) f.g.rotation.y = Math.atan2(-(s.b[1] - s.a[1]), s.b[0] - s.a[0]);
         var lg = f.g.userData.legs, sw = moving && !reduce ? Math.sin(t * 7 + i) * 0.45 : 0; if (lg) { lg[0].rotation[f.g.userData.axis || 'z'] = sw; lg[1].rotation[f.g.userData.axis || 'z'] = -sw; }
       });
+      if (GL.wheel && !reduce) GL.wheel.rotation.y = t * 2.2; if (GL.slots) GL.slots.forEach(function (m, k) { m.color.setHSL(((t * 0.4 + k * 0.13) % 1), 0.9, 0.55); });
       var B = GL.board; if (B) { var k = JSON.stringify(sc.board || null); if (k !== B.key) { B.key = k; var c = B.tex.image, g = c.getContext('2d'); drawBoard(g, c.width, c.height, sc.board, B.kind); B.tex.needsUpdate = true; } }
     }
     function drawBoard(g, w, h, bd, kind) {
@@ -1091,15 +1092,67 @@
     function chair(x, z, ry, col) { var c = new T.Group(); c.position.set(x, 0, z); c.rotation.y = ry || 0; var m = mat('chair' + col, { color: col, roughness: 0.5 }); c.add(mesh(new T.BoxGeometry(1, 0.12, 1), m, 0, 0.9, 0)); c.add(mesh(new T.BoxGeometry(1, 1.1, 0.12), m, 0, 1.45, -0.45)); [[-0.42, -0.42], [0.42, -0.42], [-0.42, 0.42], [0.42, 0.42]].forEach(function (q) { c.add(mesh(new T.BoxGeometry(0.08, 0.9, 0.08), m, q[0], 0.45, q[1])); }); galG.add(c); return c; }
     function plant(x, z) { galG.add(mesh(new T.CylinderGeometry(0.7, 0.55, 1.2, 12), mat('pot', { color: 0xd8c3a5 }), x, 0.6, z)); for (var k = 0; k < 5; k++) { var lf = mesh(new T.ConeGeometry(0.25, 2.4, 5), mat('leaf', { color: 0x2f8f4a }), x + Math.cos(k * 1.3) * 0.25, 2.1, z + Math.sin(k * 1.3) * 0.25); lf.rotation.set(Math.sin(k * 1.3) * 0.35, 0, -Math.cos(k * 1.3) * 0.35); galG.add(lf); } }
     function sitter(i, x, z, ry, lie) { var p = flowFig(i); p.position.set(x, lie ? 1.25 : 0.05, z); p.rotation.y = ry || 0; if (lie) p.rotation.z = Math.PI / 2; else if (p.userData.legs) p.userData.legs.forEach(function (l) { l.rotation[p.userData.axis || 'z'] = -1.2; }); return p; }
+    // The High Court, the city library, the grand hotel, the casino and the office floor (rules 19 places).
+    function buildMore(kind, room, floor, RW, RD, RH, DX, DZ) {
+      var wood = mat('mwood', { color: 0x6b3f22, roughness: 0.6 }), gold = mat('mgold2', { color: 0xd4af37, metalness: 0.85, roughness: 0.25 });
+      poster(String(sc.name || '').replace(/,.*/, '').toUpperCase(), { court: '#3a2a12', library: '#1f3b63', hotel: '#17181a', casino: '#5a0f1a', office: '#1f2a44' }[kind], kind === 'hotel' || kind === 'casino' ? '#d4af37' : '#ffffff', 22, 1.8, 0, 8.4, RD / 2 - 0.3, Math.PI);
+      if (kind === 'court') {
+        room.material.color.set(0xe9dfc9); floor.material.color.set(0x8a6a4a);
+        galG.add(mesh(new T.BoxGeometry(14, 3.2, 3), wood, 0, 1.6, 16)); galG.add(mesh(new T.BoxGeometry(14.4, 0.25, 3.4), wood, 0, 3.3, 16)); chair(0, 18, Math.PI, 0x7a1f1f); var judge = flowFig(140, 0x17181a); judge.position.set(0, 1.6, 17.6); judge.rotation.y = -Math.PI / 2;
+        poster('COURT IN SESSION', '#7a1f1f', '#ffffff', 8, 1.2, 0, 6.4, RD / 2 - 0.35, Math.PI);
+        var dock = new T.Group(); dock.position.set(-14, 0, 4); dock.add(mesh(new T.BoxGeometry(4, 1.6, 0.2), wood, 0, 0.8, -2)); dock.add(mesh(new T.BoxGeometry(0.2, 1.6, 4), wood, -2, 0.8, 0)); dock.add(mesh(new T.BoxGeometry(0.2, 1.6, 4), wood, 2, 0.8, 0)); galG.add(dock); var acc = flowFig(141); acc.position.set(-14, 0.05, 4.6); acc.rotation.y = -Math.PI / 2; poster('THE DOCK', '#3a2a12', '#fff', 3, 0.6, -14, 2.4, 2.1, Math.PI);
+        var wb = new T.Group(); wb.position.set(12, 0, 10); wb.add(mesh(new T.BoxGeometry(3, 1.6, 0.2), wood, 0, 0.8, -1.5)); wb.add(mesh(new T.BoxGeometry(0.2, 1.6, 3), wood, -1.5, 0.8, 0)); galG.add(wb); var wit = flowFig(142); wit.position.set(12, 0.05, 10.4); wit.rotation.y = -Math.PI / 2; poster('WITNESS', '#3a2a12', '#fff', 3, 0.6, 12, 2.4, 8.3, Math.PI);
+        [-6, 6].forEach(function (x, i) { galG.add(mesh(new T.BoxGeometry(8, 0.15, 2.4), wood, x, 2, 6)); chair(x - 2, 4.6, 0, 0x17181a); chair(x + 2, 4.6, 0, 0x17181a); var lw = flowFig(143 + i, 0x17181a); lw.position.set(x, 0.05, 3.8); lw.rotation.y = -Math.PI / 2; var wig = new T.Mesh(new T.SphereGeometry(0.18, 10, 8), mat('wig', { color: 0xf2efe6 })); wig.position.y = 1.95; lw.add(wig); });
+        for (var gr = 0; gr < 4; gr++) { galG.add(mesh(new T.BoxGeometry(22, 0.3, 1.2), wood, 0, 0.9, -6 - gr * 3)); galG.add(mesh(new T.BoxGeometry(22, 1.4, 0.2), wood, 0, 1.6, -6.6 - gr * 3)); } sitter(146, -5, -6, -Math.PI / 2); sitter(147, 3, -9, -Math.PI / 2); sitter(148, 7, -6, -Math.PI / 2);
+        poster('PUBLIC GALLERY', '#3a2a12', '#fff', 6, 1, -20, 5, -RD / 2 + 0.3, 0);
+        flow(flowFig(150, 0x17181a), [[DX, DZ], [-6, 2], [6, 2], [DX, DZ]], 1.8, 0, 4); flow(flowFig(151), [[DX, DZ + 1], [-10, -14], [DX, DZ + 1]], 2, 6, 6); flow(flowFig(152, 0x1b2a49, 0x111111), [[DX, DZ - 1], [-14, 1.5], [DX, DZ - 1]], 1.6, 10, 8);
+      } else if (kind === 'library') {
+        room.material.color.set(0xf3ede0); floor.material.color.set(0x9a7a5a);
+        for (var row = 0; row < 5; row++) for (var side = 0; side < 2; side++) { var sx = -24 + row * 5, sz = side ? 12 : -12; galG.add(mesh(new T.BoxGeometry(1.2, 6, 9), wood, sx, 3, sz)); for (var bk = 0; bk < 24; bk++) galG.add(mesh(new T.BoxGeometry(0.4, 0.9, 0.3 + (bk % 3) * 0.1), mat('lbk' + bk % 5, { color: [0xc0392b, 0x2f6fd0, 0x16a35a, 0xf2a516, 0x8e44ad][bk % 5] }), sx + 0.65, 0.8 + Math.floor(bk / 6) * 1.4, sz - 3.6 + (bk % 6) * 1.4)); }
+        for (var tb = 0; tb < 4; tb++) { var tx = 4 + (tb % 2) * 10, tz = -6 + Math.floor(tb / 2) * 10; galG.add(mesh(new T.BoxGeometry(6, 0.2, 2.6), wood, tx, 2, tz)); galG.add(mesh(new T.CylinderGeometry(0.15, 0.2, 0.8, 8), mat('lamp', { color: 0x1f5a3c }), tx, 2.5, tz)); chair(tx - 1.5, tz - 2, 0, 0x5a3a22); chair(tx + 1.5, tz + 2, Math.PI, 0x5a3a22); }
+        sitter(160, 2.5, -8, 0); sitter(161, 15.5, 6, Math.PI);
+        for (var pc = 0; pc < 4; pc++) { galG.add(mesh(new T.BoxGeometry(2.4, 0.15, 1.4), mat('pcdesk', { color: 0xf4f3ec }), 22, 1.6, -14 + pc * 3.2)); galG.add(mesh(new T.BoxGeometry(0.1, 1, 1.4), mat('mon', { color: 0x2f6fd0 }), 22.8, 2.3, -14 + pc * 3.2)); }
+        poster('COMPUTER ROOM', '#1f3b63', '#fff', 6, 1, 22, 5.4, -RD / 2 + 0.3, 0); poster('SILENCE PLEASE', '#ffffff', '#d0453a', 7, 1.2, -12, 6, RD / 2 - 0.35, Math.PI);
+        galG.add(mesh(new T.BoxGeometry(6, 2.2, 2), mat('ldesk', { color: 0x1f3b63 }), -18, 1.1, 0)); var lib = flowFig(162, 0x8e44ad); lib.position.set(-18, 0.05, 1.6); lib.rotation.y = -Math.PI / 2;
+        flow(flowFig(163), [[DX, DZ], [-18, -1.6], [-14, 10], [8, -3.6], [DX, DZ]], 1.6, 0, 5); flow(flowFig(164), [[DX, DZ + 1], [-9, -10], [21, -8], [DX, DZ + 1]], 1.6, 9, 6);
+      } else if (kind === 'hotel') {
+        room.material.color.set(0xf4ece0); floor.material.color.set(0xe8e2d6); floor.material.roughness = 0.1; floor.material.metalness = 0.2;
+        galG.add(mesh(new T.BoxGeometry(10, 2.4, 2.4), mat('hdesk', { color: 0x2b1a10, roughness: 0.3 }), -12, 1.2, 14)); galG.add(mesh(new T.BoxGeometry(10.4, 0.15, 2.8), gold, -12, 2.47, 14)); poster('RECEPTION', '#17181a', '#d4af37', 6, 1, -12, 5.6, RD / 2 - 0.35, Math.PI); [-14, -10].forEach(function (x, i) { var rc = flowFig(170 + i, 0x17181a); rc.position.set(x, 0.05, 16); rc.rotation.y = -Math.PI / 2; });
+        var ch = new T.Group(); ch.position.set(0, RH - 2.4, 0); ch.add(mesh(new T.CylinderGeometry(2.2, 0.8, 1.6, 16, 1, true), gold, 0, 0, 0)); for (var cr = 0; cr < 24; cr++) { var a = cr / 24 * Math.PI * 2; ch.add(mesh(new T.SphereGeometry(0.16, 8, 6), new T.MeshBasicMaterial({ color: 0xfff1c8 }), Math.cos(a) * 2.1, -0.9, Math.sin(a) * 2.1)); } galG.add(ch); var cl = new T.PointLight(0xffe2a8, 50, 40, 1.2); cl.position.set(0, RH - 3.4, 0); galG.add(cl);
+        var pool = new T.Mesh(new T.BoxGeometry(16, 0.3, 8), new T.MeshPhysicalMaterial({ color: 0x3fb4e0, roughness: 0.05, clearcoat: 1 })); pool.position.set(12, 0.2, -10); galG.add(pool); galG.add(mesh(new T.BoxGeometry(17, 0.25, 9), mat('poolrim', { color: 0xf4f3ec }), 12, 0.1, -10)); poster('POOL', '#3fb4e0', '#fff', 4, 0.9, 12, 5, -RD / 2 + 0.3, 0);
+        for (var lg = 0; lg < 4; lg++) { var lo = new T.Group(); lo.position.set(5 + lg * 4.5, 0, -3.5); lo.add(mesh(new T.BoxGeometry(1.4, 0.35, 3.2), mat('hlounger', { color: 0xf4f3ec }), 0, 0.5, 0)); galG.add(lo); } sitter(172, 9.5, -3.5, 0, true);
+        [[-14, -8], [-6, -8]].forEach(function (q) { galG.add(mesh(new T.BoxGeometry(5, 1, 2), mat('sofa', { color: 0x7a1f3a }), q[0], 0.5, q[1])); galG.add(mesh(new T.BoxGeometry(5, 1.4, 0.5), mat('sofa', {}), q[0], 1.2, q[1] - 0.9)); }); sitter(173, -14, -7.6, Math.PI / 2); plant(-24, -14); plant(-2, 18); plant(24, 14);
+        var trolley = new T.Group(); trolley.add(mesh(new T.BoxGeometry(1.8, 0.1, 1), gold, 0, 0.4, 0)); trolley.add(mesh(new T.BoxGeometry(0.08, 2.2, 0.08), gold, -0.85, 1.4, 0)); trolley.add(mesh(new T.BoxGeometry(0.08, 2.2, 0.08), gold, 0.85, 1.4, 0)); trolley.add(mesh(new T.BoxGeometry(1.8, 0.08, 0.08), gold, 0, 2.5, 0)); trolley.add(mesh(new T.BoxGeometry(1.2, 0.9, 0.6), mat('bag', { color: 0x2f6fd0 }), 0, 0.9, 0)); galG.add(trolley); trolley.userData.legs = null;
+        flow(trolley, [[DX + 1.5, DZ], [-12, 11.6], [20, 16], [DX + 1.5, DZ]], 1.5, 0, 4); flow(flowFig(174, 0x7a1f3a), [[DX, DZ + 1], [-11, 11.6], [20, 17], [DX, DZ + 1]], 1.5, 0, 4); flow(flowFig(175), [[DX, DZ - 1], [12, -5], [DX, DZ - 1]], 1.8, 7, 8);
+      } else if (kind === 'casino') {
+        room.material.color.set(0x2a0d14); floor.material.color.set(0x5a0f1a);
+        var dome = new T.Mesh(new T.SphereGeometry(10, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), mat('cdome', { color: 0xd4af37, metalness: 0.9, roughness: 0.2, side: T.BackSide })); dome.position.set(0, RH - 1.5, 0); dome.scale.y = 0.25; galG.add(dome);
+        var rt = new T.Group(); rt.position.set(0, 0, 4); rt.add(mesh(new T.BoxGeometry(9, 1.8, 4.5), mat('felt', { color: 0x0f5a32, roughness: 0.9 }), 0, 0.9, 0)); var wheel = new T.Mesh(new T.CylinderGeometry(1.4, 1.4, 0.3, 37), new T.MeshStandardMaterial({ map: canvasTex(256, 256, function (g, w, h) { for (var k = 0; k < 37; k++) { g.fillStyle = k === 0 ? '#16a35a' : k % 2 ? '#c0392b' : '#17181a'; g.beginPath(); g.moveTo(w / 2, h / 2); g.arc(w / 2, h / 2, w / 2, k / 37 * 6.283, (k + 1) / 37 * 6.283); g.fill(); } g.fillStyle = '#d4af37'; g.beginPath(); g.arc(w / 2, h / 2, w / 6, 0, 6.3); g.fill(); }), metalness: 0.3, roughness: 0.4 })); wheel.position.set(-3, 1.95, 0); rt.add(wheel); GL.wheel = wheel; galG.add(rt);
+        var crp = flowFig(180, 0x17181a); crp.position.set(-3, 0.05, 6.6); crp.rotation.y = -Math.PI / 2; poster('ROULETTE', '#5a0f1a', '#d4af37', 5, 0.9, 0, 4.4, 6.4, Math.PI);
+        [-14, 14].forEach(function (x, i) { var bj = new T.Group(); bj.position.set(x, 0, 6); var top = new T.Mesh(new T.CylinderGeometry(3.2, 3.2, 0.3, 24, 1, false, 0, Math.PI), mat('felt', {})); top.position.y = 1.8; bj.add(top); bj.add(mesh(new T.BoxGeometry(6.4, 1.6, 0.3), mat('bjb', { color: 0x2b1a10 }), 0, 0.8, 0)); for (var cd = 0; cd < 3; cd++) bj.add(mesh(new T.BoxGeometry(0.5, 0.02, 0.7), mat('card', { color: 0xffffff }), -1 + cd, 1.97, -1.5)); galG.add(bj); var dl = flowFig(181 + i, 0x17181a); dl.position.set(x, 0.05, 6.8); dl.rotation.y = -Math.PI / 2; poster('BLACKJACK', '#5a0f1a', '#d4af37', 4, 0.8, x, 4.2, 6.5, Math.PI); });
+        GL.slots = []; for (var sl = 0; sl < 12; sl++) { var sx = -24 + sl * 4.4, sz = -16; var sm = new T.MeshBasicMaterial({ color: 0xffd23f }); galG.add(mesh(new T.BoxGeometry(2.4, 4, 2), mat('slotb', { color: 0x8a1a2a, metalness: 0.4 }), sx, 2, sz)); var sc0 = new T.Mesh(new T.PlaneGeometry(1.8, 1.2), sm); sc0.position.set(sx, 2.8, sz + 1.01); galG.add(sc0); GL.slots.push(sm); galG.add(mesh(new T.CylinderGeometry(0.4, 0.4, 0.15, 12), mat('slotstool', { color: 0x17181a }), sx, 1.2, sz + 2)); }
+        sitter(183, -15.2, -14, -Math.PI / 2); sitter(184, 1.2, -14, -Math.PI / 2); sitter(185, 14.4, -14, -Math.PI / 2); poster('SLOTS', '#d4af37', '#5a0f1a', 6, 1.1, 0, 6.4, -RD / 2 + 0.3, 0); poster('18+ · PLAY RESPONSIBLY', '#17181a', '#ffffff', 9, 1, -20, 6, RD / 2 - 0.35, Math.PI);
+        flow(flowFig(186), [[DX, DZ], [-3, 1.2], [-14, 3.5], [-10, -13], [DX, DZ]], 1.6, 0, 5); flow(flowFig(187), [[DX, DZ + 1], [14, 3.5], [6, -13], [DX, DZ + 1]], 1.6, 8, 6);
+      } else { // the office floor
+        room.material.color.set(0xeef1f4); floor.material.color.set(0x8f969e);
+        for (var d = 0; d < 12; d++) { var dx = -18 + (d % 4) * 9, dz = -10 + Math.floor(d / 4) * 7; galG.add(mesh(new T.BoxGeometry(5, 0.15, 2.2), mat('odesk', { color: 0xf4f3ec, roughness: 0.4 }), dx, 1.5, dz)); galG.add(mesh(new T.BoxGeometry(1.4, 0.9, 0.08), mat('mon', { color: 0x2f6fd0 }), dx, 2.3, dz + 0.6)); chair(dx, dz - 1.4, 0, 0x17181a); if (d % 3 === 0) sitter(190 + d, dx, dz - 1.3, Math.PI / 2); }
+        var mr = new T.MeshStandardMaterial({ color: 0xbfe3ff, transparent: true, opacity: 0.3, roughness: 0.05 }); galG.add(mesh(new T.BoxGeometry(12, RH - 2, 0.1), mr, 18, (RH - 2) / 2, 10)); galG.add(mesh(new T.BoxGeometry(0.1, RH - 2, 10), mr, 12, (RH - 2) / 2, 15));
+        galG.add(mesh(new T.BoxGeometry(8, 0.2, 3), wood, 19, 1.8, 16)); for (var mc = 0; mc < 4; mc++) chair(16 + mc * 2, 14, 0, 0x2f6fd0); poster('MEETING ROOM', '#1f2a44', '#fff', 6, 1, 18, 7.5, RD / 2 - 0.35, Math.PI);
+        galG.add(mesh(new T.BoxGeometry(RW - 2, 6, 0.1), mat('owin', { color: 0x9fd0ff, emissive: 0x6aa8e0, emissiveIntensity: 0.4, transparent: true, opacity: 0.6 }), 0, 4, -RD / 2 + 0.3));
+        galG.add(mesh(new T.BoxGeometry(6, 2.2, 2), mat('ordesk', { color: 0x1f2a44 }), -18, 1.1, 14)); var rc2 = flowFig(200, 0x1f2a44); rc2.position.set(-18, 0.05, 15.6); rc2.rotation.y = -Math.PI / 2; plant(-24, 18); plant(24, -18);
+        flow(flowFig(201, 0x1f2a44), [[DX, DZ], [-18, 12.4], [16, 12], [DX, DZ]], 1.8, 0, 4); flow(flowFig(202), [[DX, DZ + 1], [-9, -2], [9, -2], [DX, DZ + 1]], 1.8, 6, 5);
+      }
+    }
     function buildCivic(kind, room, floor, RW, RD, RH) {
       GL.flow = []; var DX = -RW / 2 + 0.6, DZ = 0; // the door, in the left wall
       galG.add(mesh(new T.BoxGeometry(0.3, 6.4, 5.2), mat('doorframe', { color: 0x5a3a22 }), -RW / 2 + 0.2, 3.2, DZ));
       var day = !sc.night, dm = new T.Mesh(new T.PlaneGeometry(4.4, 6), new T.MeshBasicMaterial({ color: day ? 0xfff3d6 : 0x1c2433 })); dm.position.set(-RW / 2 + 0.36, 3, DZ); dm.rotation.y = Math.PI / 2; galG.add(dm);
-      poster(kind === 'polling' ? 'WAY IN' : 'ENTRANCE', '#16a35a', '#fff', 4, 0.9, -RW / 2 + 0.4, 6.8, DZ, Math.PI / 2);
+      poster(kind === 'polling' ? 'WAY IN' : kind === 'casino' ? 'CASINO' : 'ENTRANCE', '#16a35a', '#fff', 4, 0.9, -RW / 2 + 0.4, 6.8, DZ, Math.PI / 2);
       var board = canvasTex(1024, 512, function () {}); GL.board = { tex: board, key: '', kind: kind };
-      if (kind !== 'hospital') { var bm = new T.Mesh(new T.PlaneGeometry(12, 6), new T.MeshBasicMaterial({ map: board })); bm.position.set(0, 4, RD / 2 - 0.3); bm.rotation.y = Math.PI; galG.add(bm); galG.add(mesh(new T.BoxGeometry(12.6, 6.6, 0.3), mat('bframe', { color: 0x17181a }), 0, 4, RD / 2 - 0.1));
+      if (kind === 'police' || kind === 'polling') { var bm = new T.Mesh(new T.PlaneGeometry(12, 6), new T.MeshBasicMaterial({ map: board })); bm.position.set(0, 4, RD / 2 - 0.3); bm.rotation.y = Math.PI; galG.add(bm); galG.add(mesh(new T.BoxGeometry(12.6, 6.6, 0.3), mat('bframe', { color: 0x17181a }), 0, 4, RD / 2 - 0.1));
         poster(String(sc.name || '').toUpperCase(), kind === 'polling' ? '#16a35a' : '#1f2a44', '#ffffff', 22, 1.8, 0, 8.4, RD / 2 - 0.3, Math.PI); }
-      if (kind === 'police') {
+      if (/^(court|library|hotel|casino|office)$/.test(kind)) buildMore(kind, room, floor, RW, RD, RH, DX, DZ);
+      else if (kind === 'police') {
         room.material.color.set(0xd6dde6); floor.material.color.set(0x9aa3ad);
         galG.add(mesh(new T.BoxGeometry(3, 2.4, 14), mat('pdesk', { color: 0x1f2a44, roughness: 0.5 }), -6, 1.2, 4)); galG.add(mesh(new T.BoxGeometry(3.4, 0.2, 14.4), mat('pdtop', { color: 0xd9d4c7 }), -6, 2.5, 4));
         galG.add(mesh(new T.BoxGeometry(0.15, 1, 1.4), mat('mon', { color: 0x2f6fd0, roughness: 0.2 }), -5.6, 3.1, 1)); galG.add(mesh(new T.BoxGeometry(1.2, 0.05, 1.6), mat('book', { color: 0x7a1f1f }), -6, 2.63, 6));
@@ -1201,7 +1254,7 @@
           var ps = new T.Mesh(new T.PlaneGeometry(10, 2.5), new T.MeshBasicMaterial({ map: pt })); ps.position.set(14, RH - 2.4, -RD / 2 + 0.4); galG.add(ps);
           for (var pl2 = 0; pl2 < 3; pl2++) { galG.add(mesh(new T.CylinderGeometry(0.7, 0.55, 1.2, 12), mat('pot', { color: 0xd8c3a5 }), RW / 2 - 4, 0.6, -16 + pl2 * 14)); galG.add(mesh(new T.ConeGeometry(0.9, 2.6, 7), mat('leaf', { color: 0x2f8f4a }), RW / 2 - 4, 2.4, -16 + pl2 * 14)); } // potted plants
         }
-      } else if (kind === 'police' || kind === 'polling' || kind === 'hospital') {
+      } else if (/^(police|polling|hospital|court|library|hotel|casino|office)$/.test(kind)) {
         tm.visible = false; buildCivic(kind, room, floor, RW, RD, RH);
       } else {
         // A mall atrium: shopfronts on two levels, a gallery walkway, an escalator and the cinema's NOW SHOWING screen.
@@ -1214,7 +1267,7 @@
         galG.add(mesh(new T.CylinderGeometry(4, 4.4, 0.8, 32), mat('basin', { color: 0xc9ccd1 }), 0, 0.4, -2)); palm(0, -2, 6, 0.1);
       }
       GL.amb = new T.PointLight(0xffffff, 60, 90, 1); GL.amb.position.set(0, RH - 1, 0); galG.add(GL.amb);
-      var NW = kind === 'cinema' ? 70 : /^(police|polling|hospital)$/.test(kind) ? 1 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
+      var NW = kind === 'cinema' ? 70 : /^(police|polling|hospital|court|library|hotel|casino|office)$/.test(kind) ? 1 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
       GL.walkers = squad(NW, function (i) { return [0x17181a, 0xf4f3ec, 0xc0392b, 0x2f6fa0, 0x8e44ad, 0xe67e22][i % 6]; }, 1, galG); GL.walkBase = wb;
     }
 
