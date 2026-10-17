@@ -1700,6 +1700,39 @@
       { id: id + '_deckhand', label: 'Deckhand shift (tie up, sweep, serve)', mins: 240, earn: 2600, fx: { energy: -12, hygiene: -6 }, gig: true, fest: true, when: { from: 10, to: 22 } }
     ];
   });
+  // Rules 19: UNILAG, the whole campus. Small student hustles only (once a day each), cheap food at Mama B's.
+  (function () {
+    var U = [
+      ['tutorial', 'Evening tutorial class', 90, 2000, 0, { energy: -6 }, { tech: 1 }, { from: 17, to: 21 }],
+      ['portal', 'Check results on the portal', 15, 0, 0, { stress: 4 }, null, null],
+      ['tdb', 'Night reading (TDB)', 120, 0, 0, { energy: -12, stress: 3 }, { tech: 1 }, { from: 21, to: 24 }],
+      ['pastq', 'Photocopy past questions', 15, 500, 0, { stress: -3 }, null, { from: 8, to: 19 }],
+      ['typing', 'Type coursemates\' assignments', 120, 0, 1500, { energy: -8 }, { tech: 1 }, { from: 9, to: 22 }],
+      ['tutor', 'Tutor 100L students', 120, 0, 2500, { energy: -8, social: 4 }, { charisma: 1 }, { from: 15, to: 21 }],
+      ['fiveside', 'Five-a-side at the Sports Centre', 60, 0, 0, { fun: 12, energy: -14, hygiene: -10 }, { fitness: 1 }, { from: 16, to: 20 }],
+      ['track', 'Jog round the track', 45, 0, 0, { energy: -10, stress: -6, hygiene: -8 }, { fitness: 1 }, { from: 6, to: 19 }],
+      ['interhall', 'Inter-hall games', 180, 0, 0, { fun: 25, social: 15, energy: -15 }, null, { days: [5], from: 10, to: 18 }],
+      ['yarn', 'Yarn with coursemates', 30, 0, 0, { social: 8, fun: 4 }, null, null],
+      ['groupstudy', 'Group study under the tree', 90, 0, 0, { social: 5, energy: -5 }, { tech: 1 }, { from: 9, to: 19 }],
+      ['sug', 'SUG campaign rally', 60, 0, 0, { fun: 8, social: 8 }, { charisma: 1 }, { from: 12, to: 19 }],
+      ['whot', 'Play Whot', 30, 0, 0, { fun: 8, social: 4 }, null, null],
+      ['ricebeans', 'Rice, beans and dodo at Mama B\'s', 30, 1200, 0, { hunger: 32 }, null, { from: 7, to: 13 }],
+      ['spag', 'Jollof spaghetti and egg', 15, 900, 0, { hunger: 24 }, null, { from: 11, to: 21 }],
+      ['akara', 'Bread and akara', 15, 500, 0, { hunger: 16 }, null, { from: 6, to: 11 }],
+      ['gala', 'Pure water and gala', 15, 250, 0, { hunger: 8 }, null, null],
+      ['mamab', 'Help Mama B serve the lunch rush', 180, 0, 1500, { energy: -10, hunger: 15 }, null, { from: 11, to: 15 }],
+      ['nap', 'Nap on your bunk', 60, 0, 0, { energy: 18 }, null, null],
+      ['hallgist', 'Late-night hall gist', 60, 0, 0, { social: 10, fun: 8, energy: -6 }, null, { from: 21, to: 24 }],
+      ['bucket', 'Bucket bath in the hall', 15, 0, 0, { hygiene: 25 }, null, null],
+      ['braid', 'Barb and braid in the hall', 60, 1500, 0, { hygiene: 6, fun: 4 }, null, { from: 9, to: 21 }],
+      ['recharge', 'Sell recharge cards and data', 180, 0, 1800, { energy: -6, social: 4 }, null, { from: 8, to: 20 }],
+      ['puffpuff', 'Fry puff-puff to sell', 150, 1500, 2800, { energy: -10, hygiene: -6 }, null, { from: 7, to: 18 }],
+      ['sunset', 'Watch the lagoon at sunset', 30, 0, 0, { stress: -8, fun: 4 }, null, { from: 17, to: 20 }],
+      ['date', 'Lagoon front date', 60, 2000, 0, { fun: 10, social: 10, stress: -5 }, null, { from: 16, to: 21 }],
+      ['shoot', 'Lagoon front photoshoot', 45, 3000, 0, { fun: 8, social: 4 }, null, { from: 9, to: 18 }]
+    ];
+    CIVIC_ACTS.unilag = U.map(function (u) { var a = { id: 'uni_' + u[0], label: u[1], mins: u[2], fx: u[5] }; if (u[3]) a.cost = u[3]; if (u[4]) { a.earn = u[4]; a.gig = true; a.fest = true; } if (u[6]) a.xp = u[6]; if (u[7]) a.when = u[7]; return a; });
+  })();
   // Rules 19: Lekki Conservation Centre, close up.
   CIVIC_ACTS.lcc = [
     { id: 'lcc_trail', label: 'Walk the nature trail through the mangroves', mins: 60, cost: 1000, fx: { stress: -10, energy: -6, fun: 6 }, xp: { fitness: 1 }, when: { from: 8, to: 17 } },
