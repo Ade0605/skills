@@ -2522,7 +2522,7 @@ test('rules 17: every place has INSIDE acts on the 15-minute grid that never pay
     assert.ok(a.mins > 0 && a.mins % 15 === 0, a.id); assert.ok(!ids.has(a.id), 'duplicate id ' + a.id); ids.add(a.id);
     assert.ok(!a.earn && !a.gig, a.id + ' pays nothing out');
   }
-  for (const p of D.PLACES) assert.ok((D.INSIDE[D.insideKind(p)] || []).length >= 3, p.id + ' has at least 3 things to do inside');
+  for (const p of D.PLACES) assert.ok((D.INSIDE[D.insideKind(p)] || D.CIVIC_ACTS[p.id] || []).length >= 3, p.id + ' has at least 3 things to do inside'); // police and polling: rules 19
   const s = L.newGame({ seed: 71, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
   assert.ok(s.rules >= 17);
   const here = L.availableActions(s).filter(a => a.inside);
@@ -2562,7 +2562,7 @@ test('rules 18: festival acts sit on the 15-minute grid with unique ids, and pay
 });
 test('rules 18: Christmas at the cathedral only in the last week of December; hidden under rules 17; replays', () => {
   const s = L.newGame({ seed: 81, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 18); s.loc = 'island';
+  assert.ok(s.rules >= 18); s.loc = 'island';
   atMonth(s, 11, 1, 2, 19); assert.ok(!L.availableActions(s).some(a => a.id === 'fest_xmas_carols') || L.availableActions(s).find(a => a.id === 'fest_xmas_carols').disabled, 'not open in week 2');
   atMonth(s, 11, 3, 2, 19); const a = L.availableActions(s).find(x => x.id === 'fest_xmas_carols');
   assert.ok(a && !a.disabled, a ? a.disabled : 'missing'); const r = L.doAction(s, 'fest_xmas_carols'); assert.ok(r.ok, r.msg); sane(s);
@@ -2604,4 +2604,58 @@ test('rules 18: Pulse gym branches cost more on the Island and most at Eko Atlan
   for (const list of Object.values(B)) for (const a of list) { assert.ok(a.mins % 15 === 0, a.id); if (a.earn) assert.ok(a.gig && a.fest && a.earn <= 4000, a.id); }
   const old = L.newGame({ seed: 85, origin: 'nepo', goal: 'freestyle', rules: 17 }); old.loc = 'vi';
   assert.ok(!L.availableActions(old).some(a => /^pulse_/.test(a.id)));
+});
+test('rules 19: police, polling and hospital acts; hidden from rules-18 lives; small once-a-day gigs only', () => {
+  for (const list of Object.values(D.CIVIC_ACTS)) for (const a of list) { assert.ok(a.mins % 15 === 0, a.id); if (a.earn) assert.ok(a.gig && a.fest && a.earn <= 3000, a.id); }
+  assert.equal(D.PLACES.filter(p => p.civic === 'police').length, 6);
+  assert.equal(D.PLACES.filter(p => p.civic === 'polling').length, 12);
+  const old = L.newGame({ seed: 91, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (old.pending.length) L.resolveChoice(old, 0); old.loc = 'ikeja';
+  assert.ok(!L.availableActions(old).some(a => /^(police|poll|hosp)_/.test(a.id)));
+  const before = old.ledgerHash; assert.equal(L.doAction(old, 'police_ikeja_report').ok, false); assert.equal(old.ledgerHash, before);
+});
+test('rules 19: report a theft, follow the case; recovery is half at most and capped; a case goes cold', () => {
+  let solved = 0, maxBack = 0;
+  for (let i = 0; i < 30; i++) {
+    const s = L.newGame({ seed: 1200 + i, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+    assert.equal(s.rules, 19); s.loc = 'ikeja'; atMonth(s, 9, 1, 1, 10); s.needs.energy = 100;
+    s.lastLoss = { amt: 100000, what: 'Phone snatched', day: L.day(s), reported: false };
+    let r = L.doAction(s, 'police_ikeja_report'); assert.ok(r.ok, r.msg); assert.equal(s.cases.length, 1); assert.ok(s.lastLoss.reported);
+    assert.match(L.availableActions(s).find(a => a.id === 'police_ikeja_report').disabled || '', /Once a day/);
+    assert.ok(L.doAction(s, 'police_ikeja_mobilise').ok); assert.match(L.availableActions(s).find(a => a.id === 'police_ikeja_mobilise').disabled || '', /already/);
+    for (let d = 0; d < 16 && s.cases[0].status === 'open'; d++) {
+      L.wait(s, 24 * 60); while (s.pending.length) L.resolveChoice(s, 0); s.needs.energy = 100; s.needs.hunger = 80; s.loc = 'ikeja';
+      const c = L.availableActions(s).find(a => a.id === 'police_ikeja_check'); if (c.disabled) continue;
+      const cash = s.cash; r = L.doAction(s, c.id); assert.ok(r.ok, r.msg); maxBack = Math.max(maxBack, s.cash - cash);
+    }
+    if (s.cases[0].status === 'solved') solved++;
+    assert.notEqual(s.cases[0].status, 'open', 'no case stays open past 14 days of checking');
+    sane(s);
+  }
+  assert.ok(solved > 0, 'some cases are solved');
+  assert.ok(maxBack <= 20000 * 2, 'recovery capped: ' + maxBack);
+});
+test('rules 19: area boys on the street: four choices, odds shown, each resolves; doctor treats malaria', () => {
+  const seen = new Set();
+  for (let i = 0; i < 4; i++) {
+    const s = L.newGame({ seed: 1300 + i, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+    s.pending.push({ id: 'streetboys', title: 'Area boys!', text: '', odds: { talk: 0.5, run: 0.5, stand: 0.5 }, toll: 200, options: ['a', 'b', 'c', 'd'], subs: ['', '', '', ''] });
+    const r = L.resolveChoice(s, i); assert.ok(r.ok, r.msg); seen.add(r.msg); sane(s);
+  }
+  assert.ok(seen.size >= 3);
+  const d = L.newGame({ seed: 1310, origin: 'nepo', goal: 'freestyle' }); while (d.pending.length) L.resolveChoice(d, 0);
+  d.pending.push({ id: 'detained', title: '', text: '', bail: 5000, options: ['a', 'b'] }); const h0 = d.t; L.resolveChoice(d, 1);
+  assert.equal(L.hour(d), 7); assert.ok(d.t > h0); assert.equal(d.stats.cellNights, 1);
+  const m = L.newGame({ seed: 1311, origin: 'nepo', goal: 'freestyle' }); while (m.pending.length) L.resolveChoice(m, 0);
+  m.loc = 'island'; atMonth(m, 9, 1, 1, 10); m.cash = 50000; m.sick = { kind: 'malaria', since: L.day(m), drugs: false, cure: -1 };
+  const r = L.doAction(m, 'hosp_gen_hosp_doctor'); assert.ok(r.ok, r.msg); assert.ok(m.sick.drugs); assert.equal(m.sick.cure, L.day(m) + 1);
+});
+test('rules 19: a life that travels to a police division and acts replays to the same seal', () => {
+  const s = L.newGame({ seed: 1320, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  for (const dest of ['ikeja', 'oshodi', 'island']) {
+    const o = L.travelOptions(s, dest).find(x => !x.disabled); if (!o) continue;
+    L.travel(s, dest, o.mode); while (s.pending.length) L.resolveChoice(s, s.pending[0].options.length - 1);
+    const a = L.availableActions(s).find(x => /^(police|poll|hosp)_/.test(x.id) && !x.disabled); if (a) L.doAction(s, a.id);
+    while (s.pending.length) L.resolveChoice(s, 0);
+  }
+  const r = L.replayLife(s.replay); assert.equal(r.ledgerHash, s.ledgerHash);
 });

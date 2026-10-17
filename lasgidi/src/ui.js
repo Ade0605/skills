@@ -2002,6 +2002,8 @@
     mosque: [['Imam', 'Jumat service starts at one.', 0], ['Worshipper', 'Peace be unto you.', 0], ['Caretaker', 'Shoes off at the steps, please.', 0]],
     church: [['Usher', 'Welcome! The choir is warming up.', 0], ['Chorister', 'We have been practising all week.', 0], ['Pastor', 'Service starts at nine, come early.', 0]],
     govt: [['Guard', 'Only appointments past this gate.', 1], ['Aide', 'The commissioner is in a meeting.', 0], ['Visitor', 'I came to see how government works.', 0]],
+    police: [['Desk officer', 'Write your statement here. Who did it?', 0], ['IPO', 'Investigation is ongoing.', 0], ['Complainant', 'They took my phone right at the bus stop.', 0], ['Suspect\'s mother', 'My son did nothing, I swear.', 0], ['Lawyer', 'Bail is free. Read the sign.', 0]],
+    polling: [['Presiding officer', 'Card and thumb, then the cubicle. One person, one vote.', 0], ['Agent', 'We are watching the count, every paper.', 0], ['Voter', 'I have been in this queue since seven.', 0], ['Observer', 'Peaceful so far. Write that down.', 0]],
     hospital: [['Nurse', 'Take a number and sit down, please.', 0], ['Doctor', 'Drink water and rest, you hear?', 0], ['Patient', 'The queue is long today.', 0], ['Paramedic', 'Clear the way for the ambulance!', 1]],
     bank: [['Teller', 'Next customer, please.', 0], ['Security', 'One person at a time in the door.', 0], ['Customer', 'The ATM swallowed my card again.', 0]],
     workshop: [['Mechanic', 'Your engine needs small work, oga.', 1], ['Apprentice', 'Pass me the spanner, the ten.', 1], ['Customer', 'How much for the brake pads?', 0]],
@@ -2023,10 +2025,10 @@
     return dv ? D.VEHICLES[dv.id].color : '#c9ccd2';
   }
   // The look of a place's yard: a few by id, the rest by its map glyph, then by its type.
-  var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
+  var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', badge: 'govt', ballot: 'govt', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
   // Nightlife rooms drawn in 3D: the club strips, lounges and the members' house (not the harbour, which has its own scene).
   // Every other kind of place opens as a street scene or an interior hall in 3D; music venues use the club hall.
-  var PLACE3D = { eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'street', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
+  var PLACE3D = { eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
   function NIGHT3D(pl) { return (pl.type === 'nightlife' && pl.glyph === 'glass' && !/^harbour_/.test(pl.id)) || pl.id === 'club_tidewater'; }
   function venueSet(pl) {
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
@@ -2064,6 +2066,9 @@
     }).filter(Boolean)).concat(S.rules >= 18 ? (D.BRANCH_ACTS[pl.id] || []).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
+    }) : []).concat(S.rules >= 19 ? (D.CIVIC_ACTS[pl.id] || []).map(function (def) {
+      var a = avail.filter(function (x) { return x.id === def.id; })[0];
+      return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
     }) : []).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return !def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0; }).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: '🎊', short: venueShort(def.label), off: !a || a.disabled, fest: true };
@@ -2090,7 +2095,7 @@
     return out;
   }
   function venueScene(pl) {
-    var set = venueSet(pl), hr = Math.floor(S.t / 60), crew = VENUE_CREW[set], seed = pl.id + ':' + hr, n = 3 + vHash(seed, 1) % 4, acts = venueActs(pl), slots = Math.max(1, Math.min(8, acts.length));
+    var set = venueSet(pl), hr = Math.floor(S.t / 60), crew = VENUE_CREW[pl.civic] || VENUE_CREW[set], seed = pl.id + ':' + hr, n = 3 + vHash(seed, 1) % 4, acts = venueActs(pl), slots = Math.max(1, Math.min(8, acts.length));
     var people = [];
     for (var i = 0; i < n; i++) {
       var role = crew[vHash(seed, 20 + i) % crew.length], st = venueStranger(seed, i);
@@ -2108,7 +2113,7 @@
     var worksHere = S.job && careersAt(pl).indexOf(S.job.id) >= 0, h0 = L.hour(S), bub = ui.venueBubble && ui.venueBubble.place === pl.id && Date.now() - ui.venueBubble.at < 7000 ? ui.venueBubble.text : null;
     return {
       name: pl.name, set: set, acts: acts, people: people, commuters: commuters, night: h0 >= 19 || h0 < 6, weather: L.weatherNow(S) || 'clear',
-      letter: huntLetterAt(pl),
+      rain: (ui.rainUntil && Date.now() < ui.rainUntil) || (NIGHT3D(pl) && vHash(pl.id + ':rain', Math.floor(Date.now() / 300000)) % 4 === 0), letter: huntLetterAt(pl), civic: pl.civic || (D.insideKind(pl) === 'hospital' ? 'hospital' : null), board: civicBoard(pl),
       gem: (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? { n: gm.n, slot: vHash(pl.id, 7 + gm.n) % 8 } : null; })(),
       sign: pl.name.toUpperCase().slice(0, 30), signBg: set === 'refinery' ? '#1f3b63' : set === 'nightlife' ? '#8e24aa' : '#1f3b63',
       shuttle: set === 'refinery' ? 'staff' : set === 'airport' || set === 'govt' || set === 'estate' || set === 'dealer' ? 'cab' : set === 'stadium' || set === 'campus' ? 'brt' : ['danfo', 'keke', 'okada', 'cab'][vHash(pl.id, 3) % 4],
@@ -2149,7 +2154,62 @@
   // A place's own desks and boards: departures, clubs, the cruise, rooms, the estate office, japa, HR desks, shares.
   function venueExtras(pl) {
     return (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.cruise ? cruiseCard() : '') + roomCardFor(pl.id) + (pl.hydepark ? hydeParkView() : '') +
-      (pl.id === 'airport' && !S.challenge ? japaView() : '') + hrCards(pl) + (pl.shares ? sharesCard(pl) : '');
+      (pl.id === 'airport' && !S.challenge ? japaView() : '') + hrCards(pl) + (pl.shares ? sharesCard(pl) : '') + clubBanner(pl) + civicView(pl);
+  }
+  /* ---------- Police divisions and polling units (rules 19): live boards, drawn only ---------- */
+  var CASE_KINDS = ['Phone theft', 'Fake bank alert', 'Car break-in', 'Fight at a bus stop', 'Land dispute', 'Missing goat', 'Noise complaint', 'Okada accident', 'Burglary', 'Shop lifting', 'Online fraud', 'Unpaid debt'];
+  var CASE_STEPS = [['Reported', '#2f6fd0'], ['Under investigation', '#f2a516'], ['Suspect in cell', '#d0453a'], ['Charged to court', '#8e44ad'], ['Bail granted', '#16a35a'], ['Closed', '#7a7f87']];
+  // The station's day, from the real clock: cases move a step every 40 minutes; people in and out all day.
+  function policeLive(pl) {
+    var now = Date.now(), slot = Math.floor(now / 600000), h = new Date(now).getHours(), rows = [];
+    for (var k = 0; k < 7; k++) { var sid = slot - k * 3, v = vHash(pl.id + ':case', sid), step = Math.min(CASE_STEPS.length - 1, Math.floor((now / 600000 - sid) / 4));
+      rows.push({ no: 'LAG/' + (sid % 900 + 100) + '/' + new Date(now).getFullYear(), what: CASE_KINDS[v % CASE_KINDS.length], step: CASE_STEPS[step] }); }
+    var base = vHash(pl.id + ':day', Math.floor(now / 86400000)) % 9;
+    return { rows: rows, inToday: base + Math.round(h * 2.6), outToday: base + Math.round(h * 2.2), cell: 2 + (vHash(pl.id, slot) % 6) };
+  }
+  function pollLive(pl) {
+    if (!G) return null;
+    var e = govState(townWeek()).e, unit = pl.district;
+    var end = new Date(); end.setUTCHours(24, 0, 0, 0); var dow = end.getUTCDay(); // closes at the end of Sunday (UTC)
+    while (end.getUTCDay() !== 1) end = new Date(end.getTime() + 86400000);
+    return { phase: govPhase(), total: e.units[unit] || 0, all: e.total, rows: e.rows.map(function (r) { return { party: G.PARTIES[r.ticket.party], votes: r.units[unit] || 0 }; }), closes: end.getTime() };
+  }
+  function civicBoard(pl) {
+    if (pl.civic === 'police') { var P = policeLive(pl), mine = (S.cases || []).slice(-2).reverse();
+      return { title: 'LIVE CASES · ' + D.DISTRICTS[pl.district].name.toUpperCase(), rows: mine.map(function (c) { return ['★ ' + c.no + ' · ' + c.what, c.status === 'open' ? 'Your case: open' : c.status === 'solved' ? 'Your case: solved' : 'Your case: gone cold', '#2f6fd0']; }).concat(P.rows.map(function (r) { return [r.no + ' · ' + r.what, r.step[0], r.step[1]]; })).slice(0, 7),
+        foot: 'IN TODAY ' + P.inToday + '   OUT ' + P.outToday + '   IN THE CELL ' + P.cell }; }
+    if (pl.civic === 'polling') { var V = pollLive(pl); if (!V) return null;
+      return { title: 'LIVE RESULTS · ' + pl.name.toUpperCase(), rows: V.rows.length ? V.rows.map(function (r) { return [r.party.icon + ' ' + r.party.short + ' · ' + r.party.name, String(r.votes), r.party.color]; }) : [['No tickets on the ballot yet', '', '#7a7f87']],
+        foot: V.phase === 'election' ? 'LIVE COUNT · ' + V.total + ' VOTES HERE · ' + V.all + ' IN LAGOS' : 'POLLS OPEN SATURDAY' }; }
+    return null;
+  }
+  function accreditedNow() { return S.accredited != null && L.week(S) - S.accredited <= 1; }
+  // Club moments (rules 19): raining money and shutting the club down show in the room for a while.
+  function clubMoment(id) {
+    if (/^club_.*_(rain|bottle|vip|shutdown)$/.test(id)) ui.rainUntil = Date.now() + (/_shutdown$/.test(id) ? 120000 : 25000);
+    if (/^club_.*_shutdown$/.test(id)) ui.shutdown = { at: Date.now(), place: ui.venueOpen };
+  }
+  function clubBanner(pl) {
+    var sd = ui.shutdown && ui.shutdown.place === pl.id && Date.now() - ui.shutdown.at < 15 * 60000 ? ui.shutdown : null;
+    if (!sd) return '';
+    return '<div class="shutdown"><b>' + esc(handleOf(online.me || 'me') || 'You') + ' SHUT DOWN THE CLUB!</b><span>The whole night is on you. Everybody here is your guest tonight 🔒</span></div>';
+  }
+  function civicView(pl) {
+    if (pl.civic === 'police') {
+      var P = policeLive(pl), mine = S.cases || [];
+      return '<div class="section civic"><h3>🚓 Live at the station</h3><p class="note">' + P.inToday + ' people came in today, ' + P.outToday + ' went out. ' + P.cell + ' in the cell now. Bail is free.</p>' +
+        (mine.length ? '<div class="label">Your cases</div><div class="list">' + mine.slice(-4).reverse().map(function (c) { return '<div class="item"><div><h3>' + esc(c.no) + ' · ' + esc(c.what) + '</h3><div class="meta"><span>Opened day ' + (c.day + 1) + '</span><span>' + (c.mob ? 'IPO "mobilised"' : 'Not mobilised') + '</span><span>' + c.checks + ' follow-ups</span></div></div><b class="num">' + (c.status === 'open' ? '🔎 Open' : c.status === 'solved' ? '✅ Solved' : '🧊 Cold') + '</b></div>'; }).join('') + '</div>' : '') +
+        '<div class="label">Case board</div><div class="list">' + P.rows.map(function (r) { return '<div class="item"><div><h3>' + esc(r.no) + '</h3><div class="meta"><span>' + esc(r.what) + '</span></div></div><b class="num" style="color:' + r.step[1] + '">' + esc(r.step[0]) + '</b></div>'; }).join('') + '</div></div>';
+    }
+    if (pl.civic === 'polling') {
+      var V = pollLive(pl); if (!V) return '';
+      var mineUnit = myUnit() === pl.district, left = Math.max(0, V.closes - Date.now()), hh = Math.floor(left / 3600000), mm = Math.floor(left % 3600000 / 60000);
+      return '<div class="section civic"><h3>🗳️ ' + (V.phase === 'election' ? 'Live count · ' + V.total + ' votes · closes in ' + hh + 'h ' + mm + 'm' : 'Polls open on Saturday') + '</h3>' +
+        '<p class="note">' + (mineUnit ? 'This is your polling unit.' : 'Your polling unit is ' + esc(unitName(myUnit())) + ' (where your home is). You can watch the count here, but vote there.') + '</p>' +
+        (V.rows.length ? '<div class="list">' + V.rows.map(function (r) { return '<div class="item"><div><h3>' + esc(r.party.icon + ' ' + r.party.name) + '</h3></div><b class="num">' + r.votes + '</b></div>'; }).join('') + '</div>' : '') + '</div>' +
+        (mineUnit && V.phase === 'election' && S.rules >= 19 ? govVote(!!(online.db && online.me) && accreditedNow()).replace(/<div class="section"><h3>📘[\s\S]*?<\/ul><\/div>/, '') + (accreditedNow() ? '' : '<p class="note">Get accredited at the desk first, then the ballot opens.</p>') : '');
+    }
+    return '';
   }
   // Inside a place: Do (its own acts and, from rules 17, its everyday ones), Rides (buy or sell transport), Here (its desks).
   function venueTabs(pl, acts) {
@@ -2170,7 +2230,7 @@
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
-    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
+    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
     if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
@@ -3951,7 +4011,7 @@
     var ev = S.pending[0];
     if (ev) {
       return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ev-title"><div class="sheet"><span class="label">' + L.clockLabel(S) + ' · ' + esc(D.DISTRICTS[S.loc].name) + '</span><h2 id="ev-title">' + esc(ev.title) + '</h2><p>' + esc(ev.text) + '</p><div class="opts">' +
-        ev.options.map(function (o, i) { return '<button class="btn' + (i === 0 ? ' go' : ' ghost') + '" id="choice-' + i + '" data-choice="' + i + '">' + esc(o) + '</button>'; }).join('') + '</div></div></div>';
+        ev.options.map(function (o, i) { return '<button class="btn' + (i === 0 ? ' go' : ' ghost') + '" id="choice-' + i + '" data-choice="' + i + '">' + esc(o) + (ev.subs && ev.subs[i] ? '<small class="ch-sub">' + esc(ev.subs[i]) + '</small>' : '') + '</button>'; }).join('') + '</div></div></div>';
     }
     var r = S.report;
     if (r && S.reportSeen !== r.w) {
@@ -4341,7 +4401,7 @@
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
     if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
-    if (ds.act) { var aid0 = ds.act; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { ui.activity = activityFor(aid0); ui.activityAt = Date.now(); if (aid0 === 'work_shift' && ui.venueOpen) ui.venueBubble = { place: ui.venueOpen, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; }); return; }
+    if (ds.act) { var aid0 = ds.act; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { clubMoment(aid0); ui.activity = activityFor(aid0); ui.activityAt = Date.now(); if (aid0 === 'work_shift' && ui.venueOpen) ui.venueBubble = { place: ui.venueOpen, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
     if (ds.interview !== undefined) { ui.interview = ds.interview || null; render(); return; }

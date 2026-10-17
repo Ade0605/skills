@@ -1489,6 +1489,8 @@
         case 'tree': C(0, -0.25, 0.5, true); L([[0, 0.2], [0, 0.85]]); break;
         case 'wave': g.beginPath(); for (var i = 0; i <= 10; i++) { var t = i / 10; g.lineTo(x + (t * 1.7 - 0.85) * r, y + Math.sin(t * Math.PI * 2) * 0.3 * r); } g.stroke(); break;
         case 'ball': C(0, 0, 0.7); L([[-0.7, 0], [0.7, 0]]); L([[0, -0.7], [0, 0.7]]); break;
+        case 'badge': L([[0, -0.8], [0.7, -0.45], [0.55, 0.45], [0, 0.85], [-0.55, 0.45], [-0.7, -0.45], [0, -0.8]]); C(0, 0, 0.22, true); break;
+        case 'ballot': R(-0.7, -0.2, 1.4, 1.0); L([[-0.3, -0.2], [0.3, -0.2]]); L([[0, -0.85], [0, -0.3]]); break;
         case 'dumbbell': L([[-0.6, 0], [0.6, 0]]); R(-0.85, -0.4, 0.3, 0.8, true); R(0.55, -0.4, 0.3, 0.8, true); break;
         case 'bowl': g.beginPath(); g.arc(x, y - 0.1 * r, 0.75 * r, 0, Math.PI); g.closePath(); g.fill(); L([[-0.9, -0.1], [0.9, -0.1]]); break;
         case 'basket': L([[-0.8, -0.2], [0.8, -0.2], [0.55, 0.7], [-0.55, 0.7], [-0.8, -0.2]]); g.beginPath(); g.arc(x, y - 0.2 * r, 0.5 * r, Math.PI, 0); g.stroke(); break;

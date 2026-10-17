@@ -1141,3 +1141,8 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .app-ic .badge.new { background: #ef4444; font-size: .55rem; padding: 1px 4px; }
 .gist-hot { background: #fff4e5; border-radius: 14px; padding: 8px 12px; margin-bottom: 8px; color: #3a2400; }
 .gist-hot p { margin: 2px 0; font-size: .9rem; }
+.ch-sub { display: block; font-size: 11px; font-weight: 500; opacity: .75; margin-top: 2px; }
+.civic .num { white-space: nowrap; }
+.shutdown { margin: 8px 0; padding: 12px; border-radius: 14px; background: linear-gradient(135deg, #17181a, #3a2a12); color: #ffd23f; text-align: center; }
+.shutdown b { display: block; font-size: 20px; letter-spacing: .02em; }
+.shutdown span { display: block; font-size: 12px; color: #fff; opacity: .85; margin-top: 4px; }

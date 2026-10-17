@@ -42,7 +42,9 @@
   // never too tired to set off (you arrive spent, slower and stressed, but never below 5 energy).
   // 18 adds festivals and big days at their places, in their month (D.FESTIVALS): Christmas, Sallah, the New Yam
   // festival, the Eko City Marathon and Eko Style Week. Their paid work is once a day each and the prizes are capped.
-  var RULES = 18;
+  // 19 adds police divisions, polling units and hospital rooms (D.CIVIC_ACTS): report a theft and follow the case,
+  // a night in the cell after a bad checkpoint argument, the doctor for malaria, and street area boys on foot or danfo.
+  var RULES = 19;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -194,7 +196,7 @@
 
   // Spending and income categories for the weekly report.
   var FOOD_LABELS = {}, GIG_LABELS = {};
-  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; }), Object.keys(D.BRANCH_ACTS).map(function (k) { return D.BRANCH_ACTS[k]; })).forEach(function (list) {
+  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; }), Object.keys(D.BRANCH_ACTS).map(function (k) { return D.BRANCH_ACTS[k]; }), Object.keys(D.CIVIC_ACTS).map(function (k) { return D.CIVIC_ACTS[k]; })).forEach(function (list) {
     list.forEach(function (a) {
       if ((a.fx && a.fx.hunger > 0) || a.special === 'pantry7') FOOD_LABELS[a.label] = true;
       if (a.gig) GIG_LABELS[a.label] = true;
@@ -713,6 +715,15 @@
   }
   // Festival acts (rules 18) at the places in a district, shown only in their month.
   var FEST_AT = {};
+  // Rules 19: the acts inside police divisions, polling units and hospitals in this district.
+  var CIVIC_AT = {};
+  function civicActions(s) {
+    var d = s.loc;
+    return CIVIC_AT[d] || (CIVIC_AT[d] = D.PLACES.filter(function (p) { return p.district === d && D.CIVIC_ACTS[p.id]; }).reduce(function (o, p) { return o.concat(D.CIVIC_ACTS[p.id]); }, []));
+  }
+  function openCase(s) { return (s.cases || []).filter(function (c) { return c.status === 'open'; })[0] || null; }
+  // Rules 19: remember the last thing taken from you, so you can report it. No random numbers.
+  function noteLoss(s, amt, what) { if (s.rules >= 19 && amt > 0) s.lastLoss = { amt: amt, what: what, day: day(s), reported: false }; }
   function festivalActions(s) {
     var d = s.loc, all = FEST_AT[d] || (FEST_AT[d] = D.PLACES.filter(function (p) { return p.district === d && (D.FESTIVALS[p.id] || D.BRANCH_ACTS[p.id]); }).reduce(function (o, p) { return o.concat(D.FESTIVALS[p.id] || [], D.BRANCH_ACTS[p.id] || []); }, [])), m = monthIndex(s); // and the Pulse gym branches' acts
     return all.filter(function (a) { return !a.when || !a.when.months || a.when.months.indexOf(m) >= 0; });
@@ -729,6 +740,7 @@
     });
     if (s.rules >= 17) list = list.concat(insideActions(s.loc));
     if (s.rules >= 18) list = list.concat(festivalActions(s));
+    if (s.rules >= 19) list = list.concat(civicActions(s));
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
@@ -825,6 +837,10 @@
     if (s.rules >= 16 && a.compete && dayCount(s, 'c:' + a.id)) return 'One entry a day: come back tomorrow';
     if (s.rules >= 18 && a.fest && dayCount(s, 'f:' + a.id)) return 'Once a day: come back tomorrow';
     if (s.rules >= 18 && a.special === 'casting' && s.castingWeek === week(s)) return 'One casting a week';
+    if (a.special === 'casecheck' && !openCase(s)) return 'You have no open case';
+    if (a.special === 'mobilise') { var oc = openCase(s); if (!oc) return 'You have no open case'; if (oc.mob) return 'You already "mobilised" for this case'; }
+    if (a.special === 'accredit' && s.accredited === week(s)) return 'Accredited already this week';
+    if (a.special === 'shutdown' && s.shutdownWeek === week(s)) return 'Once a week: the club needs to restock';
     if (s.rules >= 16 && (a.minigame === 'bole' || a.minigame === 'hawk' || a.minigame === 'danfo') && dayCount(s, 'm:' + a.minigame) >= 2) return 'Two runs a day: rest and come back tomorrow';
     switch (a.special) {
       case 'cook': if (s.pantry <= 0) return 'No foodstuff at home'; break;
@@ -964,6 +980,42 @@
       if (c >= 3 && rand(s) < 0.35) { var fee = price(s, 15000); earn(s, fee, 'Runway booking: Eko Style Week'); return '✨ The designer booked you for one show: ' + naira(fee) + '.'; }
       return 'They said "We will call you." They did not call.';
     },
+    // Rules 19, the police division. A report opens a case (a theft you can name, or a general complaint);
+    // after three days each follow-up may crack it, "mobilisation" helps, and after 14 days it goes cold.
+    // A solved theft gives back half, capped: the police rarely find all of it.
+    report: function (s) {
+      var c = s.cases = s.cases || [];
+      if (openCase(s)) return 'The desk officer wrote it under your open case. "We are on it."';
+      var L0 = s.lastLoss && !s.lastLoss.reported && day(s) - s.lastLoss.day <= 7 ? s.lastLoss : null;
+      if (L0) L0.reported = true;
+      var cs = { no: 'LAG/' + (100 + c.length * 37 + day(s) % 97) + '/' + (2026 + Math.floor(day(s) / 336)), what: L0 ? L0.what : 'A complaint about a neighbour', amt: L0 ? L0.amt : 0, day: day(s), status: 'open', mob: false, checks: 0 };
+      c.push(cs); if (c.length > 12) c.shift();
+      log(s, '🚓 Case ' + cs.no + ' opened: ' + cs.what + '.', 'story');
+      return 'Statement taken. Case ' + cs.no + ': ' + cs.what + '. An IPO will investigate. Check back in a few days.';
+    },
+    casecheck: function (s) {
+      var cs = openCase(s), age = day(s) - cs.day; cs.checks++;
+      if (age >= 14) { cs.status = 'cold'; return 'Case ' + cs.no + ' has gone cold. "These things take time," the IPO says, and closes the file.'; }
+      if (age < 3) return '"Investigation is ongoing." Come back in ' + (3 - age) + ' day' + (3 - age > 1 ? 's' : '') + '.';
+      if (rand(s) < (cs.mob ? 0.4 : 0.2)) {
+        cs.status = 'solved';
+        if (cs.amt) { var back = Math.min(price(s, 20000), Math.round(cs.amt / 2 / 50) * 50); if (back > 0) earn(s, back, 'Recovered by the police (case ' + cs.no + ')'); log(s, '🚓 Case ' + cs.no + ' solved. They recovered ' + naira(back) + '.', 'good'); return 'They caught him! You got ' + naira(back) + ' back. The rest is "exhibit".'; }
+        log(s, '🚓 Case ' + cs.no + ' settled at the station.', 'good'); return 'Both sides were called in and it was settled at the station.';
+      }
+      return '"We have a lead." The case is still open.';
+    },
+    bottle: function (s) { return '🍾 The bottle came out with sparklers, a parade of bottle girls and the DJ calling your name.' + glamBonus(s); },
+    vip: function (s) { return '🛋️ Your own booth, your own bottles, your own security. The whole room looked over.' + glamBonus(s); },
+    rain: function (s) { s.stats.rained = (s.stats.rained || 0) + 1; return '💸 You made it rain. ₦1000 notes everywhere, and the hype man would not stop shouting your name.' + glamBonus(s); },
+    shutdown: function (s) { s.shutdownWeek = week(s); s.stats.shutdowns = (s.stats.shutdowns || 0) + 1; log(s, '👑 You shut down the club. Everybody there was your guest tonight.', 'story'); return '👑 YOU SHUT DOWN THE CLUB! Doors locked, the bar open for everybody, your name on every screen.'; },
+    mobilise: function (s) { openCase(s).mob = true; return 'The IPO took the "fuel money". The case should move faster now.'; },
+    accredit: function (s) { s.accredited = week(s); s.stats.accredited = (s.stats.accredited || 0) + 1; return 'Your card was scanned and your thumb inked. On election weekend, your ballot is at this polling unit.'; },
+    // The hospital doctor (rules 19): with malaria you get a prescription and a drip, so the fever breaks a day sooner than with the chemist.
+    doctor: function (s) {
+      if (s.sick && !s.sick.drugs) { s.sick.drugs = true; s.sick.cure = day(s) + 1; return '🩺 Malaria, the doctor confirmed. A drip, a prescription, and rest: the fever should break tomorrow morning.'; }
+      if (s.sick) return '🩺 "Keep taking the drugs and rest." You will be fine.';
+      return '🩺 Blood pressure fine, blood test fine. "Reduce stress, drink water." Easier said than done in Lagos.';
+    },
     compete: function (s, a) {
       var C = a.compete, score = skillLevel(s, C.skill) * 8 + rand(s) * 60;
       if (s.rules >= 16) dayBump(s, 'c:' + a.id);
@@ -983,7 +1035,7 @@
     club: function (s) {
       if (rand(s) < 0.06) {
         var lost = Math.min(s.cash, price(s, 20000));
-        if (lost) post(s, 'cash', -lost, 'Phone and wallet snatched');
+        if (lost) { post(s, 'cash', -lost, 'Phone and wallet snatched'); noteLoss(s, lost, 'Wallet snatched outside a club'); }
         return 'Someone snatched your wallet outside the club.';
       }
       return 'Great night.' + glamBonus(s) + dressBonus(s, 'club');
@@ -1494,8 +1546,9 @@
       queue(s, { id: 'police', title: 'Checkpoint', text: 'An officer flags you down. "Anything for the boys?"', options: ['Give ' + naira(price(s, 2000)), 'Show your papers and argue'] });
     } else if ((mode === 'danfo' || mode === 'okada') && night && rand(s) < 0.05) {
       var lost = Math.min(s.cash, price(s, 15000));
-      if (lost) { post(s, 'cash', -lost, 'Phone snatched in traffic'); msg += ' Someone snatched your phone and cash on the way.'; }
+      if (lost) { post(s, 'cash', -lost, 'Phone snatched in traffic'); noteLoss(s, lost, 'Phone and cash snatched in traffic'); msg += ' Someone snatched your phone and cash on the way.'; }
     }
+    if (s.rules >= 19 && STREET_BOYS[dest] && /^(trek|danfo|okada|keke)$/.test(mode) && !s.pending.length && rand(s) < 0.06) queueStreetBoys(s);
     return finish(s, ok(msg));
   }
 
@@ -1509,6 +1562,18 @@
 
   function queue(s, ev) { s.pending.push(ev); }
 
+  // Rules 19: area boys block your path when you arrive on foot or by danfo, okada or keke in their areas.
+  var STREET_BOYS = { oshodi: 1, mushin: 1, island: 1, surulere: 1, ajah: 1 };
+  function streetOdds(s) {
+    var c = skillLevel(s, 'charisma'), f = skillLevel(s, 'fitness');
+    return { talk: Math.min(0.85, 0.3 + c * 0.1), run: Math.min(0.85, 0.3 + f * 0.1), stand: Math.min(0.9, 0.35 + f * 0.08 + c * 0.04) };
+  }
+  function queueStreetBoys(s) {
+    var o = streetOdds(s), toll = price(s, 200);
+    queue(s, { id: 'streetboys', title: 'Area boys!', text: 'Three area boys block your path. "Oga/Madam, owo mi da? Anything for the boys!"', odds: o, toll: toll,
+      options: ['Pay ' + naira(toll), 'Talk your way out', 'Run!', 'Stand your ground'],
+      subs: ['Safe', 'Charisma check · ' + Math.round(o.talk * 100) + '%', 'Fitness check · ' + Math.round(o.run * 100) + '%', Math.round(o.stand * 100) + '% they back off · lose: pay ' + naira(toll) + ' and a knock to your energy'] });
+  }
   function queueAreaBoys(s) {
     queue(s, { id: 'areaboys', title: 'Owo ijoko', text: 'Two agberos block your spot. "Settle us before you sell here."', options: ['Pay ' + naira(price(s, 500)), 'Refuse'] });
   }
@@ -1703,11 +1768,23 @@
         break;
       case 'police':
         if (idx === 0) { payPartial(s, price(s, 2000), 'Checkpoint "settlement"'); msg = 'He waves you through.'; }
+        else if (s.rules >= 19 && rand(s) < 0.2) { advance(s, 30); applyFx(s, { stress: 15 }); var bl = price(s, 5000); queue(s, { id: 'detained', title: 'Taken to the station', text: '"You are wandering." They drove you to the division and put you behind the counter. The cell is behind you.', bail: bl, options: ['Pay "bail" ' + naira(bl), 'Wait it out in the cell'], subs: ['Out in an hour', 'Out at 7 in the morning, no charge'] }); msg = 'The argument went badly.'; }
         else { advance(s, 45); applyFx(s, { stress: 10 }); msg = 'Forty-five minutes of argument, then he lets you go.'; }
+        break;
+      case 'streetboys':
+        var so = ev.odds, tl = ev.toll;
+        if (idx === 0) { payPartial(s, tl, 'Area boys'); msg = '"Correct person!" They step aside.'; }
+        else if (idx === 1) { if (rand(s) < so.talk) { applyFx(s, { social: 3 }); msg = 'You greeted them like old friends and named the right big man. They let you pass, laughing.'; } else { payPartial(s, tl * 2, 'Area boys'); applyFx(s, { stress: 8 }); msg = 'They were not impressed. You paid double: ' + naira(tl * 2) + '.'; } }
+        else if (idx === 2) { if (rand(s) < so.run) { applyFx(s, { energy: -6 }); advance(s, 5); msg = 'You ran through two side streets and lost them.'; } else { payPartial(s, tl * 2, 'Area boys'); applyFx(s, { energy: -12, stress: 10 }); msg = 'They caught up with you. ' + naira(tl * 2) + ', and your legs are gone.'; } }
+        else { if (rand(s) < so.stand) { applyFx(s, { stress: 4 }); msg = 'You did not blink. They backed off.'; } else { payPartial(s, tl, 'Area boys'); applyFx(s, { energy: -15, stress: 10 }); msg = 'They pushed you around. You paid ' + naira(tl) + ' anyway.'; } }
+        break;
+      case 'detained':
+        if (idx === 0) { payPartial(s, ev.bail, '"Bail" at the police division'); advance(s, 60); applyFx(s, { stress: 10 }); msg = 'Bail is free, says the sign on the wall. You paid ' + naira(ev.bail) + ' anyway and walked out.'; }
+        else { var wake = (420 - minuteOfDay(s) + 1440) % 1440 || 1440; advance(s, wake); applyFx(s, { stress: 20, hygiene: -30, energy: -10, social: -5 }); s.stats.cellNights = (s.stats.cellNights || 0) + 1; log(s, '🚓 A night in the cell. They let you go at 7 with no charge.', 'bad'); msg = 'A hard bench, a crowded cell, no charge. At 7 they let you go.'; }
         break;
       case 'areaboys':
         if (idx === 0) { payPartial(s, price(s, 500), 'Owo ijoko'); msg = 'They leave you alone.'; }
-        else if (rand(s) < 0.4) { var t = Math.min(s.cash, price(s, 1500)); if (t) post(s, 'cash', -t, 'Taken by area boys'); applyFx(s, { stress: 15 }); msg = 'They took ' + naira(t) + ' from your pocket.'; }
+        else if (rand(s) < 0.4) { var t = Math.min(s.cash, price(s, 1500)); if (t) { post(s, 'cash', -t, 'Taken by area boys'); noteLoss(s, t, 'Cash taken by area boys'); } applyFx(s, { stress: 15 }); msg = 'They took ' + naira(t) + ' from your pocket.'; }
         else { applyFx(s, { stress: 5 }); msg = 'You stood your ground. They moved on.'; }
         break;
       case 'cbn':

@@ -336,7 +336,30 @@
       // Coloured washes, and a warm light over the bar.
       [[-12, 13, -6, A], [12, 13, -6, B], [-12, 13, 14, B], [12, 13, 14, A], [-RW / 2 + 6, 8, 0, new T.Color(0xffc070)]].forEach(function (q, i) { var L0 = new T.PointLight(q[3], 0, 70, 1.2); L0.position.set(q[0], q[1], q[2]); L0.userData.max = i === 4 ? 18 : 40; L0.userData.c = q[3]; clubG.add(L0); CB.lights.push(L0); });
       dancers(120, r, function (rr, i) { return i < 96 ? [-10 + rr() * 20, -4 + rr() * 20] : i < 108 ? [-RW / 2 + 9 + rr() * 3, -12 + rr() * 24] : [RW / 2 - 9 - rr() * 3, -20 + rr() * 38]; });
-      if (sc.placeId === 'owambe_hall') owambe(RD);
+      if (sc.placeId === 'owambe_hall') owambe(RD); else clubExtras(RW, RD);
+    }
+    // Every club room (not the event hall): a round stage with two poles and dancers in stage outfits, a celebrity car park
+    // at the door with a red carpet, and naira rain over the dance floor when somebody sprays (sc.rain).
+    function clubExtras(RW, RD) {
+      var px = -RW / 2 + 13, pz = 24, gold = mat('poleGold', { color: 0xd4af37, metalness: 0.9, roughness: 0.2 });
+      clubG.add(mesh(new T.CylinderGeometry(4.2, 4.4, 1, 32), mat('stage', { color: 0x17181a, roughness: 0.3, metalness: 0.4 }), px, 0.5, pz));
+      var ring = new T.Mesh(new T.TorusGeometry(4.25, 0.08, 8, 48).rotateX(Math.PI / 2), emissiveMat(0xff4fd8, 1)); ring.position.set(px, 1.02, pz); clubG.add(ring);
+      CB.poles = []; [-1.6, 1.6].forEach(function (dx, i) {
+        clubG.add(mesh(new T.CylinderGeometry(0.07, 0.07, 16, 10), gold, px + dx, 9, pz));
+        var d = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('stage' + i, i), 80 + i) : person(80 + i, true); clubG.add(d); CB.poles.push({ g: d, x: px + dx, z: pz, ph: i * Math.PI });
+      });
+      var sl = new T.SpotLight(0xff7ae0, 80, 22, 0.5, 0.6, 1.2); sl.position.set(px, 16, pz - 2); sl.target.position.set(px, 0, pz); clubG.add(sl, sl.target);
+      // the car park: a red carpet from the door and four luxury cars under a sign
+      var cx = RW / 2 - 12, cz = -29; clubG.add(mesh(new T.BoxGeometry(22, 0.04, 9), mat('park', { color: 0x2b2d33, roughness: 0.8 }), cx, 0.04, cz));
+      for (var b = 0; b < 5; b++) clubG.add(mesh(new T.BoxGeometry(0.12, 0.05, 6), mat('bay', { color: 0xf4f3ec }), cx - 10 + b * 5, 0.08, cz));
+      clubG.add(mesh(new T.BoxGeometry(2.4, 0.06, 26), mat('carpet', { color: 0xb3122a, roughness: 0.9 }), 0, 0.06, -RD / 2 + 13));
+      [0x17181a, 0xf4f3ec, 0xd4af37, 0xb3122a].forEach(function (col, k) { var c = carModel(col, 4.8); c.position.set(cx - 7.5 + k * 5, 0, cz); c.rotation.y = Math.PI / 2; clubG.add(c); });
+      var st = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#d4af37'; g.fillRect(0, 0, w, h); g.fillStyle = '#17181a'; g.font = '900 48px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CELEBRITY PARKING', w / 2, h / 2); });
+      var sm = new T.Mesh(new T.PlaneGeometry(10, 1.9), new T.MeshBasicMaterial({ map: st })); sm.position.set(cx, 5, cz + 4.6); sm.rotation.y = Math.PI; clubG.add(sm);
+      [-1, 1].forEach(function (s2) { clubG.add(mesh(new T.CylinderGeometry(0.12, 0.12, 5, 8), gold, cx + s2 * 4.6, 2.5, cz + 4.6)); });
+      // money rain
+      var nt = canvasTex(128, 64, function (g, w, h) { g.fillStyle = '#7fbf6a'; g.fillRect(0, 0, w, h); g.strokeStyle = '#1b5e20'; g.lineWidth = 4; g.strokeRect(4, 4, w - 8, h - 8); g.fillStyle = '#1b5e20'; g.font = '900 28px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('₦1000', w / 2, h / 2); });
+      var NC = LITE ? 60 : 140, notes = new T.InstancedMesh(new T.PlaneGeometry(0.9, 0.45), new T.MeshStandardMaterial({ map: nt, side: T.DoubleSide, roughness: 0.6 }), NC); clubG.add(notes); CB.cash = notes; CB.NC = NC; CB.rainOnly = true;
     }
     // The Surulere event hall: a high table on the riser, guests in agbada and gele, and naira raining on the floor.
     function owambe(RD) {
@@ -873,8 +896,129 @@
       SR.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.85 : 0; }); SR.lights.forEach(function (L0) { L0.intensity = night ? 30 : 0; });
     }
     // Interiors for a co-working hub, a gym and a mall atrium, built in the gallery's hall.
+    /* ---------- Police divisions, polling units and hospitals (rules 19 places): rooms with a door people come and go by ---------- */
+    // GL.flow: figures walking a loop of waypoints (from the door, to the desk, ... and out), pausing at each one.
+    function flowFig(i, uni, capC) {
+      var g;
+      if (!uni && !LITE && root.LasgidiAvatar3D && root.LasgidiGames3D) g = avatarFor(root.LasgidiGames3D.stranger((sc.placeId || 'civic') + ':flow', i), 60 + i);
+      else { g = person(60 + i, i % 2 === 1); if (uni) { var um = mat('uni' + uni, { color: uni, roughness: 0.6 }), cm = mat('cl' + (60 + i) % 8); g.traverse(function (o) { if (o.material === cm) o.material = um; }); }
+        if (capC) { var cap = new T.Mesh(new T.CylinderGeometry(0.17, 0.17, 0.12, 12), mat('cap' + capC, { color: capC })); cap.position.y = 2.0; g.add(cap); } }
+      galG.add(g); return g;
+    }
+    function flow(g, pts, speed, off, pause) {
+      var segs = [], tot = 0; for (var i = 0; i < pts.length; i++) { var a = pts[i], b = pts[(i + 1) % pts.length], d = Math.hypot(b[0] - a[0], b[1] - a[1]); segs.push({ a: a, b: b, d: d, t0: tot }); tot += d / speed + (pause || 2); }
+      GL.flow.push({ g: g, segs: segs, tot: tot, speed: speed, off: off || 0, pause: pause || 2 });
+    }
+    function flowFrame(t) {
+      (GL.flow || []).forEach(function (f, i) {
+        var tt = ((t + f.off) % f.tot + f.tot) % f.tot, s = f.segs[0];
+        for (var k = 0; k < f.segs.length; k++) if (tt >= f.segs[k].t0) s = f.segs[k];
+        var u = tt - s.t0, walk = s.d / f.speed, moving = u < walk, r = moving ? u / walk : 1;
+        var x = s.a[0] + (s.b[0] - s.a[0]) * r, z = s.a[1] + (s.b[1] - s.a[1]) * r; f.g.position.set(x, 0.05, z);
+        if (moving && s.d > 0.01) f.g.rotation.y = Math.atan2(-(s.b[1] - s.a[1]), s.b[0] - s.a[0]);
+        var lg = f.g.userData.legs, sw = moving && !reduce ? Math.sin(t * 7 + i) * 0.45 : 0; if (lg) { lg[0].rotation[f.g.userData.axis || 'z'] = sw; lg[1].rotation[f.g.userData.axis || 'z'] = -sw; }
+      });
+      var B = GL.board; if (B) { var k = JSON.stringify(sc.board || null); if (k !== B.key) { B.key = k; var c = B.tex.image, g = c.getContext('2d'); drawBoard(g, c.width, c.height, sc.board, B.kind); B.tex.needsUpdate = true; } }
+    }
+    function drawBoard(g, w, h, bd, kind) {
+      g.fillStyle = kind === 'polling' ? '#0f3d2e' : '#14213d'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#ffd23f'; g.font = '800 40px system-ui, sans-serif'; g.textBaseline = 'middle'; g.fillText(bd ? bd.title : (kind === 'polling' ? 'LIVE RESULTS' : 'LIVE CASES'), 28, 44, w - 56);
+      g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(28, 76, w - 56, 3);
+      var rows = bd && bd.rows || [], max = 1; rows.forEach(function (r) { var n = +r[1]; if (n > max) max = n; });
+      rows.slice(0, 7).forEach(function (r, i) {
+        var y = 116 + i * 52; g.fillStyle = '#ffffff'; g.font = '600 28px system-ui, sans-serif'; g.fillText(r[0], 28, y, w * 0.6);
+        if (kind === 'polling' && r[1] !== '') { g.fillStyle = r[2]; g.fillRect(w * 0.62, y - 14, Math.max(6, (w * 0.28) * (+r[1] / max)), 28); g.fillStyle = '#fff'; g.font = '800 28px system-ui, sans-serif'; g.textAlign = 'right'; g.fillText(r[1], w - 28, y); g.textAlign = 'left'; }
+        else { g.fillStyle = r[2]; g.font = '800 26px system-ui, sans-serif'; g.textAlign = 'right'; g.fillText(r[1], w - 28, y, w * 0.36); g.textAlign = 'left'; }
+      });
+      if (bd && bd.foot) { g.fillStyle = '#d0453a'; g.fillRect(0, h - 56, w, 56); g.fillStyle = '#fff'; g.font = '800 28px system-ui, sans-serif'; g.fillText('● ' + bd.foot, 28, h - 28, w - 56); }
+    }
+    function poster(text, bg, fg, w, h, x, y, z, ry) {
+      var tx = canvasTex(512, Math.round(512 * h / w), function (g, cw, ch) { g.fillStyle = bg; g.fillRect(0, 0, cw, ch); g.fillStyle = fg; g.font = '900 ' + Math.round(ch * 0.42) + 'px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, cw / 2, ch / 2, cw - 24); });
+      var m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ map: tx })); m.position.set(x, y, z); m.rotation.y = ry || 0; galG.add(m); return m;
+    }
+    function chair(x, z, ry, col) { var c = new T.Group(); c.position.set(x, 0, z); c.rotation.y = ry || 0; var m = mat('chair' + col, { color: col, roughness: 0.5 }); c.add(mesh(new T.BoxGeometry(1, 0.12, 1), m, 0, 0.9, 0)); c.add(mesh(new T.BoxGeometry(1, 1.1, 0.12), m, 0, 1.45, -0.45)); [[-0.42, -0.42], [0.42, -0.42], [-0.42, 0.42], [0.42, 0.42]].forEach(function (q) { c.add(mesh(new T.BoxGeometry(0.08, 0.9, 0.08), m, q[0], 0.45, q[1])); }); galG.add(c); return c; }
+    function plant(x, z) { galG.add(mesh(new T.CylinderGeometry(0.7, 0.55, 1.2, 12), mat('pot', { color: 0xd8c3a5 }), x, 0.6, z)); for (var k = 0; k < 5; k++) { var lf = mesh(new T.ConeGeometry(0.25, 2.4, 5), mat('leaf', { color: 0x2f8f4a }), x + Math.cos(k * 1.3) * 0.25, 2.1, z + Math.sin(k * 1.3) * 0.25); lf.rotation.set(Math.sin(k * 1.3) * 0.35, 0, -Math.cos(k * 1.3) * 0.35); galG.add(lf); } }
+    function sitter(i, x, z, ry, lie) { var p = flowFig(i); p.position.set(x, lie ? 1.25 : 0.05, z); p.rotation.y = ry || 0; if (lie) p.rotation.z = Math.PI / 2; else if (p.userData.legs) p.userData.legs.forEach(function (l) { l.rotation[p.userData.axis || 'z'] = -1.2; }); return p; }
+    function buildCivic(kind, room, floor, RW, RD, RH) {
+      GL.flow = []; var DX = -RW / 2 + 0.6, DZ = 0; // the door, in the left wall
+      galG.add(mesh(new T.BoxGeometry(0.3, 6.4, 5.2), mat('doorframe', { color: 0x5a3a22 }), -RW / 2 + 0.2, 3.2, DZ));
+      var day = !sc.night, dm = new T.Mesh(new T.PlaneGeometry(4.4, 6), new T.MeshBasicMaterial({ color: day ? 0xfff3d6 : 0x1c2433 })); dm.position.set(-RW / 2 + 0.36, 3, DZ); dm.rotation.y = Math.PI / 2; galG.add(dm);
+      poster(kind === 'polling' ? 'WAY IN' : 'ENTRANCE', '#16a35a', '#fff', 4, 0.9, -RW / 2 + 0.4, 6.8, DZ, Math.PI / 2);
+      var board = canvasTex(1024, 512, function () {}); GL.board = { tex: board, key: '', kind: kind };
+      if (kind !== 'hospital') { var bm = new T.Mesh(new T.PlaneGeometry(12, 6), new T.MeshBasicMaterial({ map: board })); bm.position.set(0, 4, RD / 2 - 0.3); bm.rotation.y = Math.PI; galG.add(bm); galG.add(mesh(new T.BoxGeometry(12.6, 6.6, 0.3), mat('bframe', { color: 0x17181a }), 0, 4, RD / 2 - 0.1));
+        poster(String(sc.name || '').toUpperCase(), kind === 'polling' ? '#16a35a' : '#1f2a44', '#ffffff', 22, 1.8, 0, 8.4, RD / 2 - 0.3, Math.PI); }
+      if (kind === 'police') {
+        room.material.color.set(0xd6dde6); floor.material.color.set(0x9aa3ad);
+        galG.add(mesh(new T.BoxGeometry(3, 2.4, 14), mat('pdesk', { color: 0x1f2a44, roughness: 0.5 }), -6, 1.2, 4)); galG.add(mesh(new T.BoxGeometry(3.4, 0.2, 14.4), mat('pdtop', { color: 0xd9d4c7 }), -6, 2.5, 4));
+        galG.add(mesh(new T.BoxGeometry(0.15, 1, 1.4), mat('mon', { color: 0x2f6fd0, roughness: 0.2 }), -5.6, 3.1, 1)); galG.add(mesh(new T.BoxGeometry(1.2, 0.05, 1.6), mat('book', { color: 0x7a1f1f }), -6, 2.63, 6));
+        poster('ENQUIRIES', '#1f2a44', '#ffffff', 6, 1.2, -6, 6.4, 4, Math.PI / 2 * 0 + Math.PI / 2);
+        // the cell: bars, a bench and the people inside
+        var CX = 17; galG.add(mesh(new T.BoxGeometry(RW / 2 - CX, 0.1, 16), mat('cellfl', { color: 0x6f747b }), CX + (RW / 2 - CX) / 2, 0.06, -6));
+        for (var b = 0; b < 26; b++) galG.add(mesh(new T.CylinderGeometry(0.07, 0.07, RH, 6), mat('bar', { color: 0x30343a, metalness: 0.8, roughness: 0.3 }), CX, RH / 2, -14 + b * 0.62));
+        galG.add(mesh(new T.BoxGeometry(RW / 2 - CX, 0.2, 0.2), mat('bar', {}), CX + (RW / 2 - CX) / 2, 7, 2)); galG.add(mesh(new T.BoxGeometry(0.2, RH, 0.2), mat('bar', {}), CX + (RW / 2 - CX) / 2, RH / 2, 2));
+        for (var cb = 0; cb < 2; cb++) galG.add(mesh(new T.BoxGeometry(1.2, 0.8, 7), mat('cbench', { color: 0x8a6f4d }), RW / 2 - 1.5, 0.4, -10 + cb * 8));
+        poster('THE CELL', '#d0453a', '#fff', 5, 1, CX - 0.2, 8.6, -6, -Math.PI / 2);
+        sitter(1, RW / 2 - 1.8, -11, Math.PI); sitter(2, RW / 2 - 1.8, -3, Math.PI); var st0 = flowFig(3); st0.position.set(CX + 1.2, 0.05, -8); st0.rotation.y = Math.PI;
+        // the waiting bench by the door
+        galG.add(mesh(new T.BoxGeometry(10, 0.25, 1.3), mat('wbench', { color: 0x8a6f4d }), -20, 0.9, -12)); galG.add(mesh(new T.BoxGeometry(10, 1.6, 0.2), mat('wbench', {}), -20, 1.8, -12.6));
+        sitter(4, -22, -11.9, Math.PI / 2); sitter(5, -18, -11.9, Math.PI / 2);
+        poster('THE POLICE IS YOUR FRIEND', '#1f2a44', '#ffd23f', 12, 1.6, -20, 6, -RD / 2 + 0.3, 0); poster('BAIL IS FREE', '#ffffff', '#d0453a', 6, 1.4, -18, 4, RD / 2 - 0.3, Math.PI);
+        var desk1 = flowFig(10, 0x1b2a49, 0x111111); desk1.position.set(-8.5, 0.05, 2); desk1.rotation.y = 0; var desk2 = flowFig(11, 0x1b2a49, 0x111111); desk2.position.set(-8.5, 0.05, 7);
+        // in and out: complainants to the desk and the bench, an officer walking a suspect to the cell, someone bailed walking out
+        flow(flowFig(20), [[DX, DZ], [-3.6, 2], [-16, -10], [DX, DZ]], 2.2, 0, 3);
+        flow(flowFig(21), [[DX, DZ + 1], [-3.6, 6], [-3.6, 3], [DX, DZ + 1]], 2, 9, 4);
+        var off = flowFig(22, 0x1b2a49, 0x111111), sus = flowFig(23); flow(off, [[DX, DZ - 1], [2, -2], [CX - 1.5, 1], [2, -2]], 1.8, 3, 3); flow(sus, [[DX, DZ - 2], [2, -3], [CX - 1.5, 0], [2, -3]], 1.8, 3, 3);
+        flow(flowFig(24), [[CX - 1.5, 3.5], [0, 10], [DX, DZ + 2]], 2, 14, 2);
+        flow(flowFig(25), [[DX, DZ], [-12, 12], [-3.6, 9], [DX, DZ]], 2.4, 20, 3);
+      } else if (kind === 'polling') {
+        room.material.color.set(0xefe6d2); floor.material.color.set(0xa89f8d);
+        galG.add(mesh(new T.BoxGeometry(8, 0.2, 3), mat('adesk', { color: 0xf4f3ec }), -14, 2, 6)); [[-17.5, 4.8], [-10.5, 4.8], [-17.5, 7.2], [-10.5, 7.2]].forEach(function (q) { galG.add(mesh(new T.BoxGeometry(0.15, 2, 0.15), mat('leg', { color: 0x555555 }), q[0], 1, q[1])); });
+        galG.add(mesh(new T.BoxGeometry(0.8, 0.25, 0.5), mat('bvas', { color: 0x17181a, roughness: 0.3 }), -14, 2.25, 5.6)); poster('ACCREDITATION', '#16a35a', '#fff', 7, 1.2, -14, 5.2, 7.6, Math.PI);
+        var o1 = flowFig(30, 0x2f8f4a), o2 = flowFig(31, 0x2f8f4a); o1.position.set(-15.5, 0.05, 8.4); o1.rotation.y = -Math.PI / 2; o2.position.set(-12.5, 0.05, 8.4); o2.rotation.y = -Math.PI / 2;
+        // voting cubicles: three-sided screens on small tables
+        for (var cu = 0; cu < 4; cu++) { var cx2 = 6 + cu * 4.5, cz = 14; galG.add(mesh(new T.BoxGeometry(3, 0.12, 2), mat('ctab', { color: 0xb08a5a }), cx2, 2, cz)); var sc2 = mat('cub', { color: 0x9fc8e8, roughness: 0.8 });
+          galG.add(mesh(new T.BoxGeometry(3, 2, 0.08), sc2, cx2, 3, cz + 1)); galG.add(mesh(new T.BoxGeometry(0.08, 2, 2), sc2, cx2 - 1.5, 3, cz)); galG.add(mesh(new T.BoxGeometry(0.08, 2, 2), sc2, cx2 + 1.5, 3, cz)); [[-1.4, -0.9], [1.4, -0.9], [-1.4, 0.9], [1.4, 0.9]].forEach(function (q) { galG.add(mesh(new T.BoxGeometry(0.1, 2, 0.1), mat('leg', {}), cx2 + q[0], 1, cz + q[1])); }); }
+        poster('VOTING CUBICLES', '#ffffff', '#1f3b63', 9, 1.2, 12.75, 5, 15.3, Math.PI);
+        // the ballot box: see-through, on a table, papers inside
+        galG.add(mesh(new T.BoxGeometry(3, 0.15, 2), mat('btab', { color: 0xb08a5a }), 2, 2, 2)); var bx = mesh(new T.BoxGeometry(1.6, 1.4, 1.2), new T.MeshStandardMaterial({ color: 0xdff1ff, transparent: true, opacity: 0.4, roughness: 0.05 }), 2, 2.8, 2); galG.add(bx);
+        for (var pp = 0; pp < 9; pp++) { var pap = mesh(new T.BoxGeometry(0.5, 0.02, 0.35), mat('paper', { color: 0xffffff }), 1.5 + (pp % 3) * 0.4, 2.2 + Math.floor(pp / 3) * 0.08, 1.7 + (pp % 2) * 0.4); pap.rotation.y = pp; galG.add(pap); }
+        galG.add(mesh(new T.BoxGeometry(1.7, 0.08, 1.3), mat('bxlid', { color: 0x16a35a }), 2, 3.52, 2)); poster('BALLOT BOX', '#16a35a', '#fff', 3, 0.7, 2, 4.4, 2, Math.PI);
+        poster('YOUR VOTE IS YOUR VOICE', '#16a35a', '#ffffff', 14, 1.8, -12, 7, -RD / 2 + 0.3, 0);
+        poster('THE QUEUE', '#f2a516', '#17181a', 5, 1, -24, 5.6, -RD / 2 + 0.3, 0);
+        // the queue: people standing in a line from the door, shuffling forward; voters going round desk, cubicle, box and out
+        for (var q = 0; q < 7; q++) { var qp = flowFig(40 + q); flow(qp, [[-26 + q * 1.4, -8], [-25.6 + q * 1.4, -8]], 0.2, q * 1.7, 6); }
+        for (var v = 0; v < 4; v++) flow(flowFig(50 + v), [[-17, -8], [-14, 4], [6 + v * 4.5, 12.6], [2, 0.6], [DX, DZ + 1.5 - v]], 2, v * 7, 3);
+      } else { // a hospital: reception, the nurses' station, the doctor, the pharmacy, a ward and a waiting area; a zobo kiosk
+        room.material.color.set(0xeef1f3); floor.material.color.set(0xc9ced3);
+        galG.add(mesh(new T.BoxGeometry(10, 2.4, 3), mat('nst', { color: 0x1f2a44 }), 4, 1.2, 10)); galG.add(mesh(new T.BoxGeometry(10.4, 0.2, 3.4), mat('nstt', { color: 0xf4f3ec }), 4, 2.5, 10));
+        galG.add(mesh(new T.BoxGeometry(1.4, 1, 0.12), mat('mon', { color: 0x2f6fd0 }), 3, 3.1, 9.6)); poster("NURSES' STATION", '#1f2a44', '#ffffff', 8, 1.4, 4, 6.6, 12, Math.PI);
+        var n1 = flowFig(70, 0xf4f3ec, 0xffffff); n1.position.set(4, 0.05, 12.2); n1.rotation.y = -Math.PI / 2;
+        // the ward: three beds along the left wall, two patients
+        for (var bd = 0; bd < 3; bd++) { var bz = -16 + bd * 6; galG.add(mesh(new T.BoxGeometry(5, 0.8, 2.6), mat('bedf', { color: 0xd8c3a5 }), -24, 0.8, bz)); galG.add(mesh(new T.BoxGeometry(4.6, 0.4, 2.4), mat('sheet', { color: 0xd9674a }), -23.8, 1.35, bz)); galG.add(mesh(new T.BoxGeometry(1, 0.35, 1.8), mat('pillow', { color: 0xffffff }), -26, 1.6, bz));
+          galG.add(mesh(new T.CylinderGeometry(0.04, 0.04, 3.5, 6), mat('drip', { color: 0xbbbbbb, metalness: 0.7 }), -21, 1.75, bz + 1.5)); galG.add(mesh(new T.BoxGeometry(0.4, 0.6, 0.15), mat('drbag', { color: 0xdff1ff, transparent: true, opacity: 0.7 }), -21, 3.3, bz + 1.5)); if (bd < 2) sitter(71 + bd, -24, bz, 0, true); }
+        poster('WARD', '#2f8f4a', '#fff', 4, 1, -24, 6.4, -RD / 2 + 0.3, 0);
+        // the pharmacy window: a counter and shelves of boxes
+        galG.add(mesh(new T.BoxGeometry(8, 2.2, 2), mat('ph', { color: 0xf4f3ec }), 20, 1.1, 16)); for (var sh = 0; sh < 3; sh++) for (var bx2 = 0; bx2 < 10; bx2++) galG.add(mesh(new T.BoxGeometry(0.6, 0.6, 0.5), mat('phb' + (bx2 % 4), { color: [0x2f6fd0, 0xd0453a, 0x16a35a, 0xf2a516][bx2 % 4] }), 16.5 + bx2 * 0.75, 3 + sh * 1, RD / 2 - 0.8));
+        poster('PHARMACY', '#16a35a', '#fff', 6, 1.2, 20, 7, RD / 2 - 0.3, Math.PI); var ph1 = flowFig(73, 0xf4f3ec); ph1.position.set(20, 0.05, 18.4); ph1.rotation.y = -Math.PI / 2;
+        // the doctor's corner
+        galG.add(mesh(new T.BoxGeometry(4, 0.15, 2.4), mat('ddesk', { color: 0x8a6f4d }), 20, 2, -12)); chair(20, -14, 0, 0x17181a); chair(20, -9.8, Math.PI, 0x2f6fd0); var doc = flowFig(74, 0xffffff); doc.position.set(20, 0.05, -14.6); doc.rotation.y = Math.PI / 2;
+        poster('DOCTOR', '#2f6fd0', '#fff', 4, 1, 20, 6, -RD / 2 + 0.3, 0);
+        // waiting area: rows of red chairs
+        for (var wc = 0; wc < 10; wc++) chair(-10 + (wc % 5) * 1.6, -6 + Math.floor(wc / 5) * 3, Math.PI, 0xd0453a); sitter(75, -8.4, -6, -Math.PI / 2); sitter(76, -5.2, -3, -Math.PI / 2);
+        poster('WAITING AREA', '#d0453a', '#fff', 6, 1.2, -6.8, 6, -RD / 2 + 0.3, 0);
+        // the zobo kiosk
+        galG.add(mesh(new T.BoxGeometry(5, 3, 3), mat('kiosk', { color: 0xe0a21a }), RW / 2 - 4, 1.5, 2)); galG.add(mesh(new T.BoxGeometry(5.6, 0.4, 3.6), mat('kroof', { color: 0xd0453a }), RW / 2 - 4, 4.6, 2)); poster('MAMA ZEE · ZOBO', '#d0453a', '#fff', 5, 0.9, RW / 2 - 4, 3.8, 0.45, Math.PI);
+        plant(-RW / 2 + 3, 16); plant(RW / 2 - 3, -18); plant(-4, 18);
+        poster(String(sc.name || 'HOSPITAL').toUpperCase(), '#d0453a', '#ffffff', 16, 2.2, 0, 8.4, RD / 2 - 0.3, Math.PI);
+        flow(flowFig(80), [[DX, DZ], [2, 7.6], [-8, -7.6], [20, -8.6], [20, 14], [DX, DZ]], 2, 0, 3);
+        flow(flowFig(81), [[DX, DZ + 1], [5, 7.6], [-6, -4], [DX, DZ + 1]], 2.2, 8, 4);
+        flow(flowFig(82, 0xf4f3ec, 0xffffff), [[0, 8], [-21.5, -14], [-21.5, -8], [0, 8]], 1.6, 3, 4);
+        var str = new T.Group(); str.add(mesh(new T.BoxGeometry(4.2, 0.2, 1.4), mat('strt', { color: 0xf4f3ec }), 0, 1.6, 0)); str.add(mesh(new T.BoxGeometry(4.2, 0.3, 1.4), mat('strs', { color: 0x2f6fd0 }), 0, 1.85, 0)); galG.add(str); str.userData.legs = null; flow(str, [[DX + 2, DZ - 3], [-12, 4], [DX + 2, DZ - 3]], 2.4, 12, 2);
+        flow(flowFig(83), [[DX, DZ - 1], [RW / 2 - 6, 0.2], [DX, DZ - 1]], 2.2, 16, 5);
+      }
+    }
     function buildHall() {
-      wipe(galG); var kind = sc.kind, r = rnd(hashStr(sc.placeId || 'hall')); GL = { spots: [], screens: [] };
+      wipe(galG); var kind = sc.kind, r = rnd(hashStr(sc.placeId || 'hall')); GL = { spots: [], screens: [], flow: [] };
       var RW = 60, RD = 46, RH = kind === 'cinema' ? 18 : 10;
       var room = new T.Mesh(new T.BoxGeometry(RW, RH, RD), new T.MeshStandardMaterial({ color: kind === 'gym' ? 0x2b2f36 : 0xf2f0eb, roughness: 0.85, side: T.BackSide })); room.position.set(0, RH / 2, 0); galG.add(room);
       var floor = new T.Mesh(new T.PlaneGeometry(RW, RD).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ color: kind === 'gym' ? 0x1c1c1f : kind === 'cinema' ? 0xe9e5dc : 0xb08a5a, roughness: kind === 'cinema' ? 0.12 : 0.6, metalness: kind === 'cinema' ? 0.2 : 0 })); floor.position.y = 0.02; floor.receiveShadow = true; galG.add(floor);
@@ -905,6 +1049,8 @@
           var ps = new T.Mesh(new T.PlaneGeometry(10, 2.5), new T.MeshBasicMaterial({ map: pt })); ps.position.set(14, RH - 2.4, -RD / 2 + 0.4); galG.add(ps);
           for (var pl2 = 0; pl2 < 3; pl2++) { galG.add(mesh(new T.CylinderGeometry(0.7, 0.55, 1.2, 12), mat('pot', { color: 0xd8c3a5 }), RW / 2 - 4, 0.6, -16 + pl2 * 14)); galG.add(mesh(new T.ConeGeometry(0.9, 2.6, 7), mat('leaf', { color: 0x2f8f4a }), RW / 2 - 4, 2.4, -16 + pl2 * 14)); } // potted plants
         }
+      } else if (kind === 'police' || kind === 'polling' || kind === 'hospital') {
+        tm.visible = false; buildCivic(kind, room, floor, RW, RD, RH);
       } else {
         // A mall atrium: shopfronts on two levels, a gallery walkway, an escalator and the cinema's NOW SHOWING screen.
         var SHOPS = ['SAVEMART', 'FASHION HUB', 'PHONES & MORE', 'CRISPY CHICK', 'BOOKS', 'GAMES', 'BEAUTY', 'SPORTS'];
@@ -916,7 +1062,7 @@
         galG.add(mesh(new T.CylinderGeometry(4, 4.4, 0.8, 32), mat('basin', { color: 0xc9ccd1 }), 0, 0.4, -2)); palm(0, -2, 6, 0.1);
       }
       GL.amb = new T.PointLight(0xffffff, 60, 90, 1); GL.amb.position.set(0, RH - 1, 0); galG.add(GL.amb);
-      var NW = kind === 'cinema' ? 70 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
+      var NW = kind === 'cinema' ? 70 : /^(police|polling|hospital)$/.test(kind) ? 1 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
       GL.walkers = squad(NW, function (i) { return [0x17181a, 0xf4f3ec, 0xc0392b, 0x2f6fa0, 0x8e44ad, 0xe67e22][i % 6]; }, 1, galG); GL.walkBase = wb;
     }
 
@@ -1153,7 +1299,7 @@
       } else if (STR) {
         streetFrame(reduce ? 30 : t, !!night); if (night) hemi.intensity = 0.4;
       } else if (GAL) {
-        galleryFrame(reduce ? 30 : t); if (GL.screens) GL.screens.forEach(function (m, k) { m.color.setHSL(0.6 + Math.sin(t * 0.3 + k) * 0.05, 0.6, 0.45); }); if (GL.screenTex) { var cs2 = GL.screenTex.userData.canvas; GL.screenTex.userData.redraw(cs2.getContext('2d'), cs2.width, cs2.height, t); GL.screenTex.needsUpdate = true; } hemi.intensity = 0.9; hemi.color.set(0xffffff); sun.intensity = 0; S3.fog.density = 0.002;
+        galleryFrame(reduce ? 30 : t); flowFrame(reduce ? 30 : t); if (GL.screens) GL.screens.forEach(function (m, k) { m.color.setHSL(0.6 + Math.sin(t * 0.3 + k) * 0.05, 0.6, 0.45); }); if (GL.screenTex) { var cs2 = GL.screenTex.userData.canvas; GL.screenTex.userData.redraw(cs2.getContext('2d'), cs2.width, cs2.height, t); GL.screenTex.needsUpdate = true; } hemi.intensity = 0.9; hemi.color.set(0xffffff); sun.intensity = 0; S3.fog.density = 0.002;
       } else if (PLZ) {
         plazaFrame(reduce ? 30 : t, !!night); if (night) hemi.intensity = 0.4;
       } else if (PRK) {
@@ -1178,7 +1324,8 @@
         if (CB.lasers) { CB.lasers.visible = open; var lp = CB.lasers.geometry.attributes.position, O = CB.laserO; CB.lasers.material.color.setHSL((0.33 + Math.floor(t / 4) * 0.21) % 1, 1, 0.55); for (var li = 0; li < CB.NL; li++) { var la = -0.9 + 1.8 * li / (CB.NL - 1) + Math.sin(t * 1.3) * 0.35, ev = -0.2 + Math.sin(t * 0.9 + li * 0.25) * 0.1; lp.setXYZ(li * 2, O[0], O[1], O[2]); lp.setXYZ(li * 2 + 1, O[0] + Math.sin(la) * 64, O[1] + ev * 64, O[2] - Math.cos(la) * 64); } lp.needsUpdate = true; }
         CB.beams.forEach(function (b, i) { b.visible = open; b.rotation.z = Math.sin(t * 1.1 + i) * 0.55; b.rotation.x = Math.cos(t * 0.8 + i * 1.7) * 0.45; b.material.color.copy(i % 2 ? A : B); b.material.opacity = 0.07 + 0.08 * kick; });
         CB.lights.forEach(function (L0, i) { var on = ROOF ? night : open; L0.color.copy(on || ROOF ? L0.userData.c : new T.Color(0xfff4e0)); L0.intensity = on ? L0.userData.max * (CB.flame && i === 0 ? 0.8 + 0.3 * Math.sin(t * 13) : 0.7 + 0.5 * kick) : ROOF ? 0 : L0.userData.max * 0.55; });
-        if (CB.cash) { var m5 = new T.Matrix4(), q5 = new T.Quaternion(), e5 = new T.Euler(), v5 = new T.Vector3(), s5 = new T.Vector3(1, 1, 1); CB.cash.visible = open; for (var ci = 0; ci < CB.NC; ci++) { var ck = (ci / CB.NC + t * 0.09 * (0.7 + (ci % 5) * 0.1)) % 1; v5.set(-9 + (ci * 0.618 % 1) * 18, 9 - ck * 9, -3 + (ci * 0.377 % 1) * 19); e5.set(t * 2 + ci, t * 1.3 + ci * 0.5, 0); CB.cash.setMatrixAt(ci, m5.compose(v5, q5.setFromEuler(e5), s5)); } CB.cash.instanceMatrix.needsUpdate = true; }
+        if (CB.cash) { var m5 = new T.Matrix4(), q5 = new T.Quaternion(), e5 = new T.Euler(), v5 = new T.Vector3(), s5 = new T.Vector3(1, 1, 1); CB.cash.visible = open && (!CB.rainOnly || !!sc.rain); for (var ci = 0; ci < CB.NC; ci++) { var ck = (ci / CB.NC + t * 0.09 * (0.7 + (ci % 5) * 0.1)) % 1; v5.set(-9 + (ci * 0.618 % 1) * 18, 9 - ck * 9, -3 + (ci * 0.377 % 1) * 19); e5.set(t * 2 + ci, t * 1.3 + ci * 0.5, 0); CB.cash.setMatrixAt(ci, m5.compose(v5, q5.setFromEuler(e5), s5)); } CB.cash.instanceMatrix.needsUpdate = true; }
+        if (CB.poles) CB.poles.forEach(function (P, i) { var a6 = reduce ? P.ph : t * 1.2 + P.ph, up = reduce ? 0.6 : 0.6 + Math.max(0, Math.sin(t * 0.6 + P.ph)) * 2.2; P.g.position.set(P.x + Math.cos(a6) * 0.45, up, P.z + Math.sin(a6) * 0.45); P.g.rotation.y = -a6 + Math.PI; var lg6 = P.g.userData.legs; if (lg6) { lg6[0].rotation[P.g.userData.axis || 'z'] = up > 1 ? 0.9 : Math.sin(t * 4 + i) * 0.3; lg6[1].rotation[P.g.userData.axis || 'z'] = up > 1 ? -0.3 : -Math.sin(t * 4 + i) * 0.3; } });
         if (CB.owambe) CB.owambe.forEach(function (f, i) { var u = f.userData, a5 = Math.sin(t * 6 + i) * 0.5; if (u.arms) u.arms.forEach(function (l, k) { l.rotation.x = open && i >= 4 && i % 2 ? -1.8 - Math.sin(t * 6 + i + k * 3) * 0.5 : (k ? a5 : -a5) * 0.4; }); if (u.legs && i >= 4) u.legs.forEach(function (l, k) { l.rotation.x = open ? (k ? -a5 : a5) * 0.6 : 0; }); });
         CB.sparks.forEach(function (pt) { pt.visible = open; var a = pt.geometry.attributes.position; for (var k = 0; k < a.count; k++) { var u = Math.random(), an = Math.random() * 6.283, rr2 = u * 0.5; a.setXYZ(k, Math.cos(an) * rr2, u * 1.1, Math.sin(an) * rr2); } a.needsUpdate = true; });
         CB.screens.forEach(function (st) { var cv0 = st.userData.canvas; st.userData.redraw(cv0.getContext('2d'), cv0.width, cv0.height, t); st.needsUpdate = true; });

@@ -1627,6 +1627,64 @@
   // Letter hunts: a fictional headliner's new single, its letters hidden around Lagos. Solve a riddle, go there,
   // catch the glowing letter in the walk-in. One hunt a real week, in turn. A badge only: no money, no game state.
   PULSE_PLACES.forEach(function (p) { PLACES.push(p); });
+
+  // Rules 19: police divisions, polling units and hospital rooms (CIVIC_ACTS, keyed by place, like BRANCH_ACTS).
+  // Cases, the cell and the hospital doctor are engine specials; the live boards and the ballot itself are drawing and
+  // the shared election (gov.js), so nothing here pays well: the only gigs are small, once a day.
+  var CIVIC_ACTS = {};
+  var POLICE_DIVS = [['police_ikeja', 'ikeja', 9.3, 4.9, 'Ikeja'], ['police_oshodi', 'oshodi', 10.9, 9.6, 'Oshodi'], ['police_surulere', 'surulere', 9.4, 18.5, 'Surulere'],
+    ['police_yaba', 'yaba', 14.4, 15.6, 'Yaba'], ['police_island', 'island', 16.7, 21.4, 'Lagos Island'], ['police_lekki', 'lekki', 27.0, 24.6, 'Lekki']];
+  var CIVIC_PLACES = POLICE_DIVS.map(function (b) {
+    var id = b[0];
+    CIVIC_ACTS[id] = [
+      { id: id + '_report', label: 'Report a case at the front desk', mins: 45, fx: { stress: 4 }, special: 'report', fest: true, when: { from: 0, to: 24 } },
+      { id: id + '_check', label: 'Ask the IPO about your case', mins: 30, fx: { stress: 3 }, special: 'casecheck', when: { from: 8, to: 18 } },
+      { id: id + '_mobilise', label: 'Give the IPO "mobilisation" (fuel for the investigation)', mins: 15, cost: 3000, special: 'mobilise', when: { from: 8, to: 18 } },
+      { id: id + '_bench', label: 'Sit on the waiting bench and watch', mins: 30, fx: { stress: 2, fun: 2 } },
+      { id: id + '_food', label: 'Bring food to someone in the cell', mins: 30, cost: 1500, fx: { social: 8, stress: -2 }, when: { from: 9, to: 18 } },
+      { id: id + '_watch', label: 'Neighbourhood watch patrol (night)', mins: 180, earn: 2000, fx: { energy: -12, stress: 4 }, xp: { fitness: 1 }, gig: true, fest: true, when: { from: 19, to: 24 } }
+    ];
+    return { id: id, icon: '🚓', name: b[4] + ' Police Division', type: 'services', glyph: 'badge', district: b[1], x: b[2], y: b[3], acts: [], civic: 'police',
+      text: 'Front desk, the IPOs\' office, the cell and a long bench. Report a case, follow it up, or wait for someone. Bail is free, says the sign.' };
+  });
+  var POLL_AT = { ikeja: [10.7, 3.4], ikorodu: [28.8, 3.6], oshodi: [9.4, 9.4], mushin: [11.8, 12.4], festac: [2.9, 17.4], surulere: [10.6, 17.2],
+    yaba: [15.9, 15.9], island: [15.2, 21.6], ikoyi: [20.0, 21.8], vi: [18.4, 25.5], lekki: [28.9, 24.8], ajah: [38.6, 24.4] };
+  Object.keys(POLL_AT).forEach(function (d, i) {
+    var id = 'poll_' + d;
+    CIVIC_ACTS[id] = [
+      { id: id + '_accredit', label: 'Queue and get accredited', mins: 45, fx: { stress: 4, social: 3 }, special: 'accredit', fest: true },
+      { id: id + '_board', label: 'Watch the count at the results board', mins: 30, fx: { fun: 4, social: 3 } },
+      { id: id + '_educate', label: 'Help at the voter education stand', mins: 60, fx: { social: 6, energy: -4 }, xp: { charisma: 1 } },
+      { id: id + '_water', label: 'Sell pure water to the queue', mins: 120, earn: 1800, fx: { energy: -8, hygiene: -4 }, gig: true, fest: true, when: { from: 8, to: 18 } }
+    ];
+    CIVIC_PLACES.push({ id: id, icon: '🗳️', name: 'Polling Unit ' + String(i * 7 + 3).padStart(3, '0') + ', ' + DISTRICTS[d].name, type: 'services', glyph: 'ballot', district: d, x: POLL_AT[d][0], y: POLL_AT[d][1], acts: [], civic: 'polling',
+      text: 'Voting cubicles, the accreditation desk, the ballot box and the live results board. On election weekend this is where your district votes.' });
+  });
+  // Every hospital gets the same rooms: reception, the doctor, the pharmacy, a ward bed, the waiting area and a zobo kiosk.
+  PLACES.filter(function (p) { return p.glyph === 'cross'; }).forEach(function (p) {
+    var id = 'hosp_' + p.id;
+    CIVIC_ACTS[p.id] = [
+      { id: id + '_card', label: 'Open a hospital card at reception', mins: 30, cost: 1000, fx: { stress: 3 } },
+      { id: id + '_doctor', label: 'See the doctor', mins: 90, cost: 6000, fx: { stress: -4 }, special: 'doctor', when: { from: 8, to: 20 } },
+      { id: id + '_ward', label: 'Rest on a ward bed (drip and fan)', mins: 180, cost: 4000, fx: { energy: 22, stress: -8, hygiene: -4 } },
+      { id: id + '_wait', label: 'Wait in the waiting area', mins: 45, fx: { stress: 5, energy: -2 } },
+      { id: id + '_zobo', label: 'Zobo and chin-chin at the kiosk', mins: 15, cost: 600, fx: { hunger: 8, fun: 2 } },
+      { id: id + '_porter', label: 'Porter shift (push trolleys, run errands)', mins: 240, earn: 2400, fx: { energy: -12, hygiene: -6 }, xp: { fitness: 1 }, gig: true, fest: true, when: { from: 7, to: 19 } }
+    ];
+  });
+  CIVIC_PLACES.forEach(function (p) { PLACES.push(p); });
+  // Rules 19, inside the clubs: the bar, bottle service, a VIP booth, raining money, and shutting the club down
+  // (the whole night on you, once a week). All spending: none of it pays, and the bills are Island bills.
+  ['clubs', 'quilox', 'vi_strip', 'lekki_lounges', 'club_tidewater', 'lounge', 'abj_wuse2', 'ph_garden'].forEach(function (pid) {
+    var id = 'club_' + pid;
+    CIVIC_ACTS[pid] = [
+      { id: id + '_cocktail', label: 'Cocktail at the bar', mins: 15, cost: 7000, fx: { fun: 6, hunger: 2 }, when: { from: 18, to: 24 } },
+      { id: id + '_bottle', label: 'Order a bottle of champagne (sparklers and the parade)', mins: 60, cost: 180000, fx: { fun: 25, social: 20 }, special: 'bottle', when: { from: 21, to: 24 } },
+      { id: id + '_vip', label: 'Book a VIP booth for the night', mins: 180, cost: 450000, fx: { fun: 35, social: 30, energy: -20 }, special: 'vip', when: { from: 21, to: 24 } },
+      { id: id + '_rain', label: 'Make it rain on the dance floor (₦50k in new notes)', mins: 30, cost: 50000, fx: { fun: 20, social: 15 }, special: 'rain', when: { from: 21, to: 24 } },
+      { id: id + '_shutdown', label: 'Shut down the club: the whole night on you', mins: 240, cost: 25000000, fx: { fun: 80, social: 80, energy: -40, hygiene: -15 }, xp: { charisma: 3 }, special: 'shutdown', when: { from: 22, to: 24 } }
+    ];
+  });
   var HUNTS = [
     { id: 'blaze', title: 'BLAZE!', artist: 'Kayode Blaze', color: '#d0453a', style: 'afro', pieces: [
       { ch: 'B', place: 'balogun', riddle: 'Where the whole Island haggles over every yard of ankara and lace. The first letter is folded in the fabric.' },
@@ -1717,7 +1775,7 @@
     estate:    [{ label: 'Stroll the boulevard', mins: 30, fx: { stress: -5 } }, { label: 'Look round the show home', mins: 45, fx: { fun: 5 } }, { label: 'Sit by the lagoon', mins: 30, fx: { stress: -6 } }],
     refinery:  [{ label: 'Take the visitors\' tour', mins: 60, fx: { fun: 5, energy: -4 }, xp: { craft: 1 } }, { label: 'Eat at the canteen', mins: 30, cost: 1500, fx: { hunger: 28 } }, { label: 'Read the safety boards', mins: 15, fx: { stress: 1 } }]
   };
-  var INSIDE_BY_GLYPH = { bowl: 'eatery', basket: 'market', film: 'cinema', mask: 'culture', frame: 'culture', note: 'music', tree: 'park', cap: 'campus', phone: 'tech', laptop: 'tech', tool: 'workshop', car: 'dealer', plane: 'airport', boat: 'jetty', yacht: 'jetty', bus: 'motorpark', scissors: 'salon', ball: 'stadium', stadium: 'stadium', cross: 'hospital', mosque: 'mosque', hall: 'church', naira: 'bank', dumbbell: 'gym', glass: 'lounge', club: 'lounge', wave: 'beach', umbrella: 'beach', estate: 'estate' };
+  var INSIDE_BY_GLYPH = { bowl: 'eatery', basket: 'market', film: 'cinema', mask: 'culture', frame: 'culture', note: 'music', tree: 'park', cap: 'campus', phone: 'tech', laptop: 'tech', tool: 'workshop', car: 'dealer', plane: 'airport', boat: 'jetty', yacht: 'jetty', bus: 'motorpark', scissors: 'salon', ball: 'stadium', stadium: 'stadium', cross: 'hospital', mosque: 'mosque', hall: 'church', naira: 'bank', dumbbell: 'gym', badge: 'police', ballot: 'polling', glass: 'lounge', club: 'lounge', wave: 'beach', umbrella: 'beach', estate: 'estate' };
   function insideKind(pl) {
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
     if (pl.glyph === 'dome') return pl.type === 'services' ? 'church' : 'govt';
@@ -1736,7 +1794,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, insideKind: insideKind
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
