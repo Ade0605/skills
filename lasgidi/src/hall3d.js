@@ -47,7 +47,7 @@
   function build(T, W, p, me) {
     var th = W.themes[p.theme] || W.themes.gold_white, lvl = { simple: 0, elegant: 1, grand: 2 }[p.decor] || 0, ex = p.extras || [];
     var A = new T.Color(th.a), B = new T.Color(th.b);
-    if (R.scene) R.scene.traverse(function (x) { if (x.geometry) x.geometry.dispose(); });
+    if (R.scene) R.scene.traverse(function (x) { if (x.geometry) x.geometry.dispose(); if (x.material) [].concat(x.material).forEach(function (m) { if (m.map) m.map.dispose(); m.dispose(); }); });
     var S = R.scene = new T.Scene(); S.background = new T.Color(0x1c1622); S.fog = new T.Fog(0x1c1622, 26, 48);
     R.cam = new T.PerspectiveCamera(45, (R.w || 640) / (R.h || 300), 0.1, 200);
     function M(c, r, m, x) { return new T.MeshStandardMaterial(Object.assign({ color: c, roughness: r == null ? 0.7 : r, metalness: m || 0 }, x || {})); }

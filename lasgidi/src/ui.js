@@ -1115,7 +1115,7 @@
       return '<div class="item"><div><h3>' + G.icon + ' ' + esc(G.name) + '</h3><div class="meta"><span>From ' + esc(nameOf(x.from)) + '</span></div></div><button class="btn sm" id="open-' + esc(x.from) + '" data-opengift="' + esc(x.from) + '">Open</button></div>';
     }).join('') + '</div></div>';
   }
-  var visitInterior = null;
+  var visitInterior = null, home3dFailed = false;
   function visitView() {
     if (!ui.visit) return '';
     var v = checkHome(online.homes[ui.visit]);
@@ -1133,7 +1133,7 @@
     if (!ui.visit || !window.LasgidiInterior) return;
     var slot = document.querySelector('.visit-slot'), v = checkHome(online.homes[ui.visit]);
     if (!slot || !v) return;
-    if (window.LasgidiHome3D && window.THREE && threeState === 'ready' && (!visitInterior || !visitInterior.is3d)) { var v3 = window.LasgidiHome3D.create({ onSelect: function () {}, onPlace: function () {} }); if (v3) visitInterior = v3; }
+    if (window.LasgidiHome3D && window.THREE && threeState === 'ready' && !home3dFailed && (!visitInterior || !visitInterior.is3d)) { var v3 = window.LasgidiHome3D.create({ onSelect: function () {}, onPlace: function () {} }); if (v3) visitInterior = v3; else home3dFailed = true; }
     if (!visitInterior) visitInterior = window.LasgidiInterior.create({ onSelect: function () {}, onPlace: function () {} });
     slot.appendChild(visitInterior.el);
     visitInterior.update({ size: v.size, type: v.h.type || 'room', name: v.h.name, items: v.items, vehicles: v.vehicles, sel: null, power: true, hour: 12, party: partyScene(partyOf(ui.visit), ui.visit, true),
@@ -1355,7 +1355,7 @@
     };
     // Your home opens in 3D once three.js is in (the 2D room shows meanwhile, and if 3D is unavailable).
     if (window.LasgidiHome3D && threeState !== 'ready' && threeState !== 'failed') loadThree(function () { if (ui.tab === 'home') mountInterior(); });
-    if (window.LasgidiHome3D && window.THREE && threeState === 'ready' && (!interior || !interior.is3d)) { var i3 = window.LasgidiHome3D.create(ivCb); if (i3) interior = i3; }
+    if (window.LasgidiHome3D && window.THREE && threeState === 'ready' && !home3dFailed && (!interior || !interior.is3d)) { var i3 = window.LasgidiHome3D.create(ivCb); if (i3) interior = i3; else home3dFailed = true; } // no WebGL: stay 2D, don't retry each render
     if (!interior) interior = window.LasgidiInterior.create(ivCb);
     slot.appendChild(interior.el); window.__iv = interior;
     var h = L.homeDef(S);
@@ -1994,12 +1994,12 @@
       var def = (D.PLACE_ACTIONS[pl.district] || []).filter(function (x) { return x.id === aid; })[0]; if (!def) return null;
       var a = avail.filter(function (x) { return x.id === aid; })[0];
       return { id: aid, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
-    }).filter(Boolean)).concat(S.rules >= 17 ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) {
-      var a = avail.filter(function (x) { return x.id === def.id; })[0];
-      return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled, inside: true };
-    }) : []).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return !def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0; }).map(function (def) {
+    }).filter(Boolean)).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return !def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0; }).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: '🎊', short: venueShort(def.label), off: !a || a.disabled, fest: true };
+    }) : []).concat(S.rules >= 17 ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) { // festivals (in season) come before the everyday inside acts, so they get a sign
+      var a = avail.filter(function (x) { return x.id === def.id; })[0];
+      return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled, inside: true };
     }) : []);
   }
   // Which rides a place sells inside: dealers everything (null), jetties boats, airports aircraft, motor parks road vehicles; false: none.
@@ -2248,7 +2248,7 @@
     if (threeState === 'ready' || threeState === 'failed') { cb(); return; }
     if (threeState === 'loading') { (loadThree.q = loadThree.q || []).push(cb); return; }
     threeState = 'loading'; loadThree.q = [cb];
-    var done = function (ok) { threeState = ok && window.THREE ? 'ready' : 'failed'; var q = loadThree.q; loadThree.q = []; q.forEach(function (f) { f(); }); if (threeState === 'ready') { faceCache = {}; try { drawHudAvatar(); } catch (e) {} } }; // avatars redraw in 3D once three.js is in
+    var done = function (ok) { threeState = ok && window.THREE ? 'ready' : 'failed'; var q = loadThree.q; loadThree.q = []; q.forEach(function (f) { try { f(); } catch (e) {} }); if (threeState === 'ready') { faceCache = {}; try { drawHudAvatar(); } catch (e) {} } }; // avatars redraw in 3D once three.js is in
     try {
       var inl = document.getElementById('lsg-three'), sc = document.createElement('script');
       if (inl) { sc.textContent = inl.textContent; document.head.appendChild(sc); done(true); return; }

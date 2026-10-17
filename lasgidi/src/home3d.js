@@ -39,6 +39,7 @@
     var hemi = new T.HemisphereLight(0xfff4e6, 0x5a5048, 0.7), sun = new T.DirectionalLight(0xfff1d8, 1.4); sun.castShadow = true; sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); var shc = sun.shadow.camera; shc.left = -14; shc.right = 14; shc.top = 14; shc.bottom = -14; sun.shadow.bias = -0.0006;
     S3.add(hemi, sun, sun.target); var lamp = new T.PointLight(0xffd8a0, 0, 30, 1.4); S3.add(lamp);
     var home = new T.Group(); S3.add(home); var items3 = [], fans = [], screens = [], ghost = null;
+    function wipe(g) { g.traverse(function (o) { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(function (m) { ['map', 'emissiveMap', 'alphaMap'].forEach(function (k) { if (m[k] && m[k].dispose) m[k].dispose(); }); m.dispose(); }); }); g.clear(); } // free GPU memory before a rebuild
     var Mc = {}; function mat(k, o) { return Mc[k] || (Mc[k] = new T.MeshStandardMaterial(o)); }
     function M(color, rough, metal) { return new T.MeshStandardMaterial({ color: color, roughness: rough == null ? 0.7 : rough, metalness: metal || 0 }); }
     function box(g, w, h, d, m, x, y, z) { var o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; g.add(o); return o; }
@@ -87,7 +88,7 @@
       return g;
     }
     function build() {
-      home.clear(); items3 = []; fans = []; screens = []; ghost = null;
+      wipe(home); items3 = []; fans = []; screens = []; ghost = null;
       var sz = view.size || [4, 3], w = sz[0], d = sz[1], type = view.type || 'room', wallC = view.paint ? hexN(view.paint) : WALLS[type] || 0xe2dccd;
       // Floor tiles, room floors, the two walls with windows and a door, skirting.
       var tileM = [M(FLOORS[type] || 0xd8ccb4, 0.55), M(((FLOORS[type] || 0xd8ccb4) & 0xfefefe) - 0x0a0a0a, 0.55)], rooms = roomsFor(type, sz);
@@ -135,14 +136,14 @@
     }
     function occupied(walk) { var occ = {}; (view.items || []).forEach(function (it) { if (it.x == null) return; var f = D.FURNITURE[it.id]; if (!f || (walk && f.shape === 'rug')) return; /* you can walk over a rug */ var dm = it.r ? [f.d, f.w] : [f.w, f.d]; for (var a = 0; a < dm[0]; a++) for (var b = 0; b < dm[1]; b++) occ[(it.x + a) + ',' + (it.y + b)] = 1; }); return occ; }
     function freeTile() { var occ = occupied(), w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1]; for (var y = d - 1; y >= 0; y--) for (var x = w - 1; x >= 0; x--) if (!occ[x + ',' + y]) return [x, y]; return [w - 1, d - 1]; }
-    function selectGlow() { items3.forEach(function (g, i) { if (!g) return; g.traverse(function (o) { if (o.isMesh && o.material && o.material.emissive && !o.userData.keepEmissive) { o.material = o.material.clone(); o.material.emissive.set(i === view.sel ? 0xffb000 : 0x000000); o.material.emissiveIntensity = i === view.sel ? 0.35 : 0; } }); }); }
+    function selectGlow() { items3.forEach(function (g, i) { if (!g) return; g.traverse(function (o) { if (o.isMesh && o.material && o.material.emissive && !o.userData.keepEmissive && screens.indexOf(o.material) < 0) { if (!o.userData.ownMat) { o.material = o.material.clone(); o.userData.ownMat = true; } o.material.emissive.set(i === view.sel ? 0xffb000 : 0x000000); o.material.emissiveIntensity = i === view.sel ? 0.35 : 0; } }); }); }
 
     /* ---------- a party at home: guests dancing, a disco ball and coloured lights, decorations ---------- */
     var partyG = new T.Group(); S3.add(partyG); var PT = null, partyKey = '';
     function tag(text, me) { var c = document.createElement('canvas'), g = c.getContext('2d'); g.font = '700 30px system-ui, sans-serif'; var w = Math.ceil(g.measureText(text).width) + 28; c.width = w; c.height = 44; g = c.getContext('2d'); g.fillStyle = me ? '#2f6fd0' : 'rgba(23,24,26,.82)'; g.beginPath(); g.moveTo(22, 0); g.arcTo(w, 0, w, 44, 22); g.arcTo(w, 44, 0, 44, 22); g.arcTo(0, 44, 0, 0, 22); g.arcTo(0, 0, w, 0, 22); g.fill(); g.fillStyle = '#fff'; g.font = '700 30px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, 23); var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; var sp = new T.Sprite(new T.SpriteMaterial({ map: t, depthTest: false })); sp.renderOrder = 9; sp.scale.set(0.32 * w / 44, 0.32, 1); return sp; }
     function stranger(n) { var h = Math.imul(n + 7, 2654435761) >>> 0, C = D.CLOTHES, ids = Object.keys(C), pk = function (slot, k) { var l = ids.filter(function (c) { return C[c].slot === slot; }); return l[(h >>> k) % l.length]; }; var o = (h >>> 3) % 3 === 0 ? { dress: pk('dress', 4) } : { top: pk('top', 5), bottom: pk('bottom', 9) }; o.shoes = pk('shoes', 13); if ((h >>> 15) % 3 === 0) o.head = pk('head', 17); return { look: { skin: h % D.LOOKS.skin.length, hair: (h >>> 6) % D.LOOKS.hair.length, shape: (h >>> 11) % 3 }, outfit: o }; }
     function buildParty() {
-      partyG.clear(); PT = null; var p = view && view.party; if (!p || !root.LasgidiAvatar3D) return;
+      wipe(partyG); PT = null; var p = view && view.party; if (!p || !root.LasgidiAvatar3D) return;
       var w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1], occ = occupied(), tiles = [], mine = freeTile();
       for (var y = 0; y < d; y++) for (var x = 0; x < w; x++) if (!occ[x + ',' + y] && !(x === mine[0] && y === mine[1])) tiles.push([x, y]);
       var fancy = p.planner || /owambe|grand|wedding/.test(p.kind), want = Math.min(tiles.length * 2, Math.max((p.guests || []).length, { small: 5, owambe: 9, grand: 12, wedding: 10 }[p.kind] || 6));

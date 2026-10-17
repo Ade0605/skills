@@ -1070,8 +1070,10 @@
     joy.style.display = WK.on && coarse ? '' : 'none';
     doBtn.addEventListener('click', function () { if (WK.near >= 0 && opts.onAct) opts.onAct(WK.near); });
     var KEYS = { w: 'f', arrowup: 'f', s: 'b', arrowdown: 'b', a: 'l', arrowleft: 'l', d: 'r', arrowright: 'r' };
-    function onKey(e) { if (!el.isConnected || !WK.on || (root.LasgidiGL && !root.LasgidiGL.live(el))) return; var t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return; var k = KEYS[String(e.key).toLowerCase()]; if (!k) return; WK.keys[k] = e.type === 'keydown'; if (e.type === 'keydown') { WK.tx = WK.tz = null; WK.act = null; e.preventDefault(); } }
+    function onKey(e) { if (e.type === 'keyup') { var ku = KEYS[String(e.key).toLowerCase()]; if (ku) WK.keys[ku] = false; return; } // always let go, wherever focus is
+      if (!el.isConnected || !WK.on || (root.LasgidiGL && !root.LasgidiGL.live(el))) return; var t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return; var k = KEYS[String(e.key).toLowerCase()]; if (!k) return; WK.keys[k] = e.type === 'keydown'; if (e.type === 'keydown') { WK.tx = WK.tz = null; WK.act = null; e.preventDefault(); } }
     root.addEventListener('keydown', onKey); root.addEventListener('keyup', onKey);
+    var letGo = function () { WK.keys = {}; WK.joy = null; }; root.addEventListener('blur', letGo); if (root.document) root.document.addEventListener('visibilitychange', letGo);
     function walkFrame(dt, t) {
       if (!me || !sc.me) return;
       var b = walkBox(), cfx = cam.position.x - orbit.tx, cfz = cam.position.z - orbit.tz, cl = Math.hypot(cfx, cfz) || 1, fx = -cfx / cl, fz = -cfz / cl; // camera forward on the ground
@@ -1089,6 +1091,8 @@
       var seen = WK.seen || (WK.seen = {});
       crowd.forEach(function (p, i) {
         var d = (sc.people || [])[i]; if (!p.visible || !d) return; var ddx = WK.x - p.position.x, ddz = WK.z - p.position.z, dist = Math.hypot(ddx, ddz);
+        var inner0 = p.children && p.children[0], arms0 = inner0 && inner0.userData && inner0.userData.arms;
+        if (dist > 3.2 && arms0 && arms0[1] && arms0[1].rotation.x < -1.5) arms0[1].rotation.x = 0; // stop waving once you have walked on
         if (dist > 6) { seen[i] = false; return; } if (dist > 3.2) return;
         p.rotation.y = Math.atan2(-ddz, ddx); // face you
         var inner = p.children && p.children[0], arms = inner && inner.userData && inner.userData.arms;

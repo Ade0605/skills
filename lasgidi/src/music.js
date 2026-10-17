@@ -71,10 +71,10 @@
   function play(ac, style, o) {
     o = o || {}; if (!ac || !STYLES[style]) return false;
     var bpm = o.bpm || STYLES[style].bpm;
-    if (M.style === style && M.ac === ac && M.bpm === bpm) return true;
+    if (M.style === style && M.ac === ac && M.bpm === bpm) { if (o.vol && M.bus && M.vol !== o.vol) { M.vol = o.vol; M.bus.gain.setTargetAtTime(o.vol, ac.currentTime, 0.3); } return true; } // same music, maybe a new level
     stop(true);
     var bus = ac.createGain(), comp = ac.createDynamicsCompressor(); bus.gain.setValueAtTime(0.0001, ac.currentTime); bus.gain.exponentialRampToValueAtTime(o.vol || 0.22, ac.currentTime + 0.6); bus.connect(comp); comp.connect(ac.destination);
-    M = { style: style, ac: ac, bus: bus, comp: comp, bpm: bpm, next: ac.currentTime + 0.05, step: 0, timer: setInterval(tick, 25) };
+    M = { style: style, ac: ac, bus: bus, comp: comp, bpm: bpm, vol: o.vol || 0.22, next: ac.currentTime + 0.05, step: 0, timer: setInterval(tick, 25) };
     tick(); return true;
   }
   function stop(now) {

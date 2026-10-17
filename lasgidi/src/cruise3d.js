@@ -33,7 +33,7 @@
     function spotInfo(room, k) { var src = room === 'cruise' ? D.CRUISE && D.CRUISE.spots : D.ROOMS && D.ROOMS[scene.room] && D.ROOMS[scene.room].spots; var s = src && src[k]; return s ? (s.icon ? s.icon + ' ' : '') + s.name : k; }
 
     function build(room) {
-      stage.clear(); DYN = { water: null, sky: [], tiles: [], lights: [], fire: null, spots: [], figs: [], tags: [], bubbles: {}, confetti: null };
+      wipe(stage); DYN = { water: null, sky: [], tiles: [], lights: [], fire: null, spots: [], figs: [], tags: [], bubbles: {}, confetti: null };
       var sea = room === 'cruise' || room === 'tidewater' || room === 'beach', wood = M(0xb08a5a, 0.85), dark = M(0x17181a, 0.6);
       if (sea) { var w = new T.Mesh(new T.PlaneGeometry(2000, 2000).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x2a7896, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.15 })); w.position.y = -1.2; stage.add(w); DYN.water = w;
         for (var ti = 0; ti < 26; ti++) { var hgt = 20 + (ti * 37 % 70), tw = new T.Mesh(new T.BoxGeometry(12, hgt, 12), new T.MeshStandardMaterial({ color: 0x7f97ab, roughness: 0.3, metalness: 0.4, emissive: 0xffd28c, emissiveIntensity: 0 })); tw.position.set(-260 + ti * 22, hgt / 2 - 1, -200 - (ti % 3) * 30); stage.add(tw); DYN.sky.push(tw); } }
@@ -72,7 +72,7 @@
       var room = scene.layout || scene.room || 'cruise', SP = LAYOUTS[room] || SPOTS, key = JSON.stringify((scene.players || []).map(function (p) { return [p.by, p.spot, p.look, p.outfit, p.label]; }));
       if (key !== peopleKey) {
         var was = {}; (DYN.figs || []).forEach(function (f) { was[f.pl.by] = f.g.position.clone(); }); // where everyone stood, so they walk to their new spot
-        peopleKey = key; people.clear(); DYN.figs = []; var placed = {};
+        peopleKey = key; wipe(people); DYN.figs = []; var placed = {};
         (scene.players || []).forEach(function (pl, i) {
           var base = SP[pl.spot] || SP[Object.keys(SP)[0]], n = placed[pl.spot] = (placed[pl.spot] || 0) + 1, ang = n * 2.4, rad = n === 1 ? 0 : 0.6 + 0.2 * Math.floor(n / 4), p = P(base[0] + Math.cos(ang) * rad, base[1] + Math.sin(ang) * rad * 0.8);
           var g = new T.Group(); g.position.copy(p); var fig = root.LasgidiAvatar3D ? root.LasgidiAvatar3D.figure(T, pl.look || { skin: 2, hair: 0, shape: 1 }, pl.outfit || {}, pl.extra) : new T.Mesh(new T.CapsuleGeometry(0.3, 1.1, 4, 8), M(0x2f6fa0)); fig.rotation.y = (i * 1.7) % 6.28; g.add(fig);
@@ -81,7 +81,7 @@
         });
       }
       DYN.spots.forEach(function (s) { var mine = s.k === scene.spot; s.ring.material.color.set(mine ? 0xf2b600 : 0xffffff); s.ring.material.opacity = mine ? 0.95 : 0.5; });
-      DYN.figs.forEach(function (f) { var txt = scene.bubbles && scene.bubbles[f.pl.by]; if (f.bub && f.bubText !== txt) { f.g.remove(f.bub); f.bub = null; } if (txt && !f.bub) { f.bub = tag(String(txt).slice(0, 44), '#ffffff', '#17181a', 7); f.bub.position.y = 3.3; f.g.add(f.bub); f.bubText = txt; } });
+      DYN.figs.forEach(function (f) { var txt = scene.bubbles && scene.bubbles[f.pl.by]; if (f.bub && f.bubText !== txt) { f.g.remove(f.bub); wipe(f.bub); f.bub = null; } if (txt && !f.bub) { f.bub = tag(String(txt).slice(0, 44), '#ffffff', '#17181a', 7); f.bub.position.y = 3.3; f.g.add(f.bub); f.bubText = txt; } });
     }
 
     var orbit = { az: 0.6, pol: 1.0, r: 28 }, ptrs = {}, drag = null, moved = false, pinch0 = 0;
@@ -96,6 +96,7 @@
     cv.addEventListener('pointercancel', up); cv.addEventListener('wheel', function (e) { e.preventDefault(); orbit.r *= Math.exp(e.deltaY * 0.0012); place(); }, { passive: false });
 
     function size() { var w = el.clientWidth || 360, h = el.clientHeight || 400; if (w === W && h === H) return; W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cam.aspect = W / H; cam.updateProjectionMatrix(); }
+    function wipe(g) { g.traverse(function (o) { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(function (m) { ['map', 'emissiveMap', 'alphaMap'].forEach(function (k) { if (m[k] && m[k].dispose) m[k].dispose(); }); m.dispose(); }); }); g.clear(); } // free GPU memory before a rebuild
     function frame(now) {
       if (root.LasgidiGL && !root.LasgidiGL.live(el)) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // hidden or under another view: skip the frame
       root.LasgidiGL && root.LasgidiGL.pace(renderer);

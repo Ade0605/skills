@@ -25,6 +25,7 @@
 
   function view(kind, o) {
     var T = root.THREE; o = o || {};
+    if (!o.reduce && root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches) o.reduce = true;
     if (!T || !BUILD[kind]) return null;
     var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({ antialias: !o.lite, maxRatio: 1.75 }) : new T.WebGLRenderer({ antialias: !o.lite, alpha: false }); } catch (e) { return null; } if (!renderer) return null;
     if (o.lite || (root.LasgidiGL && root.LasgidiGL.lite())) o.lite = true;
@@ -40,7 +41,7 @@
       var now = (performance.now() - t0) / 1000, dt = Math.min(0.1, Math.max(0, now - lastT)); lastT = now;
       if (hud) sizeTo(hud.clientWidth || (g && g.W) || 360, hud.clientHeight || (g && g.H) || 480);
       else if (stack) sizeTo(stack.clientWidth || 360, stack.clientHeight || 240);
-      B.update(st, g || {}, now, dt);
+      B.update(st, g || {}, o.reduce ? 1 : now, dt); // reduced motion: decorative animation holds still (the game itself still plays)
       if (root.LasgidiGL) { if (!root.LasgidiGL.live(gl)) return; root.LasgidiGL.pace(renderer); }
       renderer.render(scene, cam);
     }

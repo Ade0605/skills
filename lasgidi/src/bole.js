@@ -87,7 +87,7 @@
         ctx.textBaseline = 'alphabetic';
       }
       }
-      st.pops.forEach(function (p) { ctx.fillStyle = '#7fe08a'; ctx.font = '800 14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(p.text, p.x, p.y); });
+      if (!view) st.pops.forEach(function (p) { ctx.fillStyle = '#7fe08a'; ctx.font = '800 14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(p.text, p.x, p.y); });
       ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(8, 8, W - 16, 32);
       ctx.fillStyle = '#fff'; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'left';
       ctx.fillText('⏱ ' + Math.max(0, Math.ceil(RUN - st.t)) + 's   ₦' + st.sales.toLocaleString('en') + '   🔥 ' + st.burnt + ' burnt   ' + FOODS[st.pick].icon, 16, 29);
