@@ -2072,7 +2072,7 @@
     }) : []).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return !def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0; }).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: '🎊', short: venueShort(def.label), off: !a || a.disabled, fest: true };
-    }) : []).concat(S.rules >= 17 ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) { // festivals (in season) come before the everyday inside acts, so they get a sign
+    }) : []).concat(S.rules >= 17 && !pl.club ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) { // festivals (in season) come before the everyday inside acts, so they get a sign
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled, inside: true };
     }) : []);

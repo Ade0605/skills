@@ -1278,6 +1278,7 @@
   function clubMember(s, id) { var m = s.clubs && s.clubs[id]; return !!(m && m.until > s.t); }
   function clubQuote(s, id, via) {
     var C = D.CLUBS[id]; if (!C) return { disabled: 'No such club' };
+    if (C.rules && !(s.rules >= C.rules)) return { disabled: 'Not open in this life' };
     var m = s.clubs && s.clubs[id], first = !(m && m.joined);
     var q = { club: id, via: via, fee: first ? price(s, C.join) : 0, weekly: price(s, C.weekly) };
     q.total = q.fee + q.weekly;
@@ -1308,7 +1309,9 @@
     var C = D.CLUBS[id]; if (!C) return [];
     return C.acts.map(function (a) {
       var o = { id: a.id, label: a.label, mins: a.mins, cost: price(s, a.cost || 0), when: a.when };
-      if (!clubMember(s, id)) o.disabled = 'Members only';
+      if (C.rules && !(s.rules >= C.rules)) o.disabled = 'Not open in this life';
+      else if (!clubMember(s, id)) o.disabled = 'Members only';
+      else if (a.golf === 'cup' && s.golfCupWeek === week(s)) o.disabled = 'One Club Cup a week';
       else if (s.loc !== C.district) o.disabled = 'Go to ' + D.DISTRICTS[C.district].name + ' first';
       else if (!inWindow(s, a.when)) o.disabled = 'Only ' + windowLabel(a.when);
       else if (s.pending.length) o.disabled = 'Decide on the open event first';
@@ -1325,6 +1328,8 @@
     if (o.cost && !pay(s, o.cost, C.name + ': ' + a.label)) return fail('Not enough money.');
     advance(s, a.mins); applyFx(s, a.fx); addXp(s, a.xp);
     log(s, a.label + ' at ' + C.name + '.', 'good');
+    if (a.golf === 'lesson') s.golfLessons = (s.golfLessons || 0) + 1;
+    if (a.golf === 'cup') { s.golfCupWeek = week(s); s.golfCup = { hole: 0, strokes: 0, card: [] }; queueGolfHole(s); return finish(s, ok('You are on the first tee of the Club Cup.')); }
     return finish(s, ok(a.label + '.'));
   }
 
@@ -1574,6 +1579,22 @@
       options: ['Pay ' + naira(toll), 'Talk your way out', 'Run!', 'Stand your ground'],
       subs: ['Safe', 'Charisma check · ' + Math.round(o.talk * 100) + '%', 'Fitness check · ' + Math.round(o.run * 100) + '%', Math.round(o.stand * 100) + '% they back off · lose: pay ' + naira(toll) + ' and a knock to your energy'] });
   }
+  // The Saturday Club Cup (rules 19): six holes, one choice each. Your fitness and lessons set the odds.
+  var GOLF_PAR = [4, 3, 5, 4, 3, 4], GOLF_NAMES = ['The Lagoon', 'Short Iron', 'The Long One', 'Palm Dogleg', 'Over the Water', 'Clubhouse'];
+  function golfSkill(s) { return skillLevel(s, 'fitness') * 0.6 + Math.min(12, s.golfLessons || 0) * 0.35; }
+  function golfOdds(s) { var k = golfSkill(s); return { drive: Math.min(0.6, 0.12 + k * 0.05), iron: Math.min(0.45, 0.08 + k * 0.035), wedge: Math.min(0.9, 0.45 + k * 0.04) }; }
+  function queueGolfHole(s) {
+    var g = s.golfCup, h = g.hole, o = golfOdds(s), par = GOLF_PAR[h];
+    queue(s, { id: 'golfhole', title: 'Club Cup · hole ' + (h + 1) + ' of 6 · ' + GOLF_NAMES[h] + ' (par ' + par + ')', text: 'You are ' + (g.strokes ? (g.strokes - g.card.reduce(function (a, c) { return a + c.par; }, 0) >= 0 ? '+' : '') + (g.strokes - g.card.reduce(function (a, c) { return a + c.par; }, 0)) + ' after ' + h + ' holes.' : 'on the first tee. The members are watching.') + ' How do you play it?', odds: o,
+      options: ['Driver: go for it', 'Iron: down the middle', 'Wedge: lay up, play safe'],
+      subs: [Math.round(o.drive * 100) + '% birdie · risk of a double bogey', Math.round(o.iron * 100) + '% birdie · usually par', Math.round(o.wedge * 100) + '% par · otherwise bogey'] });
+  }
+  function golfPrize(s, over) {
+    if (over <= -4) return { place: 1, cash: price(s, 20000000), gift: 'The Club Cup trophy and a gold-plated set of clubs' };
+    if (over <= -2) return { place: 2, cash: price(s, 5000000), gift: 'A crystal decanter and a year of free green fees' };
+    if (over <= 0) return { place: 3, cash: price(s, 1000000), gift: 'A Club Cup polo and a signed flag' };
+    return null;
+  }
   function queueAreaBoys(s) {
     queue(s, { id: 'areaboys', title: 'Owo ijoko', text: 'Two agberos block your spot. "Settle us before you sell here."', options: ['Pay ' + naira(price(s, 500)), 'Refuse'] });
   }
@@ -1770,6 +1791,24 @@
         if (idx === 0) { payPartial(s, price(s, 2000), 'Checkpoint "settlement"'); msg = 'He waves you through.'; }
         else if (s.rules >= 19 && rand(s) < 0.2) { advance(s, 30); applyFx(s, { stress: 15 }); var bl = price(s, 5000); queue(s, { id: 'detained', title: 'Taken to the station', text: '"You are wandering." They drove you to the division and put you behind the counter. The cell is behind you.', bail: bl, options: ['Pay "bail" ' + naira(bl), 'Wait it out in the cell'], subs: ['Out in an hour', 'Out at 7 in the morning, no charge'] }); msg = 'The argument went badly.'; }
         else { advance(s, 45); applyFx(s, { stress: 10 }); msg = 'Forty-five minutes of argument, then he lets you go.'; }
+        break;
+      case 'golfhole':
+        var gc = s.golfCup, go = ev.odds, gp = GOLF_PAR[gc.hole], got, gx = rand(s);
+        if (idx === 0) got = gx < go.drive ? gp - 1 : gx < go.drive + (1 - go.drive) * 0.55 ? gp : gp + 2;
+        else if (idx === 1) got = gx < go.iron ? gp - 1 : gx < go.iron + (1 - go.iron) * 0.75 ? gp : gp + 1;
+        else got = gx < go.wedge ? gp : gp + 1;
+        gc.card.push({ par: gp, got: got }); gc.strokes += got; gc.hole++;
+        var word = { '-2': 'Eagle!', '-1': 'Birdie!', '0': 'Par.', '1': 'Bogey.', '2': 'Double bogey.' }[String(got - gp)] || (got - gp) + ' over.';
+        msg = '⛳ Hole ' + gc.hole + ': ' + got + ' strokes. ' + word;
+        if (gc.hole < GOLF_PAR.length) queueGolfHole(s);
+        else {
+          var parT = GOLF_PAR.reduce(function (a, b) { return a + b; }, 0), over = gc.strokes - parT, pz = golfPrize(s, over);
+          s.stats.golfBest = Math.min(s.stats.golfBest == null ? 99 : s.stats.golfBest, gc.strokes);
+          if (pz) { earn(s, pz.cash, 'Prize: Ikoyi Golf Club Cup (place ' + pz.place + ')'); (s.trophies = s.trophies || []).push({ what: pz.gift, day: day(s) }); s.stats.wins = (s.stats.wins || 0) + 1;
+            msg += ' Final card ' + gc.strokes + ' (' + (over > 0 ? '+' : '') + over + '). 🏆 ' + ['', 'You won the Club Cup!', 'Second place.', 'Third place.'][pz.place] + ' ' + naira(pz.cash) + ' and ' + pz.gift + '.'; log(s, '⛳ Club Cup: place ' + pz.place + ', ' + naira(pz.cash) + ' and ' + pz.gift + '.', 'good'); }
+          else msg += ' Final card ' + gc.strokes + ' (+' + over + '). Out of the prizes. The 19th hole is still open.';
+          s.golfCup = null; applyFx(s, { energy: -15, fun: 20 }); advance(s, 180);
+        }
         break;
       case 'streetboys':
         var so = ev.odds, tl = ev.toll;

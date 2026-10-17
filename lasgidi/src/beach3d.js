@@ -640,9 +640,63 @@
       for (var i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).normalize(); var k = 1; bumps.forEach(function (bb) { var d = v.x * bb[0] + v.y * bb[1] + v.z * bb[2]; k += Math.pow(Math.max(0, d), 3) * bb[3]; }); k += Math.sin(v.y * 40 + v.x * 6) * 0.015; var y = v.y < -0.1 ? -0.1 : v.y; p.setXYZ(i, v.x * rad * k, y * rad * k * 0.82, v.z * rad * k); }
       g.computeVertexNormals(); return new T.Mesh(g, new T.MeshStandardMaterial({ color: colr || 0x8a7a68, roughness: 0.95, flatShading: true }));
     }
+    // Ikoyi Golf Club: six holes (tee, fairway, bunker, green and a numbered flag), a lake, buggies and the clubhouse terrace.
+    var GOLF_HOLES = [[-46, -30, -20, -38], [-14, -40, 18, -28], [26, -18, 44, 8], [40, 22, 14, 36], [-4, 30, -30, 40], [-40, 18, -50, -6]];
+    function golfCourse(r) {
+      var fair = mat('fairway', { color: 0x5fae4a, roughness: 0.85 }), green = mat('green', { color: 0x79c95a, roughness: 0.6 }), sand = mat('bunker', { color: 0xe8d6a0, roughness: 1 }), tee = mat('tee', { color: 0x4f9a3d });
+      PK.flags = [];
+      GOLF_HOLES.forEach(function (h, i) {
+        var dx = h[2] - h[0], dz = h[3] - h[1], len = Math.hypot(dx, dz), ang = Math.atan2(dz, dx);
+        var fw = mesh(new T.CircleGeometry(1, 32).rotateX(-Math.PI / 2), fair, (h[0] + h[2]) / 2, 0.03, (h[1] + h[3]) / 2); fw.scale.set(len / 2 + 4, 1, 6); fw.rotation.y = -ang; fw.castShadow = false; parkG.add(fw);
+        var gr = mesh(new T.CircleGeometry(5, 32).rotateX(-Math.PI / 2), green, h[2], 0.05, h[3]); gr.castShadow = false; parkG.add(gr);
+        parkG.add(mesh(new T.BoxGeometry(4, 0.2, 4), tee, h[0], 0.1, h[1]));
+        var bk = mesh(new T.CircleGeometry(2.6, 20).rotateX(-Math.PI / 2), sand, h[2] - Math.cos(ang) * 7 + Math.sin(ang) * 4, 0.06, h[3] - Math.sin(ang) * 7 - Math.cos(ang) * 4); bk.scale.set(1.4, 1, 0.8); bk.castShadow = false; parkG.add(bk);
+        parkG.add(mesh(new T.CylinderGeometry(0.05, 0.05, 4.2, 6), mat('flagpole', { color: 0xf4f3ec }), h[2], 2.1, h[3]));
+        var ft = canvasTex(128, 96, function (g, w, hh) { g.fillStyle = i % 2 ? '#d0453a' : '#f2c200'; g.fillRect(0, 0, w, hh); g.fillStyle = '#fff'; g.font = '900 70px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(i + 1), w / 2, hh / 2 + 4); });
+        var fl = new T.Mesh(new T.PlaneGeometry(1.4, 1), new T.MeshStandardMaterial({ map: ft, side: T.DoubleSide })); fl.position.set(h[2] + 0.72, 3.6, h[3]); parkG.add(fl); PK.flags.push(fl);
+        parkG.add(mesh(new T.CylinderGeometry(0.22, 0.22, 0.05, 16), mat('cup', { color: 0x111111 }), h[2], 0.06, h[3]));
+      });
+      var lake = new T.Mesh(new T.CircleGeometry(1, 48).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x4f9fbf, roughness: 0.06, clearcoat: 1 })); lake.scale.set(12, 1, 7); lake.position.set(10, 0.04, 6); parkG.add(lake);
+      // the clubhouse and its terrace
+      var ch = new T.Group(); ch.position.set(0, 0, -62); ch.add(mesh(new T.BoxGeometry(34, 9, 14), mat('chw', { color: 0xf4efe4, roughness: 0.6 }), 0, 4.5, 0)); ch.add(mesh(new T.BoxGeometry(37, 1, 17), mat('chr', { color: 0x2b3a2b }), 0, 9.5, 0));
+      for (var w2 = 0; w2 < 8; w2++) ch.add(mesh(new T.BoxGeometry(2.6, 3.4, 0.2), glassM, -14 + w2 * 4, 4.4, 7.05)); ch.add(mesh(new T.BoxGeometry(34, 0.4, 7), mat('terr', { color: 0xb08a5a }), 0, 0.6, 10.5));
+      for (var u = 0; u < 4; u++) { ch.add(mesh(new T.CylinderGeometry(1, 1, 0.1, 16), mat('ttop', { color: 0xf4f3ec }), -12 + u * 8, 2, 10.5)); ch.add(mesh(new T.CylinderGeometry(0.1, 0.1, 4, 6), mat('upole', { color: 0x666666 }), -12 + u * 8, 2.6, 10.5)); ch.add(mesh(new T.ConeGeometry(2.6, 1.2, 8), mat('umb', { color: 0x1f5a3c }), -12 + u * 8, 4.6, 10.5)); }
+      var st = canvasTex(1024, 128, function (g, w, h) { g.fillStyle = '#1f3a2a'; g.fillRect(0, 0, w, h); g.fillStyle = '#d4af37'; g.font = '800 64px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('IKOYI GOLF CLUB · MEMBERS', w / 2, h / 2); });
+      var sm = new T.Mesh(new T.PlaneGeometry(22, 2.75), new T.MeshBasicMaterial({ map: st })); sm.position.set(0, 7.6, 7.12); ch.add(sm); parkG.add(ch);
+      // buggies and golfers mid-swing
+      PK.golfers = [];
+      [0xf4f3ec, 0xf4f3ec, 0x1f5a3c].forEach(function (c, k) { var b = carModel(c, 2.6); b.scale.set(0.8, 0.8, 0.8); b.position.set(-20 + k * 6, 0, -50 + k * 2); b.rotation.y = 0.3; parkG.add(b); });
+      GOLF_HOLES.slice(0, 4).forEach(function (h, i) { var p = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('golfer', i), 90 + i) : person(90 + i, i % 2 === 1); p.position.set(h[0] - 1, 0.05, h[1] + 1); p.rotation.y = -Math.atan2(h[3] - h[1], h[2] - h[0]); parkG.add(p);
+        var club = mesh(new T.CylinderGeometry(0.03, 0.03, 1.4, 6), mat('club', { color: 0xc0c0c0, metalness: 0.9 }), 0, 0, 0); var pv = new T.Group(); pv.position.set(h[0] - 1, 1.3, h[1] + 1); club.position.y = -0.7; pv.add(club); parkG.add(pv); PK.golfers.push({ pv: pv, ph: i * 1.7 }); });
+      PK.ball = mesh(new T.SphereGeometry(0.18, 12, 8), mat('ball', { color: 0xffffff, roughness: 0.3 }), 0, 0, 0); parkG.add(PK.ball);
+    }
+    // Lekki Conservation Centre, close up: raised platforms in the trees joined by a rope canopy walkway, a tree house,
+    // a boardwalk over the mangrove water, the nature trail sign, a picnic lawn and monkeys in the branches.
+    function lccExtras(r) {
+      var wood = mat('lccwood', { color: 0x7a4b2a, roughness: 0.9 }), rope = new T.LineBasicMaterial({ color: 0xc8a165 });
+      var plats = [[-18, 6], [-4, -2], [10, 4], [22, -6]];
+      plats.forEach(function (p) { parkG.add(mesh(new T.CylinderGeometry(0.9, 1.2, 9, 8), wood, p[0], 4.5, p[1])); parkG.add(mesh(new T.CylinderGeometry(3, 3, 0.4, 12), wood, p[0], 9, p[1])); parkG.add(mesh(new T.IcosahedronGeometry(5, 1), mat('lcccrown', { color: 0x2f7a4a, roughness: 0.9, flatShading: true }), p[0], 14, p[1])); });
+      for (var k = 0; k < plats.length - 1; k++) { var a = plats[k], b = plats[k + 1], n = 14; for (var j = 0; j <= n; j++) { var u = j / n, sag = Math.sin(u * Math.PI) * 1.2, x = a[0] + (b[0] - a[0]) * u, z = a[1] + (b[1] - a[1]) * u, pl = mesh(new T.BoxGeometry(0.5, 0.12, 1.6), mat('plank', { color: 0x9a6a3a }), x, 9 - sag, z); pl.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); parkG.add(pl); }
+        [-0.8, 0.8].forEach(function (off) { var pts = []; for (var j2 = 0; j2 <= 12; j2++) { var u2 = j2 / 12, dir = Math.atan2(b[1] - a[1], b[0] - a[0]); pts.push(new T.Vector3(a[0] + (b[0] - a[0]) * u2 - Math.sin(dir) * off, 10.1 - Math.sin(u2 * Math.PI) * 1.2, a[1] + (b[1] - a[1]) * u2 + Math.cos(dir) * off)); } parkG.add(new T.Line(new T.BufferGeometry().setFromPoints(pts), rope)); }); }
+      PK.walkway = { plats: plats };
+      var th = new T.Group(); th.position.set(-30, 0, -14); [[-2, -2], [2, -2], [-2, 2], [2, 2]].forEach(function (q) { th.add(mesh(new T.BoxGeometry(0.4, 6, 0.4), wood, q[0], 3, q[1])); });
+      th.add(mesh(new T.BoxGeometry(6, 0.4, 6), wood, 0, 6, 0)); th.add(mesh(new T.BoxGeometry(5, 4, 5), mat('thw', { color: 0xa0522d }), 0, 8.2, 0)); th.add(mesh(new T.BoxGeometry(1.2, 2, 0.1), mat('thd', { color: 0x2b1a10 }), 0, 7.8, 2.55));
+      var roof = mesh(new T.ConeGeometry(4.8, 2.6, 4), mat('thr', { color: 0x8b2e1f }), 0, 11.5, 0); roof.rotation.y = Math.PI / 4; th.add(roof); for (var s2 = 0; s2 < 6; s2++) th.add(mesh(new T.BoxGeometry(1.4, 0.15, 0.4), wood, 2.6, 0.6 + s2, 2.6 - s2 * 0.1)); parkG.add(th);
+      var sw = new T.Mesh(new T.PlaneGeometry(40, 16).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x3f5f3a, roughness: 0.15, clearcoat: 0.6 })); sw.position.set(18, 0.05, 22); parkG.add(sw);
+      for (var bw = 0; bw < 16; bw++) parkG.add(mesh(new T.BoxGeometry(2.4, 0.2, 2.2), wood, 0 + bw * 2.4, 0.5, 22));
+      for (var mg = 0; mg < 22; mg++) { var mx = 2 + r() * 34, mz = 15 + r() * 14; if (Math.abs(mz - 22) < 2) continue; parkG.add(mesh(new T.IcosahedronGeometry(1.4 + r(), 0), mat('mangrove', { color: 0x2d5a33, flatShading: true }), mx, 1.6, mz)); }
+      var sg = canvasTex(512, 128, function (g, w, h) { g.fillStyle = '#3b2a1a'; g.fillRect(0, 0, w, h); g.fillStyle = '#f4e6c8'; g.font = '800 54px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('NATURE TRAIL →', w / 2, h / 2); });
+      parkG.add(mesh(new T.BoxGeometry(0.3, 4, 0.3), wood, 26, 2, 4)); var sgm = new T.Mesh(new T.PlaneGeometry(5, 1.25), new T.MeshBasicMaterial({ map: sg, side: T.DoubleSide })); sgm.position.set(26, 3.6, 4); sgm.rotation.y = Math.PI; parkG.add(sgm);
+      var cs = canvasTex(512, 128, function (g, w, h) { g.fillStyle = '#1f3a2a'; g.fillRect(0, 0, w, h); g.fillStyle = '#f4e6c8'; g.font = '800 46px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CONSERVATION CENTRE', w / 2, h / 2); });
+      [-6, 6].forEach(function (x) { parkG.add(mesh(new T.BoxGeometry(0.4, 6, 0.4), wood, x, 3, -20)); }); var csm = new T.Mesh(new T.PlaneGeometry(12, 3), new T.MeshBasicMaterial({ map: cs, side: T.DoubleSide })); csm.position.set(0, 5.6, -20); csm.rotation.y = Math.PI; parkG.add(csm);
+      var pic = canvasTex(256, 256, function (g, w, h) { for (var y = 0; y < 8; y++) for (var x = 0; x < 8; x++) { g.fillStyle = (x + y) % 2 ? '#c0392b' : '#ffffff'; g.fillRect(x * 32, y * 32, 32, 32); } });
+      [[-12, -8], [-6, -12]].forEach(function (q) { var bl = new T.Mesh(new T.PlaneGeometry(4, 3).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: pic })); bl.position.set(q[0], 0.06, q[1]); parkG.add(bl); parkG.add(mesh(new T.CylinderGeometry(0.7, 0.8, 0.8, 12), mat('basketL', { color: 0xa9743f }), q[0] + 1.2, 0.4, q[1] + 0.6)); });
+      PK.monkeys = []; plats.forEach(function (p, i) { var m = new T.Group(), fur = mat('fur', { color: 0x6b5a45, roughness: 1 }); m.add(mesh(new T.SphereGeometry(0.35, 10, 8), fur, 0, 0, 0)); m.add(mesh(new T.SphereGeometry(0.22, 10, 8), fur, 0.3, 0.3, 0)); var tl = mesh(new T.CylinderGeometry(0.04, 0.03, 1, 5), fur, -0.4, -0.3, 0); tl.rotation.z = 0.8; m.add(tl); m.position.set(p[0] + 1.5, 12, p[1]); parkG.add(m); PK.monkeys.push({ m: m, p: p, ph: i }); });
+    }
     function buildPark() {
-      wipe(parkG); var id = sc.placeId || 'park', r = rnd(hashStr(id)); PK = { lamps: [], towers: [] };
+      wipe(parkG); var id = sc.placeId || 'park', r = rnd(hashStr(id)); PK = { lamps: [], towers: [], spray: [] }; var golf = /^golf_/.test(id);
       var lawn = mesh(new T.PlaneGeometry(500, 500).rotateX(-Math.PI / 2), mat('parklawn', { map: grassTex, roughness: 0.95 }), 0, 0, 0); lawn.castShadow = false; parkG.add(lawn);
+      if (!golf) {
       // The looping path, as short paving segments.
       for (var k = 0; k < 90; k++) { var a = pathAt(k / 90), b = pathAt((k + 1) / 90), seg = mesh(new T.BoxGeometry(Math.hypot(b[0] - a[0], b[1] - a[1]) + 0.3, 0.06, 3), mat('ppath', { color: 0xd9cdb6, roughness: 0.9 }), (a[0] + b[0]) / 2, 0.04, (a[1] + b[1]) / 2); seg.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); seg.castShadow = false; parkG.add(seg); }
       // A pond with a little fountain, and the gazebo by it.
@@ -650,32 +704,38 @@
       var rimP = mesh(new T.TorusGeometry(1, 0.06, 6, 48).rotateX(Math.PI / 2), mat('pebble', { color: 0xa9a294, roughness: 1 }), 6, 0.08, 8); rimP.scale.set(11, 1, 7); parkG.add(rimP);
       PK.spray = []; for (var f = 0; f < 40; f++) { var d = mesh(new T.SphereGeometry(0.1, 6, 4), mat('sprayM', { color: 0xf4fbff, roughness: 0.2, transparent: true, opacity: 0.8 }), 6, 0.5, 8); d.castShadow = false; parkG.add(d); PK.spray.push(d); }
       var gz = new T.Group(); gz.position.set(-14, 0, 12); gz.add(mesh(new T.CylinderGeometry(5, 5.2, 0.5, 8), mat('gzbase', { color: 0xe9e5dc, roughness: 0.7 }), 0, 0.25, 0)); for (var gp = 0; gp < 8; gp++) { var ga = gp / 8 * Math.PI * 2; gz.add(mesh(new T.CylinderGeometry(0.15, 0.15, 3.4, 8), white, Math.cos(ga) * 4.4, 2.2, Math.sin(ga) * 4.4)); } var gr = mesh(new T.ConeGeometry(5.8, 2.4, 8), mat('gzroof', { color: 0x7a3b2a, roughness: 0.8 }), 0, 5.1, 0); gz.add(gr); parkG.add(gz);
+      }
       // Shade trees (instanced crowns and trunks), palms, flower beds, benches, lamps.
-      var NT = 70, crowns = new T.InstancedMesh(new T.IcosahedronGeometry(1, 1), new T.MeshStandardMaterial({ roughness: 0.9, flatShading: true }), NT), trunks = new T.InstancedMesh(new T.CylinderGeometry(0.25, 0.35, 1, 6), trunkM, NT), m4 = new T.Matrix4(), q = new T.Quaternion(), v = new T.Vector3(), s3 = new T.Vector3(), c = new T.Color();
-      for (var t = 0; t < NT; t++) { var ang = r() * Math.PI * 2, rad = t < 24 ? 12 + r() * 14 : 42 + r() * 50, tx = Math.cos(ang) * rad * 1.3, tz = Math.sin(ang) * rad + 6; if (Math.abs(tx - 6) < 13 && Math.abs(tz - 8) < 9) tz += 18; if (tz < 4 && Math.abs(tx) < 40) tz = 30 + r() * 20; var h = 3 + r() * 3, cr = 2.4 + r() * 2.6; m4.compose(v.set(tx, h + cr * 0.6, tz), q, s3.set(cr, cr * 0.85, cr)); crowns.setMatrixAt(t, m4); crowns.setColorAt(t, c.setHSL(0.26 + r() * 0.08, 0.45, 0.24 + r() * 0.12)); m4.compose(v.set(tx, h / 2, tz), q, s3.set(1, h, 1)); trunks.setMatrixAt(t, m4); }
+      var NT = golf ? 24 : 70, crowns = new T.InstancedMesh(new T.IcosahedronGeometry(1, 1), new T.MeshStandardMaterial({ roughness: 0.9, flatShading: true }), NT), trunks = new T.InstancedMesh(new T.CylinderGeometry(0.25, 0.35, 1, 6), trunkM, NT), m4 = new T.Matrix4(), q = new T.Quaternion(), v = new T.Vector3(), s3 = new T.Vector3(), c = new T.Color();
+      for (var t = 0; t < NT; t++) { var ang = r() * Math.PI * 2, rad = t < 24 && !golf ? 12 + r() * 14 : (golf ? 62 : 42) + r() * 50, tx = Math.cos(ang) * rad * 1.3, tz = Math.sin(ang) * rad + 6; if (Math.abs(tx - 6) < 13 && Math.abs(tz - 8) < 9) tz += 18; if (tz < 4 && Math.abs(tx) < 40) tz = 30 + r() * 20; var h = 3 + r() * 3, cr = 2.4 + r() * 2.6; m4.compose(v.set(tx, h + cr * 0.6, tz), q, s3.set(cr, cr * 0.85, cr)); crowns.setMatrixAt(t, m4); crowns.setColorAt(t, c.setHSL(0.26 + r() * 0.08, 0.45, 0.24 + r() * 0.12)); m4.compose(v.set(tx, h / 2, tz), q, s3.set(1, h, 1)); trunks.setMatrixAt(t, m4); }
       crowns.castShadow = trunks.castShadow = true; parkG.add(crowns, trunks);
-      var NF = 260, flowers = new T.InstancedMesh(new T.SphereGeometry(0.22, 6, 4), new T.MeshStandardMaterial({ roughness: 0.7 }), NF);
+      var NF = golf ? 1 : 260, flowers = new T.InstancedMesh(new T.SphereGeometry(0.22, 6, 4), new T.MeshStandardMaterial({ roughness: 0.7 }), NF);
       for (var fl = 0; fl < NF; fl++) { var bed = fl % 4, bx = [-28, 26, -6, 20][bed], bz = [-6, -4, 26, 24][bed]; m4.makeTranslation(bx + (r() - 0.5) * 8, 0.25, bz + (r() - 0.5) * 3); flowers.setMatrixAt(fl, m4); flowers.setColorAt(fl, c.set([0xd23b2f, 0xf2b600, 0xe85aa0, 0xf4f3ec, 0x8e44ad][Math.floor(r() * 5)])); } parkG.add(flowers);
-      for (var bn = 0; bn < 10; bn++) { var bp = pathAt(bn / 10 + 0.03), bg = new T.Group(); bg.position.set(bp[0] * 1.12, 0, (bp[1] - 6) * 1.18 + 6); bg.lookAt(0, 0, 6); bg.add(mesh(new T.BoxGeometry(2.4, 0.15, 0.7), mat('bench', { color: 0x8a6a3a, roughness: 0.8 }), 0, 0.6, 0)); bg.add(mesh(new T.BoxGeometry(2.4, 0.6, 0.12), mat('bench', {}), 0, 1.0, -0.32)); parkG.add(bg); }
-      for (var lp2 = 0; lp2 < 14; lp2++) { var lpp = pathAt(lp2 / 14); parkG.add(mesh(new T.CylinderGeometry(0.1, 0.12, 4, 6), frameM, lpp[0] * 0.9, 2, (lpp[1] - 6) * 0.86 + 6)); var lb = new T.MeshBasicMaterial({ color: 0x6b6458 }), bulb = new T.Mesh(new T.SphereGeometry(0.3, 8, 6), lb); bulb.position.set(lpp[0] * 0.9, 4.2, (lpp[1] - 6) * 0.86 + 6); parkG.add(bulb); PK.lamps.push(lb); }
+      for (var bn = 0; bn < (golf ? 0 : 10); bn++) { var bp = pathAt(bn / 10 + 0.03), bg = new T.Group(); bg.position.set(bp[0] * 1.12, 0, (bp[1] - 6) * 1.18 + 6); bg.lookAt(0, 0, 6); bg.add(mesh(new T.BoxGeometry(2.4, 0.15, 0.7), mat('bench', { color: 0x8a6a3a, roughness: 0.8 }), 0, 0.6, 0)); bg.add(mesh(new T.BoxGeometry(2.4, 0.6, 0.12), mat('bench', {}), 0, 1.0, -0.32)); parkG.add(bg); }
+      for (var lp2 = 0; lp2 < (golf ? 0 : 14); lp2++) { var lpp = pathAt(lp2 / 14); parkG.add(mesh(new T.CylinderGeometry(0.1, 0.12, 4, 6), frameM, lpp[0] * 0.9, 2, (lpp[1] - 6) * 0.86 + 6)); var lb = new T.MeshBasicMaterial({ color: 0x6b6458 }), bulb = new T.Mesh(new T.SphereGeometry(0.3, 8, 6), lb); bulb.position.set(lpp[0] * 0.9, 4.2, (lpp[1] - 6) * 0.86 + 6); parkG.add(bulb); PK.lamps.push(lb); }
       [[0, 3], [-10, -3], [18, 2]].forEach(function (pq, i) { palm(pq[0] + 30, pq[1] - 20, 8 + i, 0.2); });
       // Each park's landmark: a great rock, the city gate, a canopy walkway, the zoo's enclosures, or a city skyline.
       if (/aso|zuma/.test(id)) { var rock = rockMesh(/zuma/.test(id) ? 70 : 55, hashStr(id), /zuma/.test(id) ? 0x7d6e5e : 0x8a7a68); rock.position.set(-30, 0, 230); rock.castShadow = true; parkG.add(rock); }
       else if (/gate/.test(id)) { var gateM = mat('gate', { color: 0xf1ece2, roughness: 0.6 }); [-16, 16].forEach(function (x) { parkG.add(mesh(new T.BoxGeometry(5, 26, 5), gateM, x, 13, 70)); }); parkG.add(mesh(new T.BoxGeometry(40, 5, 6), gateM, 0, 28, 70)); parkG.add(mesh(new T.TorusGeometry(10, 1.2, 8, 32, Math.PI), mat('gateG', { color: 0x1d7a43 }), 0, 30, 70)); }
       else if (/lcc/.test(id)) { for (var cw = 0; cw < 8; cw++) { var x0 = -40 + cw * 12, pts = []; for (var cu = 0; cu <= 10; cu++) { var uu = cu / 10; pts.push(new T.Vector3(x0 + uu * 12, 12 - Math.sin(uu * Math.PI) * 1.4, 40 + Math.sin(cw) * 6)); } parkG.add(new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x5a4632 }))); parkG.add(mesh(new T.CylinderGeometry(0.4, 0.5, 13, 6), trunkM, x0, 6.5, 40 + Math.sin(cw) * 6)); var plat = mesh(new T.CylinderGeometry(1.6, 1.6, 0.3, 10), mat('plank0', { color: 0x7a5a3a }), x0, 12, 40 + Math.sin(cw) * 6); parkG.add(plat); } }
       else if (/zoo/.test(id)) { [[-34, 40], [0, 46], [34, 40]].forEach(function (zq, zi) { for (var zp = 0; zp < 14; zp++) { var za = zp / 14 * Math.PI * 2; parkG.add(mesh(new T.CylinderGeometry(0.1, 0.1, 2.4, 6), frameM, zq[0] + Math.cos(za) * 9, 1.2, zq[1] + Math.sin(za) * 6)); } var an = new T.Group(); an.position.set(zq[0], 0, zq[1]); var am = mat('animal' + zi, { color: [0xc9a46a, 0x6b6b6b, 0x8a5a3c][zi], roughness: 0.8 }); an.add(mesh(new T.CapsuleGeometry(0.7, 1.6, 4, 8).rotateZ(Math.PI / 2), am, 0, 1.4, 0)); an.add(mesh(new T.SphereGeometry(0.5, 10, 8), am, 1.5, 1.9, 0)); [[-0.8, -0.4], [-0.8, 0.4], [0.8, -0.4], [0.8, 0.4]].forEach(function (lq) { an.add(mesh(new T.CylinderGeometry(0.12, 0.12, 1, 6), am, lq[0], 0.5, lq[1])); }); parkG.add(an); }); }
+      if (golf) golfCourse(r); if (/lcc/.test(id)) lccExtras(r);
       var rs = rnd(81); for (var tb = 0; tb < 26; tb++) { var ta = -1.2 + rs() * 2.4, td = 160 + rs() * 120; towerBlock(Math.sin(ta) * td, Math.cos(ta) * td + 40, 14 + rs() * 12, (/abj|ph_/.test(id) ? 12 : 25) + rs() * 70, 14 + rs() * 10, parkG, 0, PK.towers); }
       // Joggers and strollers going round the path, families on picnic blankets.
-      var NW = 60, wb = [], wr = rnd(37); for (var w = 0; w < NW; w++) wb.push([wr(), (wr() < 0.3 ? 2.2 : 1) * (wr() < 0.5 ? 1 : -1) * (0.008 + wr() * 0.006), (wr() - 0.5) * 1.6, wr() * 6]);
+      var NW = golf ? 6 : 60, wb = [], wr = rnd(37); for (var w = 0; w < NW; w++) wb.push([wr(), (wr() < 0.3 ? 2.2 : 1) * (wr() < 0.5 ? 1 : -1) * (0.008 + wr() * 0.006), (wr() - 0.5) * 1.6, wr() * 6]);
       PK.walkers = squad(NW, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec][i % 7]; }, 1, parkG); PK.walkBase = wb;
-      for (var pc = 0; pc < 6; pc++) { var px = -24 + pc * 9 + r() * 3, pz = -12 + (pc % 2) * 30; var bl = mesh(new T.BoxGeometry(3, 0.04, 2.4), mat('blanket' + pc % 3, { color: [0xc0392b, 0x1f5fa0, 0xf2b600][pc % 3], roughness: 0.9 }), px, 0.05, pz); bl.castShadow = false; parkG.add(bl); }
+      for (var pc = 0; pc < (golf ? 0 : 6); pc++) { var px = -24 + pc * 9 + r() * 3, pz = -12 + (pc % 2) * 30; var bl = mesh(new T.BoxGeometry(3, 0.04, 2.4), mat('blanket' + pc % 3, { color: [0xc0392b, 0x1f5fa0, 0xf2b600][pc % 3], roughness: 0.9 }), px, 0.05, pz); bl.castShadow = false; parkG.add(bl); }
     }
     function parkFrame(t, night) {
       var W = PK.walkers, m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), one = new T.Vector3(1, 1, 1), n = night ? Math.round(W.n * 0.25) : W.n;
       for (var i = 0; i < W.n; i++) { var b = PK.walkBase[i]; if (i >= n) { m4.makeTranslation(0, -9, 0); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4); continue; } var u = ((b[0] + t * b[1]) % 1 + 1) % 1, p = pathAt(u), p2 = pathAt((u + 0.002 * Math.sign(b[1]) + 1) % 1); e.set(0, Math.atan2(-(p2[1] - p[1]), p2[0] - p[0]), 0); q.setFromEuler(e); m4.compose(v.set(p[0] + b[2], Math.abs(Math.sin(t * (Math.abs(b[1]) > 0.016 ? 12 : 6) + b[3])) * 0.08, p[1] + b[2]), q, one); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4); }
       W.body.instanceMatrix.needsUpdate = W.head.instanceMatrix.needsUpdate = true;
       PK.spray.forEach(function (d, i) { var u = (t * 0.6 + i / PK.spray.length) % 1, a = i * 2.39, rad = 1.6 * u; d.position.set(6 + Math.cos(a) * rad, 0.3 + Math.sin(u * Math.PI) * 3.2, 8 + Math.sin(a) * rad * 0.8); });
-      PK.lamps.forEach(function (m) { m.color.set(night ? 0xffe2a0 : 0x6b6458); }); PK.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; });
+      PK.lamps.forEach(function (m) { m.color.set(night ? 0xffe2a0 : 0x6b6458); });
+      if (PK.flags) PK.flags.forEach(function (f, i) { f.rotation.y = Math.sin(t * 2 + i) * 0.3; });
+      if (PK.golfers) { PK.golfers.forEach(function (g, i) { var c = ((t * 0.5 + g.ph) % 3), sw = c < 1 ? -c * 2.2 : c < 1.2 ? -2.2 + (c - 1) * 22 : 2.2 - Math.min(2.2, (c - 1.2) * 3); g.pv.rotation.z = sw * 0.8; });
+        var h = GOLF_HOLES[Math.floor(t / 5) % GOLF_HOLES.length], u = (t % 5) / 5; PK.ball.position.set(h[0] + (h[2] - h[0]) * u, 0.2 + Math.sin(u * Math.PI) * 14, h[1] + (h[3] - h[1]) * u); }
+      if (PK.monkeys) PK.monkeys.forEach(function (k) { var a = t * 0.8 + k.ph; k.m.position.set(k.p[0] + Math.cos(a) * 2, 11.5 + Math.abs(Math.sin(t * 3 + k.ph)) * 0.8, k.p[1] + Math.sin(a) * 2); }); PK.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; });
     }
 
 

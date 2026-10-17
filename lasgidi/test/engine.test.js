@@ -2659,3 +2659,20 @@ test('rules 19: a life that travels to a police division and acts replays to the
   }
   const r = L.replayLife(s.replay); assert.equal(r.ledgerHash, s.ledgerHash);
 });
+test('rules 19: Ikoyi Golf Club: ₦1bn gate, a six-hole Club Cup played by choices, capped prizes, once a week', () => {
+  const s = L.newGame({ seed: 1400, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.match(L.clubQuote(s, 'golf', 'worth').disabled || '', /Net worth/);
+  const old = L.newGame({ seed: 1401, origin: 'nepo', goal: 'freestyle', rules: 18 }); assert.match(L.clubQuote(old, 'golf', 'worth').disabled || '', /Not open/);
+  let best = 0, won = 0;
+  for (let i = 0; i < 25; i++) {
+    const g = L.newGame({ seed: 1410 + i, origin: 'nepo', goal: 'freestyle' }); while (g.pending.length) L.resolveChoice(g, 0);
+    g.clubs = { golf: { joined: true, via: 'worth', until: g.t + 7 * 1440 * 10 } }; g.loc = 'ikoyi'; g.cash = 5e6; g.skills.fitness = i * 400;
+    while (L.dow(g) !== 5) g.t += 1440; g.t = g.t - (g.t % 1440) + 8 * 60;
+    const r = L.clubAct(g, 'golf', 'cup'); assert.ok(r.ok, r.msg);
+    let holes = 0; while (g.pending.length && g.pending[0].id === 'golfhole') { L.resolveChoice(g, i % 3); holes++; }
+    assert.equal(holes, 6); assert.equal(g.golfCup, null);
+    const cash0 = 5e6 - L.price(g, 500000); best = Math.max(best, g.cash - cash0); if (g.trophies) won++;
+    assert.match(L.clubActOptions(g, 'golf').find(a => a.id === 'cup').disabled || '', /./); // cash was set by hand, so no ledger check
+  }
+  assert.ok(best <= 20000000 * 1.5, 'prize capped: ' + best); assert.ok(won > 0, 'somebody places');
+});

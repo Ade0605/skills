@@ -294,6 +294,21 @@
         { id: 'day', label: 'Yacht day out to the Lekki coast', mins: 360, cost: 400000, fx: { fun: 70, social: 35, stress: -30, energy: -15 }, when: { from: 9, to: 12 } },
         { id: 'regatta', label: 'Crew in the weekend regatta', mins: 240, cost: 120000, fx: { fun: 55, social: 30, energy: -20 }, xp: { fitness: 1 }, when: { days: [5, 6], from: 9, to: 14 } }
       ] },
+    // Rules 19: the Ikoyi Golf Club. The Saturday Club Cup is six holes played shot by shot (events); the prizes are big
+    // for one morning but small next to the ₦1bn net worth it takes to get through the gate, and only once a week.
+    golf: { name: 'Ikoyi Golf Club', icon: '⛳', district: 'ikoyi', place: 'golf_ikoyi', where: 'Ikoyi', join: 10000000, weekly: 1000000, minWorth: 1000000000, referStatus: 90, referCharisma: 6, rules: 19,
+      text: 'Members only: a net worth of ₦1bn gets you through the gate. Six championship holes, single malts, quiet deals, and the ₦1bn bottle.',
+      acts: [
+        { id: 'play', label: 'Play a round', mins: 240, cost: 150000, fx: { fun: 40, stress: -25, energy: -20 }, xp: { fitness: 1 }, when: { from: 6, to: 17 } },
+        { id: 'lesson', label: 'Lesson with the Club Pro', mins: 60, cost: 80000, fx: { energy: -6 }, xp: { fitness: 1 }, golf: 'lesson', when: { from: 7, to: 17 } },
+        { id: 'malt', label: 'Single malt at the clubhouse', mins: 30, cost: 60000, fx: { fun: 8, stress: -6 }, when: { from: 12, to: 23 } },
+        { id: 'round', label: 'Buy the members a round', mins: 30, cost: 400000, fx: { social: 30, fun: 10 }, when: { from: 12, to: 23 } },
+        { id: 'gist', label: 'Quiet gist with old money', mins: 60, fx: { social: 18, stress: -4 }, xp: { charisma: 1 }, when: { from: 10, to: 22 } },
+        { id: 'deals', label: 'Talk billion-naira deals on the terrace', mins: 120, fx: { social: 15, stress: 6 }, xp: { charisma: 1 }, when: { from: 10, to: 20 } },
+        { id: 'champagne', label: 'Vintage champagne on the terrace', mins: 60, cost: 900000, fx: { fun: 25, social: 20 }, when: { from: 16, to: 23 } },
+        { id: 'diamond', label: 'Order the ₦1bn diamond bottle', mins: 60, cost: 1000000000, fx: { fun: 100, social: 100 }, when: { from: 19, to: 24 } },
+        { id: 'cup', label: 'Enter the Saturday Club Cup (6 holes)', mins: 30, cost: 500000, golf: 'cup', when: { days: [5], from: 7, to: 12 } }
+      ] },
     powerboat: { name: 'Harbour Powerboat Club', icon: '🚤', district: 'vi', place: 'club_powerboat', where: 'Eko Atlantic harbour', join: 3000000, weekly: 400000, minWorth: 300000000, referStatus: 55, referCharisma: 4,
       text: 'Race-tuned powerboats, a pit lane on the water and a timing board in the bar.',
       acts: [
@@ -895,6 +910,7 @@
     { id: 'club_tidewater', icon: '🍕', name: 'Tidewater House (members only)', type: 'nightlife', glyph: 'club', district: 'ikoyi', x: 21.4, y: 20.6, acts: [], club: 'tidewater', nogem: true, text: 'Members only, by the water on Ademola Street.' },
     { id: 'club_jetski', icon: '🌊', name: 'Five Cowries Jet Ski Club', type: 'outdoors', glyph: 'club', district: 'ikoyi', x: 19.9, y: 20.7, acts: [], club: 'jetski', nogem: true, text: 'A members\' pontoon on the lagoon.' },
     { id: 'club_yacht', icon: '🛥️', name: 'Atlantic Marina Yacht Club', type: 'outdoors', glyph: 'yacht', district: 'vi', x: 14.2, y: 29.4, acts: [], club: 'yacht', nogem: true, text: 'Members only, at the Eko Atlantic marina.' },
+    { id: 'golf_ikoyi', icon: '⛳', name: 'Ikoyi Golf Club', type: 'outdoors', glyph: 'tree', district: 'ikoyi', x: 20.4, y: 21.2, acts: [], club: 'golf', nogem: true, text: 'Members only: six holes, the lake, the clubhouse terrace and the Saturday Club Cup.' },
     { id: 'club_powerboat', icon: '🚤', name: 'Harbour Powerboat Club', type: 'outdoors', glyph: 'club', district: 'vi', x: 18.9, y: 29.6, acts: [], club: 'powerboat', nogem: true, text: 'Members only, on the Eko Atlantic harbour.' },
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
     { id: 'abj_mosque_pl', icon: '🕌', name: 'National Mosque', type: 'culture', glyph: 'mosque', district: 'abj_garki', x: 18.0, y: 13.0, acts: ['abj_mosque'], text: 'Golden dome and four minarets on the edge of the Central Area.' },
@@ -1673,6 +1689,14 @@
     ];
   });
   CIVIC_PLACES.forEach(function (p) { PLACES.push(p); });
+  // Rules 19: Lekki Conservation Centre, close up.
+  CIVIC_ACTS.lcc = [
+    { id: 'lcc_trail', label: 'Walk the nature trail through the mangroves', mins: 60, cost: 1000, fx: { stress: -10, energy: -6, fun: 6 }, xp: { fitness: 1 }, when: { from: 8, to: 17 } },
+    { id: 'lcc_treehouse', label: 'Climb up to the tree house', mins: 30, fx: { fun: 8, energy: -4 }, when: { from: 8, to: 17 } },
+    { id: 'lcc_monkeys', label: 'Watch the monkeys in the canopy', mins: 30, fx: { fun: 7, stress: -5 }, when: { from: 7, to: 18 } },
+    { id: 'lcc_picnic', label: 'Picnic on the lawn (jollof in a cooler)', mins: 60, cost: 4500, fx: { hunger: 30, social: 8, fun: 6 }, when: { from: 9, to: 17 } },
+    { id: 'lcc_guide', label: 'Guide a school group round the trail', mins: 180, earn: 2200, fx: { energy: -10, social: 5 }, xp: { charisma: 1 }, gig: true, fest: true, when: { from: 9, to: 15 } }
+  ];
   // Rules 19, inside the clubs: the bar, bottle service, a VIP booth, raining money, and shutting the club down
   // (the whole night on you, once a week). All spending: none of it pays, and the bills are Island bills.
   ['clubs', 'quilox', 'vi_strip', 'lekki_lounges', 'club_tidewater', 'lounge', 'abj_wuse2', 'ph_garden'].forEach(function (pid) {
