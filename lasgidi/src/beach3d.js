@@ -58,6 +58,8 @@
 
     /* ---------- materials and helpers ---------- */
     var Mc = {}; function mat(k, o) { return Mc[k] || (Mc[k] = new T.MeshStandardMaterial(o)); }
+    // Free a group's GPU memory before it is rebuilt for another place (shared materials and geometry simply upload again when next used).
+    function wipe(g) { g.traverse(function (o) { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(function (m) { ['map', 'emissiveMap', 'alphaMap', 'normalMap', 'roughnessMap'].forEach(function (k) { if (m[k] && m[k].dispose) m[k].dispose(); }); m.dispose(); }); }); g.clear(); }
     function mesh(geo, m, x, y, z) { var o = new T.Mesh(geo, m); o.position.set(x || 0, y || 0, z || 0); o.castShadow = true; o.receiveShadow = true; return o; }
     var white = mat('white', { color: 0xf7f5f0, roughness: 0.55 }), glassM = mat('glass', { color: 0x2c4a5c, roughness: 0.05, metalness: 0.85 }), frameM = mat('frame', { color: 0x2a2d31, roughness: 0.4, metalness: 0.6 });
     // Pool water: rippled light lines over a pale tile floor, under a glossy coat.
@@ -291,7 +293,7 @@
       for (var s = 0; s < Math.floor(len / 3); s++) { var sz = z - len / 2 + 1.5 + s * 3; clubG.add(mesh(new T.CylinderGeometry(0.45, 0.45, 0.15, 14), mat('stool', { color: 0x8a6a3a, roughness: 0.5 }), x + faceX * 2.8, 2.2, sz)); clubG.add(mesh(new T.CylinderGeometry(0.07, 0.07, 2.2, 6), frameM, x + faceX * 2.8, 1.1, sz)); }
     }
     function buildClub() {
-      clubG.clear(); var key = sc.placeId || sc.name || 'club', hh = hashStr(key), r = rnd(hh), pal = PALS[hh % PALS.length];
+      wipe(clubG); var key = sc.placeId || sc.name || 'club', hh = hashStr(key), r = rnd(hh), pal = PALS[hh % PALS.length];
       CB = { beams: [], lights: [], sparks: [], screens: [], towers: [], base: [], bulbs: null, pal: [new T.Color(pal[0]), new T.Color(pal[1]), new T.Color(pal[2])] };
       var title = String(sc.name || 'Club').replace(/\s*\(.*?\)/g, '').replace(/^The /, '').toUpperCase();
       if (ROOF) buildRoof(r, title); else buildRoom(r, title);
@@ -409,7 +411,7 @@
     // 4-3-3 for each side, attacking left to right for the home team.
     var FORM = [[-48, 0], [-34, -22], [-36, -8], [-36, 8], [-34, 22], [-20, -14], [-22, 0], [-20, 14], [-8, -22], [-6, 0], [-8, 22]];
     function buildStadium() {
-      stadG.clear(); ST = { street: !!sc.street, towers: [], lights: [], banks: [] }; var r = rnd(hashStr((sc.placeId || 'stadium') + ':' + (sc.day || 0)));
+      wipe(stadG); ST = { street: !!sc.street, towers: [], lights: [], banks: [] }; var r = rnd(hashStr((sc.placeId || 'stadium') + ':' + (sc.day || 0)));
       if (ST.street) return buildStreetPitch(r);
       var PW = 105, PH = 68; ST.PW = PW; ST.PH = PH; ST.scale = 1;
       var ground = mesh(new T.PlaneGeometry(600, 600).rotateX(-Math.PI / 2), mat('stadOut', { color: 0x8a8d84, roughness: 0.95 }), 0, -0.05, 0); ground.castShadow = false; stadG.add(ground);
@@ -492,7 +494,7 @@
     var MK_ROWS = [-33, -21, -9, 9, 21, 33], MK_Z0 = -26, MK_DZ = 5, MK_N = 15;
     var GOODS = { food: [0xd23b2f, 0xe8742a, 0x7b3f8c, 0x8a5a2b, 0x9ccf4a, 0xf2c94c, 0xc7ccd1, 0xf4f1ea], crafts: [0x5a3a22, 0x7a4f2e, 0x3b2a1a, 0xc0392b, 0x1f5fa0, 0xf2b600, 0x2fa36b, 0x8e44ad] };
     function buildMarket() {
-      mktG.clear(); var crafts = /crafts/.test(sc.placeId || ''), r = rnd(hashStr(sc.placeId || 'market')), pal = GOODS[crafts ? 'crafts' : 'food']; MK = { towers: [], lamps: [], crafts: crafts };
+      wipe(mktG); var crafts = /crafts/.test(sc.placeId || ''), r = rnd(hashStr(sc.placeId || 'market')), pal = GOODS[crafts ? 'crafts' : 'food']; MK = { towers: [], lamps: [], crafts: crafts };
       var dirtT = canvasTex(256, 256, function (g, w, h) { var rr = rnd(13); g.fillStyle = '#8d7e6b'; g.fillRect(0, 0, w, h); for (var i = 0; i < 7000; i++) { g.fillStyle = rr() < 0.5 ? 'rgba(70,60,50,.2)' : 'rgba(190,175,150,.2)'; g.fillRect(rr() * w, rr() * h, 2, 2); } for (var k = 0; k < 6; k++) { g.fillStyle = 'rgba(60,70,80,.35)'; g.beginPath(); g.ellipse(rr() * w, rr() * h, 10 + rr() * 16, 4 + rr() * 6, rr() * 3, 0, Math.PI * 2); g.fill(); } }, [20, 20]);
       var ground = mesh(new T.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: dirtT, roughness: 0.95 }), 0, 0, 0); ground.castShadow = false; mktG.add(ground);
       // Stall frames, tables and zinc roofs, instanced: six rows facing the aisles.
@@ -557,7 +559,7 @@
       jetG.add(g); return g;
     }
     function buildJetty() {
-      jetG.clear(); var id = sc.placeId || 'jetty', marina = /yacht|club_|vip/.test(id), makoko = id === 'makoko', r = rnd(hashStr(id)); JT = { towers: [], boats: [], wakes: [], marina: marina, makoko: makoko, lamps: [] };
+      wipe(jetG); var id = sc.placeId || 'jetty', marina = /yacht|club_|vip/.test(id), makoko = id === 'makoko', r = rnd(hashStr(id)); JT = { towers: [], boats: [], wakes: [], marina: marina, makoko: makoko, lamps: [] };
       var water = new T.Mesh(new T.PlaneGeometry(3000, 3000, 1, 1).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: makoko ? 0x4f7a6a : 0x3a8fb0, roughness: 0.2, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1 })); water.position.y = -0.4; jetG.add(water); JT.water = water;
       // The shore: a concrete quay with a ticket kiosk, benches and a life-jacket rack.
       jetG.add(mesh(new T.BoxGeometry(160, 2.2, 30), mat('quay', { color: 0xbdb7aa, roughness: 0.9 }), 0, -0.3, -30));
@@ -616,7 +618,7 @@
       g.computeVertexNormals(); return new T.Mesh(g, new T.MeshStandardMaterial({ color: colr || 0x8a7a68, roughness: 0.95, flatShading: true }));
     }
     function buildPark() {
-      parkG.clear(); var id = sc.placeId || 'park', r = rnd(hashStr(id)); PK = { lamps: [], towers: [] };
+      wipe(parkG); var id = sc.placeId || 'park', r = rnd(hashStr(id)); PK = { lamps: [], towers: [] };
       var lawn = mesh(new T.PlaneGeometry(500, 500).rotateX(-Math.PI / 2), mat('parklawn', { map: grassTex, roughness: 0.95 }), 0, 0, 0); lawn.castShadow = false; parkG.add(lawn);
       // The looping path, as short paving segments.
       for (var k = 0; k < 90; k++) { var a = pathAt(k / 90), b = pathAt((k + 1) / 90), seg = mesh(new T.BoxGeometry(Math.hypot(b[0] - a[0], b[1] - a[1]) + 0.3, 0.06, 3), mat('ppath', { color: 0xd9cdb6, roughness: 0.9 }), (a[0] + b[0]) / 2, 0.04, (a[1] + b[1]) / 2); seg.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); seg.castShadow = false; parkG.add(seg); }
@@ -686,7 +688,7 @@
       plzG.add(g); return g;
     }
     function buildPlaza() {
-      plzG.clear(); var id = sc.placeId || 'plaza'; PZ = { glow: [], domes: [], flags: [], lamps: [], towers: [] };
+      wipe(plzG); var id = sc.placeId || 'plaza'; PZ = { glow: [], domes: [], flags: [], lamps: [], towers: [] };
       var paveT = canvasTex(256, 256, function (c, w, h) { var rr = rnd(3); c.fillStyle = '#d8d2c4'; c.fillRect(0, 0, w, h); for (var y = 0; y < h; y += 32) for (var x = 0; x < w; x += 32) { c.fillStyle = 'hsl(40,' + (8 + rr() * 6) + '%,' + (74 + rr() * 8) + '%)'; c.fillRect(x + 1, y + 1, 30, 30); } }, [40, 40]);
       var pave = mesh(new T.PlaneGeometry(500, 500).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: paveT, roughness: 0.85 }), 0, 0, 0); pave.castShadow = false; plzG.add(pave);
       var gr = mesh(new T.PlaneGeometry(500, 160).rotateX(-Math.PI / 2), mat('plzlawn', { map: grassTex, roughness: 0.95 }), 0, 0.02, -150); gr.castShadow = false; plzG.add(gr);
@@ -735,7 +737,7 @@
         g.globalAlpha = 1; });
     }
     function buildGallery() {
-      galG.clear(); var id = sc.placeId || 'gallery', r = rnd(hashStr(id)), museum = /museum|badagry|obiwali/.test(id); GL = { spots: [] };
+      wipe(galG); var id = sc.placeId || 'gallery', r = rnd(hashStr(id)), museum = /museum|badagry|obiwali/.test(id); GL = { spots: [] };
       var RW = 56, RD = 44, RH = 13;
       var room = new T.Mesh(new T.BoxGeometry(RW, RH, RD), new T.MeshStandardMaterial({ color: 0xf6f4ef, roughness: 0.9, side: T.BackSide })); room.position.set(0, RH / 2, 0); room.receiveShadow = true; galG.add(room);
       var floorT = canvasTex(256, 256, function (g, w, h) { var rr = rnd(4); g.fillStyle = museum ? '#a88a64' : '#b9b5ad'; g.fillRect(0, 0, w, h); for (var i = 0; i < 3000; i++) { g.fillStyle = 'rgba(0,0,0,' + rr() * 0.05 + ')'; g.fillRect(rr() * w, rr() * h, 2, 2); } if (museum) for (var y = 0; y < h; y += 16) { g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, y, w, 1); } }, [10, 8]);
@@ -796,7 +798,7 @@
     function danfo() { var g = new T.Group(); g.add(mesh(new T.BoxGeometry(7, 2.6, 2.6), mat('danfoY', { color: 0xf2c200, roughness: 0.5 }), 0, 1.7, 0)); g.add(mesh(new T.BoxGeometry(7.05, 0.3, 2.65), mat('danfoB', { color: 0x17181a }), 0, 1.4, 0)); g.add(mesh(new T.BoxGeometry(5, 0.9, 2.66), glassM, -0.4, 2.4, 0)); [[-2.3, 1.3], [2.3, 1.3], [-2.3, -1.3], [2.3, -1.3]].forEach(function (w) { var wh = mesh(new T.CylinderGeometry(0.45, 0.45, 0.3, 12), mat('tyre', { color: 0x111111 }), w[0], 0.45, w[1]); wh.rotation.x = Math.PI / 2; g.add(wh); }); return g; }
     function zincRoof(w, d, y, tilt) { var r = mesh(new T.BoxGeometry(w, 0.15, d), mat('zincR', { color: 0x9a8a78, metalness: 0.45, roughness: 0.55 }), 0, y, 0); r.rotation.x = tilt || 0.12; return r; }
     function buildStreet() {
-      strG.clear(); var id = sc.placeId || 'street', kind = sc.kind || 'eatery', r = rnd(hashStr(id)), title = String(sc.name || 'Lagos').replace(/\s*\(.*?\)/g, '').toUpperCase(); SR = { signs: [], towers: [], movers: [], flames: [], smoke: [], kind: kind, spin: [] };
+      wipe(strG); var id = sc.placeId || 'street', kind = sc.kind || 'eatery', r = rnd(hashStr(id)), title = String(sc.name || 'Lagos').replace(/\s*\(.*?\)/g, '').toUpperCase(); SR = { signs: [], towers: [], movers: [], flames: [], smoke: [], kind: kind, spin: [] };
       var ground = mesh(new T.PlaneGeometry(600, 600).rotateX(-Math.PI / 2), mat('stGround', { color: 0x9a9184, roughness: 0.95 }), 0, 0, 0); ground.castShadow = false; strG.add(ground);
       var road = mesh(new T.PlaneGeometry(600, 12).rotateX(-Math.PI / 2), mat('mroad', { color: 0x3a3f46, roughness: 0.9 }), 0, 0.02, -12); road.castShadow = false; strG.add(road);
       for (var dl = -280; dl < 280; dl += 8) { var dash = mesh(new T.PlaneGeometry(3.5, 0.25).rotateX(-Math.PI / 2), mat('dash', { color: 0xf2c200 }), dl, 0.03, -12); dash.castShadow = false; strG.add(dash); }
@@ -872,7 +874,7 @@
     }
     // Interiors for a co-working hub, a gym and a mall atrium, built in the gallery's hall.
     function buildHall() {
-      galG.clear(); var kind = sc.kind, r = rnd(hashStr(sc.placeId || 'hall')); GL = { spots: [], screens: [] };
+      wipe(galG); var kind = sc.kind, r = rnd(hashStr(sc.placeId || 'hall')); GL = { spots: [], screens: [] };
       var RW = 60, RD = 46, RH = kind === 'cinema' ? 18 : 10;
       var room = new T.Mesh(new T.BoxGeometry(RW, RH, RD), new T.MeshStandardMaterial({ color: kind === 'gym' ? 0x2b2f36 : 0xf2f0eb, roughness: 0.85, side: T.BackSide })); room.position.set(0, RH / 2, 0); galG.add(room);
       var floor = new T.Mesh(new T.PlaneGeometry(RW, RD).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ color: kind === 'gym' ? 0x1c1c1f : kind === 'cinema' ? 0xe9e5dc : 0xb08a5a, roughness: kind === 'cinema' ? 0.12 : 0.6, metalness: kind === 'cinema' ? 0.2 : 0 })); floor.position.y = 0.02; floor.receiveShadow = true; galG.add(floor);
@@ -957,8 +959,8 @@
     function syncPeople() {
       var list = sc.people || [];
       while (crowd.length < list.length) { var p = avatarFor(list[crowd.length], crowd.length); world.add(p); crowd.push(p); }
-      crowd.forEach(function (p, i) { var d = list[i]; if (d && d.look && lookKey(d) !== (p.userData.key || '')) { var np = avatarFor(d, i); world.remove(p); world.add(np); crowd[i] = p = np; } p.visible = !!d; if (!d) return; p.userData.person = i; var q = SP()[(d.slot || i) % SP().length]; p.userData.home = [q[0] + Math.cos(i * 2.3) * 2.2, q[1] + 1.5 + Math.sin(i * 2.3) * 1.6]; p.traverse(function (o) { o.userData.person = i; }); });
-      if (sc.me && me && lookKey(sc.me) !== (me.userData.key || '')) { world.remove(me); me = null; }
+      crowd.forEach(function (p, i) { var d = list[i]; if (d && d.look && lookKey(d) !== (p.userData.key || '')) { var np = avatarFor(d, i); world.remove(p); wipe(p); world.add(np); crowd[i] = p = np; } p.visible = !!d; if (!d) return; p.userData.person = i; var q = SP()[(d.slot || i) % SP().length]; p.userData.home = [q[0] + Math.cos(i * 2.3) * 2.2, q[1] + 1.5 + Math.sin(i * 2.3) * 1.6]; p.traverse(function (o) { o.userData.person = i; }); });
+      if (sc.me && me && lookKey(sc.me) !== (me.userData.key || '')) { world.remove(me); wipe(me); me = null; }
       if (sc.me && !me) { me = avatarFor(sc.me, 9); if (!meTag) { meTag = sprite('You', '#2f6fd0', '#fff', 2.4); world.add(meTag); } world.add(me); }
       if (me) { me.visible = meTag.visible = !!sc.me; }
       if (sc.gem && !gem) { gem = new T.Mesh(new T.OctahedronGeometry(0.6, 0), new T.MeshPhysicalMaterial({ color: 0x33c3f0, roughness: 0, metalness: 0.1, clearcoat: 1, emissive: 0x0c5a7a, emissiveIntensity: 0.6 })); gem.castShadow = true; gem.traverse(function (o) { o.userData.gem = true; }); world.add(gem); }
@@ -975,7 +977,7 @@
       orbit.ty = 0; if (PLZ && /abj_tower/.test(sc.placeId || '')) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.42; orbit.r = 120; orbit.tx = 0; orbit.ty = 55; orbit.tz = 40; } else if (STR) { cam.fov = 52; orbit.az = 0; orbit.pol = 1.25; orbit.pol = 1.32; orbit.r = sc.kind === 'refinery' ? 90 : sc.kind === 'hospital' || sc.kind === 'motorpark' || sc.kind === 'airport' ? 60 : 38; orbit.tx = 0; orbit.ty = sc.kind === 'refinery' ? 10 : 3; orbit.tz = 14; } else if (GAL) { cam.fov = 60; orbit.az = 0; orbit.pol = 1.25; orbit.r = 24; orbit.tx = 0; orbit.ty = 1; orbit.tz = 6; } else if (PLZ) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.3; orbit.r = 70; orbit.tx = 0; orbit.ty = 12; orbit.tz = 20; } else if (PRK) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.18; orbit.r = 50; orbit.tx = 0; orbit.tz = 8; } else if (JTY) { cam.fov = 52; orbit.az = 0.35; orbit.pol = 1.2; orbit.r = 52; orbit.tx = 0; orbit.tz = 8; } else if (MKT) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.16; orbit.r = 36; orbit.tx = 0; orbit.tz = 4; } else if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 84; orbit.tx = 0; orbit.tz = sc.street ? 2 : 4; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
       cam.updateProjectionMatrix(); place();
       estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB && !STAD && !MKT && !JTY && !PRK && !PLZ && !GAL && !STR; });
-      dyn.clear(); palms = []; villas = new T.Group(); beachBits = new T.Group(); dyn.add(villas, beachBits);
+      wipe(dyn); palms = []; villas = new T.Group(); beachBits = new T.Group(); dyn.add(villas, beachBits);
       if (CLUB || STAD || MKT || JTY || PRK || PLZ || GAL || STR) return;
       if (HARBOUR) { [[-80, -20], [-60, 50], [70, 60], [85, -20], [-30, -50], [40, -50], [-95, 90], [95, 95]].forEach(function (q, i) { palm(q[0], q[1], 9 + (i % 3), (i % 2 ? -0.2 : 0.2)); }); return; }
       if (ESTATE) { [-38, -12, 14, 40].forEach(function (x) { villa(x, x === -12); }); [[-30, 3, 9, 0.3], [-4, 5, 8.5, 0.4], [20, 4, 9.5, 0.2], [44, 2, 9, -0.3], [-25, -24, 12, 0.1], [28, -24, 12, 0.15], [-2, -21, 9, 0.35], [30, 22, 10, -0.2], [-50, 18, 11, 0.25]].forEach(function (q) { palm(q[0], q[1], q[2], q[3]); }); return; }
@@ -1011,7 +1013,7 @@
     /* ---------- the season: a Christmas tree, Sallah rams, the marathon arch, the New Yam pile, Style Week's runway ---------- */
     var seasG = new T.Group(); world.add(seasG); var seasKey = '', SEAS = { bulbs: [] };
     function seasonal() {
-      var k = built + '|' + sc.month + '|' + (sc.placeId || ''); if (k === seasKey) return; seasKey = k; seasG.clear(); SEAS = { bulbs: [] };
+      var k = built + '|' + sc.month + '|' + (sc.placeId || ''); if (k === seasKey) return; seasKey = k; wipe(seasG); SEAS = { bulbs: [] };
       var m = sc.month, q = SP(), cx = 0, cz = 0, x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; if (m == null) return; q.forEach(function (p) { cx += p[0] / q.length; cz += p[1] / q.length; x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); });
       var K = Math.max(1, Math.min(2.6, Math.max(x1 - x0, z1 - z0) / 22)), front = z1 + 3 * K; // bigger in the big squares, in front of the signs
       var at = function (dx, dz) { var x = cx + dx * K, z = front + dz * K - 6 * K; return [x, groundY(x, z), z]; }, id = sc.placeId || '';

@@ -2590,3 +2590,10 @@ test('rules 18: festival gigs are once a day; the marathon and casting prizes ar
   assert.ok(L.doAction(c, 'fest_style_casting').ok); atMonth(c, 10, 0, 2, 11);
   assert.match(L.availableActions(c).find(x => x.id === 'fest_style_casting').disabled || '', /One casting a week/);
 });
+test('rules 18: a rules-17 life can never do a festival act, even in season and in the right place', () => {
+  const old = L.newGame({ seed: 84, origin: 'nepo', goal: 'freestyle', rules: 17 }); while (old.pending.length) L.resolveChoice(old, 0);
+  old.loc = 'island'; atMonth(old, 11, 3, 2, 19);
+  const before = old.ledgerHash, r = L.doAction(old, 'fest_xmas_carols');
+  assert.equal(r.ok, false); assert.equal(old.ledgerHash, before);
+  old.loc = 'vi'; atMonth(old, 10, 0, 0, 11); assert.equal(L.doAction(old, 'fest_style_casting').ok, false);
+});
