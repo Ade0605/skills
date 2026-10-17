@@ -341,6 +341,7 @@
     // Every club room (not the event hall): a round stage with two poles and dancers in stage outfits, a celebrity car park
     // at the door with a red carpet, and naira rain over the dance floor when somebody sprays (sc.rain).
     function clubExtras(RW, RD) {
+      if (sc.placeId === 'shrine') return shrineExtras(RW, RD);
       var px = -RW / 2 + 13, pz = 24, gold = mat('poleGold', { color: 0xd4af37, metalness: 0.9, roughness: 0.2 });
       clubG.add(mesh(new T.CylinderGeometry(4.2, 4.4, 1, 32), mat('stage', { color: 0x17181a, roughness: 0.3, metalness: 0.4 }), px, 0.5, pz));
       var ring = new T.Mesh(new T.TorusGeometry(4.25, 0.08, 8, 48).rotateX(Math.PI / 2), emissiveMat(0xff4fd8, 1)); ring.position.set(px, 1.02, pz); clubG.add(ring);
@@ -360,6 +361,23 @@
       // money rain
       var nt = canvasTex(128, 64, function (g, w, h) { g.fillStyle = '#7fbf6a'; g.fillRect(0, 0, w, h); g.strokeStyle = '#1b5e20'; g.lineWidth = 4; g.strokeRect(4, 4, w - 8, h - 8); g.fillStyle = '#1b5e20'; g.font = '900 28px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('₦1000', w / 2, h / 2); });
       var NC = LITE ? 60 : 140, notes = new T.InstancedMesh(new T.PlaneGeometry(0.9, 0.45), new T.MeshStandardMaterial({ map: nt, side: T.DoubleSide, roughness: 0.6 }), NC); clubG.add(notes); CB.cash = notes; CB.NC = NC; CB.rainOnly = true;
+    }
+    // The Afrobeat live house in Ikeja: a band on the riser (drums, sax, guitar, a singer), a painted mural wall,
+    // round tables with red stools and yellow AFROBEAT LIVE boards.
+    function shrineExtras(RW, RD) {
+      var bz = RD / 2 - 8; CB.band = [];
+      var kit = new T.Group(); kit.position.set(-6, 1.6, bz + 1); [[0, 0.7, 0.9], [-1.1, 1.1, 0.5], [1.1, 1.1, 0.5]].forEach(function (d) { kit.add(mesh(new T.CylinderGeometry(d[2], d[2], 0.6, 18), mat('drum', { color: 0xc0392b, roughness: 0.4 }), d[0], d[1], 0)); }); kit.add(mesh(new T.CylinderGeometry(0.6, 0.6, 0.04, 18), mat('cymbal', { color: 0xd4af37, metalness: 0.9, roughness: 0.2 }), 1.6, 2.2, -0.4)); clubG.add(kit);
+      [[-6, bz + 2.4], [-2, bz - 1], [2.5, bz - 1], [6.5, bz - 1.5]].forEach(function (q, i) { var f = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('band', i), 100 + i) : person(100 + i, i === 3); f.position.set(q[0], 1.6, q[1]); f.rotation.y = -Math.PI / 2; clubG.add(f); CB.band.push(f); });
+      var sax = mesh(new T.CylinderGeometry(0.06, 0.16, 0.9, 10), mat('sax', { color: 0xd4af37, metalness: 0.9, roughness: 0.2 }), -2, 2.9, bz - 1.5); sax.rotation.x = 0.5; clubG.add(sax);
+      var gtr = mesh(new T.BoxGeometry(0.9, 0.3, 0.08), mat('gtr', { color: 0x7a3b12 }), 2.5, 2.7, bz - 1.5); gtr.rotation.z = 0.5; clubG.add(gtr);
+      clubG.add(mesh(new T.CylinderGeometry(0.04, 0.04, 2.6, 6), mat('mic', { color: 0x222222, metalness: 0.7 }), 6.5, 2.9, bz - 2.4));
+      function board(text, w, h, x, y, z, ry) { var t = canvasTex(1024, 192, function (g, cw, ch) { g.fillStyle = '#f2c200'; g.fillRect(0, 0, cw, ch); g.fillStyle = '#17181a'; g.font = '900 110px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, cw / 2, ch / 2 + 6, cw - 40); }); var m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ map: t })); m.position.set(x, y, z); m.rotation.y = ry; clubG.add(m); }
+      board('AFROBEAT LIVE', 14, 2.6, -12, 14.5, RD / 2 - 0.4, Math.PI); board('AFROBEAT LIVE', 14, 2.6, 12, 14.5, RD / 2 - 0.4, Math.PI);
+      var mural = canvasTex(1024, 512, function (g, w, h) { g.fillStyle = '#f2a516'; g.fillRect(0, 0, w, h); g.fillStyle = '#17181a'; g.fillRect(30, 30, w - 60, 170); g.fillStyle = '#f2c200'; g.font = '900 120px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('MUSIC IS THE WEAPON', w / 2, 118, w - 100);
+        ['#d0453a', '#1f8a9a', '#c45a1a', '#2f6fd0'].forEach(function (c, i) { g.fillStyle = c; g.fillRect(40 + i * 240, 240, 210, 230); g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.arc(145 + i * 240, 330, 50, 0, 6.3); g.fill(); g.fillRect(105 + i * 240, 380, 80, 70); }); });
+      var mm = new T.Mesh(new T.PlaneGeometry(22, 11), new T.MeshBasicMaterial({ map: mural })); mm.position.set(RW / 2 - 0.4, 9, -22); mm.rotation.y = -Math.PI / 2; clubG.add(mm);
+      for (var tb = 0; tb < 5; tb++) { var tx = -14 + (tb % 3) * 14, tz = -24 + Math.floor(tb / 3) * 8; clubG.add(mesh(new T.CylinderGeometry(1.8, 1.8, 0.15, 20), mat('rtab', { color: 0x6b3a1a, roughness: 0.6 }), tx, 2.2, tz)); clubG.add(mesh(new T.CylinderGeometry(0.2, 0.3, 2.2, 8), mat('rtleg', { color: 0x2a1a10 }), tx, 1.1, tz));
+        for (var st = 0; st < 4; st++) { var a = st * Math.PI / 2; clubG.add(mesh(new T.CylinderGeometry(0.5, 0.45, 0.25, 14), mat('rstool', { color: 0xc0392b }), tx + Math.cos(a) * 2.6, 1.5, tz + Math.sin(a) * 2.6)); } }
     }
     // The Surulere event hall: a high table on the riser, guests in agbada and gele, and naira raining on the floor.
     function owambe(RD) {
@@ -609,9 +627,46 @@
       // Passengers waiting on the quay and the pier.
       var NW = 46, wr = rnd(29), wb = []; for (var w = 0; w < NW; w++) wb.push(w < 26 ? [-10 + wr() * 20, -24 + wr() * 8, wr() * 6] : [(wr() - 0.5) * 4, -8 + wr() * 36, wr() * 6]);
       JT.people = squad(NW, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec][i % 7]; }, 1, jetG); JT.peopleBase = wb;
+      if (/^(cms|lagoon_cruise|lagoon_jetty)$/.test(id)) partyBoat();
+    }
+    // The Lagoon party boat (the island jetty and the Lagoon Boat Cruise): moored by the pier, with the deck bar,
+    // the captain's helm, an LED dance floor, speaker stacks, a sun deck with loungers, rails and life rings.
+    function partyBoat() {
+      var B = new T.Group(); B.position.set(-34, 0, 8); jetG.add(B); JT.party = { g: B };
+      var hullM = mat('pbhull', { color: 0xf4f3ec, roughness: 0.4 }), deck = mat('pbdeck', { color: 0x6b3f22, roughness: 0.8 }), rail = mat('pbrail', { color: 0xdfe6ee, metalness: 0.7, roughness: 0.3 });
+      B.add(mesh(new T.BoxGeometry(14, 2.6, 30), hullM, 0, 0.3, 0)); B.add(mesh(new T.BoxGeometry(14.2, 0.4, 30.2), mat('pbstripe', { color: 0x1f5fa0 }), 0, -0.6, 0));
+      var bow = mesh(new T.CylinderGeometry(7, 7, 2.6, 3, 1), hullM, 0, 0.3, 16.5); bow.rotation.y = Math.PI / 2; bow.scale.set(1, 1, 0.5); B.add(bow);
+      B.add(mesh(new T.BoxGeometry(13.6, 0.3, 30), deck, 0, 1.75, 0));
+      [-6.8, 6.8].forEach(function (x) { B.add(mesh(new T.BoxGeometry(0.12, 0.12, 30), rail, x, 3, 0)); for (var p = -14; p <= 14; p += 2) B.add(mesh(new T.CylinderGeometry(0.05, 0.05, 1.2, 6), rail, x, 2.4, p)); });
+      B.add(mesh(new T.BoxGeometry(13.6, 0.12, 0.12), rail, 0, 3, -15));
+      // the deck bar with a shelf of bottles and a bartender
+      B.add(mesh(new T.BoxGeometry(2, 1.8, 8), mat('pbbar', { color: 0xf4f3ec }), -5, 2.8, -8)); B.add(mesh(new T.BoxGeometry(2.4, 0.15, 8.4), mat('pbbartop', { color: 0x2b2d33 }), -5, 3.75, -8));
+      for (var bt = 0; bt < 6; bt++) B.add(mesh(new T.CylinderGeometry(0.12, 0.14, 0.7, 8), mat('pbbtl' + bt % 3, { color: [0x1c7a4a, 0x2f6fd0, 0xc0392b][bt % 3], roughness: 0.1 }), -6.4, 4.6, -11 + bt * 1.2)); B.add(mesh(new T.BoxGeometry(0.2, 0.1, 8), mat('pbshelf', { color: 0x5a3a22 }), -6.4, 4.2, -8));
+      for (var sb = 0; sb < 3; sb++) B.add(mesh(new T.CylinderGeometry(0.4, 0.4, 0.15, 12), mat('pbstool', { color: 0x17181a }), -3.4, 3, -10.5 + sb * 2.5));
+      var bar1 = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('deckbar', 0), 120) : person(120, true); bar1.position.set(-6, 1.9, -8); bar1.rotation.y = 0; B.add(bar1);
+      // the captain's helm on a console at the bow end
+      B.add(mesh(new T.BoxGeometry(4, 2.2, 2), mat('pbhelm', { color: 0xf4f3ec }), 0, 2.9, 11)); var wheel = new T.Mesh(new T.TorusGeometry(0.7, 0.07, 8, 24), mat('wheel', { color: 0x7a4b2a })); wheel.position.set(0, 4.3, 10); B.add(wheel); JT.party.wheel = wheel;
+      for (var sp = 0; sp < 8; sp++) { var spk = mesh(new T.BoxGeometry(0.05, 1.7, 0.05), mat('wheel', {}), 0, 4.3, 10); spk.rotation.z = sp * Math.PI / 8; B.add(spk); }
+      var cap = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('captain', 0), 121) : person(121, false); cap.position.set(0, 1.9, 12.6); cap.rotation.y = -Math.PI / 2; B.add(cap);
+      // the LED dance floor and speaker stacks
+      var NT = 5, tiles = new T.InstancedMesh(new T.BoxGeometry(1.6, 0.08, 1.6), new T.MeshBasicMaterial({ color: 0xffffff }), NT * NT), m4 = new T.Matrix4(), c = new T.Color();
+      for (var i = 0; i < NT; i++) for (var j = 0; j < NT; j++) { m4.makeTranslation(-2.6 + i * 1.75 + 1, 1.95, -3.5 + j * 1.75); tiles.setMatrixAt(i * NT + j, m4); tiles.setColorAt(i * NT + j, c.set(0x333333)); }
+      B.add(tiles); JT.party.tiles = tiles; JT.party.NT = NT;
+      [[-2.5, -5.5], [4.5, -5.5], [-2.5, 5], [4.5, 5]].forEach(function (q) { B.add(mesh(new T.BoxGeometry(1, 2.4, 0.9), mat('pbspk', { color: 0x3a3f46 }), q[0], 3.1, q[1])); });
+      JT.party.dancers = []; for (var d = 0; d < 4; d++) { var f = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('deck', d), 122 + d) : person(122 + d, d % 2 === 1); f.position.set(-1 + (d % 2) * 3, 1.95, -2 + Math.floor(d / 2) * 3); f.rotation.y = d * 1.5; B.add(f); JT.party.dancers.push(f); }
+      // the sun deck: loungers at the stern, and life rings on the rails
+      for (var l = 0; l < 3; l++) { var lg = new T.Group(); lg.position.set(4 + 0, 1.9, -13 + l * 0 + 0); lg.position.x = -4 + l * 4; lg.add(mesh(new T.BoxGeometry(1.4, 0.3, 3), mat('lounger', { color: 0xf4f3ec }), 0, 0.4, 0)); var back = mesh(new T.BoxGeometry(1.4, 0.2, 1.2), mat('lounger', {}), 0, 0.9, -1.4); back.rotation.x = -0.6; lg.add(back); B.add(lg); }
+      [[6.85, -4], [-6.85, 6], [6.85, 9]].forEach(function (q) { var ring = new T.Mesh(new T.TorusGeometry(0.55, 0.16, 8, 20), mat('lring', { color: 0xff3b2f })); ring.position.set(q[0], 2.7, q[1]); ring.rotation.y = Math.PI / 2; B.add(ring); });
+      // a sign on two poles
+      var st = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#17213a'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 54px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LAGOON CRUISE', w / 2, h / 2); });
+      [-3, 3].forEach(function (x) { B.add(mesh(new T.CylinderGeometry(0.08, 0.08, 4, 6), rail, x, 4, 14)); }); var sm = new T.Mesh(new T.PlaneGeometry(7, 1.3), new T.MeshBasicMaterial({ map: st, side: T.DoubleSide })); sm.position.set(0, 6, 14); sm.rotation.y = Math.PI; B.add(sm);
+      var L0 = new T.PointLight(0xff3fb4, 0, 22, 1.4); L0.position.set(0, 7, 0); B.add(L0); JT.party.light = L0;
     }
     // A 60-second round: the ferry comes in and ties up at the T-head, a speedboat zips past, a canoe paddles along the shore.
     function jettyFrame(t, night) {
+      var P = JT.party; if (P) { P.g.position.y = Math.sin(t * 1.1) * 0.08; P.g.rotation.z = Math.sin(t * 0.8) * 0.01; P.wheel.rotation.z = Math.sin(t * 0.4) * 0.6; P.light.intensity = night ? 30 : 0;
+        var c9 = new T.Color(), A9 = new T.Color(0xff3fb4), B9 = new T.Color(0xffd23f); for (var i9 = 0; i9 < P.NT * P.NT; i9++) { c9.copy(A9).lerp(B9, 0.5 + 0.5 * Math.sin(t * 2.2 + i9 * 0.9)).offsetHSL((i9 % 4) * 0.15, 0, 0); P.tiles.setColorAt(i9, c9); } P.tiles.instanceColor.needsUpdate = true;
+        P.dancers.forEach(function (f, k) { f.rotation.y = k * 1.5 + (reduce ? 0 : Math.sin(t * 1.5 + k) * 0.8); f.position.y = 1.95 + (reduce ? 0 : Math.abs(Math.sin(t * 4 + k)) * 0.12); var lg = f.userData.legs; if (lg && !reduce) { lg[0].rotation[f.userData.axis || 'z'] = Math.sin(t * 4 + k) * 0.35; lg[1].rotation[f.userData.axis || 'z'] = -Math.sin(t * 4 + k) * 0.35; } }); }
       var u = (t % 60) / 60, fx, fz, fyaw = Math.PI / 2;
       if (u < 0.35) { var a = u / 0.35, e = 1 - Math.pow(1 - a, 2); fx = -140 + e * 140; fz = 37 + (1 - e) * 30; fyaw = -Math.atan2(-30 * 2 * (1 - a), 140) ; }
       else if (u < 0.65) { fx = 0; fz = 37; fyaw = 0; }
@@ -1145,6 +1200,35 @@
       if (w === 'storm' && !indoor && !reduce) { if (now > flashUntil + 4000 && Math.random() < 0.004) flashUntil = now + 160; if (now < flashUntil) { hemi.intensity = 2.4; hemi.color.set(0xdfe8ff); } }
     }
 
+    /* ---------- the beach rave after dark: a DJ booth and LED screen, a light-up dance floor, speaker stacks,
+       a suya grill with glowing coals, cabanas and a banner. Beaches only, from 20:00. ---------- */
+    var raveG = new T.Group(); raveG.visible = false; world.add(raveG); var RV = null;
+    function buildRave() {
+      if (RV) return; RV = { key: sc.name }; var X = -4, Z = -4;
+      var NT = 6, tiles = new T.InstancedMesh(new T.BoxGeometry(2.2, 0.1, 2.2), new T.MeshBasicMaterial({ color: 0xffffff }), NT * NT), m4 = new T.Matrix4(), c = new T.Color();
+      for (var i = 0; i < NT; i++) for (var j = 0; j < NT; j++) { m4.makeTranslation(X - 6.5 + i * 2.6, 0.2, Z - 6.5 + j * 2.6); tiles.setMatrixAt(i * NT + j, m4); tiles.setColorAt(i * NT + j, c.set(0x333333)); }
+      raveG.add(tiles); RV.tiles = tiles; RV.NT = NT;
+      var booth = new T.Group(); booth.position.set(X + 2, 0, Z + 11); booth.add(mesh(new T.BoxGeometry(7, 2.2, 2.4), mat('rvbooth', { color: 0x17181a }), 0, 1.1, 0)); booth.add(mesh(new T.BoxGeometry(2.4, 0.2, 1.2), mat('decks', { color: 0x444a52, metalness: 0.6 }), 0, 2.3, 0)); raveG.add(booth);
+      var scr = new T.MeshBasicMaterial({ color: 0xff3fb4 }); var sm = new T.Mesh(new T.PlaneGeometry(12, 6.5), scr); sm.position.set(X + 2, 6.5, Z + 13.5); sm.rotation.y = Math.PI; raveG.add(sm); RV.screen = scr; raveG.add(mesh(new T.BoxGeometry(12.6, 7, 0.3), mat('rvframe', { color: 0x111111 }), X + 2, 6.5, Z + 13.8));
+      var dj = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('beachdj', 0), 110) : person(110, true); dj.position.set(X + 2, 0.1, Z + 12.4); dj.rotation.y = Math.PI / 2; raveG.add(dj); RV.dj = dj;
+      [[-4, 11], [8, 11], [-9, 0], [10, 0]].forEach(function (q) { for (var k = 0; k < 2; k++) { var sp = mesh(new T.BoxGeometry(1.4, 2.4, 1.2), mat('spk', { color: 0x9b9fae, roughness: 0.4 }), X + q[0] + k * 1.5, 1.2, Z + q[1]); raveG.add(sp); [0.55, 1.65].forEach(function (y) { var cone = mesh(new T.CircleGeometry(0.42, 18), mat('cone', { color: 0x2b2d33 }), X + q[0] + k * 1.5, y, Z + q[1] + 0.61); raveG.add(cone); }); } });
+      var bn = canvasTex(1024, 160, function (g, w, h) { g.fillStyle = '#c2185b'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 96px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(sc.name || 'Beach').replace(/,.*/, '').toUpperCase() + ' RAVE', w / 2, h / 2, w - 40); });
+      [-5, 5].forEach(function (dx) { raveG.add(mesh(new T.CylinderGeometry(0.12, 0.12, 8, 8), mat('bnpole', { color: 0x17181a }), X - 12 + dx, 4, Z - 10)); }); var bm = new T.Mesh(new T.PlaneGeometry(10, 1.6), new T.MeshBasicMaterial({ map: bn, side: T.DoubleSide })); bm.position.set(X - 12, 7.4, Z - 10); bm.rotation.y = Math.PI; raveG.add(bm);
+      var grill = new T.Group(); grill.position.set(X - 12, 0, Z - 6); grill.add(mesh(new T.BoxGeometry(4, 1.6, 1.6), mat('grill', { color: 0x3a2a1f }), 0, 0.8, 0)); var coal = new T.MeshBasicMaterial({ color: 0xff5a1a }); for (var s = 0; s < 8; s++) grill.add(mesh(new T.BoxGeometry(0.3, 0.12, 1.3), coal, -1.6 + s * 0.45, 1.68, 0)); RV.coal = coal; var gl = new T.PointLight(0xff6a2a, 20, 10, 1.6); gl.position.set(0, 2.4, 0); grill.add(gl); RV.grillLight = gl;
+      var cook = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('suya', 0), 111) : person(111, false); cook.position.set(0, 0.1, -1.6); cook.rotation.y = Math.PI / 2; grill.add(cook); raveG.add(grill);
+      [[-14, 6], [-8, 9], [18, 6]].forEach(function (q, k) { var cb = new T.Group(); cb.position.set(X + q[0], 0, Z + q[1]); cb.add(mesh(new T.CylinderGeometry(0.1, 0.1, 4, 6), mat('cbpole', { color: 0x5a3a22 }), 0, 2, 0)); cb.add(mesh(new T.ConeGeometry(3, 1.4, 8), mat('cbtop' + k, { color: [0x1f8a7a, 0x8a5a3c, 0xc2185b][k] }), 0, 4.4, 0));
+        [-1, 1].forEach(function (s2) { cb.add(mesh(new T.BoxGeometry(1, 0.35, 2.4), mat('lounger', { color: 0x5a7bd0 }), s2 * 1.4, 0.45, 0)); }); raveG.add(cb); });
+      RV.lights = []; [0xff3fb4, 0x3fd0ff, 0xffd23f].forEach(function (col, k) { var L0 = new T.PointLight(col, 40, 26, 1.4); L0.position.set(X - 4 + k * 6, 6, Z - 4); raveG.add(L0); RV.lights.push(L0); });
+    }
+    function raveFrame(t, on) {
+      if (on && RV && RV.key !== sc.name) { wipe(raveG); RV = null; }
+      if (on) buildRave(); raveG.visible = !!on; if (!on || !RV) return;
+      var c = new T.Color(), A = new T.Color(0xff3fb4), B = new T.Color(0x3fd0ff), kick = Math.pow(Math.abs(Math.sin(t * 3.9)), 3);
+      for (var i = 0; i < RV.NT; i++) for (var j = 0; j < RV.NT; j++) { c.copy(A).lerp(B, 0.5 + 0.5 * Math.sin(t * 2 + i * 0.7 + j * 0.4)).offsetHSL(((i + j) % 3) * 0.12, 0, 0).multiplyScalar(0.6 + 0.4 * kick); RV.tiles.setColorAt(i * RV.NT + j, c); }
+      RV.tiles.instanceColor.needsUpdate = true; RV.screen.color.setHSL((t * 0.05) % 1, 0.8, 0.5 + 0.1 * kick); RV.coal.color.setHSL(0.04, 1, 0.45 + 0.1 * Math.sin(t * 9)); RV.grillLight.intensity = 16 + 6 * Math.sin(t * 9);
+      RV.lights.forEach(function (L0, k) { L0.intensity = 25 + 30 * kick; L0.position.x = -4 - 4 + k * 6 + Math.sin(t + k) * 3; });
+      var lg = RV.dj.userData.legs; RV.dj.position.y = 0.1 + kick * 0.1; if (lg && !reduce) { lg[0].rotation[RV.dj.userData.axis || 'z'] = Math.sin(t * 3.9) * 0.2; lg[1].rotation[RV.dj.userData.axis || 'z'] = -Math.sin(t * 3.9) * 0.2; }
+    }
     /* ---------- people, signs, the gem ---------- */
     var SKIN = [0x6b4029, 0x8a5a3c, 0x4a2c1c, 0x9b6a4b], CL = [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec, 0x17181a];
     function person(i, female) {
@@ -1385,6 +1469,7 @@
         CB.beams.forEach(function (b, i) { b.visible = open; b.rotation.z = Math.sin(t * 1.1 + i) * 0.55; b.rotation.x = Math.cos(t * 0.8 + i * 1.7) * 0.45; b.material.color.copy(i % 2 ? A : B); b.material.opacity = 0.07 + 0.08 * kick; });
         CB.lights.forEach(function (L0, i) { var on = ROOF ? night : open; L0.color.copy(on || ROOF ? L0.userData.c : new T.Color(0xfff4e0)); L0.intensity = on ? L0.userData.max * (CB.flame && i === 0 ? 0.8 + 0.3 * Math.sin(t * 13) : 0.7 + 0.5 * kick) : ROOF ? 0 : L0.userData.max * 0.55; });
         if (CB.cash) { var m5 = new T.Matrix4(), q5 = new T.Quaternion(), e5 = new T.Euler(), v5 = new T.Vector3(), s5 = new T.Vector3(1, 1, 1); CB.cash.visible = open && (!CB.rainOnly || !!sc.rain); for (var ci = 0; ci < CB.NC; ci++) { var ck = (ci / CB.NC + t * 0.09 * (0.7 + (ci % 5) * 0.1)) % 1; v5.set(-9 + (ci * 0.618 % 1) * 18, 9 - ck * 9, -3 + (ci * 0.377 % 1) * 19); e5.set(t * 2 + ci, t * 1.3 + ci * 0.5, 0); CB.cash.setMatrixAt(ci, m5.compose(v5, q5.setFromEuler(e5), s5)); } CB.cash.instanceMatrix.needsUpdate = true; }
+        if (CB.band) CB.band.forEach(function (f, i) { f.position.y = 1.6 + (open && !reduce ? Math.abs(Math.sin(t * 4 + i)) * 0.15 : 0); var lg7 = f.userData.legs; if (lg7 && open && !reduce) { lg7[0].rotation[f.userData.axis || 'z'] = Math.sin(t * 4 + i) * 0.25; lg7[1].rotation[f.userData.axis || 'z'] = -Math.sin(t * 4 + i) * 0.25; } });
         if (CB.poles) CB.poles.forEach(function (P, i) { var a6 = reduce ? P.ph : t * 1.2 + P.ph, up = reduce ? 0.6 : 0.6 + Math.max(0, Math.sin(t * 0.6 + P.ph)) * 2.2; P.g.position.set(P.x + Math.cos(a6) * 0.45, up, P.z + Math.sin(a6) * 0.45); P.g.rotation.y = -a6 + Math.PI; var lg6 = P.g.userData.legs; if (lg6) { lg6[0].rotation[P.g.userData.axis || 'z'] = up > 1 ? 0.9 : Math.sin(t * 4 + i) * 0.3; lg6[1].rotation[P.g.userData.axis || 'z'] = up > 1 ? -0.3 : -Math.sin(t * 4 + i) * 0.3; } });
         if (CB.owambe) CB.owambe.forEach(function (f, i) { var u = f.userData, a5 = Math.sin(t * 6 + i) * 0.5; if (u.arms) u.arms.forEach(function (l, k) { l.rotation.x = open && i >= 4 && i % 2 ? -1.8 - Math.sin(t * 6 + i + k * 3) * 0.5 : (k ? a5 : -a5) * 0.4; }); if (u.legs && i >= 4) u.legs.forEach(function (l, k) { l.rotation.x = open ? (k ? -a5 : a5) * 0.6 : 0; }); });
         CB.sparks.forEach(function (pt) { pt.visible = open; var a = pt.geometry.attributes.position; for (var k = 0; k < a.count; k++) { var u = Math.random(), an = Math.random() * 6.283, rr2 = u * 0.5; a.setXYZ(k, Math.cos(an) * rr2, u * 1.1, Math.sin(an) * rr2); } a.needsUpdate = true; });
@@ -1406,6 +1491,7 @@
       strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STR ? -2 + (i % 3) * 0.5 : GAL ? -16 + (i % 3) * 1.2 : PLZ ? -34 + (i % 3) * 1.2 : PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation[p.userData.axis || 'z'] = a; p.userData.legs[1].rotation[p.userData.axis || 'z'] = -a; });
       if (bubble && bubble.visible && now - bubbleAt > 3500) bubble.visible = false;
       weatherFrame(t, now);
+      raveFrame(t, !ESTATE && !HARBOUR && !CLUB && !STAD && !MKT && !JTY && !PRK && !PLZ && !GAL && !STR && !!sc.night && (sc.hour == null || sc.hour >= 20 || sc.hour < 4));
       SEAS.bulbs.forEach(function (b, i) { b.visible = reduce || Math.floor(t * 2 + i * 0.37) % 3 !== 0; });
       signs.forEach(function (s) { s.visible = s.visible && !sc.clean; });
       renderer.render(S3, cam);

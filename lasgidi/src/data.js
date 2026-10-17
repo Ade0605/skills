@@ -1689,6 +1689,17 @@
     ];
   });
   CIVIC_PLACES.forEach(function (p) { PLACES.push(p); });
+  // Rules 19: the Lagoon party boat moored at the island jetties.
+  ['cms', 'lagoon_cruise', 'lagoon_jetty'].forEach(function (pid) {
+    var id = 'boat_' + pid;
+    CIVIC_ACTS[pid] = [
+      { id: id + '_party', label: 'Party cruise on the deck (two hours round the lagoon)', mins: 120, cost: 15000, fx: { fun: 30, social: 20, energy: -10 }, when: { from: 16, to: 24 } },
+      { id: id + '_deckbar', label: 'Chapman at the deck bar', mins: 15, cost: 3500, fx: { fun: 4, hunger: 3 }, when: { from: 12, to: 24 } },
+      { id: id + '_sundeck', label: 'Lie on the sun deck', mins: 60, cost: 5000, fx: { stress: -12, fun: 5 }, when: { from: 9, to: 18 } },
+      { id: id + '_helm', label: 'Stand with the captain at the helm', mins: 30, fx: { fun: 8 }, when: { from: 9, to: 20 } },
+      { id: id + '_deckhand', label: 'Deckhand shift (tie up, sweep, serve)', mins: 240, earn: 2600, fx: { energy: -12, hygiene: -6 }, gig: true, fest: true, when: { from: 10, to: 22 } }
+    ];
+  });
   // Rules 19: Lekki Conservation Centre, close up.
   CIVIC_ACTS.lcc = [
     { id: 'lcc_trail', label: 'Walk the nature trail through the mangroves', mins: 60, cost: 1000, fx: { stress: -10, energy: -6, fun: 6 }, xp: { fitness: 1 }, when: { from: 8, to: 17 } },
