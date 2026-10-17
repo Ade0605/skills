@@ -1,0 +1,563 @@
+{
+ "note": "AI-generated illustrations (Higgsfield, gpt_image_2_5). Not photos of the real venues. Run node tools/fetch-images.js to download and convert.",
+ "images": [
+  {
+   "key": "place:cv",
+   "file": "img/place/cv.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_163139_c05a4977-5489-4638-8d00-df2003c61fab.png",
+   "prompt": "Photo of Computer Village, Ikeja, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:ikeja_mall",
+   "file": "img/place/ikeja_mall.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261010_232101_52d0077d-3de0-4bc6-b42b-2d28d77247ca.png",
+   "prompt": "Photo of Ikeja mall and cinema, Ikeja, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:shrine",
+   "file": "img/place/shrine.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261010_232101_5761bef3-f419-4544-a23b-b6dcecef3a6b.png",
+   "prompt": "Photo of New Afrika Shrine, Ikeja, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:kanu_park",
+   "file": "img/place/kanu_park.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_163139_12bdd82b-6b59-4174-9ca6-adbb7f2ced3f.png",
+   "prompt": "Photo of Ndubuisi Kanu Park, Ikeja, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:ielts",
+   "file": "img/place/ielts.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261010_232100_4b8b9f7d-5e5c-49af-9160-0154762d22d5.png",
+   "prompt": "Photo of IELTS test centre, Ikeja, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:berger_cars",
+   "file": "img/place/berger_cars.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261010_232100_c9f62fb0-69f5-4840-9939-c8a5a1d1c0de.png",
+   "prompt": "Photo of Berger car mart, Ikeja, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:allen",
+   "file": "img/place/allen.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261010_232100_315dc38b-377d-4f4f-a773-01d6991b76ba.png",
+   "prompt": "Photo of Allen Avenue suya spots, Ikeja, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:airport",
+   "file": "img/place/airport.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_163140_34d2b2a0-bd9a-47df-85bc-be66a0c1a67c.png",
+   "prompt": "Photo of Murtala Muhammed Airport, Ikeja, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:iko_jetty",
+   "file": "img/place/iko_jetty.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261010_232101_9e265332-8189-4d61-bc4c-39b13a758593.png",
+   "prompt": "Photo of Ikorodu ferry terminal, Ikorodu, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:iko_market",
+   "file": "img/place/iko_market.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261010_232059_41df7ab0-dec1-41c6-a3af-5b38ecb49079.png",
+   "prompt": "Photo of Ikorodu farm market, Ikorodu, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:sawmill",
+   "file": "img/place/sawmill.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_163139_6eb3784a-ff45-4d75-b5e5-e38b5712cdfc.png",
+   "prompt": "Photo of Ikorodu sawmill, Ikorodu, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:oshodi_hub",
+   "file": "img/place/oshodi_hub.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261010_232100_c279292d-e4a0-44b5-b879-60c7daa0a6ca.png",
+   "prompt": "Photo of Oshodi transport interchange, Oshodi, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:oshodi_market",
+   "file": "img/place/oshodi_market.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_163140_5d3a3544-d82c-44a2-b0df-bdd74d78faea.png",
+   "prompt": "Photo of Oshodi market, Oshodi, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:mushin_market",
+   "file": "img/place/mushin_market.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_163139_79bac23f-f8b6-4f45-a18c-65f695720175.png",
+   "prompt": "Photo of Mushin market, Mushin, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:mamaput",
+   "file": "img/place/mamaput.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171614_77d76909-ba10-49e8-8f23-f958a6294806.png",
+   "prompt": "Photo of Mama Put row, Mushin, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:barber",
+   "file": "img/place/barber.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171615_74364d7f-5dce-49d1-8949-e2424b66d728.png",
+   "prompt": "Photo of Barbershop, Mushin, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:pitch",
+   "file": "img/place/pitch.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171614_11ce5a57-ec7f-4575-92dc-63ce4988d2a7.png",
+   "prompt": "Photo of Street football pitch, Mushin, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:luth",
+   "file": "img/place/luth.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171614_62aa134c-4715-4386-9503-51e0e557a7b9.png",
+   "prompt": "Photo of LUTH, Idi-Araba, Mushin, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:festac_park",
+   "file": "img/place/festac_park.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171614_f0a50f0c-51b7-4076-b0e7-8ebc5d231844.png",
+   "prompt": "Photo of Festac park, Festac, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:festac_market",
+   "file": "img/place/festac_market.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171613_3be0b068-9841-4c73-980f-68785bf4b5b0.png",
+   "prompt": "Photo of Festac market, Festac, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:tailor",
+   "file": "img/place/tailor.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171815_0716786c-c978-4f2f-9db3-b515cffda233.png",
+   "prompt": "Photo of Tailor's shop, Festac, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:stadium",
+   "file": "img/place/stadium.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171816_3d26f604-c029-49fd-b47d-69e8ff41fffb.png",
+   "prompt": "Photo of National Stadium, Surulere, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:theatre",
+   "file": "img/place/theatre.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171815_a3233c64-5b47-4aab-b562-f68beab188ff.png",
+   "prompt": "Photo of National Theatre, Surulere, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:studio",
+   "file": "img/place/studio.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171815_d79f97a5-9934-4ec6-a325-f07c2144f628.png",
+   "prompt": "Photo of Recording studio, Surulere, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:owambe_hall",
+   "file": "img/place/owambe_hall.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171816_22018325-0a55-4ede-a5fe-097f17e0132f.png",
+   "prompt": "Photo of Event hall, Surulere, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:amala",
+   "file": "img/place/amala.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171816_45d92839-e59c-475a-b714-dd470a21c682.png",
+   "prompt": "Photo of Amala Shitta, Surulere, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:unilag",
+   "file": "img/place/unilag.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171814_9fbc48f3-dfdb-426d-8833-7960f1cdbfcb.png",
+   "prompt": "Photo of University of Lagos, Yaba, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:hub",
+   "file": "img/place/hub.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171815_1a22ceb1-3a12-4a4e-aad0-dc9fbfd6ece4.png",
+   "prompt": "Photo of CcHub, Yaba, Yaba, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:library",
+   "file": "img/place/library.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171841_f93c1ebc-2929-44e1-81b4-af21b2d6ab27.png",
+   "prompt": "Photo of Yaba library, Yaba, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:tejuosho",
+   "file": "img/place/tejuosho.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171840_47711941-5fe2-44b8-9353-be6aea389707.png",
+   "prompt": "Photo of Tejuosho market, Yaba, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:balogun",
+   "file": "img/place/balogun.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171841_62936725-c9c7-4081-bd52-4abb6aa14cf8.png",
+   "prompt": "Photo of Balogun market, Lagos Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:freedom",
+   "file": "img/place/freedom.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171840_dd178c35-9a38-40a2-b99c-dbf8d8cbb118.png",
+   "prompt": "Photo of Freedom Park, Lagos Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:museum",
+   "file": "img/place/museum.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171840_7f918002-9d8f-492f-899e-7da663139cdd.png",
+   "prompt": "Photo of National Museum, Onikan, Lagos Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:gen_hosp",
+   "file": "img/place/gen_hosp.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171840_462e52e7-5707-491e-a4ad-4d058c70a5de.png",
+   "prompt": "Photo of General Hospital, Lagos Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:worship",
+   "file": "img/place/worship.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171839_5d5a01b0-b702-4cbb-a5c5-3688bf4f9b2e.png",
+   "prompt": "Photo of Cathedral and Central Mosque, Lagos Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:cms",
+   "file": "img/place/cms.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171841_031c2eb5-2788-4f68-b6f6-d3fee72044a3.png",
+   "prompt": "Photo of CMS jetty, Lagos Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:ewa",
+   "file": "img/place/ewa.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171909_5037056d-0e88-4f8e-b361-a63195ce2ecf.png",
+   "prompt": "Photo of Ewa agoyin stall, Lagos Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:falomo",
+   "file": "img/place/falomo.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171911_ee663b0f-3e85-4f09-ab7a-cf1dba6afb55.png",
+   "prompt": "Photo of Falomo jetty, Ikoyi, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:gallery",
+   "file": "img/place/gallery.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171909_32fd9248-1764-4852-b644-5a865f3b5b68.png",
+   "prompt": "Photo of Ikoyi art gallery, Ikoyi, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:ikoyi_park",
+   "file": "img/place/ikoyi_park.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171908_f5951fc6-c20c-4440-a9f4-3a97330ec313.png",
+   "prompt": "Photo of Ikoyi park, Ikoyi, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:dine",
+   "file": "img/place/dine.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171910_17b1adc8-64b7-4f32-889b-d9e01ecfbb0b.png",
+   "prompt": "Photo of Fine-dining restaurant, Ikoyi, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:clubs",
+   "file": "img/place/clubs.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171909_7ce97f55-5006-4927-8202-db0769384606.png",
+   "prompt": "Photo of Adeola Odeku club strip, Victoria Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:lounge",
+   "file": "img/place/lounge.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171909_b5489669-aed8-4de1-b86b-0d344446956b.png",
+   "prompt": "Photo of Rooftop lounge, Victoria Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:bar_beach",
+   "file": "img/place/bar_beach.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_171910_bfe751a0-6061-4dfe-9c47-dd8ef3488cbe.png",
+   "prompt": "Photo of Bar Beach, Victoria Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:muri_park",
+   "file": "img/place/muri_park.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_192323_d7b33d3c-09db-4e9a-8d21-65855870f28b.png",
+   "prompt": "Photo of Muri Okunola Park, Victoria Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:vi_food",
+   "file": "img/place/vi_food.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_192322_41909d61-3f73-41e5-a508-7b5286f3d578.png",
+   "prompt": "Photo of VI restaurants, Victoria Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:banks",
+   "file": "img/place/banks.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_192322_eb77e677-6244-4672-8d64-1990130c1e79.png",
+   "prompt": "Photo of Bank headquarters, Victoria Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:quilox",
+   "file": "img/place/quilox.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_192322_62944a43-8d90-4386-8630-de6b4f963b57.png",
+   "prompt": "Photo of Quilox, Victoria Island, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:palms",
+   "file": "img/place/palms.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_192321_2b687deb-2753-4e95-882a-106a28cde7a3.png",
+   "prompt": "Photo of The Palms, Lekki, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:vip_jetty",
+   "file": "img/place/vip_jetty.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_192322_b252df0d-9794-464a-97f7-47e501a55e9e.png",
+   "prompt": "Photo of Lekki VIP jetty, Lekki, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:elegushi",
+   "file": "img/place/elegushi.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_192320_10b562a6-8cdf-45eb-8731-1be0264b0980.png",
+   "prompt": "Photo of Elegushi beach, Lekki, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:lekki_motors",
+   "file": "img/place/lekki_motors.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_192321_da373c24-1d55-48ca-8fa5-264e499faff7.png",
+   "prompt": "Photo of Lekki luxury motors, Lekki, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:lekki_beach",
+   "file": "img/place/lekki_beach.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204221_0ca98a56-bf9e-43e9-a45e-14f3f303d894.png",
+   "prompt": "Photo of Lekki beach, Lekki, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:lcc",
+   "file": "img/place/lcc.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204221_b9459613-53f5-406d-a14b-0402fdc0492c.png",
+   "prompt": "Photo of Lekki Conservation Centre, Lekki, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:lekki_gym",
+   "file": "img/place/lekki_gym.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204221_a6166462-59ce-4474-b529-7cf932122870.png",
+   "prompt": "Photo of Lekki gym, Lekki, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:lekki_cafe",
+   "file": "img/place/lekki_cafe.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204221_a42ff56b-5045-42fb-bb78-67bbe0750c42.png",
+   "prompt": "Photo of Lekki cafés, Lekki, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "place:ajah_market",
+   "file": "img/place/ajah_market.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204222_b5fe62d7-d107-4903-ab4a-ffd1343d78b2.png",
+   "prompt": "Photo of Ajah market, Ajah, Lagos, Nigeria, everyday street life, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:tokunbo",
+   "file": "img/veh/tokunbo.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204221_a4fb25f8-571c-47c3-ab3f-8abc8548bb68.png",
+   "prompt": "Photo of a Tokunbo saloon parked on a Lagos street, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:keke_own",
+   "file": "img/veh/keke_own.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204222_81cc8f19-8237-47d1-bc17-02db4aa6f4c7.png",
+   "prompt": "Photo of a Your own keke parked on a Lagos street, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:muscle",
+   "file": "img/veh/muscle.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204221_7c20c4b8-f0ec-4855-a977-179df74767d0.png",
+   "prompt": "Photo of a Muscle saloon parked on a Lagos street, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:powerbike",
+   "file": "img/veh/powerbike.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204254_bb22932e-629e-4ca7-913f-3883bf98abf6.png",
+   "prompt": "Photo of a Power bike parked on a Lagos street, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:suv",
+   "file": "img/veh/suv.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204253_46f03c18-c569-4433-9269-53a004218140.png",
+   "prompt": "Photo of a Luxury SUV parked on a Lagos street, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:cruiser",
+   "file": "img/veh/cruiser.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204254_66830df2-7ef2-49e2-9f4a-43b8e5360dfa.png",
+   "prompt": "Photo of a Full-size 4x4 parked on a Lagos street, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:gclass",
+   "file": "img/veh/gclass.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204254_6bc7e996-82b2-4c57-82c5-43b0366d8013.png",
+   "prompt": "Photo of a Boxy German 4x4 parked on a Lagos street, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:supercar",
+   "file": "img/veh/supercar.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204253_a084ac40-3741-4a67-a3ca-7df9fdd39112.png",
+   "prompt": "Photo of a Supercar parked on a Lagos street, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:limo",
+   "file": "img/veh/limo.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204253_e81bc076-2b62-4f9c-b441-11fdab8ca612.png",
+   "prompt": "Photo of a Ultra-luxury limousine parked on a Lagos street, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:speedboat",
+   "file": "img/veh/speedboat.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204253_4695bce9-e66c-4da4-b2c7-e6fa0b142078.png",
+   "prompt": "Photo of a Speedboat on the Lagos lagoon with the city skyline behind, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:yacht",
+   "file": "img/veh/yacht.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204254_947cba6e-18c5-43d7-9f99-6dd008a396b6.png",
+   "prompt": "Photo of a Yacht on the Lagos lagoon with the city skyline behind, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:heli",
+   "file": "img/veh/heli.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204315_574fbece-be46-4bbd-9d54-bc1fb44386bb.png",
+   "prompt": "Photo of a Helicopter on a helipad in Lagos, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:jetski",
+   "file": "img/veh/jetski.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204317_894a6b83-a0cd-4312-8f0e-910f28176876.png",
+   "prompt": "Photo of a Jet ski on the Lagos lagoon with the city skyline behind, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:houseboat",
+   "file": "img/veh/houseboat.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204315_4aa1e449-dee5-4cc0-9125-b893c2e5a7be.png",
+   "prompt": "Photo of a Houseboat on the Lagos lagoon with the city skyline behind, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:catamaran",
+   "file": "img/veh/catamaran.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204316_2c06b463-8b1b-471c-8b2c-98966a6b3e5a.png",
+   "prompt": "Photo of a Luxury catamaran on the Lagos lagoon with the city skyline behind, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:superyacht",
+   "file": "img/veh/superyacht.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204315_965faed8-21ec-4286-ae6b-5861b7072a7b.png",
+   "prompt": "Photo of a Superyacht on the Lagos lagoon with the city skyline behind, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:light_jet",
+   "file": "img/veh/light_jet.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204316_51c52d8b-83b0-42b7-94b6-780c93da621f.png",
+   "prompt": "Photo of a Light jet on the apron at a Lagos airport, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:jumbo",
+   "file": "img/veh/jumbo.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204316_26dd4b5c-42d2-4e91-af67-b1845b0e7fb3.png",
+   "prompt": "Photo of a VIP airliner on the apron at a Lagos airport, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:bizjet",
+   "file": "img/veh/bizjet.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204315_85be8918-89ad-4777-ac1e-88d36f9996ef.png",
+   "prompt": "Photo of a Business jet on the apron at a Lagos airport, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "veh:jet",
+   "file": "img/veh/jet.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204531_a2d9509b-21f7-46a6-9a3c-0e21935e572d.png",
+   "prompt": "Photo of a Private jet on the apron at a Lagos airport, generic model with no brand badges, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "home:room",
+   "file": "img/home/room.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204531_974a16c2-807c-4108-ba02-1faf807de9b3.png",
+   "prompt": "Photo of a tiny face-me-I-face-you room in a crowded Lagos tenement compound, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "home:share",
+   "file": "img/home/share.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204530_7115ca13-ff32-4d0f-a46e-f2a023d34819.png",
+   "prompt": "Photo of a shared flat room with two mattresses in Lagos, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "home:selfcon",
+   "file": "img/home/selfcon.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204529_b0e6e025-3487-4dac-9fa8-3250498e59fa.png",
+   "prompt": "Photo of a modest self-contained one-room apartment in Lagos, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "home:miniflat",
+   "file": "img/home/miniflat.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204531_d206b312-cbc1-417d-8664-bbc2948818c2.png",
+   "prompt": "Photo of a Lagos mini flat living room, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "home:flat2",
+   "file": "img/home/flat2.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204530_c3de3740-31af-46cb-9044-80afd83a1323.png",
+   "prompt": "Photo of a two-bedroom flat block in Lagos, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "home:flat3",
+   "file": "img/home/flat3.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204530_ef9948e8-8e25-4ad6-8b71-541f643a62e9.png",
+   "prompt": "Photo of a three-bedroom flat building in Lagos with a gate, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "home:duplex",
+   "file": "img/home/duplex.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204530_68c1ba65-453b-44b3-b2de-51f1a0d5ec36.png",
+   "prompt": "Photo of a modern duplex house in Lekki, Lagos, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "home:luxury",
+   "file": "img/home/luxury.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204559_76f41d1b-1077-429a-9052-4dd6bcf986fa.png",
+   "prompt": "Photo of a luxury waterfront house in Ikoyi, Lagos, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "home:mansion",
+   "file": "img/home/mansion.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204559_5ed3dd2e-be98-4776-af04-5ad53a479b3f.png",
+   "prompt": "Photo of a grand mansion with a pool on Banana Island, Lagos, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "biz:pos",
+   "file": "img/biz/pos.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204558_067af347-8dfe-4302-853e-a776a4c0dbe1.png",
+   "prompt": "Photo of a roadside POS kiosk under an umbrella, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "biz:buka",
+   "file": "img/biz/buka.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204600_fcc0df25-f2e6-4d0b-ade1-ecac85627df1.png",
+   "prompt": "Photo of a busy Lagos buka with pots of soup, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "biz:barber",
+   "file": "img/biz/barber.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204600_304859e5-eb71-4671-9d7e-fec0ecb57d7e.png",
+   "prompt": "Photo of a Lagos barbershop interior, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "biz:laundry",
+   "file": "img/biz/laundry.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204559_597ed90f-3e01-4711-a530-3a74dc4d6f2e.png",
+   "prompt": "Photo of a small Lagos laundry and dry cleaner, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "biz:danfo",
+   "file": "img/biz/danfo.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204600_4973010f-d9ea-4e78-9a4a-78d1a4291678.png",
+   "prompt": "Photo of a yellow Lagos danfo minibus with black stripes, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "biz:event",
+   "file": "img/biz/event.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204559_0049f663-aa1b-4b7f-8286-459ce5a34f16.png",
+   "prompt": "Photo of a decorated Lagos event centre hall for an owambe, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  },
+  {
+   "key": "biz:shortlet",
+   "file": "img/biz/shortlet.webp",
+   "src": "https://d8j0ntlcm91z4.cloudfront.net/user_3ErRH7lboUtQU6J90pWcvpEho5r/hf_20261011_204611_d519965d-ec2b-41a8-abe9-2b1a7ac6737d.png",
+   "prompt": "Photo of a stylish short-let apartment interior in Lekki, realistic photograph, natural light, no text, no signage lettering, no logos, no identifiable faces"
+  }
+ ]
+}
