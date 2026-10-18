@@ -57,6 +57,41 @@
     var frondTex = canvasTex(256, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = '#4c7a2a'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke(); for (var x = 6; x < w - 4; x += 5) { var L = (h / 2 - 2) * Math.sin(Math.PI * Math.min(1, (x / w) * 1.15)); g.strokeStyle = 'hsl(' + (95 + (x % 13)) + ',48%,' + (30 + (x % 7) * 2) + '%)'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(x, h / 2); g.lineTo(x + 7, h / 2 - L); g.moveTo(x, h / 2); g.lineTo(x + 7, h / 2 + L); g.stroke(); } });
 
     /* ---------- materials and helpers ---------- */
+
+    // Speed: merge the meshes in a group that never move into one mesh per material (draw calls drop from hundreds
+    // to a few dozen). People (anything with legs), tagged movers (userData.dyn), tappable things, instanced meshes,
+    // points, lines and sprites are left as they are, and so is anything in `skip`.
+    function mergeStatic(root, skip, figure) {
+      var keep = new Set(skip || []), groups = {}, inv = new T.Matrix4(), m4 = new T.Matrix4(), nm = new T.Matrix3();
+      root.updateMatrixWorld(true); inv.copy(root.matrixWorld).invert();
+      (function walk(o, frozen) {
+        if (o !== root && (keep.has(o) || (figure ? false : (o.userData.dyn || o.userData.spin || o.userData.legs !== undefined)) || o.userData.letter || o.userData.gem || o.userData.person != null)) return;
+        if (o.isMesh && !o.isInstancedMesh && !Array.isArray(o.material) && o.visible && o.geometry && o.geometry.attributes.position && o.geometry.attributes.normal) {
+          var g = o.geometry, sig = o.material.uuid + '|' + (g.attributes.uv ? 'uv' : '') + '|' + (o.castShadow ? 'c' : '') + (o.receiveShadow ? 'r' : '');
+          (groups[sig] = groups[sig] || []).push(o);
+        }
+        o.children.slice().forEach(function (c) { walk(c); });
+      })(root);
+      var merged = 0;
+      Object.keys(groups).forEach(function (k) {
+        var list = groups[k]; if (list.length < 2) return;
+        var n = 0, ni = 0, uv = !!list[0].geometry.attributes.uv;
+        list.forEach(function (o) { var g = o.geometry; n += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; });
+        var pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uvs = uv ? new Float32Array(n * 2) : null, idx = new (n > 65535 ? Uint32Array : Uint16Array)(ni), v = new T.Vector3(), off = 0, io = 0;
+        list.forEach(function (o) {
+          var g = o.geometry, P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv, c = P.count;
+          m4.multiplyMatrices(inv, o.matrixWorld); nm.getNormalMatrix(m4);
+          for (var i = 0; i < c; i++) { v.fromBufferAttribute(P, i).applyMatrix4(m4); pos[(off + i) * 3] = v.x; pos[(off + i) * 3 + 1] = v.y; pos[(off + i) * 3 + 2] = v.z; v.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); nor[(off + i) * 3] = v.x; nor[(off + i) * 3 + 1] = v.y; nor[(off + i) * 3 + 2] = v.z; if (uvs && U) { uvs[(off + i) * 2] = U.getX(i); uvs[(off + i) * 2 + 1] = U.getY(i); } }
+          if (g.index) for (var j = 0; j < g.index.count; j++) idx[io++] = g.index.getX(j) + off; else for (var j2 = 0; j2 < c; j2++) idx[io++] = j2 + off;
+          off += c; o.parent.remove(o); g.dispose();
+        });
+        var mg = new T.BufferGeometry(); mg.setAttribute('position', new T.BufferAttribute(pos, 3)); mg.setAttribute('normal', new T.BufferAttribute(nor, 3)); if (uvs) mg.setAttribute('uv', new T.BufferAttribute(uvs, 2)); mg.setIndex(new T.BufferAttribute(idx, 1)); mg.computeBoundingSphere();
+        var mm = new T.Mesh(mg, list[0].material); mm.castShadow = list[0].castShadow; mm.receiveShadow = list[0].receiveShadow; root.add(mm); merged += list.length;
+      });
+      return merged;
+    }
+    // A person's body, head, hair and clothes merged by material; legs and arms stay separate so they still swing and wave.
+    function slimFigure(g, inner) { var u = (inner || g).userData; mergeStatic(g, [].concat(u.legs || [], u.arms || []), true); return g; }
     var Mc = {}; function mat(k, o) { return Mc[k] || (Mc[k] = new T.MeshStandardMaterial(o)); }
     // Free a group's GPU memory before it is rebuilt for another place (shared materials and geometry simply upload again when next used).
     function wipe(g) { g.traverse(function (o) { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(function (m) { ['map', 'emissiveMap', 'alphaMap', 'normalMap', 'roughnessMap'].forEach(function (k) { if (m[k] && m[k].dispose) m[k].dispose(); }); m.dispose(); }); }); g.clear(); }
@@ -661,6 +696,7 @@
       var st = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#17213a'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 54px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LAGOON CRUISE', w / 2, h / 2); });
       [-3, 3].forEach(function (x) { B.add(mesh(new T.CylinderGeometry(0.08, 0.08, 4, 6), rail, x, 4, 14)); }); var sm = new T.Mesh(new T.PlaneGeometry(7, 1.3), new T.MeshBasicMaterial({ map: st, side: T.DoubleSide })); sm.position.set(0, 6, 14); sm.rotation.y = Math.PI; B.add(sm);
       var L0 = new T.PointLight(0xff3fb4, 0, 22, 1.4); L0.position.set(0, 7, 0); B.add(L0); JT.party.light = L0;
+      mergeStatic(B, [wheel]);
     }
     // A 60-second round: the ferry comes in and ties up at the T-head, a speedboat zips past, a canoe paddles along the shore.
     function jettyFrame(t, night) {
@@ -779,6 +815,7 @@
       // Joggers and strollers going round the path, families on picnic blankets.
       var NW = golf ? 6 : 60, wb = [], wr = rnd(37); for (var w = 0; w < NW; w++) wb.push([wr(), (wr() < 0.3 ? 2.2 : 1) * (wr() < 0.5 ? 1 : -1) * (0.008 + wr() * 0.006), (wr() - 0.5) * 1.6, wr() * 6]);
       PK.walkers = squad(NW, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec][i % 7]; }, 1, parkG); PK.walkBase = wb; if (golf) { PK.walkers.body.visible = PK.walkers.head.visible = false; }
+      if (golf || /lcc/.test(id)) mergeStatic(parkG, [lawn].concat(PK.spray || [], PK.flags || [], (PK.golfers || []).map(function (g) { return g.pv; }), PK.ball ? [PK.ball] : [], (PK.monkeys || []).map(function (k) { return k.m; })));
       for (var pc = 0; pc < (golf ? 0 : 6); pc++) { var px = -24 + pc * 9 + r() * 3, pz = -12 + (pc % 2) * 30; var bl = mesh(new T.BoxGeometry(3, 0.04, 2.4), mat('blanket' + pc % 3, { color: [0xc0392b, 0x1f5fa0, 0xf2b600][pc % 3], roughness: 0.9 }), px, 0.05, pz); bl.castShadow = false; parkG.add(bl); }
     }
     function parkFrame(t, night) {
@@ -874,7 +911,7 @@
         var st = mat('stand', { color: 0xf4f1ea, roughness: 0.7 }); for (var tier = 0; tier < 8; tier++) plzG.add(mesh(new T.BoxGeometry(120, 1.2, 3), st, 0, 0.6 + tier * 1.2, 70 + tier * 3)); var can = mesh(new T.BoxGeometry(124, 0.6, 30), mat('canopy', { color: 0x1d7a43, roughness: 0.5 }), 0, 16, 80); can.rotation.x = -0.08; plzG.add(can); for (var cp = -60; cp <= 60; cp += 15) plzG.add(mesh(new T.CylinderGeometry(0.5, 0.5, 16, 8), st, cp, 8, 94));
         if (/tbs/.test(id)) { [-30, 30].forEach(function (hx) { var hs = new T.Group(); hs.position.set(hx, 0, 30); hs.add(mesh(new T.BoxGeometry(6, 4, 6), st, 0, 2, 0)); var hm = mat('bronze', { color: 0x6b4a2b, metalness: 0.6, roughness: 0.4 }); hs.add(mesh(new T.CapsuleGeometry(1.2, 4, 4, 8).rotateZ(Math.PI / 2 - 0.5), hm, 0, 7, 0)); hs.add(mesh(new T.CapsuleGeometry(0.6, 2, 4, 8).rotateZ(-0.6), hm, 2.6, 9.2, 0)); [[-1.6, -0.8], [-1.6, 0.8], [1.2, -0.8], [1.2, 0.8]].forEach(function (lq) { hs.add(mesh(new T.CylinderGeometry(0.3, 0.3, 3, 6), hm, lq[0], 5, lq[1])); }); plzG.add(hs); }); }
         else { var eg = new T.Group(); eg.position.set(0, 0, 36); eg.add(mesh(new T.CylinderGeometry(3, 4, 8, 12), st, 0, 4, 0)); var em = mat('eagle', { color: 0x2b2f36, metalness: 0.6, roughness: 0.35 }); eg.add(mesh(new T.SphereGeometry(2, 16, 12), em, 0, 10, 0)); [-1, 1].forEach(function (sd) { var wg = mesh(new T.BoxGeometry(9, 0.4, 2.6), em, sd * 5, 11.5, 0); wg.rotation.z = sd * 0.35; eg.add(wg); }); eg.add(mesh(new T.ConeGeometry(0.7, 2, 8), mat('gold', { color: 0xd4af37, metalness: 0.8 }), 0, 11.2, -2.2)); plzG.add(eg); }
-      } else if (id === 'unilag') campusBuild();
+      } else if (id === 'unilag') { campusBuild(); }
       else stateHouse(0, 60, /threearms/.test(id));
       // Flags along the plaza, a fountain at its heart, lamps, palms, and the city behind.
       var flagT = canvasTex(96, 64, function (c, w, h) { c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
@@ -888,6 +925,7 @@
       // People crossing the plaza; a crowd on worship days (Friday at the mosque, Sunday at the church).
       var NW = 140, wr = rnd(43), wb = []; for (var w = 0; w < NW; w++) wb.push([-40 + wr() * 80, -36 + wr() * 70, (wr() - 0.5) * 2, (wr() - 0.5) * 2, wr() * 6]);
       PZ.walkers = squad(NW, function (i) { return [0xf4f3ec, 0xf4f3ec, 0x2f6fa0, 0x1d7a43, 0xc0392b, 0x8e44ad, 0xf2b600][i % 7]; }, 1, plzG); PZ.walkBase = wb;
+      if (id === 'unilag') mergeStatic(plzG, [pave, gr].concat(PZ.spray || [], PZ.flags || [], PZ.ball ? [PZ.ball] : []));
     }
     function plazaFrame(t, night) {
       if (PZ.ball) { var bu = t * 0.7; PZ.ball.position.set(Math.sin(bu) * 7, 0.35 + Math.abs(Math.sin(t * 3)) * 0.6, Math.sin(bu * 1.7) * 3.5); (PZ.players || []).forEach(function (f, k) { var lg = f.userData.legs; f.position.x = -20 + (k - 1.5) * 4 + Math.sin(bu + k) * 1.5; if (lg && !reduce) { lg[0].rotation[f.userData.axis || 'z'] = Math.sin(t * 7 + k) * 0.5; lg[1].rotation[f.userData.axis || 'z'] = -Math.sin(t * 7 + k) * 0.5; } }); }
@@ -1123,7 +1161,7 @@
         for (var lg = 0; lg < 4; lg++) { var lo = new T.Group(); lo.position.set(5 + lg * 4.5, 0, -3.5); lo.add(mesh(new T.BoxGeometry(1.4, 0.35, 3.2), mat('hlounger', { color: 0xf4f3ec }), 0, 0.5, 0)); galG.add(lo); } sitter(172, 9.5, -3.5, 0, true);
         [[-14, -8], [-6, -8]].forEach(function (q) { galG.add(mesh(new T.BoxGeometry(5, 1, 2), mat('sofa', { color: 0x7a1f3a }), q[0], 0.5, q[1])); galG.add(mesh(new T.BoxGeometry(5, 1.4, 0.5), mat('sofa', {}), q[0], 1.2, q[1] - 0.9)); }); sitter(173, -14, -7.6, Math.PI / 2); plant(-24, -14); plant(-2, 18); plant(24, 14);
         var trolley = new T.Group(); trolley.add(mesh(new T.BoxGeometry(1.8, 0.1, 1), gold, 0, 0.4, 0)); trolley.add(mesh(new T.BoxGeometry(0.08, 2.2, 0.08), gold, -0.85, 1.4, 0)); trolley.add(mesh(new T.BoxGeometry(0.08, 2.2, 0.08), gold, 0.85, 1.4, 0)); trolley.add(mesh(new T.BoxGeometry(1.8, 0.08, 0.08), gold, 0, 2.5, 0)); trolley.add(mesh(new T.BoxGeometry(1.2, 0.9, 0.6), mat('bag', { color: 0x2f6fd0 }), 0, 0.9, 0)); galG.add(trolley); trolley.userData.legs = null;
-        flow(trolley, [[DX + 1.5, DZ], [-12, 11.6], [20, 16], [DX + 1.5, DZ]], 1.5, 0, 4); flow(flowFig(174, 0x7a1f3a), [[DX, DZ + 1], [-11, 11.6], [20, 17], [DX, DZ + 1]], 1.5, 0, 4); flow(flowFig(175), [[DX, DZ - 1], [12, -5], [DX, DZ - 1]], 1.8, 7, 8); flow(flowFig(176), [[DX, DZ + 2], [-6, -6], [-12, 11.6], [DX, DZ + 2]], 1.6, 12, 6); flow(flowFig(177), [[DX, DZ - 2], [20, -10], [DX, DZ - 2]], 1.4, 18, 10);
+        flow(trolley, [[DX + 1.5, DZ], [-12, 11.6], [20, 16], [DX + 1.5, DZ]], 1.5, 0, 4); flow(flowFig(174, 0x7a1f3a), [[DX, DZ + 1], [-11, 11.6], [20, 17], [DX, DZ + 1]], 1.5, 0, 4); flow(flowFig(175), [[DX, DZ - 1], [12, -5], [DX, DZ - 1]], 1.8, 7, 8); flow(flowFig(176), [[DX, DZ + 2], [-6, -6], [-12, 11.6], [DX, DZ + 2]], 1.6, 12, 6); flow(flowFig(177), [[DX, DZ - 2], [24, -2], [DX, DZ - 2]], 1.4, 18, 10);
       } else if (kind === 'casino') {
         room.material.color.set(0x2a0d14); floor.material.color.set(0x5a0f1a);
         var dome = new T.Mesh(new T.SphereGeometry(10, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), mat('cdome', { color: 0xd4af37, metalness: 0.9, roughness: 0.2, side: T.BackSide })); dome.position.set(0, RH - 1.5, 0); dome.scale.y = 0.25; galG.add(dome);
@@ -1257,6 +1295,7 @@
         }
       } else if (/^(police|polling|hospital|court|library|hotel|casino|office)$/.test(kind)) {
         tm.visible = false; buildCivic(kind, room, floor, RW, RD, RH);
+        mergeStatic(galG, [room, floor].concat((GL.flow || []).map(function (f) { return f.g; }), GL.wheel ? [GL.wheel] : []));
       } else {
         // A mall atrium: shopfronts on two levels, a gallery walkway, an escalator and the cinema's NOW SHOWING screen.
         var SHOPS = ['SAVEMART', 'FASHION HUB', 'PHONES & MORE', 'CRISPY CHICK', 'BOOKS', 'GAMES', 'BEAUTY', 'SPORTS'];
@@ -1309,6 +1348,7 @@
       var cook = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('suya', 0), 111) : person(111, false); cook.position.set(0, 0.1, -1.6); cook.rotation.y = Math.PI / 2; grill.add(cook); raveG.add(grill);
       [[-14, 6], [-8, 9], [18, 6]].forEach(function (q, k) { var cb = new T.Group(); cb.position.set(X + q[0], 0, Z + q[1]); cb.add(mesh(new T.CylinderGeometry(0.1, 0.1, 4, 6), mat('cbpole', { color: 0x5a3a22 }), 0, 2, 0)); cb.add(mesh(new T.ConeGeometry(3, 1.4, 8), mat('cbtop' + k, { color: [0x1f8a7a, 0x8a5a3c, 0xc2185b][k] }), 0, 4.4, 0));
         [-1, 1].forEach(function (s2) { cb.add(mesh(new T.BoxGeometry(1, 0.35, 2.4), mat('lounger', { color: 0x5a7bd0 }), s2 * 1.4, 0.45, 0)); }); raveG.add(cb); });
+      mergeStatic(raveG, [RV.dj]);
       RV.lights = []; [0xff3fb4, 0x3fd0ff, 0xffd23f].forEach(function (col, k) { var L0 = new T.PointLight(col, 40, 26, 1.4); L0.position.set(X - 4 + k * 6, 6, Z - 4); raveG.add(L0); RV.lights.push(L0); });
     }
     function raveFrame(t, on) {
@@ -1329,7 +1369,7 @@
       [-1, 1].forEach(function (s) { var a = new T.Mesh(new T.CapsuleGeometry(0.055, 0.55, 4, 6), skin); a.position.set(0, 1.3, s * 0.26); a.castShadow = true; g.add(a); });
       var head = new T.Mesh(new T.SphereGeometry(0.15, 14, 10), skin); head.position.y = 1.85; head.castShadow = true; g.add(head);
       var hair = new T.Mesh(new T.SphereGeometry(0.155, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat('hair', { color: 0x1a1410, roughness: 0.9 })); hair.position.y = 1.87; g.add(hair);
-      g.userData.legs = legs; return g;
+      g.userData.legs = legs; return slimFigure(g);
     }
     function sprite(text, bg, fg, w) {
       var c = document.createElement('canvas'); c.width = 512; c.height = 96; var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace;
@@ -1350,7 +1390,7 @@
       if (d && !d.look && root.LasgidiGames3D && root.LasgidiAvatar3D) { var st0 = root.LasgidiGames3D.stranger((sc.placeId || 'yard') + ':' + (d.label || ''), i); d = Object.assign({}, d, { look: st0.look, outfit: st0.outfit }); } // strangers get a real 3D look too
       if (!d || !d.look || !root.LasgidiAvatar3D) return person(i, i % 2 === 1);
       var outer = new T.Group(), f = root.LasgidiAvatar3D.figure(T, d.look, d.outfit, d.extra); f.rotation.y = Math.PI / 2; f.scale.setScalar(1.05); outer.add(f);
-      outer.userData.legs = f.userData.legs; outer.userData.axis = 'x'; outer.userData.key = JSON.stringify([d.look, d.outfit, d.extra]); return outer;
+      outer.userData.legs = f.userData.legs; outer.userData.axis = 'x'; outer.userData.key = JSON.stringify([d.look, d.outfit, d.extra]); slimFigure(outer, f); return outer;
     }
     function lookKey(d) { return d && d.look ? JSON.stringify([d.look, d.outfit, d.extra]) : ''; }
     // The letter hunt: today's letter glows here when you have its riddle; tap it (or walk into it) to catch it.
