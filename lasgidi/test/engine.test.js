@@ -2698,3 +2698,14 @@ test('rules 19: every casino game pays back less than it takes, once a day each;
   const s = L.newGame({ seed: 2999, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.loc = 'vi'; s.t = s.t - (s.t % 1440) + 1440 + 22 * 60;
   assert.match(L.availableActions(s).find(x => x.id === 'casino_highroller').disabled || '', /High rollers|Costs/);
 });
+test('rules 19: rent a sea block for 7 days at ₦500 a plot; rented plots are no trade-in; owners must let go first; rules 18 cannot rent; replays', () => {
+  const s = L.newGame({ seed: 1600, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const c0 = s.cash + s.bank, r = L.rentSeaPlots(s, 3, 2, 2, 2); assert.ok(r.ok, r.msg);
+  assert.equal(c0 - (s.cash + s.bank), L.seaRentCost(s, 2, 2)); assert.equal(L.seaRentCost(s, 2, 2), L.price(s, 500) * 4); assert.ok(s.sea.rent);
+  assert.equal(L.seaCost(s, 2, 2), L.price(s, D.SEA.price) * 4, 'renting gives no credit toward buying');
+  assert.ok(L.rentSeaPlots(s, 3, 2, 2, 2).ok, 'renew'); sane(s);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  const o = L.newGame({ seed: 1601, origin: 'nepo', goal: 'freestyle' }); while (o.pending.length) L.resolveChoice(o, 0);
+  o.bank += 0; assert.ok(L.buySeaPlots(o, 0, 0, 1, 1).ok); assert.match(L.rentSeaPlots(o, 5, 5, 1, 1).msg, /Let it go/);
+  const old = L.newGame({ seed: 1602, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (old.pending.length) L.resolveChoice(old, 0); assert.equal(L.rentSeaPlots(old, 0, 0, 1, 1).ok, false);
+});

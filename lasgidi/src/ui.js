@@ -144,7 +144,7 @@
     var ti = document.getElementById('radio-title'), title = (ti ? ti.value : ui.radioTitle || '').trim(), c = CH.clean(title.slice(0, 40));
     if (!title) { online.radioStatus = 'Give your song a title first.'; render(); return; }
     if (!c.ok) { online.radioStatus = 'That title is not allowed. Keep it clean.'; render(); return; }
-    var taken = {}; radioAll().forEach(function (x) { taken[x.n] = 1; }), now = radioSlotNow(), picks = [];
+    var taken = {}, now = radioSlotNow(), picks = []; radioAll().forEach(function (x) { taken[x.n] = 1; });
     for (var k = now + 1; picks.length < n && k < now + 400; k += 3) { while (taken[k] && k < now + 400) k++; picks.push(k); }
     var r = L.radioBook(S, n); if (!r.ok) { online.radioStatus = r.msg; render(); return; }
     save(); var mineOld = ((online.radio || []).filter(function (x) { return x.id === online.me; })[0] || {}).raw, keep = mineOld && Array.isArray(mineOld.slots) ? mineOld.slots.filter(function (k2) { return k2 >= now; }) : [];
@@ -2596,6 +2596,11 @@
   }
   /* ---------- Sea Plots: shared claims, approved pictures ---------- */
   var SEA_COLORS = ['#c0392b', '#2f6fa0', '#2fa36b', '#6b3fa0', '#d9822b', '#17181a', '#d0453a', '#0f6f78'];
+  // Rented sea blocks (rules 19) carry a real end time on the shared map, like billboards.
+  function seaExpired(raw) { return !!(raw && typeof raw.until === 'number' && raw.until < Date.now()); }
+  function myRentDoc() { return online.me ? ((online.sea || []).filter(function (d) { return d.id === online.me; })[0] || {}).raw || null : null; }
+  function myRentEnded() { var d = myRentDoc(); return !!(d && typeof d.until === 'number' && d.until < Date.now()); }
+  function rentLeft() { var d = myRentDoc(); if (!d || typeof d.until !== 'number') return ''; var ms = d.until - Date.now(); if (ms <= 0) return 'Your rental has ended. Rent the block again to put it back on the water.'; var dd = Math.floor(ms / 86400000), hh = Math.floor(ms % 86400000 / 3600000); return 'Rented: ' + (dd ? dd + 'd ' : '') + hh + 'h left.'; }
   function cleanRect(r) {
     var S = D.SEA, i = function (v) { return typeof v === 'number' && Math.round(v) === v && v >= 0; };
     if (!r || !i(r.x) || !i(r.y) || !i(r.w) || !i(r.h) || r.w < 1 || r.h < 1 || r.w > S.maxSide || r.h > S.maxSide || r.x + r.w > S.cols || r.y + r.h > S.rows) return null;
@@ -2615,10 +2620,11 @@
   function okImg(s) { return typeof s === 'string' && s.length <= L.PIC_MAX && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+\/]+={0,2}$/.test(s); }
   // Everyone's blocks, oldest claim first; a later claim that overlaps is ignored.
   function seaClaims() {
-    var list = (online.sea || []).map(function (d) { var r = cleanRect(d.raw); return r ? Object.assign(r, { id: d.id }) : null; }).filter(Boolean)
+    var list = (online.sea || []).filter(function (d) { return !seaExpired(d.raw); }).map(function (d) { var r = cleanRect(d.raw); return r ? Object.assign(r, { id: d.id }) : null; }).filter(Boolean)
       .sort(function (a, b) { return a.at - b.at || (a.id < b.id ? -1 : 1); }), out = [];
     // Your own block comes from your life, so it shows even offline.
-    if (S && S.sea && online.me) { var myDoc = list.filter(function (k) { return k.id === online.me; })[0]; list = list.filter(function (k) { return k.id !== online.me; }).concat([Object.assign({ id: online.me, at: myDoc ? myDoc.at : Infinity }, S.sea)]); list.sort(function (a, b) { return a.at - b.at; }); }
+    if (S && S.sea && S.sea.rent && myRentEnded()) { /* your rental ran out: off the map until you rent again */ }
+    else if (S && S.sea && online.me) { var myDoc = list.filter(function (k) { return k.id === online.me; })[0]; list = list.filter(function (k) { return k.id !== online.me; }).concat([Object.assign({ id: online.me, at: myDoc ? myDoc.at : Infinity }, S.sea)]); list.sort(function (a, b) { return a.at - b.at; }); }
     else if (S && S.sea) list.push(Object.assign({ id: 'me', at: Infinity }, S.sea));
     list.forEach(function (k) { if (!out.some(function (o) { return overlap(o, k); })) out.push(k); });
     return out.map(function (k) {
@@ -2665,13 +2671,15 @@
         return '<button type="button" class="pg-chip' + (ui.seaSel.w === z[0] && ui.seaSel.h === z[1] ? ' sel' : '') + '" id="seasz-' + z[0] + 'x' + z[1] + '" data-seasize="' + z[0] + 'x' + z[1] + '">' + z[0] + '×' + z[1] + '</button>';
       }).join('') + '</div>';
       html += sel.bad ? '<p class="why">Someone already owns part of that block. Pick another spot.</p>'
-        : '<div class="inline" style="margin-top:8px"><button class="btn go" id="sea-buy" data-seabuy="1"' + (cost > S.cash + S.bank ? ' disabled' : '') + '>' + (mine ? 'Move here' : 'Buy') + ' ' + sel.w + '×' + sel.h + (cost ? ' · ' + N(cost) : ' · free (same size or smaller)') + '</button></div>';
+        : '<div class="inline" style="margin-top:8px">' + (mine && mine.rent ? '' : '<button class="btn go" id="sea-buy" data-seabuy="1"' + (cost > S.cash + S.bank ? ' disabled' : '') + '>' + (mine ? 'Move here' : 'Buy') + ' ' + sel.w + '×' + sel.h + (cost ? ' · ' + N(cost) : ' · free (same size or smaller)') + '</button>') +
+          (S.rules >= 19 && !(mine && !mine.rent) ? '<button class="btn' + (mine && mine.rent ? ' go' : ' ghost') + '" id="sea-rent" data-searent="1"' + (L.seaRentCost(S, sel.w, sel.h) > S.cash + S.bank ? ' disabled' : '') + '>Rent ' + sel.w + '×' + sel.h + ' for ' + D.SEA.rentDays + ' days · ' + N(L.seaRentCost(S, sel.w, sel.h)) + '</button>' : '') + '</div>' +
+          (S.rules >= 19 ? '<p class="note">' + N(L.price(S, D.SEA.rent)) + ' a plot for ' + D.SEA.rentDays + ' real days, or buy outright at ' + N(L.price(S, D.SEA.price)) + ' a plot.</p>' : '');
     }
     if (mine) {
       var rv = online.mySeaReview, si = online.me && online.seaimg[online.me];
       var live = si && okImg(si.img) && si.x === mine.x && si.y === mine.y && si.w === mine.w && si.h === mine.h;
       if (seaDropped()) html += '<p class="why" id="sea-dropped">Someone claimed part of this water before you, so your block is hidden on the shared map. Pick a free spot and move there: moving is free.</p>';
-      html += '<div class="section"><h3>Your block · ' + mine.w + '×' + mine.h + ' at ' + (mine.x + 1) + '·' + (mine.y + 1) + '</h3><p class="note">' +
+      html += '<div class="section"><h3>Your block · ' + mine.w + '×' + mine.h + ' at ' + (mine.x + 1) + '·' + (mine.y + 1) + (mine.rent ? ' (rented)' : '') + '</h3>' + (mine.rent ? '<p class="note"><b>' + esc(rentLeft() || 'Rented for ' + D.SEA.rentDays + ' days.') + '</b></p>' : '') + '<p class="note">' +
         (live ? '✅ Your picture is live.' : rv && !rv.status ? '⏳ Your picture is waiting for an editor.' : rv && rv.status === 'rejected' ? '❌ Your last picture was not approved. Try another.' : 'No picture yet.') + (online.db ? '' : ' Pictures need the shared board (open the game on claude.ai).') + '</p>' +
         (online.db && online.me ? '<div class="sea-adform"><label class="label" for="sea-cap">Ad line (optional)</label><input id="sea-cap" maxlength="60" placeholder="e.g. Fresh puff-puff in Yaba, call us" value="' + esc(ui.seaCap || '') + '">' +
           '<label class="label" for="sea-link">Link (optional, https only)</label><input id="sea-link" maxlength="120" inputmode="url" placeholder="https://" value="' + esc(ui.seaLink || '') + '"><p class="note">The line and the link go to the editor with your picture.</p></div>' : '') +
@@ -4188,7 +4196,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook]');
+    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -4336,6 +4344,19 @@
       run(function () {
         var r = L.buySeaPlots(S, sel.x, sel.y, sel.w, sel.h);
         if (r.ok && online.db && online.me) online.db.doc('sea/' + online.me).set({ x: sel.x, y: sel.y, w: sel.w, h: sel.h, at: Date.now() }).catch(function () { online.seaStatus = 'Saved in your life, but the shared map refused it.'; render(); });
+        if (r.ok) ui.seaSel = null;
+        return r;
+      });
+      return;
+    }
+    if (ds.searent) {
+      var sel2 = seaSel(); if (!sel2 || sel2.bad) return;
+      run(function () {
+        var r = L.rentSeaPlots(S, sel2.x, sel2.y, sel2.w, sel2.h);
+        if (r.ok && online.db && online.me) {
+          var old = myRentDoc(), same = old && old.x === sel2.x && old.y === sel2.y && old.w === sel2.w && old.h === sel2.h && typeof old.until === 'number' && old.until > Date.now();
+          online.db.doc('sea/' + online.me).set({ x: sel2.x, y: sel2.y, w: sel2.w, h: sel2.h, at: same ? old.at : Date.now(), until: (same ? old.until : Date.now()) + D.SEA.rentDays * 86400000 }).catch(function () { online.seaStatus = 'Paid, but the shared map refused it.'; render(); });
+        }
         if (r.ok) ui.seaSel = null;
         return r;
       });

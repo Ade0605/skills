@@ -1136,7 +1136,7 @@
   // taken by hash() are lived in already; the rest are for sale, one per player.
   // Sea Plots: a grid of small plots in the water off Lagos Island. Players buy
   // a block and fill it with a picture (after review), like a million-naira homepage.
-  var SEA = { name: 'Sea Plots', x0: 21.2, y0: 27.6, cols: 64, rows: 18, gap: 0.3, price: 5000, maxSide: 12 };
+  var SEA = { name: 'Sea Plots', x0: 21.2, y0: 27.6, cols: 64, rows: 18, gap: 0.3, price: 5000, rent: 500, rentDays: 7, maxSide: 12 }; // rent: rules 19, per plot for 7 real days
   var ESTATE = { name: 'Mainland Estate', district: 'ikeja', x0: 13.6, y0: 0.4, cols: 18, rows: 6, gap: 0.5, home: 'estate_own', property: 'estate_house' };
 
   // Named roads (by district pair) and streets inside districts.

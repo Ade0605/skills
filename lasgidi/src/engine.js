@@ -4260,7 +4260,7 @@
   // for plots beyond the ones you already had. Other players' claims are
   // checked against the shared store by the page before this is called.
   function seaCost(s, w, h) {
-    var had = s.sea ? s.sea.w * s.sea.h : 0;
+    var had = s.sea && !s.sea.rent ? s.sea.w * s.sea.h : 0; // rented plots (rules 19) are not yours to trade in
     return price(s, D.SEA.price) * Math.max(0, w * h - had);
   }
   function buySeaPlots(s, x, y, w, h) {
@@ -4276,6 +4276,24 @@
     s.sea = { x: x, y: y, w: w, h: h };
     unlock(s, 'seaplot');
     return finish(s, ok('🌊 You own a ' + w + '×' + h + ' block of Sea Plots' + (cost ? ' for ' + naira(cost) : '') + '. Add a picture for all Lagos to see.'));
+  }
+  // Rules 19: rent a block for 7 real days (the page keeps the end date on the shared map, like billboards).
+  function seaRentCost(s, w, h) { return price(s, D.SEA.rent) * w * h; }
+  function rentSeaPlots(s, x, y, w, h) {
+    if (!(s.rules >= 19)) return fail('Renting Sea Plots is not open in this life.');
+    var S = D.SEA, ok2 = function (v) { return Math.round(v) === v && v >= 0; };
+    if (!ok2(x) || !ok2(y) || !ok2(w) || !ok2(h) || w < 1 || h < 1) return fail('Pick a block of plots.');
+    if (w > S.maxSide || h > S.maxSide) return fail('A block is at most ' + S.maxSide + ' plots on a side.');
+    if (x + w > S.cols || y + h > S.rows) return fail('That block runs off the grid.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.challenge) return fail('No Sea Plots in Weekly Lagos.');
+    if (s.sea && !s.sea.rent) return fail('You own a block outright. Let it go first if you want to rent instead.');
+    var cost = seaRentCost(s, w, h);
+    s.alerts = [];
+    if (!pay(s, cost, 'Sea Plots rent: ' + w + '×' + h + ' block, ' + S.rentDays + ' days')) return fail('Renting that block costs ' + naira(cost) + '.');
+    s.sea = { x: x, y: y, w: w, h: h, rent: true };
+    unlock(s, 'seaplot');
+    return finish(s, ok('🌊 You rented a ' + w + '×' + h + ' block of Sea Plots for ' + S.rentDays + ' days (' + naira(cost) + '). Add a picture for all Lagos to see.'));
   }
   function releaseSeaPlots(s) {
     if (!s.sea) return fail('You own no Sea Plots.');
@@ -4854,7 +4872,7 @@
     buyPhone: recorded('ph', buyPhone), brandDeal: brandDeal, followerGain: followerGain, phoneCam: phoneCam,
     openShop: recorded('os', openShop), restockShop: recorded('or', restockShop), setShopAds: recorded('oa', setShopAds), closeShop: recorded('oc', closeShop), shopPreview: shopPreview,
     buyPet: recorded('pp', buyPet), rehomePet: recorded('pr', rehomePet), joinHmo: recorded('hj', joinHmo), leaveHmo: recorded('hl', leaveHmo), hasYard: hasYard,
-    buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost,
+    buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost, rentSeaPlots: recorded('sr', rentSeaPlots), seaRentCost: seaRentCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
     nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
