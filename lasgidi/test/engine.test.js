@@ -2783,3 +2783,16 @@ test('rules 19: Abuja and PH extras: libraries, offices, the Uniport campus, the
   s.clubs.golf = { joined: true, via: 'worth', until: s.t + 70 * 1440 };
   assert.match(L.clubActOptions(s, 'golf').find(a => a.id === 'cup').disabled || '', /One Club Cup a week|Go to/);
 });
+test('rules 19: the Abuja expansion: eleven new places, each nogem, with its own acts (rules 19 only) and an inside', () => {
+  const ids = ['abj_jabi_park', 'abj_garki_mkt', 'abj_assembly', 'abj_secretariat', 'abj_conference', 'abj_zoo', 'abj_uni', 'abj_chu', 'abj_funpark', 'abj_sky_lounge', 'abj_motors'];
+  for (const id of ids) {
+    const p = D.PLACES.find(x => x.id === id); assert.ok(p && p.nogem && p.civic, id); assert.ok(D.DISTRICTS[p.district], id);
+    const acts = D.CIVIC_ACTS[id]; assert.ok(acts.length >= 3, id);
+    const s = L.newGame({ seed: 1700, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.loc = p.district;
+    const o = L.newGame({ seed: 1700, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (o.pending.length) L.resolveChoice(o, 0); o.loc = p.district;
+    assert.ok(L.availableActions(s).some(a => a.id === acts[0].id), id);
+    assert.ok(!L.availableActions(o).some(a => acts.some(b => b.id === a.id)), id + ' hidden in rules 18');
+  }
+  assert.equal(D.insideKind(D.PLACES.find(x => x.id === 'abj_conference')), 'conference');
+  assert.ok(D.CIVIC_ACTS.abj_uni.every(a => !/lagoon|Mama B'/i.test(a.label)));
+});

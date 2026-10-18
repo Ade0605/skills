@@ -1768,6 +1768,73 @@
   // Taking one marks the life Boosted: it can never go on the Hall of Fame or the weekly board.
   var TOPUP_PACKS = { topup_jollof: { name: 'Jollof pack', naira: 50000 }, topup_owambe: { name: 'Owambe pack', naira: 300000 }, topup_bigboy: { name: 'Big boy pack', naira: 700000 }, topup_odogwu: { name: 'Odogwu pack', naira: 1600000 } };
   // Places added after the gem hunt began stay out of its pool, so old lives' gems (and their seals) replay.
+  // Rules 19: more of the capital, each with an inside and its own acts. Public landmarks keep their names; the businesses are made up.
+  function act(id, label, mins, cost, earn, fx, xp, when) { var a = { id: id, label: label, mins: mins, fx: fx }; if (cost) a.cost = cost; if (earn) { a.earn = earn; a.gig = true; a.fest = true; } if (xp) a.xp = xp; if (when) a.when = when; return a; }
+  var WK = [0, 1, 2, 3, 4], CAMPUS_CLONES = [];
+  [
+    ['abj_jabi_park', '🚌', 'Jabi Motor Park', 'transport', 'bus', 'abj_jabi', 6.2, 9.0, null, 'Ticket office, the loading shed, a tea and bread stall, the drivers\' bench, and coaches to Lagos, PH and the north.', [
+      act('jpark_tea', 'Tea and bread at the mai shayi stall', 15, 700, 0, { hunger: 18, fun: 2 }, null, { from: 5, to: 23 }),
+      act('jpark_bench', 'Gist with the drivers on the bench', 30, 0, 0, { social: 8, fun: 4 }, null, { from: 6, to: 21 }),
+      act('jpark_load', 'Load bags onto the coaches (park boy shift)', 180, 0, 2000, { energy: -14, hygiene: -8 }, { fitness: 1 }, { from: 5, to: 20 }),
+      act('jpark_tout', 'Call passengers for a driver', 120, 0, 1400, { energy: -8, social: 4 }, { charisma: 1 }, { from: 6, to: 20 }),
+      act('jpark_board', 'Read the timetable board and price the routes', 15, 0, 0, { stress: -1 }, null, null)
+    ]],
+    ['abj_garki_mkt', '🧺', 'Garki Market', 'food', 'basket', 'abj_garki', 18.8, 15.8, null, 'Fabric lanes, foodstuff, phone stalls and the meat section, all under zinc.', [
+      act('gmkt_food', 'Buy the week\'s foodstuff', 45, 6000, 0, { hunger: 30 }, null, { from: 7, to: 18 }),
+      act('gmkt_fabric', 'Bargain for ankara in the fabric lane', 60, 9000, 0, { fun: 10, social: 4 }, { charisma: 1 }, { from: 8, to: 18 }),
+      act('gmkt_suya', 'Suya and zobo by the gate', 15, 1500, 0, { hunger: 18, fun: 4 }, null, { from: 16, to: 22 }),
+      act('gmkt_porter', 'Carry loads for traders (truck pusher)', 180, 0, 1800, { energy: -16, hygiene: -8 }, { fitness: 1 }, { from: 7, to: 17 })
+    ]],
+    ['abj_assembly', '🏛️', 'National Assembly', 'outdoors', 'dome', 'abj_asokoro', 19.4, 11.4, null, 'The green dome, the two chambers and the public gallery. Bring ID.', [
+      act('nass_tour', 'Join the guided tour of the chambers', 90, 0, 0, { fun: 8 }, { charisma: 1 }, { days: WK, from: 10, to: 15 }),
+      act('nass_plenary', 'Watch a plenary from the public gallery', 120, 0, 0, { fun: 6, stress: 3 }, null, { days: [1, 2, 3], from: 10, to: 14 }),
+      act('nass_photo', 'Photo by the dome', 15, 0, 0, { fun: 5 }, null, { from: 8, to: 18 }),
+      act('nass_lobby', 'Wait in the lobby to see your rep', 120, 0, 0, { stress: 8, social: 4 }, null, { days: WK, from: 9, to: 16 })
+    ]],
+    ['abj_secretariat', '🏢', 'Federal Secretariat', 'services', 'tower', 'abj_garki', 14.6, 13.6, null, 'The ministries\' blocks: long corridors, file rooms and the canteen.', [
+      act('fsec_file', 'Chase your file from desk to desk', 120, 0, 0, { stress: 12, energy: -6 }, null, { days: WK, from: 8, to: 16 }),
+      act('fsec_canteen', 'Rice and moi moi at the staff canteen', 30, 1500, 0, { hunger: 28 }, null, { days: WK, from: 11, to: 15 }),
+      act('fsec_messenger', 'Messenger shift (files and tea)', 240, 0, 2200, { energy: -10 }, null, { days: WK, from: 8, to: 16 }),
+      act('fsec_typing', 'Type letters at the business centre', 120, 0, 1600, { energy: -6 }, { tech: 1 }, { days: WK, from: 8, to: 17 })
+    ]],
+    ['abj_conference', '🎤', 'International Conference Centre', 'services', 'tower', 'abj_garki', 13.2, 16.0, 'conference', 'The big hall: tiered seats, the stage and podium, flags and the screens.', [
+      act('icc_summit', 'Sit in on a summit session', 120, 0, 0, { fun: 6, stress: 2 }, { charisma: 1 }, { days: WK, from: 9, to: 17 }),
+      act('icc_expo', 'Walk the trade expo stands', 60, 2000, 0, { fun: 8, social: 6 }, null, { days: [3, 4, 5], from: 10, to: 18 }),
+      act('icc_usher', 'Usher at the conference', 240, 0, 2600, { energy: -12, social: 6 }, { charisma: 1 }, { days: WK, from: 8, to: 18 }),
+      act('icc_network', 'Network at the coffee break', 30, 0, 0, { social: 10 }, { charisma: 1 }, { days: WK, from: 10, to: 16 })
+    ]],
+    ['abj_zoo', '🦒', 'Children\'s Park and Zoo, Asokoro', 'outdoors', 'tree', 'abj_asokoro', 22.6, 11.0, null, 'Animal pens under the trees, a play area and picnic lawns.', [
+      act('zoo_visit', 'See the animals', 60, 1000, 0, { fun: 12, stress: -6 }, null, { from: 9, to: 18 }),
+      act('zoo_feed', 'Feeding time at the monkey pen', 30, 500, 0, { fun: 8 }, null, { from: 10, to: 16 }),
+      act('zoo_picnic', 'Picnic on the lawn', 60, 3000, 0, { hunger: 24, social: 6, fun: 6 }, null, { from: 10, to: 17 }),
+      act('zoo_keeper', 'Help the keepers clean the pens', 180, 0, 1600, { energy: -12, hygiene: -12 }, null, { from: 7, to: 15 })
+    ]],
+    ['abj_uni', '🎓', 'University of Abuja', 'learn', 'cap', 'abj_airport', 6.4, 20.6, null, 'The Senate building, lecture theatre, library, a buka and the halls.', 'uniabj_'],
+    ['abj_chu', '🎓', 'Capital Heights University, Kubwa', 'learn', 'cap', 'abj_kubwa', 6.4, 4.2, null, 'A private campus: neat lawns, a glass library and a strict dress code.', 'chu_'],
+    ['abj_funpark', '🎡', 'Capital Fun Park, Jabi', 'outdoors', 'tree', 'abj_jabi', 8.4, 11.6, 'funpark', 'A Ferris wheel, a carousel, bumper cars and candy floss.', [
+      act('fun_wheel', 'Ride the Ferris wheel', 15, 2000, 0, { fun: 14 }, null, { from: 11, to: 22 }),
+      act('fun_bumper', 'Bumper cars', 15, 1500, 0, { fun: 12, stress: -4 }, null, { from: 11, to: 22 }),
+      act('fun_carousel', 'Carousel with the kids', 15, 1000, 0, { fun: 8, social: 6 }, null, { from: 11, to: 20 }),
+      act('fun_candy', 'Candy floss and popcorn', 15, 1200, 0, { hunger: 10, fun: 4 }, null, { from: 11, to: 22 }),
+      act('fun_ops', 'Run a ride for the evening', 240, 0, 2200, { energy: -10 }, null, { from: 15, to: 22 })
+    ]],
+    ['abj_sky_lounge', '🍸', 'Skyline Rooftop Lounge, Wuse 2', 'nightlife', 'glass', 'abj_wuse', 9.0, 11.2, null, 'A rooftop over Wuse 2: city lights, a DJ, mocktails and cocktails.', [
+      act('sky_sunset', 'Sundowner on the roof', 60, 9000, 0, { fun: 14, social: 8, stress: -6 }, null, { from: 17, to: 20 }),
+      act('sky_dj', 'Friday DJ night', 180, 15000, 0, { fun: 30, social: 18, energy: -12 }, null, { days: [4, 5], from: 21, to: 24 }),
+      act('sky_mock', 'Mocktail at the bar', 15, 4000, 0, { fun: 5 }, null, { from: 16, to: 24 }),
+      act('sky_wait', 'Waiter shift on the roof', 240, 0, 2600, { energy: -12 }, null, { from: 17, to: 24 })
+    ]],
+    ['abj_motors', '🚗', 'Capital Motors, Wuse', 'services', 'car', 'abj_wuse', 10.4, 13.0, null, 'A glass showroom of saloons and SUVs, and a finance desk.', [
+      act('cmot_browse', 'Browse the showroom', 30, 0, 0, { fun: 5 }, null, { from: 9, to: 18 }),
+      act('cmot_test', 'Test drive a new SUV', 45, 0, 0, { fun: 14 }, null, { days: WK, from: 10, to: 17 }),
+      act('cmot_wash', 'Wash and polish the showroom cars', 180, 0, 1800, { energy: -10, hygiene: -6 }, null, { from: 8, to: 17 })
+    ]]
+  ].forEach(function (q) {
+    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || 'abuja', text: q[9] };
+    if (q[8]) p.inside = q[8];
+    CIVIC_PLACES.push(p);
+    if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
+  });
   CIVIC_PLACES.forEach(function (p) { p.nogem = true; PLACES.push(p); });
   // Rules 19: the Lagoon party boat moored at the island jetties.
   ['cms', 'lagoon_cruise', 'lagoon_jetty', 'ph_bonny_pl'].forEach(function (pid) {
@@ -1814,6 +1881,8 @@
     CIVIC_ACTS.unilag = U.map(function (u) { var a = { id: 'uni_' + u[0], label: u[1], mins: u[2], fx: u[5] }; if (u[3]) a.cost = u[3]; if (u[4]) { a.earn = u[4]; a.gig = true; a.fest = true; } if (u[6]) a.xp = u[6]; if (u[7]) a.when = u[7]; return a; });
     // and the University of Port Harcourt, the same campus life under its own ids (Mama Ngozi runs the buka there).
     CIVIC_ACTS.ph_uniport = cloneActs(CIVIC_ACTS.unilag, 'uni_', 'uniport_').map(function (a) { a.label = a.label.replace(/Mama B/g, 'Mama Ngozi').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river'); return a; });
+    // and the Abuja campuses (Mama Hauwa's buka; lawns and hills where Lagos has the lagoon).
+    CAMPUS_CLONES.forEach(function (c) { CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
   })();
   // Rules 19: Lekki Conservation Centre, close up.
   CIVIC_ACTS.lcc = [
@@ -1927,6 +1996,7 @@
   };
   var INSIDE_BY_GLYPH = { bowl: 'eatery', basket: 'market', film: 'cinema', mask: 'culture', frame: 'culture', note: 'music', tree: 'park', cap: 'campus', phone: 'tech', laptop: 'tech', tool: 'workshop', car: 'dealer', plane: 'airport', boat: 'jetty', yacht: 'jetty', bus: 'motorpark', scissors: 'salon', ball: 'stadium', stadium: 'stadium', cross: 'hospital', mosque: 'mosque', hall: 'church', naira: 'bank', dumbbell: 'gym', badge: 'police', ballot: 'polling', gavel: 'court', book: 'library', hotel: 'hotel', dice: 'casino', tower: 'office', glass: 'lounge', club: 'lounge', wave: 'beach', umbrella: 'beach', estate: 'estate' };
   function insideKind(pl) {
+    if (pl.inside) return pl.inside; // a few rules-19 places name their own inside
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
     if (pl.glyph === 'dome') return pl.type === 'services' ? 'church' : 'govt';
     if (pl.glyph === 'club' && pl.type === 'outdoors') return 'jetty';

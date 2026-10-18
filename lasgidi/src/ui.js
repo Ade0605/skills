@@ -525,7 +525,7 @@
         online.peers = counts; online.others = others;
         var seen = {};
         online.peerList = ch.peers.filter(function (p) { return !p.isMe && p.kind === 'viewer' && p.by && p.presence && own(D.DISTRICTS, p.presence.d); })
-          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look), party: cleanParty(p.presence.party), at: typeof p.presence.at === 'string' && p.presence.at.length < 80 ? p.presence.at : null, act: typeof p.presence.a === 'string' && Object.prototype.hasOwnProperty.call(ACTIVITIES, p.presence.a) ? p.presence.a : null }; });
+          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look), party: cleanParty(p.presence.party), at: typeof p.presence.at === 'string' && p.presence.at.length < 80 ? p.presence.at : null, act: typeof p.presence.a === 'string' && Object.prototype.hasOwnProperty.call(ACTIVITIES, p.presence.a) ? p.presence.a : null , biz: cleanBiz(p.presence.biz) }; });
         var ids = online.peerList.map(function (p) { return p.by; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
@@ -577,10 +577,19 @@
     renderTimer = setTimeout(function () { renderTimer = null; render(); }, 400);
   }
 
+  // Other players' shops, from their live presence: only known businesses in real business districts, at most 12.
+  function cleanBiz(v) { return Array.isArray(v) ? v.slice(0, 12).filter(function (x) { return Array.isArray(x) && typeof x[0] === 'string' && typeof x[1] === 'string' && own(D.BUSINESSES, x[0]) && own(D.BUSINESS_SITES, x[1]); }).map(function (x) { return [x[0], x[1]]; }) : []; }
+  function shopsCard(pl) {
+    if (!own(D.BUSINESS_SITES, pl.district)) return '';
+    var rows = (S.businesses || []).filter(function (b) { return b.site === pl.district && own(D.BUSINESSES, b.id); }).map(function (b) { return [D.BUSINESSES[b.id].name, 'Yours' + (b.level ? ' · level ' + b.level : '')]; });
+    (online.peerList || []).filter(function (p) { return !online.muted[p.by]; }).forEach(function (p) { (p.biz || []).forEach(function (x) { if (x[1] === pl.district && rows.length < 16) rows.push([D.BUSINESSES[x[0]].name, handleOf(p.by) + ' · online now']); }); });
+    var dn = D.DISTRICTS[pl.district].name;
+    return '<div class="card-lite"><h3>🏪 Player shops in ' + esc(dn) + '</h3>' + (rows.length ? '<div class="list">' + rows.map(function (r) { return '<div class="item"><div><h3>' + esc(r[0]) + '</h3><div class="meta"><span>' + esc(r[1]) + '</span></div></div></div>'; }).join('') + '</div>' : '<p class="note">No player shops here right now. Open one from the Bank app under Businesses, and pick ' + esc(dn) + '.</p>') + '</div>';
+  }
   function syncPresence() {
     if (!online.room) return;
     var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null, pt = myParty();
-    var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : S && S.room && L.roomIn(S, S.room.id) ? 'room:' + S.room.id + ':' + S.room.spot : ui.visit || null, a: S ? myActivity() : null };
+    var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : S && S.room && L.roomIn(S, S.room.id) ? 'room:' + S.room.id + ':' + S.room.spot : ui.visit || null, a: S ? myActivity() : null, biz: S && S.businesses ? S.businesses.filter(function (b) { return b.site; }).slice(0, 12).map(function (b) { return [b.id, b.site]; }) : null };
     var key = JSON.stringify(pres);
     if (key === online.sentLoc) return;
     online.sentLoc = key;
@@ -1703,7 +1712,7 @@
       (pl.dealer ? dealerView() : '') +
       (DEP_PLACES[pl.id] ? departuresView(pl) : '') + (pl.club ? clubView(pl.club) : '') + (pl.cruise ? cruiseCard() : '') + roomCardFor(pl.id) + (pl.hydepark ? hydeParkView() : '') +
       (pl.id === 'airport' && !S.challenge ? japaView() : '') +
-      hrCards(pl) + (pl.shares ? sharesCard(pl) : '') +
+      hrCards(pl) + (pl.shares ? sharesCard(pl) : '') + shopsCard(pl) +
       (function () { var g = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return g ? '<div class="gem-here"><span>💎 A gem is hidden here.</span>' + (here ? '<button class="btn sm" id="gemp-' + g.n + '" data-gem="' + g.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '<span class="muted">Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to pick it up.</span>') + '</div>' : ''; })() +
       (here || pl.dealer ? '' : rideRow(pl.district));
   }
@@ -2080,7 +2089,7 @@
   var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', badge: 'govt', ballot: 'govt', gavel: 'govt', book: 'campus', hotel: 'nightlife', dice: 'nightlife', tower: 'tech', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
   // Nightlife rooms drawn in 3D: the club strips, lounges and the members' house (not the harbour, which has its own scene).
   // Every other kind of place opens as a street scene or an interior hall in 3D; music venues use the club hall.
-  var PLACE3D = { eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
+  var PLACE3D = { conference: 'hall', funpark: 'park', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
   function NIGHT3D(pl) { return (pl.type === 'nightlife' && pl.glyph === 'glass' && !/^harbour_/.test(pl.id)) || pl.id === 'club_tidewater'; }
   function venueSet(pl) {
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
@@ -2124,7 +2133,7 @@
     }) : []).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return !def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0; }).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: '🎊', short: venueShort(def.label), off: !a || a.disabled, fest: true };
-    }) : []).concat(S.rules >= 17 && !pl.club ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) { // festivals (in season) come before the everyday inside acts, so they get a sign
+    }) : []).concat(S.rules >= 17 && !pl.club && !pl.civic ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) { // festivals (in season) come before the everyday inside acts, so they get a sign
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled, inside: true };
     }) : []);
@@ -2287,7 +2296,7 @@
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
-    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
+    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
     if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
@@ -2538,7 +2547,7 @@
     return '<div class="rides" role="radiogroup" aria-label="How to get there">' + opts.map(function (o) {
       var on = sel && o.mode === sel.mode;
       return '<button type="button" class="ride' + (on ? ' sel' : '') + '" role="radio" aria-checked="' + on + '" id="ride-' + o.mode + '" data-ridemode="' + o.mode + '"' + (o.disabled ? ' disabled title="' + esc(o.disabled) + '"' : '') + '>' +
-        (icon3d(MODE_ICONS[o.mode]) || '<span class="ride-e">' + (MODE_EMOJI[o.mode] || '🚌') + '</span>') + '<b>' + esc(o.name) + '</b><span class="num">' + (o.cost ? N(o.cost) : o.mode === 'trek' && S.rules >= 17 ? 'Free · open' : 'Free') + '</span></button>';
+        (icon3d(MODE_ICONS[o.mode]) || '<span class="ride-e">' + (MODE_EMOJI[o.mode] || '🚌') + '</span>') + '<b>' + esc(modeName(o)) + '</b><span class="num">' + (o.cost ? N(o.cost) : o.mode === 'trek' && S.rules >= 17 ? 'Free · open' : 'Free') + '</span></button>';
     }).join('') + '</div>' + (rush ? '<p class="why">🚦 Go-slow: the roads are slow right now.</p>' : '') + (sel && sel.risk ? '<p class="why">' + esc(sel.risk) + '</p>' : '') + (sel && sel.tired ? '<p class="why">🥵 A long, slow walk: you rest on the way and arrive spent and stressed.</p>' : '') +
       (sel ? '<button class="btn go big-go" id="ride-go" data-travel="' + dest + '" data-mode="' + sel.mode + '">Go · ' + (sel.cost ? N(sel.cost) : 'free') + ' · ' + dur(sel.mins) + '</button>' : '<p class="why">No way to get there right now.</p>');
   }
@@ -2559,12 +2568,15 @@
   // Mounted outside the app so live re-renders never restart it. Tap anywhere or Arrive to skip.
   // Towns on the road between the cities, for the coach (the real routes, in order).
   var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'] };
+  // Abuja's own words for the same rides (display only: the engine and its ledger keep the mode names).
+  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' } };
+  function modeName(o) { var m = CITY_MODE_NAMES[L.cityOf(S)]; return (m && own(m, o.mode)) ? m[o.mode] : o.name; }
   var RIDE_NAMES = { coach: 'Savanna Line coach', danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
   function showRide(from, to, mode, t0) {
     var old = document.getElementById('ride-view'); if (old) old.remove();
     if (!D.DISTRICTS[from] || !D.DISTRICTS[to] || from === to) return;
     var chauffeur = mode === 'car' && (S.staff || []).some(function (x) { return x.id === 'driver' || x === 'driver'; });
-    var name = chauffeur ? 'VIP chauffeur' : (RIDE_NAMES[mode] || 'Ride'), water = mode === 'ferry' || mode === 'boat', air = mode === 'heli' || mode === 'flight' || mode === 'jet';
+    var cm = CITY_MODE_NAMES[L.cityOf(S)], name = chauffeur ? 'VIP chauffeur' : (cm && own(cm, mode) ? cm[mode] : RIDE_NAMES[mode] || 'Ride'), water = mode === 'ferry' || mode === 'boat', air = mode === 'heli' || mode === 'flight' || mode === 'jet';
     var cf = L.districtCity(from), ctt = L.districtCity(to), coach = mode === 'coach', route = coach ? (COACH_ROUTE[cf + '-' + ctt] || (COACH_ROUTE[ctt + '-' + cf] || []).slice().reverse()) : null;
     var sights = coach ? route : passing(from, to).slice(0, 3);
     if (!air && !sights.length) {
@@ -2889,7 +2901,7 @@
     var km = opts.length ? opts[0].km : 0;
     var rows = opts.filter(function (o) { return !(o.mode === 'car' && !S.car); }).map(function (o) {
       var meta = dur(o.mins) + ' · ' + (o.cost ? N(o.cost) : 'free') + (o.energy ? ' · −' + o.energy + ' energy' : '') + (o.traffic > 1.3 ? ' · go-slow ×' + o.traffic : '') + (o.wet && !L.outfitTags(S).rain ? ' · you will get wet' : '');
-      return '<div class="mode' + (o.disabled ? ' dis' : '') + '"><b>' + (icon3d(MODE_ICONS[o.mode]) || '') + esc(o.name) + '</b><div class="meta">' + (o.disabled ? esc(o.disabled) : meta) +
+      return '<div class="mode' + (o.disabled ? ' dis' : '') + '"><b>' + (icon3d(MODE_ICONS[o.mode]) || '') + esc(modeName(o)) + '</b><div class="meta">' + (o.disabled ? esc(o.disabled) : meta) +
         (o.risk && !o.disabled ? '<em>' + esc(o.risk) + '</em>' : '') + '</div>' +
         '<button class="btn sm go" id="go-' + o.mode + '" data-travel="' + dest + '" data-mode="' + o.mode + '"' + (o.disabled ? ' disabled' : '') + '>Go</button></div>';
     }).join('');

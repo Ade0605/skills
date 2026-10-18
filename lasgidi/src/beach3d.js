@@ -813,13 +813,28 @@
       else if (/gate/.test(id)) { var gateM = mat('gate', { color: 0xf1ece2, roughness: 0.6 }); [-16, 16].forEach(function (x) { parkG.add(mesh(new T.BoxGeometry(5, 26, 5), gateM, x, 13, 70)); }); parkG.add(mesh(new T.BoxGeometry(40, 5, 6), gateM, 0, 28, 70)); parkG.add(mesh(new T.TorusGeometry(10, 1.2, 8, 32, Math.PI), mat('gateG', { color: 0x1d7a43 }), 0, 30, 70)); }
       else if (/lcc/.test(id)) { for (var cw = 0; cw < 8; cw++) { var x0 = -40 + cw * 12, pts = []; for (var cu = 0; cu <= 10; cu++) { var uu = cu / 10; pts.push(new T.Vector3(x0 + uu * 12, 12 - Math.sin(uu * Math.PI) * 1.4, 40 + Math.sin(cw) * 6)); } parkG.add(new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x5a4632 }))); parkG.add(mesh(new T.CylinderGeometry(0.4, 0.5, 13, 6), trunkM, x0, 6.5, 40 + Math.sin(cw) * 6)); var plat = mesh(new T.CylinderGeometry(1.6, 1.6, 0.3, 10), mat('plank0', { color: 0x7a5a3a }), x0, 12, 40 + Math.sin(cw) * 6); parkG.add(plat); } }
       else if (/zoo/.test(id)) { [[-34, 40], [0, 46], [34, 40]].forEach(function (zq, zi) { for (var zp = 0; zp < 14; zp++) { var za = zp / 14 * Math.PI * 2; parkG.add(mesh(new T.CylinderGeometry(0.1, 0.1, 2.4, 6), frameM, zq[0] + Math.cos(za) * 9, 1.2, zq[1] + Math.sin(za) * 6)); } var an = new T.Group(); an.position.set(zq[0], 0, zq[1]); var am = mat('animal' + zi, { color: [0xc9a46a, 0x6b6b6b, 0x8a5a3c][zi], roughness: 0.8 }); an.add(mesh(new T.CapsuleGeometry(0.7, 1.6, 4, 8).rotateZ(Math.PI / 2), am, 0, 1.4, 0)); an.add(mesh(new T.SphereGeometry(0.5, 10, 8), am, 1.5, 1.9, 0)); [[-0.8, -0.4], [-0.8, 0.4], [0.8, -0.4], [0.8, 0.4]].forEach(function (lq) { an.add(mesh(new T.CylinderGeometry(0.12, 0.12, 1, 6), am, lq[0], 0.5, lq[1])); }); parkG.add(an); }); }
-      if (golf) golfCourse(r); if (/lcc/.test(id)) lccExtras(r);
+      if (golf) golfCourse(r); if (/lcc/.test(id)) lccExtras(r); if (/funpark/.test(id)) funRides();
       var rs = rnd(81); for (var tb = 0; tb < 26; tb++) { var ta = -1.2 + rs() * 2.4, td = 160 + rs() * 120; towerBlock(Math.sin(ta) * td, Math.cos(ta) * td + 40, 14 + rs() * 12, (/abj|ph_/.test(id) ? 12 : 25) + rs() * 70, 14 + rs() * 10, parkG, 0, PK.towers); }
       // Joggers and strollers going round the path, families on picnic blankets.
       var NW = golf ? 6 : 60, wb = [], wr = rnd(37); for (var w = 0; w < NW; w++) wb.push([wr(), (wr() < 0.3 ? 2.2 : 1) * (wr() < 0.5 ? 1 : -1) * (0.008 + wr() * 0.006), (wr() - 0.5) * 1.6, wr() * 6]);
       PK.walkers = squad(NW, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec][i % 7]; }, 1, parkG); PK.walkBase = wb; if (golf) { PK.walkers.body.visible = PK.walkers.head.visible = false; }
-      if (golf || /lcc/.test(id)) mergeStatic(parkG, [lawn].concat(PK.spray || [], PK.flags || [], (PK.golfers || []).map(function (g) { return g.pv; }), PK.ball ? [PK.ball] : [], (PK.monkeys || []).map(function (k) { return k.m; })));
+      if (golf || /lcc|funpark|zoo/.test(id)) mergeStatic(parkG, [lawn].concat(PK.spray || [], PK.flags || [], (PK.golfers || []).map(function (g) { return g.pv; }), PK.ball ? [PK.ball] : [], (PK.monkeys || []).map(function (k) { return k.m; })));
       for (var pc = 0; pc < (golf ? 0 : 6); pc++) { var px = -24 + pc * 9 + r() * 3, pz = -12 + (pc % 2) * 30; var bl = mesh(new T.BoxGeometry(3, 0.04, 2.4), mat('blanket' + pc % 3, { color: [0xc0392b, 0x1f5fa0, 0xf2b600][pc % 3], roughness: 0.9 }), px, 0.05, pz); bl.castShadow = false; parkG.add(bl); }
+    }
+    // Capital Fun Park: a Ferris wheel, a carousel and a bumper-car rink.
+    function funRides() {
+      var steel = mat('funSteel', { color: 0xdfe3e8, metalness: 0.7, roughness: 0.3 }), W = new T.Group(); W.position.set(0, 16, 46);
+      W.add(mesh(new T.TorusGeometry(14, 0.25, 6, 48), steel, 0, 0, 0)); W.add(mesh(new T.TorusGeometry(14, 0.25, 6, 48), steel, 0, 0, 1.6));
+      for (var sp = 0; sp < 12; sp++) { var a = sp / 12 * Math.PI * 2, spk = mesh(new T.BoxGeometry(0.2, 14, 0.2), steel, Math.cos(a) * 7, Math.sin(a) * 7, 0.8); spk.rotation.z = a - Math.PI / 2; W.add(spk); }
+      PK.cabins = []; for (var cb = 0; cb < 12; cb++) { var ca = cb / 12 * Math.PI * 2, cab = mesh(new T.BoxGeometry(2, 1.8, 1.6), mat('funCab' + cb % 4, { color: [0xc0392b, 0xf2b600, 0x2f6fa0, 0x16a35a][cb % 4], roughness: 0.4 }), Math.cos(ca) * 14, Math.sin(ca) * 14 - 1.2, 0.8); W.add(cab); PK.cabins.push(cab); }
+      parkG.add(W); PK.wheel = W; W.userData.dyn = true; [-1, 1].forEach(function (sd) { var leg = mesh(new T.BoxGeometry(0.5, 18, 0.5), steel, sd * 5, 8, 44.6); leg.rotation.z = sd * 0.28; parkG.add(leg); var leg2 = leg.clone(); leg2.position.z = 49; parkG.add(leg2); });
+      var C = new T.Group(); C.position.set(-30, 0, 28); C.add(mesh(new T.CylinderGeometry(7, 7, 0.6, 32), mat('carDeck', { color: 0xf4f3ec }), 0, 0.5, 0)); C.add(mesh(new T.ConeGeometry(7.6, 3, 16), mat('carTop', { color: 0xc0392b, roughness: 0.5 }), 0, 6.8, 0)); C.add(mesh(new T.CylinderGeometry(0.6, 0.6, 5.4, 10), steel, 0, 3.2, 0));
+      for (var hs = 0; hs < 8; hs++) { var ha = hs / 8 * Math.PI * 2, hg = new T.Group(); hg.position.set(Math.cos(ha) * 5, 0, Math.sin(ha) * 5); hg.rotation.y = -ha; hg.add(mesh(new T.CylinderGeometry(0.06, 0.06, 4.6, 6), mat('funGold', { color: 0xd4af37, metalness: 0.8, roughness: 0.3 }), 0, 3, 0)); hg.add(mesh(new T.BoxGeometry(0.5, 0.7, 1.6), mat('funCab' + hs % 4, {}), 0, 2, 0)); hg.add(mesh(new T.BoxGeometry(0.35, 0.6, 0.4), mat('funCab' + hs % 4, {}), 0, 2.6, 0.75)); C.add(hg); }
+      C.userData.dyn = true; parkG.add(C); PK.carousel = C;
+      var rk = new T.Group(); rk.position.set(30, 0, 28); rk.add(mesh(new T.BoxGeometry(18, 0.15, 12), mat('rink', { color: 0x2b2f36, roughness: 0.3, metalness: 0.3 }), 0, 0.08, 0)); [[0, -6, 18, 0.2], [0, 6, 18, 0.2], [-9, 0, 0.2, 12], [9, 0, 0.2, 12]].forEach(function (q) { rk.add(mesh(new T.BoxGeometry(q[2] || 0.2, 0.8, q[3] || 0.2), mat('rinkRail', { color: 0xf2b600 }), q[0], 0.5, q[1])); });
+      rk.add(mesh(new T.BoxGeometry(18.4, 0.3, 12.4), mat('rinkRoof', { color: 0x2f6fa0 }), 0, 5, 0)); [[-9, -6], [9, -6], [-9, 6], [9, 6]].forEach(function (q) { rk.add(mesh(new T.CylinderGeometry(0.15, 0.15, 5, 6), steel, q[0], 2.5, q[1])); }); parkG.add(rk);
+      PK.bumpers = []; for (var bc = 0; bc < 6; bc++) { var car = new T.Group(); car.add(mesh(new T.BoxGeometry(1.8, 0.7, 1.3), mat('funCab' + bc % 4, {}), 0, 0.55, 0)); car.add(mesh(new T.TorusGeometry(0.8, 0.12, 6, 16).rotateX(Math.PI / 2), mat('tyre', { color: 0x111111 }), 0, 0.3, 0)); car.position.set(30, 0, 28); car.userData.dyn = true; parkG.add(car); PK.bumpers.push({ g: car, ph: bc * 1.7 }); }
+      [['FERRIS WHEEL', 0, 30], ['CAROUSEL', -30, 37], ['BUMPER CARS', 30, 36]].forEach(function (q) { var st = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#c0392b'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 56px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(q[0], w / 2, h / 2); }); var sm = new T.Mesh(new T.PlaneGeometry(8, 1.5), new T.MeshBasicMaterial({ map: st })); sm.position.set(q[1], 7.5, q[2]); sm.rotation.y = Math.PI; parkG.add(sm); });
     }
     function parkFrame(t, night) {
       var W = PK.walkers, m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), one = new T.Vector3(1, 1, 1), n = night ? Math.round(W.n * 0.25) : W.n;
@@ -830,6 +845,7 @@
       if (PK.flags) PK.flags.forEach(function (f, i) { f.rotation.y = Math.sin(t * 2 + i) * 0.3; });
       if (PK.golfers) { PK.golfers.forEach(function (g, i) { var c = ((t * 0.5 + g.ph) % 3), sw = c < 1 ? -c * 2.2 : c < 1.2 ? -2.2 + (c - 1) * 22 : 2.2 - Math.min(2.2, (c - 1.2) * 3); g.pv.rotation.z = sw * 0.8; });
         var h = GOLF_HOLES[Math.floor(t / 5) % GOLF_HOLES.length], u = (t % 5) / 5; PK.ball.position.set(h[0] + (h[2] - h[0]) * u, 0.2 + Math.sin(u * Math.PI) * 14, h[1] + (h[3] - h[1]) * u); }
+      if (PK.wheel && !reduce) { PK.wheel.rotation.z = t * 0.12; PK.cabins.forEach(function (c) { c.rotation.z = -t * 0.12; }); PK.carousel.rotation.y = t * 0.6; PK.carousel.children.forEach(function (h, i) { if (i > 2) h.position.y = Math.sin(t * 2 + i) * 0.4; }); PK.bumpers.forEach(function (b) { var a = t * 0.7 + b.ph; b.g.position.set(30 + Math.sin(a) * 7, 0, 28 + Math.sin(a * 1.6 + b.ph) * 4.5); b.g.rotation.y = a * 1.3; }); }
       if (PK.monkeys) PK.monkeys.forEach(function (k) { var a = t * 0.8 + k.ph; k.m.position.set(k.p[0] + Math.cos(a) * 2, 11.5 + Math.abs(Math.sin(t * 3 + k.ph)) * 0.8, k.p[1] + Math.sin(a) * 2); }); PK.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; });
     }
 
@@ -870,7 +886,7 @@
     function campusSign(text, bg, fg, w, x, y, z, ry, grp) { var t = canvasTex(1024, 160, function (g, cw, ch) { g.fillStyle = bg; g.fillRect(0, 0, cw, ch); g.fillStyle = fg; g.font = '900 88px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, cw / 2, ch / 2 + 4, cw - 40); }); var m = new T.Mesh(new T.PlaneGeometry(w, w * 0.156), new T.MeshBasicMaterial({ map: t, side: T.DoubleSide })); m.position.set(x, y, z); m.rotation.y = ry || 0; (grp || plzG).add(m); return m; }
     function campusFig(i, x, z, ry, sit) { var f = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('unilag', i), 130 + i) : person(130 + i, i % 2 === 1); f.position.set(x, sit ? 0.5 : 0.05, z); f.rotation.y = ry || 0; if (sit && f.userData.legs) f.userData.legs.forEach(function (l) { l.rotation[f.userData.axis || 'z'] = -1.2; }); plzG.add(f); return f; }
     function campusBuild() {
-      var UP = sc.placeId === 'ph_uniport';
+      var CN = { ph_uniport: ['UNIVERSITY OF PORT HARCOURT', "MAMA NGOZI'S BUKA · RICE AND BEANS N1200"], abj_uni: ['UNIVERSITY OF ABUJA', "MAMA HAUWA'S BUKA · RICE AND BEANS N1200"], abj_chu: ['CAPITAL HEIGHTS UNIVERSITY', "MAMA HAUWA'S BUKA · RICE AND BEANS N1200"] }[sc.placeId] || ['UNIVERSITY OF LAGOS', "MAMA B'S BUKA · RICE AND BEANS N1200"], DRY = /^abj_/.test(sc.placeId || '');
       var wall = mat('cwall', { color: 0xf1ede4, roughness: 0.7 }), wood = mat('cwood', { color: 0x8a5a33, roughness: 0.8 }), dark = mat('cdark', { color: 0x1f2a44 });
       // the Senate Building: a tall white tower with window bands, and the admissions desk at its foot
       var sen = new T.Group(); sen.position.set(0, 0, 70); sen.add(mesh(new T.BoxGeometry(26, 48, 16), wall, 0, 24, 0)); for (var fl = 1; fl < 12; fl++) sen.add(mesh(new T.BoxGeometry(26.2, 1.4, 16.2), glassM, 0, fl * 4, 0)); plzG.add(sen);
@@ -888,7 +904,7 @@
       var bu = new T.Group(); bu.position.set(30, 0, -26); bu.add(mesh(new T.BoxGeometry(12, 0.3, 6), mat('canopyB', { color: 0xe0c27a }), 0, 4.6, 0)); [[-5.6, -2.6], [5.6, -2.6], [-5.6, 2.6], [5.6, 2.6]].forEach(function (q) { bu.add(mesh(new T.CylinderGeometry(0.12, 0.12, 4.6, 6), mat('cpost', { color: 0x666666 }), q[0], 2.3, q[1])); });
       bu.add(mesh(new T.BoxGeometry(10, 1.8, 2), mat('bcounter', { color: 0x1f3b9a }), 0, 0.9, 1.6)); for (var pt = 0; pt < 4; pt++) bu.add(mesh(new T.CylinderGeometry(0.8, 0.7, 1, 16), mat('pot', { color: 0x3a3a3a, metalness: 0.5 }), -3.6 + pt * 2.4, 2.3, 1.6));
       for (var bt = 0; bt < 2; bt++) { bu.add(mesh(new T.BoxGeometry(8, 0.2, 2), wood, 0, 1.4, -4.5 - bt * 4)); bu.add(mesh(new T.BoxGeometry(8, 0.2, 0.7), wood, 0, 0.8, -3.2 - bt * 4)); bu.add(mesh(new T.BoxGeometry(8, 0.2, 0.7), wood, 0, 0.8, -5.8 - bt * 4)); bu.add(mesh(new T.CylinderGeometry(0.5, 0.5, 0.06, 14), mat('plate', { color: 0xffffff }), -2 + bt * 3, 1.55, -4.5 - bt * 4)); }
-      plzG.add(bu); campusSign(UP ? "MAMA NGOZI'S BUKA · RICE AND BEANS N1200" : "MAMA B'S BUKA · RICE AND BEANS N1200", '#1f3b9a', '#ffffff', 11, 30, 3.6, -24.25, Math.PI); campusFig(10, 30, -22.6, -Math.PI / 2); campusFig(11, 28, -30.5, Math.PI / 2, true);
+      plzG.add(bu); campusSign(CN[1], '#1f3b9a', '#ffffff', 11, 30, 3.6, -24.25, Math.PI); campusFig(10, 30, -22.6, -Math.PI / 2); campusFig(11, 28, -30.5, Math.PI / 2, true);
       // a hall of residence room, cut away: bunk beds, a locker and a red bucket
       var hr = new T.Group(); hr.position.set(-32, 0, -26); hr.add(mesh(new T.BoxGeometry(12, 0.2, 10), mat('hfloor', { color: 0x9a9a9a }), 0, 0.1, 0)); hr.add(mesh(new T.BoxGeometry(12, 6, 0.3), mat('hwall', { color: 0xdfe8d8 }), 0, 3, 5)); hr.add(mesh(new T.BoxGeometry(0.3, 6, 10), mat('hwall', {}), -6, 3, 0));
       [0, 1].forEach(function (bb) { var bx = -3 + bb * 5.5; [0.9, 3].forEach(function (y) { hr.add(mesh(new T.BoxGeometry(4, 0.4, 2), mat('bunkm', { color: 0x1f3b9a }), bx, y, 2.6)); }); [[-2, 1.6], [2, 1.6], [-2, 3.6], [2, 3.6]].forEach(function (q) { hr.add(mesh(new T.BoxGeometry(0.15, 4, 0.15), mat('bunkf', { color: 0x2b2d33 }), bx + q[0], 2, q[1])); }); });
@@ -897,9 +913,9 @@
       var pc = new T.Group(); pc.position.set(-20, 0, 8); pc.add(mesh(new T.BoxGeometry(18, 0.06, 11), mat('pitch5', { color: 0x2f8f3a }), 0, 0.06, 0)); pc.add(mesh(new T.BoxGeometry(0.15, 0.08, 11), mat('pline', { color: 0xffffff }), 0, 0.1, 0)); [-9, 9].forEach(function (x) { pc.add(mesh(new T.BoxGeometry(0.12, 2, 0.12), mat('pline', {}), x, 1, -1.8)); pc.add(mesh(new T.BoxGeometry(0.12, 2, 0.12), mat('pline', {}), x, 1, 1.8)); pc.add(mesh(new T.BoxGeometry(0.12, 0.12, 3.7), mat('pline', {}), x, 2, 0)); });
       PZ.ball = mesh(new T.SphereGeometry(0.3, 12, 8), mat('ballw', { color: 0xffffff }), 0, 0.35, 0); pc.add(PZ.ball); plzG.add(pc); PZ.players = []; for (var pl = 0; pl < 4; pl++) PZ.players.push(campusFig(20 + pl, -20 + (pl - 1.5) * 4, 8 + (pl % 2 ? 2 : -2), 0));
       // the lagoon front, the gate sign
-      var lag = new T.Mesh(new T.PlaneGeometry(200, 30).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x3a7f9f, roughness: 0.08, clearcoat: 1 })); lag.position.set(0, 0.04, -62); plzG.add(lag);
+      var lag = new T.Mesh(new T.PlaneGeometry(200, 30).rotateX(-Math.PI / 2), (DRY ? mat('plzlawn', {}) : new T.MeshPhysicalMaterial({ color: 0x3a7f9f, roughness: 0.08, clearcoat: 1 }))); lag.position.set(0, 0.04, -62); plzG.add(lag);
       for (var lb = 0; lb < 5; lb++) plzG.add(mesh(new T.BoxGeometry(3, 0.25, 0.8), wood, -24 + lb * 12, 0.9, -45)); campusFig(24, -12, -44.4, Math.PI / 2, true); campusFig(25, -10.6, -44.4, Math.PI / 2, true);
-      [-10, 10].forEach(function (x) { plzG.add(mesh(new T.BoxGeometry(1.4, 8, 1.4), wall, x, 4, 18)); }); campusSign(UP ? 'UNIVERSITY OF PORT HARCOURT' : 'UNIVERSITY OF LAGOS', '#1f2a44', '#f2c200', 18, 0, 8.6, 18, Math.PI);
+      [-10, 10].forEach(function (x) { plzG.add(mesh(new T.BoxGeometry(1.4, 8, 1.4), wall, x, 4, 18)); }); campusSign(CN[0], '#1f2a44', '#f2c200', 18, 0, 8.6, 18, Math.PI);
     }
     function buildPlaza() {
       wipe(plzG); var id = sc.placeId || 'plaza'; PZ = { glow: [], domes: [], flags: [], lamps: [], towers: [] };
@@ -915,7 +931,7 @@
         var st = mat('stand', { color: 0xf4f1ea, roughness: 0.7 }); for (var tier = 0; tier < 8; tier++) plzG.add(mesh(new T.BoxGeometry(120, 1.2, 3), st, 0, 0.6 + tier * 1.2, 70 + tier * 3)); var can = mesh(new T.BoxGeometry(124, 0.6, 30), mat('canopy', { color: 0x1d7a43, roughness: 0.5 }), 0, 16, 80); can.rotation.x = -0.08; plzG.add(can); for (var cp = -60; cp <= 60; cp += 15) plzG.add(mesh(new T.CylinderGeometry(0.5, 0.5, 16, 8), st, cp, 8, 94));
         if (/tbs/.test(id)) { [-30, 30].forEach(function (hx) { var hs = new T.Group(); hs.position.set(hx, 0, 30); hs.add(mesh(new T.BoxGeometry(6, 4, 6), st, 0, 2, 0)); var hm = mat('bronze', { color: 0x6b4a2b, metalness: 0.6, roughness: 0.4 }); hs.add(mesh(new T.CapsuleGeometry(1.2, 4, 4, 8).rotateZ(Math.PI / 2 - 0.5), hm, 0, 7, 0)); hs.add(mesh(new T.CapsuleGeometry(0.6, 2, 4, 8).rotateZ(-0.6), hm, 2.6, 9.2, 0)); [[-1.6, -0.8], [-1.6, 0.8], [1.2, -0.8], [1.2, 0.8]].forEach(function (lq) { hs.add(mesh(new T.CylinderGeometry(0.3, 0.3, 3, 6), hm, lq[0], 5, lq[1])); }); plzG.add(hs); }); }
         else { var eg = new T.Group(); eg.position.set(0, 0, 36); eg.add(mesh(new T.CylinderGeometry(3, 4, 8, 12), st, 0, 4, 0)); var em = mat('eagle', { color: 0x2b2f36, metalness: 0.6, roughness: 0.35 }); eg.add(mesh(new T.SphereGeometry(2, 16, 12), em, 0, 10, 0)); [-1, 1].forEach(function (sd) { var wg = mesh(new T.BoxGeometry(9, 0.4, 2.6), em, sd * 5, 11.5, 0); wg.rotation.z = sd * 0.35; eg.add(wg); }); eg.add(mesh(new T.ConeGeometry(0.7, 2, 8), mat('gold', { color: 0xd4af37, metalness: 0.8 }), 0, 11.2, -2.2)); plzG.add(eg); }
-      } else if (id === 'unilag' || id === 'ph_uniport') { campusBuild(); }
+      } else if (/^(unilag|ph_uniport|abj_uni|abj_chu)$/.test(id)) { campusBuild(); }
       else stateHouse(0, 60, /threearms/.test(id));
       // Flags along the plaza, a fountain at its heart, lamps, palms, and the city behind.
       var flagT = canvasTex(96, 64, function (c, w, h) { c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
@@ -929,7 +945,7 @@
       // People crossing the plaza; a crowd on worship days (Friday at the mosque, Sunday at the church).
       var NW = 140, wr = rnd(43), wb = []; for (var w = 0; w < NW; w++) wb.push([-40 + wr() * 80, -36 + wr() * 70, (wr() - 0.5) * 2, (wr() - 0.5) * 2, wr() * 6]);
       PZ.walkers = squad(NW, function (i) { return [0xf4f3ec, 0xf4f3ec, 0x2f6fa0, 0x1d7a43, 0xc0392b, 0x8e44ad, 0xf2b600][i % 7]; }, 1, plzG); PZ.walkBase = wb;
-      if (id === 'unilag' || id === 'ph_uniport') mergeStatic(plzG, [pave, gr].concat(PZ.spray || [], PZ.flags || [], PZ.ball ? [PZ.ball] : []));
+      if (/^(unilag|ph_uniport|abj_uni|abj_chu)$/.test(id)) mergeStatic(plzG, [pave, gr].concat(PZ.spray || [], PZ.flags || [], PZ.ball ? [PZ.ball] : []));
     }
     function plazaFrame(t, night) {
       if (PZ.ball) { var bu = t * 0.7; PZ.ball.position.set(Math.sin(bu) * 7, 0.35 + Math.abs(Math.sin(t * 3)) * 0.6, Math.sin(bu * 1.7) * 3.5); (PZ.players || []).forEach(function (f, k) { var lg = f.userData.legs; f.position.x = -20 + (k - 1.5) * 4 + Math.sin(bu + k) * 1.5; if (lg && !reduce) { lg[0].rotation[f.userData.axis || 'z'] = Math.sin(t * 7 + k) * 0.5; lg[1].rotation[f.userData.axis || 'z'] = -Math.sin(t * 7 + k) * 0.5; } }); }
@@ -1038,6 +1054,21 @@
         var can = zincRoof(46, 22, 7, 0.06); can.position.z = 6; B.add(can); for (var cp = -22; cp <= 22; cp += 11) [-4, 16].forEach(function (z) { B.add(mesh(new T.CylinderGeometry(0.25, 0.25, 7, 8), frameM, cp, 3.5, z)); });
         for (var db = 0; db < 8; db++) { var dn = danfo(); dn.position.set(-18 + (db % 4) * 12, 0, 1 + Math.floor(db / 4) * 9); dn.rotation.y = Math.PI / 2; B.add(dn); }
         B.add(mesh(new T.BoxGeometry(5, 3, 3), mat('kiosk', { color: 0xf4f3ec }), 20, 1.5, -6)); signBoard(B, title, 'LAGOS · IBADAN · ABUJA · PH · BENIN', '#1f5fa0', 0, 8.6, -5.2, 20);
+        // The ticket office, the tea and bread stall, the drivers' bench, and the intercity coaches loading behind the shed.
+        var tko = new T.Group(); tko.position.set(-30, 0, 2); tko.add(mesh(new T.BoxGeometry(7, 4, 5), mat('tko', { color: 0x1f5fa0, roughness: 0.6 }), 0, 2, 0)); tko.add(mesh(new T.BoxGeometry(7.4, 0.3, 5.6), mat('tkoRoof', { color: 0xf4f3ec }), 0, 4.15, 0));
+        [-2, 0, 2].forEach(function (x) { tko.add(mesh(new T.BoxGeometry(1.4, 1.2, 0.1), glassM, x, 2.2, -2.55)); }); tko.add(mesh(new T.BoxGeometry(6.6, 0.15, 0.7), mat('tkoSill', { color: 0xf4f3ec }), 0, 1.5, -2.8)); B.add(tko); signBoard(B, 'TICKETS', 'LAGOS · PH · KANO · JOS · ENUGU', '#c0392b', -30, 5.3, -0.7, 8);
+        var tq = 0; for (var tqq = 0; tqq < 4; tqq++) { var qp = person(60 + tqq, tqq % 2 === 1); qp.position.set(-31 + tqq * 0.1, 0, -2 - tqq * 1.3); qp.rotation.y = Math.PI / 2; B.add(qp); tq++; }
+        var tea = new T.Group(); tea.position.set(8, 0, -8.2); tea.add(mesh(new T.BoxGeometry(3.2, 0.15, 1.4), mat('teaTop', { color: 0x8a5a33 }), 0, 1.3, 0)); [[-1.4, -0.5], [1.4, -0.5], [-1.4, 0.5], [1.4, 0.5]].forEach(function (q) { tea.add(mesh(new T.BoxGeometry(0.1, 1.3, 0.1), mat('teaTop', {}), q[0], 0.65, q[1])); });
+        tea.add(mesh(new T.CylinderGeometry(0.3, 0.35, 0.6, 12), mat('kettle', { color: 0xc7ccd1, metalness: 0.8, roughness: 0.3 }), -1, 1.7, 0)); for (var lf = 0; lf < 4; lf++) tea.add(mesh(new T.BoxGeometry(0.5, 0.35, 0.9), mat('bread', { color: 0xd9a35a, roughness: 0.8 }), 0.1 + lf * 0.55, 1.55, 0));
+        tea.add(mesh(new T.CylinderGeometry(0.05, 0.05, 3.4, 6), frameM, 0, 1.7, 0.6)); var umb = mesh(new T.ConeGeometry(2.2, 0.8, 10, 1, true), mat('teaUmb', { color: 0x16a35a, side: T.DoubleSide }), 0, 3.6, 0.6); tea.add(umb); B.add(tea);
+        var mai = person(64, false); mai.position.set(8, 0, -7); mai.rotation.y = -Math.PI / 2; B.add(mai); signBoard(B, 'MAI SHAYI', 'TEA · BREAD · EGG · INDOMIE', '#16a35a', 8, 4.4, -9.3, 5);
+        B.add(mesh(new T.BoxGeometry(7, 0.2, 1), mat('dbench', { color: 0x6b4a2b }), -9, 0.9, -8.6)); [-12, -6].forEach(function (x) { B.add(mesh(new T.BoxGeometry(0.2, 0.9, 0.8), mat('dbench', {}), x, 0.45, -8.6)); });
+        for (var dr = 0; dr < 3; dr++) { var dv = person(65 + dr, false); dv.position.set(-11.2 + dr * 2.2, 0.5, -8.6); dv.rotation.y = Math.PI / 2; if (dv.userData.legs) dv.userData.legs.forEach(function (l) { l.rotation[dv.userData.axis || 'z'] = -1.2; }); B.add(dv); }
+        signBoard(B, "DRIVERS' UNION", 'NO SMOKING · WAIT YOUR TURN', '#17181a', -9, 3.2, -9.3, 5);
+        [-13, 13].forEach(function (x, ci) { var co = new T.Group(); co.position.set(x, 0, 25); co.add(mesh(new T.BoxGeometry(18, 3.6, 3.2), mat('coachW', { color: 0xf4f3ec, roughness: 0.35 }), 0, 2.4, 0)); co.add(mesh(new T.BoxGeometry(18.05, 0.6, 3.25), mat('coachS' + ci, { color: ci ? 0x1f5fa0 : 0x16a35a }), 0, 1.4, 0)); co.add(mesh(new T.BoxGeometry(16, 1.1, 3.3), glassM, 0.4, 3.2, 0));
+          [-6.5, -4.5, 5, 7].forEach(function (wx) { var wh = mesh(new T.CylinderGeometry(0.6, 0.6, 3.4, 12), mat('tyre', { color: 0x111111 }), wx, 0.6, 0); wh.rotation.x = Math.PI / 2; co.add(wh); }); B.add(co); });
+        for (var bg = 0; bg < 6; bg++) B.add(mesh(new T.BoxGeometry(0.9, 0.7, 0.6), mat('lug' + bg % 3, { color: [0xc0392b, 0x2f6fa0, 0x17181a][bg % 3] }), -18 + bg * 0.9, 0.35, 22.6));
+        mergeStatic(B, []);
       } else if (kind === 'salon') {
         B.add(mesh(new T.BoxGeometry(14, 5, 9), wall, 0, 2.5, 4.5)); B.add(mesh(new T.BoxGeometry(12, 3.6, 0.15), glassM, 0, 2.2, -0.05));
         for (var ch = 0; ch < 3; ch++) { B.add(mesh(new T.BoxGeometry(1.1, 1.2, 1.1), mat('bchair', { color: 0xc0392b, roughness: 0.4 }), -4 + ch * 4, 0.9, 4)); B.add(mesh(new T.BoxGeometry(2, 1.6, 0.1), mat('mirror', { color: 0xdfe8ee, metalness: 0.9, roughness: 0.05 }), -4 + ch * 4, 2.6, 8.9)); }
@@ -1139,7 +1170,7 @@
     // The High Court, the city library, the grand hotel, the casino and the office floor (rules 19 places).
     function buildMore(kind, room, floor, RW, RD, RH, DX, DZ) {
       var wood = mat('mwood', { color: 0x6b3f22, roughness: 0.6 }), gold = mat('mgold2', { color: 0xd4af37, metalness: 0.85, roughness: 0.25 });
-      poster(String(sc.name || '').replace(/,.*/, '').toUpperCase(), { court: '#3a2a12', library: '#1f3b63', hotel: '#17181a', casino: '#5a0f1a', office: '#1f2a44' }[kind], kind === 'hotel' || kind === 'casino' ? '#d4af37' : '#ffffff', 22, 1.8, 0, 8.4, RD / 2 - 0.3, Math.PI);
+      poster(String(sc.name || '').replace(/,.*/, '').toUpperCase(), { court: '#3a2a12', library: '#1f3b63', hotel: '#17181a', casino: '#5a0f1a', office: '#1f2a44', conference: '#0b3d2a' }[kind], kind === 'hotel' || kind === 'casino' ? '#d4af37' : '#ffffff', 22, 1.8, 0, 8.4, RD / 2 - 0.3, Math.PI);
       if (kind === 'court') {
         room.material.color.set(0xe9dfc9); floor.material.color.set(0x8a6a4a);
         galG.add(mesh(new T.BoxGeometry(14, 3.2, 3), wood, 0, 1.6, 16)); galG.add(mesh(new T.BoxGeometry(14.4, 0.25, 3.4), wood, 0, 3.3, 16)); chair(0, 18, Math.PI, 0x7a1f1f); var judge = flowFig(140, 0x17181a); judge.position.set(0, 1.6, 17.6); judge.rotation.y = -Math.PI / 2;
@@ -1186,6 +1217,21 @@
         [-26.5, -23.5].forEach(function (x) { galG.add(mesh(new T.BoxGeometry(2, 0.5, 1), linen, x, 1.6, 20)); }); galG.add(mesh(new T.BoxGeometry(5.9, 0.2, 3), mat('throw', { color: 0xd4af37, roughness: 0.6 }), -25, 1.45, 15.6)); poster('PRESIDENTIAL SUITE', '#17181a', '#d4af37', 8, 1, -25, 6.4, RD / 2 - 0.35, Math.PI);
         HS.forEach(function (f) { mergeStatic(f, [], true); }); // these guests never move: one draw per material each
         flow(trolley, [[DX + 1.5, DZ], [-12, 11.6], [20, 16], [DX + 1.5, DZ]], 1.5, 0, 4); flow(flowFig(174, 0x7a1f3a), [[DX, DZ + 1], [-11, 11.6], [20, 17], [DX, DZ + 1]], 1.5, 0, 4); flow(flowFig(175), [[DX, DZ - 1], [12, -5], [DX, DZ - 1]], 1.8, 7, 8); flow(flowFig(176), [[DX, DZ + 2], [-6, -6], [-12, 11.6], [DX, DZ + 2]], 1.6, 12, 6); flow(flowFig(177), [[DX, DZ - 2], [24, -2], [DX, DZ - 2]], 1.4, 18, 10);
+      } else if (kind === 'conference') {
+        // The plenary hall: a stage with a podium and a big screen, flags, and tiered rows of delegates.
+        room.material.color.set(0xe9e4da); floor.material.color.set(0x6a1f2a);
+        galG.add(mesh(new T.BoxGeometry(34, 1.2, 8), wood, 0, 0.6, 17)); galG.add(mesh(new T.BoxGeometry(34.4, 0.15, 8.4), gold, 0, 1.25, 17));
+        galG.add(mesh(new T.BoxGeometry(2, 2.2, 1.4), wood, 0, 2.3, 15)); galG.add(mesh(new T.CylinderGeometry(0.04, 0.04, 0.8, 6), frameM, 0, 3.7, 14.6)); var spk = flowFig(190, 0x17181a); spk.position.set(0, 1.25, 16.4); spk.rotation.y = -Math.PI / 2;
+        galG.add(mesh(new T.BoxGeometry(14, 0.15, 2), mat('ctable', { color: 0xf4f3ec }), -10, 2.4, 18.6)); [-14, -10, -6].forEach(function (x, i) { chair(x, 20, Math.PI, 0x17181a); }); galG.add(mesh(new T.BoxGeometry(14, 0.15, 2), mat('ctable', {}), 10, 2.4, 18.6)); [6, 10, 14].forEach(function (x) { chair(x, 20, Math.PI, 0x17181a); });
+        var scr = screenTex(1024, 512, function (g, w, h, t) { var gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#0b3d2a'); gr.addColorStop(1, '#127a4f'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 72px system-ui'; g.textAlign = 'center'; g.fillText('CAPITAL SUMMIT', w / 2, 200); g.font = '600 40px system-ui'; g.fillText(['Trade and jobs', 'Power for all', 'Youth and tech', 'Roads and rail'][Math.floor(t / 6) % 4], w / 2, 290); g.fillStyle = '#d4af37'; g.fillRect(w / 2 - 160, 330, 320, 6); });
+        var sm = new T.Mesh(new T.PlaneGeometry(13, 6.5), new T.MeshBasicMaterial({ map: scr })); sm.position.set(0, 4.6, RD / 2 - 0.3); sm.rotation.y = Math.PI; galG.add(sm); GL.screenTex = scr; redrawAt(scr, 0, 1);
+        var flagT = canvasTex(96, 64, function (g, w, h) { g.fillStyle = '#008751'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.fillRect(w / 3, 0, w / 3, h); }), flagM = new T.MeshStandardMaterial({ map: flagT, side: T.DoubleSide, roughness: 0.8 });
+        [-15, -12, 12, 15].forEach(function (x) { galG.add(mesh(new T.CylinderGeometry(0.06, 0.06, 5, 6), gold, x, 3.7, 20.4)); var fm = new T.Mesh(new T.PlaneGeometry(1.6, 1.1), flagM); fm.position.set(x + 0.8, 5.4, 20.4); galG.add(fm); });
+        var NA = 72, aud = squad(NA, function (i) { return [0x17181a, 0xf4f3ec, 0x1f3b63, 0x0b3d2a, 0x7a1f3a, 0xd4af37][i % 6]; }, 1, galG), m4 = new T.Matrix4();
+        for (var rw = 0; rw < 6; rw++) { var y = rw * 0.5, z = 8 - rw * 4; galG.add(mesh(new T.BoxGeometry(44, y + 0.01 || 0.01, 4), mat('ctier', { color: 0x5a1a24 }), 0, y / 2, z)); galG.add(mesh(new T.BoxGeometry(40, 0.15, 0.9), wood, 0, y + 1.5, z + 1.2));
+          for (var se = 0; se < 12; se++) { var k = rw * 12 + se; m4.makeTranslation(-18 + se * 3.3 + (rw % 2) * 0.8, y - 0.35, z - 0.4); aud.body.setMatrixAt(k, m4); aud.head.setMatrixAt(k, m4); } }
+        aud.body.instanceMatrix.needsUpdate = aud.head.instanceMatrix.needsUpdate = true; poster('DELEGATES ONLY', '#0b3d2a', '#fff', 6, 1, -20, 5, -RD / 2 + 0.3, 0); poster('EXPO HALL', '#d4af37', '#17181a', 5, 1, 20, 5, -RD / 2 + 0.3, 0);
+        flow(flowFig(191, 0x0b3d2a), [[DX, DZ], [-22, 10], [-22, -14], [DX, DZ]], 1.6, 0, 5); flow(flowFig(192, 0x17181a), [[DX, DZ + 1], [22, 12], [DX, DZ + 1]], 1.4, 8, 6);
       } else if (kind === 'casino') {
         room.material.color.set(0x2a0d14); floor.material.color.set(0x5a0f1a);
         var dome = new T.Mesh(new T.SphereGeometry(10, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), mat('cdome', { color: 0xd4af37, metalness: 0.9, roughness: 0.2, side: T.BackSide })); dome.position.set(0, RH - 1.5, 0); dome.scale.y = 0.25; galG.add(dome);
@@ -1214,7 +1260,7 @@
       var board = canvasTex(1024, 512, function () {}); GL.board = { tex: board, key: '', kind: kind };
       if (kind === 'police' || kind === 'polling') { var bm = new T.Mesh(new T.PlaneGeometry(12, 6), new T.MeshBasicMaterial({ map: board })); bm.position.set(0, 4, RD / 2 - 0.3); bm.rotation.y = Math.PI; galG.add(bm); galG.add(mesh(new T.BoxGeometry(12.6, 6.6, 0.3), mat('bframe', { color: 0x17181a }), 0, 4, RD / 2 - 0.1));
         poster(String(sc.name || '').toUpperCase(), kind === 'polling' ? '#16a35a' : '#1f2a44', '#ffffff', 22, 1.8, 0, 8.4, RD / 2 - 0.3, Math.PI); }
-      if (/^(court|library|hotel|casino|office)$/.test(kind)) buildMore(kind, room, floor, RW, RD, RH, DX, DZ);
+      if (/^(court|library|hotel|casino|office|conference)$/.test(kind)) buildMore(kind, room, floor, RW, RD, RH, DX, DZ);
       else if (kind === 'police') {
         room.material.color.set(0xd6dde6); floor.material.color.set(0x9aa3ad);
         galG.add(mesh(new T.BoxGeometry(3, 2.4, 14), mat('pdesk', { color: 0x1f2a44, roughness: 0.5 }), -6, 1.2, 4)); galG.add(mesh(new T.BoxGeometry(3.4, 0.2, 14.4), mat('pdtop', { color: 0xd9d4c7 }), -6, 2.5, 4));
@@ -1317,7 +1363,7 @@
           var ps = new T.Mesh(new T.PlaneGeometry(10, 2.5), new T.MeshBasicMaterial({ map: pt })); ps.position.set(14, RH - 2.4, -RD / 2 + 0.4); galG.add(ps);
           for (var pl2 = 0; pl2 < 3; pl2++) { galG.add(mesh(new T.CylinderGeometry(0.7, 0.55, 1.2, 12), mat('pot', { color: 0xd8c3a5 }), RW / 2 - 4, 0.6, -16 + pl2 * 14)); galG.add(mesh(new T.ConeGeometry(0.9, 2.6, 7), mat('leaf', { color: 0x2f8f4a }), RW / 2 - 4, 2.4, -16 + pl2 * 14)); } // potted plants
         }
-      } else if (/^(police|polling|hospital|court|library|hotel|casino|office)$/.test(kind)) {
+      } else if (/^(police|polling|hospital|court|library|hotel|casino|office|conference)$/.test(kind)) {
         tm.visible = false; buildCivic(kind, room, floor, RW, RD, RH);
         mergeStatic(galG, [room, floor].concat((GL.flow || []).map(function (f) { return f.g; }), GL.wheel ? [GL.wheel] : [], GL.steam || []));
       } else {
@@ -1331,9 +1377,9 @@
         galG.add(mesh(new T.CylinderGeometry(4, 4.4, 0.8, 32), mat('basin', { color: 0xc9ccd1 }), 0, 0.4, -2)); palm(0, -2, 6, 0.1);
       }
       GL.amb = new T.PointLight(0xffffff, 60, 90, 1); GL.amb.position.set(0, RH - 1, 0); galG.add(GL.amb);
-      var NW = kind === 'cinema' ? 70 : /^(police|polling|hospital|court|library|hotel|casino|office)$/.test(kind) ? 1 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
+      var NW = kind === 'cinema' ? 70 : /^(police|polling|hospital|court|library|hotel|casino|office|conference)$/.test(kind) ? 1 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
       GL.walkers = squad(NW, function (i) { return [0x17181a, 0xf4f3ec, 0xc0392b, 0x2f6fa0, 0x8e44ad, 0xe67e22][i % 6]; }, 1, galG); GL.walkBase = wb;
-      if (!/^(police|polling|hospital|court|library|hotel|casino|office)$/.test(kind)) mergeStatic(galG, [room, floor]); // civic rooms merged in their own branch
+      if (!/^(police|polling|hospital|court|library|hotel|casino|office|conference)$/.test(kind)) mergeStatic(galG, [room, floor]); // civic rooms merged in their own branch
     }
 
     /* ---------- weather: rain streaks (and lightning in a storm), harmattan dust ---------- */
