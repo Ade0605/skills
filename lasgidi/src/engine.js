@@ -710,7 +710,7 @@
   function insideActions(d) {
     if (INSIDE_AT[d]) return INSIDE_AT[d];
     var seen = {}, out = [];
-    D.PLACES.forEach(function (p) { if (p.district !== d) return; var k = D.insideKind(p); if (seen[k]) return; seen[k] = true; out = out.concat(D.INSIDE[k] || []); });
+    D.PLACES.forEach(function (p) { if (p.district !== d || p.civic) return; var k = D.insideKind(p); if (seen[k]) return; seen[k] = true; out = out.concat(D.INSIDE[k] || []); }); // civic places (rules 19) bring their own acts
     return (INSIDE_AT[d] = out);
   }
   // Festival acts (rules 18) at the places in a district, shown only in their month.

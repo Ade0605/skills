@@ -1649,7 +1649,8 @@
   // the shared election (gov.js), so nothing here pays well: the only gigs are small, once a day.
   var CIVIC_ACTS = {};
   var POLICE_DIVS = [['police_ikeja', 'ikeja', 9.3, 4.9, 'Ikeja'], ['police_oshodi', 'oshodi', 10.9, 9.6, 'Oshodi'], ['police_surulere', 'surulere', 9.4, 18.5, 'Surulere'],
-    ['police_yaba', 'yaba', 14.4, 15.6, 'Yaba'], ['police_island', 'island', 16.7, 21.4, 'Lagos Island'], ['police_lekki', 'lekki', 27.0, 24.6, 'Lekki']];
+    ['police_yaba', 'yaba', 14.4, 15.6, 'Yaba'], ['police_island', 'island', 16.7, 21.4, 'Lagos Island'], ['police_lekki', 'lekki', 27.0, 24.6, 'Lekki'],
+    ['police_garki', 'abj_garki', 16.6, 15.4, 'Garki'], ['police_phgra', 'ph_gra', 12.6, 11.4, 'GRA Port Harcourt']];
   var CIVIC_PLACES = POLICE_DIVS.map(function (b) {
     var id = b[0];
     CIVIC_ACTS[id] = [
@@ -1732,6 +1733,26 @@
     { id: 'office_view', label: 'Take the lift to the sky lobby view', mins: 30, fx: { fun: 6, stress: -3 }, when: { from: 8, to: 19 } },
     { id: 'office_clean', label: 'Evening cleaning shift', mins: 240, earn: 2400, fx: { energy: -14, hygiene: -8 }, gig: true, fest: true, when: { from: 17, to: 23 } }
   ];
+  // Rules 19 in Abuja and Port Harcourt: a hospital, a hotel, a casino and a court in each city, with the same rooms and
+  // acts as Lagos under their own ids (the Lagos tables are copied, never changed). Polling units stay in Lagos, where the election is.
+  function cloneActs(list, from, to) { return list.map(function (a) { var b = JSON.parse(JSON.stringify(a)); b.id = to + a.id.slice(from.length); return b; }); }
+  [
+    ['abj_hospital', '🏥', 'Abuja City Hospital, Garki', 'services', 'cross', 'abj_garki', 15.4, 15.6, 'hospital', 'Reception, the nurses\' station, the doctor, a ward and the pharmacy.'],
+    ['ph_hospital', '🏥', 'Garden City Hospital, Old GRA', 'services', 'cross', 'ph_oldgra', 14.6, 15.4, 'hospital', 'Reception, the nurses\' station, the doctor, a ward and the pharmacy.'],
+    ['abj_hotel', '🏨', 'Maitama Grand Hotel', 'nightlife', 'hotel', 'abj_maitama', 14.6, 7.4, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
+    ['ph_hotel', '🏨', 'Garden City Grand Hotel, GRA', 'nightlife', 'hotel', 'ph_gra', 11.4, 11.6, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
+    ['abj_casino', '🎰', 'Wuse Casino', 'nightlife', 'dice', 'abj_wuse', 11.6, 11.4, 'casino', 'Slots, roulette and blackjack. 18 and over. The house always wins in the end.'],
+    ['ph_casino', '🎰', 'Trans-Amadi Casino', 'nightlife', 'dice', 'ph_transamadi', 21.6, 11.4, 'casino', 'Slots, roulette and blackjack. 18 and over. The house always wins in the end.'],
+    ['abj_court', '⚖️', 'FCT High Court, Garki', 'services', 'gavel', 'abj_garki', 16.4, 14.6, 'court', 'The bench, the dock, the witness box and a public gallery.'],
+    ['ph_court', '⚖️', 'Rivers High Court, Old GRA', 'services', 'gavel', 'ph_oldgra', 13.6, 14.6, 'court', 'The bench, the dock, the witness box and a public gallery.']
+  ].forEach(function (q) {
+    var pfx = q[0].split('_')[0];
+    CIVIC_PLACES.push({ id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8], text: q[9] });
+    CIVIC_ACTS[q[0]] = q[8] === 'hospital' ? cloneActs(CIVIC_ACTS.gen_hosp, 'hosp_gen_hosp_', 'hosp_' + q[0] + '_')
+      : q[8] === 'hotel' ? cloneActs(CIVIC_ACTS.grand_hotel, 'hotel_', 'hotel_' + pfx + '_')
+      : q[8] === 'casino' ? cloneActs(CIVIC_ACTS.lagoon_casino, 'casino_', 'casino_' + pfx + '_')
+      : cloneActs(CIVIC_ACTS.high_court, 'court_', 'court_' + pfx + '_');
+  });
   // Places added after the gem hunt began stay out of its pool, so old lives' gems (and their seals) replay.
   CIVIC_PLACES.forEach(function (p) { p.nogem = true; PLACES.push(p); });
   // Rules 19: the Lagoon party boat moored at the island jetties.

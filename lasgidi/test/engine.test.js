@@ -2607,7 +2607,7 @@ test('rules 18: Pulse gym branches cost more on the Island and most at Eko Atlan
 });
 test('rules 19: police, polling and hospital acts; hidden from rules-18 lives; small once-a-day gigs only', () => {
   for (const list of Object.values(D.CIVIC_ACTS)) for (const a of list) { assert.ok(a.mins % 15 === 0, a.id); if (a.earn) assert.ok(a.gig && a.fest && a.earn <= 3000, a.id); }
-  assert.equal(D.PLACES.filter(p => p.civic === 'police').length, 6);
+  assert.equal(D.PLACES.filter(p => p.civic === 'police').length, 8); // 6 in Lagos, one each in Abuja and Port Harcourt
   assert.equal(D.PLACES.filter(p => p.civic === 'polling').length, 12);
   const old = L.newGame({ seed: 91, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (old.pending.length) L.resolveChoice(old, 0); old.loc = 'ikeja';
   assert.ok(!L.availableActions(old).some(a => /^(police|poll|hosp)_/.test(a.id)));
@@ -2713,4 +2713,21 @@ test('gems still replay: places added in rules 18-19 stay out of the gem pool, a
   for (const p of D.PLACES) if (p.civic || p.chain === 'pulse' || p.club === 'golf') assert.ok(p.nogem, p.id + ' must be nogem');
   assert.deepEqual(L.gemsFor('2026-10-12').map(g => g.place), ['vi_food', 'banks', 'vip_jetty', 'tailor', 'studio']);
   assert.deepEqual(L.gemsFor('2026-10-17').map(g => g.place), ['palms', 'pitch', 'berger_cars', 'ikeja_mall', 'festac_market']);
+});
+test('rules 19: Abuja and Port Harcourt get police, a hospital, a hotel, a casino and a court; rules-18 lives see none; replays', () => {
+  for (const [city, ds] of [['abuja', ['abj_garki', 'abj_maitama', 'abj_wuse']], ['ph', ['ph_gra', 'ph_oldgra', 'ph_transamadi']]]) {
+    const kinds = new Set(D.PLACES.filter(p => p.civic && (D.DISTRICTS[p.district].city === city)).map(p => p.civic));
+    for (const k of ['police', 'hospital', 'hotel', 'casino', 'court']) assert.ok(kinds.has(k), city + ' has ' + k);
+    for (const d of ds) {
+      const n = L.newGame({ seed: 1700, origin: 'nepo', goal: 'freestyle' }); n.loc = d;
+      const o = L.newGame({ seed: 1700, origin: 'nepo', goal: 'freestyle', rules: 18 }); o.loc = d;
+      assert.ok(L.availableActions(n).some(a => /^(police|hosp|hotel|casino|court)_/.test(a.id)), d + ' rules 19');
+      assert.ok(!L.availableActions(o).some(a => /^(police|hosp|hotel|casino|court)_/.test(a.id)), d + ' rules 18');
+    }
+  }
+  assert.ok(!D.PLACES.some(p => p.civic === 'polling' && D.DISTRICTS[p.district].city), 'polling units stay in Lagos');
+  const s = L.newGame({ seed: 1701, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const io = L.intercityOptions(s, 'abuja').find(x => !x.disabled); if (io) { L.intercity(s, 'abuja', io.mode); while (s.pending.length) L.resolveChoice(s, 0); }
+  const a = L.availableActions(s).find(x => /^(hosp|court|police|hotel|casino)_/.test(x.id) && !x.disabled); if (a) L.doAction(s, a.id);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
