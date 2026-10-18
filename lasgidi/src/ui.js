@@ -2550,13 +2550,16 @@
   }
   /* ---------- the ride view: a short journey scene with "Now passing" signs ---------- */
   // Mounted outside the app so live re-renders never restart it. Tap anywhere or Arrive to skip.
-  var RIDE_NAMES = { danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
+  // Towns on the road between the cities, for the coach (the real routes, in order).
+  var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'] };
+  var RIDE_NAMES = { coach: 'Savanna Line coach', danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
   function showRide(from, to, mode, t0) {
     var old = document.getElementById('ride-view'); if (old) old.remove();
     if (!D.DISTRICTS[from] || !D.DISTRICTS[to] || from === to) return;
     var chauffeur = mode === 'car' && (S.staff || []).some(function (x) { return x.id === 'driver' || x === 'driver'; });
     var name = chauffeur ? 'VIP chauffeur' : (RIDE_NAMES[mode] || 'Ride'), water = mode === 'ferry' || mode === 'boat', air = mode === 'heli' || mode === 'flight' || mode === 'jet';
-    var sights = passing(from, to).slice(0, 3);
+    var cf = L.districtCity(from), ctt = L.districtCity(to), coach = mode === 'coach', route = coach ? (COACH_ROUTE[cf + '-' + ctt] || (COACH_ROUTE[ctt + '-' + cf] || []).slice().reverse()) : null;
+    var sights = coach ? route : passing(from, to).slice(0, 3);
     if (!air && !sights.length) {
       var pick = function (d) { var x = D.PLACES.filter(function (p) { return p.district === d && !/_site$/.test(p.id); })[0]; return x ? x.name : D.DISTRICTS[d].name; };
       sights = [pick(from), pick(to)];
@@ -2564,12 +2567,13 @@
     var h = L.hour(S), night = h < 6 || h >= 19, dusk = h >= 17 && h < 19;
     var ic = icon3d(MODE_ICONS[mode] || (air ? 't_heli' : 'car'), name).replace('width="32" height="32"', 'width="64" height="64"');
     var veh = ic || '<span class="rv-emoji">' + (MODE_EMOJI[mode] || (mode === 'flight' || mode === 'jet' ? '✈️' : '🚗')) + '</span>';
-    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, secs = reduce ? 2.5 : 5.5;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, secs = reduce ? 2.5 : coach ? 12 : 5.5;
+    var fromName = cf !== ctt && D.CITIES[cf] ? D.CITIES[cf].name : D.DISTRICTS[from].name, toName = cf !== ctt && D.CITIES[ctt] ? D.CITIES[ctt].name : D.DISTRICTS[to].name;
     var el = document.createElement('div');
     el.id = 'ride-view'; el.className = 'ride-view' + (night ? ' night' : dusk ? ' dusk' : '') + (water ? ' water' : '') + (air ? ' air' : '') + (reduce ? ' still' : '');
-    el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', name + ' to ' + D.DISTRICTS[to].name);
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', name + ' to ' + toName);
     el.style.setProperty('--rv-secs', secs + 's');
-    el.innerHTML = '<div class="rv-card"><div class="rv-top"><span class="rv-mode">' + esc(name) + '</span><b>' + esc(D.DISTRICTS[from].name) + ' → ' + esc(D.DISTRICTS[to].name) + '</b><span class="rv-time">' + dur(Math.max(1, S.t - (t0 || S.t))) + ' · arrive ' + esc(L.clockLabel(S)) + '</span></div>' +
+    el.innerHTML = '<div class="rv-card"><div class="rv-top"><span class="rv-mode">' + esc(name) + '</span><b>' + esc(fromName) + ' → ' + esc(toName) + '</b><span class="rv-time">' + dur(Math.max(1, S.t - (t0 || S.t))) + ' · arrive ' + esc(L.clockLabel(S)) + '</span>' + (coach ? '<span class="rv-cams">' + [['chase', '🚌 Chase'], ['side', '👀 Side'], ['inside', '💺 Inside']].map(function (c) { return '<button type="button" class="btn sm ghost" data-rvcam="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</span>' : '') + '</div>' +
       '<div class="rv-scene" aria-hidden="true"><div class="rv-sky"><i class="rv-sun"></i><i class="rv-cloud c1"></i><i class="rv-cloud c2"></i></div><div class="rv-far"></div><div class="rv-near"></div>' +
       '<div class="rv-road"><div class="rv-lines"></div></div>' +
       sights.map(function (s, i) { return '<div class="rv-sign" style="animation-delay:' + (secs * (0.12 + i * 0.8 / Math.max(1, sights.length))).toFixed(2) + 's"><small>Now passing</small><b>' + esc(s) + '</b></div>'; }).join('') +
@@ -2577,11 +2581,11 @@
       '<div class="rv-bar"><i></i></div>' +
       '<div class="rv-foot"><span>' + (sights.length ? '📍 ' + esc(sights.join(' · ')) : '☁️ Above the city') + '</span><button class="btn go" id="rv-arrive" type="button">Arrive</button></div></div>';
     var done = function () { if (el.parentNode) { el.remove(); if (ui.venueOpen) mountVenue(); } }; // a walk-in scene behind the ride starts its arrival now
-    el.addEventListener('click', function (e) { if (e.target === el || (e.target.closest && e.target.closest('#rv-arrive'))) done(); });
+    el.addEventListener('click', function (e) { var cb = e.target.closest && e.target.closest('[data-rvcam]'); if (cb) { var sc0 = el.querySelector('.rv-scene'); if (sc0) sc0.dataset.cam = cb.getAttribute('data-rvcam'); e.stopPropagation(); return; } if (e.target === el || (e.target.closest && e.target.closest('#rv-arrive'))) done(); });
     el.addEventListener('keydown', function (e) { if (e.key === 'Escape') done(); });
     document.body.appendChild(el);
     // In 3D when three.js is in: the same window, with the journey built in three.js (the 2D scene stays otherwise).
-    if (window.LasgidiRide3D && window.THREE && threeState === 'ready') { var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { mode: mode, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit })) el.classList.add('rv-3dmode'); } catch (e) {} }
+    if (window.LasgidiRide3D && window.THREE && threeState === 'ready') { var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { mode: mode, highway: coach, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit })) el.classList.add('rv-3dmode'); } catch (e) {} }
     var b = document.getElementById('rv-arrive'); if (b) b.focus();
     setTimeout(done, secs * 1000 + 400);
   }
@@ -4440,7 +4444,7 @@
       if (gx) run(function () { return L.openGift(S, gx.from + ':' + gx.raw.at, gx.raw.gift); });
       return;
     }
-    if (ds.fly) { var fp = ds.fly.split(':'); run(function () { var r = L.intercity(S, fp[0], fp[1]); if (r.ok) { ui.sel = null; ui.place = null; ui.placeCat = null; } return r; }, 'travel'); return; }
+    if (ds.fly) { var fp = ds.fly.split(':'), ff = S.loc, ft = S.t; run(function () { var r = L.intercity(S, fp[0], fp[1]); if (r.ok) { ui.sel = null; ui.place = null; ui.placeCat = null; showRide(ff, S.loc, fp[1] === 'bus' ? 'coach' : 'flight', ft); } return r; }, 'travel'); return; }
     if (ds.gem) { var gid = gemToday(), gn = +ds.gem; run(function () { return L.collectGem(S, gid, gn); }); return; }
     if (ds.picsubmit) {
       var draft = ui.picDraft, bid = ds.picsubmit, pl = ui.ad.plan || 'day';

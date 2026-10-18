@@ -1154,3 +1154,4 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .radio input { width: 100%; box-sizing: border-box; }
 #radio-title { width: 100%; box-sizing: border-box; margin: 2px 0 8px; padding: 8px; border-radius: 10px; border: 1px solid var(--line, #ddd); font: inherit; }
 .radio .ph-promo { flex-direction: column; align-items: flex-start; gap: 4px; }
+.rv-cams { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
