@@ -30,20 +30,24 @@ const KEYS = { FLW_SECRET_KEY: 'FLWSECK_TEST-x', FLW_SECRET_HASH: 'hush', FLW_RE
 const ACC = 'abcdefghij0123456789';
 const post = (req, p, body, headers) => req(p, { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, headers || {}), body: JSON.stringify(body) });
 
-test('shop: lists cosmetics only, in sandbox by default, with no providers until keys are set', async () => {
+test('shop: lists cosmetics and the wallet top-ups, in sandbox by default, with no providers until keys are set', async () => {
   await withServer({}, async req => {
     const j = await (await req('/api/shop')).json();
     assert.equal(j.mode, 'sandbox'); assert.deepEqual(j.providers, { flutterwave: false, paypal: false });
     assert.deepEqual(Object.keys(j.kinds), ['tag', 'acc', 'paint']);
     const looks = ['shades', 'chain', 'cap', 'phones'];
-    for (const it of Object.values(j.catalog)) {
+    const D = require('../src/data.js');
+    for (const [k, it] of Object.entries(j.catalog).filter(([, v]) => v.kind === 'topup')) {
+      assert.ok(D.TOPUP_PACKS[k], k + ' is a known pack'); assert.equal(it.naira, D.TOPUP_PACKS[k].naira, k + ' credits what the engine credits');
+    }
+    for (const it of Object.values(j.catalog).filter(v => v.kind !== 'topup')) {
       assert.ok(j.kinds[it.kind], 'every item has a known kind');
       assert.ok(it.ngn >= 1500 && it.ngn <= 3000 && /^\d+\.\d\d$/.test(it.usd) && +it.usd <= 3.99, 'priced as a small cosmetic');
       assert.match(it.color, /^#[0-9a-f]{6}$/i);
       if (it.kind === 'acc') assert.ok(looks.includes(it.look), 'an accessory names a drawing the avatar knows');
       assert.deepEqual(Object.keys(it).filter(k => !['name', 'kind', 'look', 'color', 'ink', 'ngn', 'usd'].includes(k)), [], 'no field that could carry an advantage');
     }
-    for (const k of ['tag', 'acc', 'paint']) assert.ok(Object.values(j.catalog).some(it => it.kind === k));
+    for (const k of ['tag', 'acc', 'paint', 'topup']) assert.ok(Object.values(j.catalog).some(it => it.kind === k));
     const r = await post(req, '/api/checkout', { account: ACC, item: 'tag_emerald', provider: 'paypal', adult: true });
     assert.equal(r.status, 400);
   });

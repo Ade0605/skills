@@ -7,7 +7,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { COSMETICS, KINDS } = require('./catalog');
+const { COSMETICS, KINDS, TOPUPS } = require('./catalog');
 
 const ACCOUNT = /^[a-z0-9]{16,40}$/; // a random shop key the game makes on the device (not a password, never typed)
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon' };
@@ -60,7 +60,7 @@ function store(dir) {
       const o = db.orders[ref]; if (!o || o.status !== 'paid') return 'No paid order with that receipt';
       if (o.account === acc) return 'That key already has it';
       const old = db.grants[o.account] || [], g = old.filter(x => x.ref === ref)[0]; if (!g) return 'No grant for that receipt';
-      if ((db.grants[acc] || []).some(x => x.item === o.item)) return 'That key already owns this item';
+      if (!/^topup_/.test(o.item) && (db.grants[acc] || []).some(x => x.item === o.item)) return 'That key already owns this item';
       db.grants[o.account] = old.filter(x => x.ref !== ref);
       (db.grants[acc] = db.grants[acc] || []).push(Object.assign({}, g, { restored: new Date().toISOString() }));
       o.restoredFrom = (o.restoredFrom || []).concat(o.account); o.account = acc; save(); return '';
@@ -107,11 +107,11 @@ function createApp(cfg, fetchImpl) {
   }
 
   async function checkout(body) {
-    const item = COSMETICS[body.item];
+    const item = COSMETICS[body.item] || TOPUPS[body.item];
     if (!item) return [400, { error: 'No such item' }];
     if (!ACCOUNT.test(body.account || '')) return [400, { error: 'Bad shop key' }];
     if (body.adult !== true) return [400, { error: 'Purchases are for players aged 18 or over' }];
-    if (db.owned(body.account).some(g => g.item === body.item)) return [409, { error: 'You already own this' }];
+    if (!TOPUPS[body.item] && db.owned(body.account).some(g => g.item === body.item)) return [409, { error: 'You already own this' }]; // top-ups can be bought again
     if (db.pendingFor(body.account) >= 5) return [429, { error: 'Too many unfinished payments. Finish or wait a day.' }];
     const ref = 'lsg_' + crypto.randomBytes(12).toString('hex');
     if (body.provider === 'flutterwave' && cfg.flw) {
@@ -189,7 +189,7 @@ function createApp(cfg, fetchImpl) {
         if (!allow(ip)) return send(res, 429, { error: 'Slow down' });
         if (req.method === 'POST' && !/^application\/json\b/.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'Send JSON' });
       }
-      if (url.pathname === '/api/shop' && req.method === 'GET') return send(res, 200, { catalog: COSMETICS, kinds: KINDS, providers, mode: cfg.live ? 'live' : 'sandbox', terms: '/terms.html' });
+      if (url.pathname === '/api/shop' && req.method === 'GET') return send(res, 200, { catalog: Object.assign({}, COSMETICS, TOPUPS), kinds: KINDS, providers, mode: cfg.live ? 'live' : 'sandbox', terms: '/terms.html' });
       if (url.pathname === '/api/owned' && req.method === 'GET') {
         const acc = url.searchParams.get('account') || ''; if (!ACCOUNT.test(acc)) return send(res, 400, { error: 'Bad shop key' });
         return send(res, 200, { items: db.owned(acc) });

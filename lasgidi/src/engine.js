@@ -1356,6 +1356,25 @@
     return finish(s, ok('📻 Booked ' + n + ' slot' + (n > 1 ? 's' : '') + ' on the club radio.'));
   }
 
+  /* ---------- wallet top-ups (rules 19, recorded call tu) ----------
+     The self-hosted shop verifies the payment; the page then credits the pack once per receipt. The naira comes from
+     D.TOPUP_PACKS, never from the page. A topped-up life is Boosted: it cannot go on the Hall of Fame or weekly board. */
+  var TOPUP_REF = /^[A-Za-z0-9_-]{6,64}$/;
+  function topUp(s, pack, ref) {
+    var P = D.TOPUP_PACKS[pack];
+    if (!(s.rules >= 19)) return fail('Top-ups are not open in this life.');
+    if (!P) return fail('No such pack.');
+    if (typeof ref !== 'string' || !TOPUP_REF.test(ref)) return fail('That receipt is not valid.');
+    if (s.challenge) return fail('No top-ups in Weekly Lagos.');
+    s.topups = s.topups || [];
+    if (s.topups.indexOf(ref) >= 0) return fail('That receipt was already added.');
+    s.alerts = [];
+    earn(s, P.naira, 'Wallet top-up: ' + P.name);
+    s.topups.push(ref); s.boosted = true;
+    log(s, '💳 ' + P.name + ': ' + naira(P.naira) + ' added to your wallet. This life is now Boosted (off the leaderboards).', 'story');
+    return finish(s, ok('💳 ' + naira(P.naira) + ' added to your wallet.'));
+  }
+
   /* ---------- airport departures (new recorded calls; old lives never make them) ---------- */
   function ownsJet(s) { return (s.vehicles || []).some(function (v) { return D.VEHICLES[v.id] && D.VEHICLES[v.id].kind === 'jet'; }); }
   // A cab to the airport is included when you book from elsewhere in the same city.
@@ -3631,6 +3650,7 @@
     if (!e || !raw.replay) return { ok: false, entry: e, reason: e ? 'no replay' : 'malformed' };
     var s = replayLife(raw.replay);
     if (!s) return { ok: false, entry: e, reason: 'replay failed' };
+    if (s.boosted) return { ok: false, entry: e, reason: 'boosted' }; // bought money never ranks
     var got = fameEntry(s);
     var same = got.seal === raw.seal && got.lines === raw.lines && got.score === e.score && got.weeks === e.weeks && got.worth === e.worth;
     return { ok: same, entry: same ? got : e, reason: same ? null : 'does not match its replay' };
@@ -4883,6 +4903,7 @@
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
     claimQuest: recorded('qc', claimQuest), questDone: questDone, activeQuests: activeQuests,
+    topUp: recorded('tu', topUp),
     radioBook: recorded('cr', radioBook), radioCost: radioCost, RADIO_MAX: RADIO_MAX,
     sendGift: recorded('gf', sendGift), openGift: recorded('gx', openGift),
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,

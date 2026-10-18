@@ -687,9 +687,9 @@ The engine is deterministic: all randomness comes from a seeded PRNG kept in the
 - **Where to read it:** a Safety and privacy card on the start screen and in the Guide app spells all of this out.
 - **Background:** `docs/REVIEW.md` section 6 compares this with a field review of Lagos Life.
 
-## Real-cash cosmetics: the Style shop (self-hosted only)
+## Real-cash cosmetics and wallet top-ups: the Style shop (self-hosted only)
 
-Real money buys **cosmetics only**, in three kinds, and you wear one of each: name-tag colours for your @handle in live rooms and on the cruise; accessories drawn over your own avatar on your phone, in rooms and on the cruise (dark shades, a gold rope chain, a snapback cap, studio headphones); and house paint for your home's walls in the home designer and your home pin on the map (sage, terracotta, sky blue). Prices run from ₦1,500 to ₦3,000 ($1.99 to $3.99). What you wear is kept in this browser (`lasgidi.wear.v1`), never in a life's state. They never buy naira, status, skills or anything that changes a life, so the Hall of Fame and Weekly Lagos stay fair and money stays hard to make. The claude.ai artifact build has no shop at all.
+Real money buys **cosmetics**, in three kinds, and you wear one of each: name-tag colours for your @handle in live rooms and on the cruise; accessories drawn over your own avatar on your phone, in rooms and on the cruise (dark shades, a gold rope chain, a snapback cap, studio headphones); and house paint for your home's walls in the home designer and your home pin on the map (sage, terracotta, sky blue). Prices run from ₦1,500 to ₦3,000 ($1.99 to $3.99). What you wear is kept in this browser (`lasgidi.wear.v1`), never in a life's state. They never buy naira, status, skills or anything that changes a life, so the Hall of Fame and Weekly Lagos stay fair and money stays hard to make. The claude.ai artifact build has no shop at all.
 
 - **Run it:** `npm run shop` serves the game and the shop from `server/` (Node 18+, no dependencies). Settings are environment variables; keys never go in the code:
   - `PORT`, `PUBLIC_URL` (the address players use, for payment return links), `DATA_DIR` (default `server/data/`, ignored by git);
@@ -701,6 +701,7 @@ Real money buys **cosmetics only**, in three kinds, and you wear one of each: na
 - **Identity:** a random shop key is made on the device and kept in the browser. It is never typed and is not a password. The Style shop shows it under "Your shop key", with a Copy button.
 - **Restoring items:** a player on a new device (or who cleared site data) sends the owner their receipt reference and their new shop key. The owner runs `SHOP_ADMIN_TOKEN=... PORT=... npm run shop:restore -- <receipt> <new key>` on the server machine. It only works from that machine, only with the admin token set in `SHOP_ADMIN_TOKEN` (with no token set there is no admin endpoint at all), and it moves the item, so the old key loses it and items can't be shared.
 - **Replays:** owned cosmetics live outside a life's state, like profile photos, so buying one never changes a ledger seal.
+- **Wallet top-ups (rules 19 lives):** four packs, from ₦50,000 game money (₦1,000 or $1) to ₦1.6m ($14). The server verifies each payment; the page then credits the pack once per receipt through a recorded engine call, with the amount taken from `D.TOPUP_PACKS`, never from the page. The life is marked **Boosted** and can never go on the Hall of Fame (`verifyFame` rejects it) or the weekly board (no top-ups in Weekly Lagos). Top-ups can be bought again; the claude.ai build has no shop.
 - **Security (reviewed 15 Oct 2026):**
   - every page carries a strict Content-Security-Policy (scripts only from the game itself), `X-Frame-Options: DENY` and `Referrer-Policy: same-origin`;
   - `/api/` is rate-limited per address (30 a minute, `SHOP_RATE_LIMIT`); behind a reverse proxy set `SHOP_TRUST_PROXY=1` so the limit uses the forwarded client address;

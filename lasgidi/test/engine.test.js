@@ -2731,3 +2731,15 @@ test('rules 19: Abuja and Port Harcourt get police, a hospital, a hotel, a casin
   const a = L.availableActions(s).find(x => /^(hosp|court|police|hotel|casino)_/.test(x.id) && !x.disabled); if (a) L.doAction(s, a.id);
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+test('rules 19: wallet top-ups credit the pack once per receipt, mark the life Boosted and keep it off the Hall of Fame', () => {
+  const s = L.newGame({ seed: 1800, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const c0 = s.cash; const r = L.topUp(s, 'topup_jollof', 'lsg_abc123def456'); assert.ok(r.ok, r.msg);
+  assert.equal(s.cash - c0, 50000); assert.ok(s.boosted); sane(s);
+  assert.equal(L.topUp(s, 'topup_jollof', 'lsg_abc123def456').ok, false, 'same receipt twice');
+  assert.equal(L.topUp(s, 'topup_free', 'lsg_zzz999999').ok, false); assert.equal(L.topUp(s, 'topup_jollof', '<bad>').ok, false);
+  const e = L.fameEntry(s); const v = L.verifyFame(Object.assign({}, e)); assert.equal(v.ok, false); assert.equal(v.reason, 'boosted');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  const old = L.newGame({ seed: 1801, origin: 'nepo', goal: 'freestyle', rules: 18 }); assert.equal(L.topUp(old, 'topup_jollof', 'lsg_abc123def456').ok, false);
+  const clean = L.newGame({ seed: 1802, origin: 'nepo', goal: 'freestyle' }); while (clean.pending.length) L.resolveChoice(clean, 0); L.wait(clean, 60);
+  assert.equal(L.verifyFame(L.fameEntry(clean)).ok, true, 'an unboosted life still verifies');
+});

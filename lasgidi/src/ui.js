@@ -842,6 +842,7 @@
   function postFame(entry, quiet) {
     if (!online.db || !online.me) return Promise.resolve(quiet ? null : 'The Hall of Fame is not available here.');
     if (S && S.tampered) return Promise.resolve('Edited saves cannot go on the Hall of Fame.');
+    if (S && S.boosted) return Promise.resolve(quiet ? null : 'This life took a wallet top-up, so it is Boosted and stays off the Hall of Fame.');
     if (!entry.replay) return Promise.resolve(quiet ? null : 'This life began before verified scores, so it cannot be checked. Start a new life to get on the board.');
     var mine = myFame();
     if (mine && mine.score >= entry.score) return Promise.resolve(quiet ? null : 'Your best on the board (' + mine.score + ') is higher. It stays.');
@@ -4794,7 +4795,7 @@
     if (!document.querySelector('meta[name="lasgidi-shop"]') || !window.fetch) return; // only when served by the shop server
     fetch('/api/shop', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       if (!j || !j.catalog) return;
-      online.shop = j; return fetch('/api/owned?account=' + shopKey(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (o) { online.owned = (o && o.items) || []; scheduleRender(); });
+      online.shop = j; return fetch('/api/owned?account=' + shopKey(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (o) { online.owned = (o && o.items) || []; applyTopups(); scheduleRender(); });
     }).catch(function () {});
     var q = new URLSearchParams(location.search), st = q.get('shop');
     if (st) {
@@ -4803,16 +4804,33 @@
       ui.tab = 'phone'; ui.app = 'style'; scheduleRender();
     }
   }
+  // Paid top-ups (verified by the shop server) are credited to this life once each, by receipt.
+  function applyTopups() {
+    if (!S || S.rules < 19 || S.challenge) return;
+    var done = S.topups || [], added = 0;
+    (online.owned || []).forEach(function (g) { if (!g || !D.TOPUP_PACKS[g.item] || typeof g.ref !== 'string' || done.indexOf(g.ref) >= 0) return; var r = L.topUp(S, g.item, g.ref); if (r.ok) { added++; ui.toasts.push({ msg: r.msg, ok: true }); } });
+    if (added) { save(); render(); }
+  }
+  function topupView() {
+    var sh = online.shop, P = sh.providers, packs = Object.keys(sh.catalog).filter(function (k) { return sh.catalog[k].kind === 'topup' && D.TOPUP_PACKS[k]; });
+    if (!packs.length) return '';
+    var can = S.rules >= 19 && !S.challenge;
+    return '<h4>💳 Top up wallet</h4><p class="note">Balance ' + N(S.cash) + '. ' + (can ? 'A life that takes a top-up is marked <b>Boosted</b> and can never go on the Hall of Fame or the weekly board, so players who earned it stay on top.' : S.challenge ? 'No top-ups in Weekly Lagos.' : 'Top-ups are for new lives only.') + (S.boosted ? ' This life is Boosted.' : '') + '</p>' +
+      (can ? '<div class="list">' + packs.map(function (k) { var C = sh.catalog[k], T = D.TOPUP_PACKS[k];
+        return '<div class="item"><div><h3>+' + N(T.naira) + ' game money</h3><div class="meta"><span>' + esc(T.name) + '</span><span>₦' + Number(C.ngn).toLocaleString('en') + ' · $' + esc(C.usd) + '</span></div></div><div class="inline">' +
+          (P.flutterwave ? '<button class="btn sm go" id="shop-flw-' + k + '" data-shopbuy="' + k + ':flutterwave"' + (ui.shopAdult ? '' : ' disabled title="Tick 18 or over first"') + '>Pay ₦' + Number(C.ngn).toLocaleString('en') + '</button>' : '') +
+          (P.paypal ? '<button class="btn sm ghost" id="shop-pp-' + k + '" data-shopbuy="' + k + ':paypal"' + (ui.shopAdult ? '' : ' disabled title="Tick 18 or over first"') + '>PayPal $' + esc(C.usd) + '</button>' : '') + '</div></div>'; }).join('') + '</div>' : '');
+  }
   function ownedItem(id) { return (online.owned || []).some(function (g) { return g.item === id; }); }
   function myTag() { var C = worn('tag'); return C ? { color: C.color, ink: C.ink } : null; }
   function styleView() {
     var sh = online.shop; if (!sh) return '<p class="note">The Style shop is only on self-hosted copies of the game.</p>';
     var P = sh.providers, cat = sh.catalog, wear = wearing(), kinds = sh.kinds || { tag: 'Name tags' };
-    var html = '<div class="section" style="padding-top:0"><h3>🎨 Style shop</h3><p class="note">Real money buys <b>cosmetics only</b>: a colour for your @handle in live rooms and on the cruise, an accessory over your avatar, or a paint colour for your home. You wear one of each kind. It never buys naira, skills, status or any advantage, and it is not part of any life\'s score or replay.</p>' +
+    var html = '<div class="section" style="padding-top:0"><h3>🎨 Style shop</h3><p class="note">Cosmetics are a colour for your @handle in live rooms and on the cruise, an accessory over your avatar, or a paint colour for your home. You wear one of each kind, and they never change any life. Wallet top-ups add game money to your current life and mark it Boosted, off the leaderboards.</p>' +
       (sh.mode !== 'live' ? '<p class="why">Sandbox mode: payments use test cards and accounts, and no real money moves.</p>' : '') +
       (!P.flutterwave && !P.paypal ? '<p class="why">No payment method is set up on this server yet.</p>' : '') +
       '<label class="shop-adult"><input type="checkbox" id="shop-adult"' + (ui.shopAdult ? ' checked' : '') + ' data-shopadult="1"> I am 18 or over</label>' +
-      '<p class="note"><a href="/terms.html" target="_blank" rel="noopener">Terms and refunds</a></p>' + Object.keys(kinds).map(function (kind) {
+      '<p class="note"><a href="/terms.html" target="_blank" rel="noopener">Terms and refunds</a></p>' + topupView() + Object.keys(kinds).map(function (kind) {
         var ids = Object.keys(cat).filter(function (k) { return (cat[k].kind || 'tag') === kind; });
         return ids.length ? '<h4>' + esc(kinds[kind]) + '</h4><div class="list">' + ids.map(function (k) { return shopRow(k, kind); }).join('') + '</div>' : '';
       }).join('') + purchaseHistory() +

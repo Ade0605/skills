@@ -17,4 +17,12 @@ const COSMETICS = {
   paint_sky:   { name: 'Sky blue house paint', kind: 'paint', color: '#8fc3e3', ink: '#17181a', ngn: 1500, usd: '1.99' }
 };
 const KINDS = { tag: 'Name tags', acc: 'Accessories', paint: 'House paint' };
-module.exports = { COSMETICS, KINDS };
+// Wallet top-ups (rules 19 lives only): game money for real money. A life that takes one is marked Boosted and can
+// never go on the Hall of Fame or the weekly board. naira must match D.TOPUP_PACKS in src/data.js (a test checks).
+const TOPUPS = {
+  topup_jollof: { name: 'Jollof pack', kind: 'topup', naira: 50000, color: '#e2652b', ink: '#ffffff', ngn: 1000, usd: '1.00' },
+  topup_owambe: { name: 'Owambe pack', kind: 'topup', naira: 300000, color: '#c2417f', ink: '#ffffff', ngn: 5000, usd: '4.00' },
+  topup_bigboy: { name: 'Big boy pack', kind: 'topup', naira: 700000, color: '#5a3a22', ink: '#ffffff', ngn: 10000, usd: '7.00' },
+  topup_odogwu: { name: 'Odogwu pack', kind: 'topup', naira: 1600000, color: '#d4a017', ink: '#17181a', ngn: 20000, usd: '14.00' }
+};
+module.exports = { COSMETICS, KINDS, TOPUPS };
