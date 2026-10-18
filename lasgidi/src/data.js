@@ -1934,6 +1934,9 @@
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, insideKind: insideKind
   };
 
+  // Keyed tables have no prototype, so an id like 'constructor' or '__proto__' from a save, a replay or another player's
+  // doc never finds an entry (Object.keys, for-in, JSON and lookups behave exactly as before).
+  Object.keys(DATA).forEach(function (k) { var v = DATA[k]; if (v && typeof v === 'object' && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype) Object.setPrototypeOf(v, null); });
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.LASGIDI_DATA = DATA;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

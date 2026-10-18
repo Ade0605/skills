@@ -133,9 +133,14 @@ test('shop security: headers, JSON-only posts, rate limit, proxied admin calls a
     // Through a proxy, the admin endpoint is not there even with the right token.
     assert.equal((await post(req, '/api/admin/restore', { ref: 'lsg_' + '0'.repeat(24), account: ACC }, { 'x-admin-token': 'owner-secret', 'x-forwarded-for': '203.0.113.9' })).status, 404);
     // At most five unfinished payments per shop key.
-    const items = ['tag_emerald', 'tag_lagoon', 'tag_ankara', 'tag_night'];
-    let last; for (let i = 0; i < 6; i++) last = await post(req, '/api/checkout', { account: ACC, item: items[i % 4], provider: 'flutterwave', adult: true });
+    const items = ['tag_emerald', 'tag_lagoon', 'tag_ankara', 'tag_night', 'acc_shades', 'acc_chain'];
+    const dup0 = await post(req, '/api/checkout', { account: ACC, item: 'tag_emerald', provider: 'flutterwave', adult: true });
+    const dup = await post(req, '/api/checkout', { account: ACC, item: 'tag_emerald', provider: 'flutterwave', adult: true });
+    assert.equal(dup.status, 409, 'no second payment for an item already being paid for');
+    let last; for (let i = 1; i < 6; i++) last = await post(req, '/api/checkout', { account: ACC, item: items[i], provider: 'flutterwave', adult: true });
     assert.equal(last.status, 429);
+    for (const bad of ['constructor', '__proto__', 'toString']) assert.equal((await post(req, '/api/checkout', { account: ACC + 'x', item: bad, provider: 'flutterwave', adult: true })).status, 400, bad + ' is not an item');
+    assert.equal((await post(req, '/api/checkout', { account: [ACC], item: 'tag_lagoon', provider: 'flutterwave', adult: true })).status, 400, 'a shop key must be a string');
   });
   await withServer({ SHOP_RATE_LIMIT: '5' }, async req => {
     const codes = []; for (let i = 0; i < 8; i++) codes.push((await req('/api/shop')).status);

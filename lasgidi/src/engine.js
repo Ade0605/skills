@@ -44,7 +44,9 @@
   // festival, the Eko City Marathon and Eko Style Week. Their paid work is once a day each and the prizes are capped.
   // 19 adds police divisions, polling units and hospital rooms (D.CIVIC_ACTS): report a theft and follow the case,
   // a night in the cell after a bad checkpoint argument, the doctor for malaria, and street area boys on foot or danfo.
-  var RULES = 19;
+  // 20 closes holes found in a review: the ajo walk-out after collecting (you owe the rest, 8-week ban), and
+  // businesses bought without a site (now need one, and count toward the cap of 12).
+  var RULES = 20;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -385,7 +387,7 @@
     var startCash = heir ? heir.inherit : o.cash;
     s.bank = startCash; s.opening.bank = startCash;
     if (heir) {
-      s.heir = heir; s.name = opts.name || heir.name;
+      s.heir = heir; s.name = opts.name || heir.name; if (heir.boosted) s.boosted = true;
       // What your parent gave you before money: schooling.
       if (heir.school === 'intl') s.edu.degree = true;
       if (heir.school === 'private' || heir.school === 'intl') addXp(s, { charisma: heir.school === 'intl' ? 25 : 12 });
@@ -1634,9 +1636,9 @@
       subs: [Math.round(o.drive * 100) + '% birdie · risk of a double bogey', Math.round(o.iron * 100) + '% birdie · usually par', Math.round(o.wedge * 100) + '% par · otherwise bogey'] });
   }
   function golfPrize(s, over) {
-    if (over <= -4) return { place: 1, cash: price(s, 10000000), gift: 'The Club Cup trophy and a gold-plated set of clubs' };
-    if (over <= -2) return { place: 2, cash: price(s, 2500000), gift: 'A crystal decanter and a year of free green fees' };
-    if (over <= 0) return { place: 3, cash: price(s, 600000), gift: 'A Club Cup polo and a signed flag' };
+    if (over <= -4) return { place: 1, cash: price(s, 4000000), gift: 'The Club Cup trophy and a gold-plated set of clubs' };
+    if (over <= -2) return { place: 2, cash: price(s, 1000000), gift: 'A crystal decanter and a year of free green fees' };
+    if (over <= 0) return { place: 3, cash: price(s, 300000), gift: 'A Club Cup polo and a signed flag' };
     return null;
   }
   function queueAreaBoys(s) {
@@ -1746,7 +1748,7 @@
     s.alerts = [];
     var ev = s.pending[0];
     if (!ev) return fail('Nothing to decide.');
-    if (idx < 0 || idx >= ev.options.length) return fail('Pick one of the options.');
+    if (!(typeof idx === 'number' && idx === Math.floor(idx) && idx >= 0 && idx < ev.options.length)) return fail('Pick one of the options.');
     s.pending.shift();
     var msg = '';
     switch (ev.id) {
@@ -1952,6 +1954,7 @@
   function joinAjo(s, contrib) {
     if (AJO_SIZES.indexOf(contrib) < 0) return fail('Pick one of the contribution sizes.');
     if (s.ajo) return fail('You are already in an ajo.');
+    if (s.rules >= 20 && s.ajoBan > week(s)) return fail('No ajo will take you back yet: you walked out on the last one.');
     s.ajo = { contrib: contrib, slot: 1 + Math.floor(rand(s) * AJO_MEMBERS), round: 0, paid: 0, received: false };
     log(s, 'You joined a ' + naira(contrib) + '/week ajo with 5 market women. Your turn to collect is week ' + s.ajo.slot + ' of ' + AJO_MEMBERS + '.', 'good');
     return ok('Joined. Contributions start Monday.');
@@ -1964,6 +1967,8 @@
     if (!pay(s, a.contrib, 'Ajo contribution')) {
       log(s, 'You missed your ajo contribution. The group has thrown you out and the collector is keeping what you paid.', 'bad');
       applyFx(s, { social: -20, stress: 15 });
+      // Rules 20: after collecting, you still owe the rest of the cycle, and no ajo takes you back for 8 weeks.
+      if (s.rules >= 20) { if (a.received) { var owe = a.contrib * Math.max(0, AJO_MEMBERS - a.round + 1); if (owe) addDebt(s, owe, 'Ajo contributions you still owe'); } s.ajoBan = week(s) + 8; }
       s.ajo = null;
       return;
     }
@@ -2057,7 +2062,8 @@
     var b = D.BUSINESSES[id];
     if (!b) return fail('Unknown business.');
     if (site != null && !D.BUSINESS_SITES[site]) return fail('Pick a district for your business.');
-    if (site != null && s.businesses.length >= 12) return fail('You run 12 businesses already.');
+    if (s.rules >= 20 && site == null) return fail('Pick a district for your business.');
+    if ((site != null || s.rules >= 20) && s.businesses.length >= 12) return fail('You run 12 businesses already.');
     var cost = price(s, b.price);
     s.alerts = [];
     if (!pay(s, cost, 'Bought ' + b.name)) return fail('You need ' + naira(cost) + '.');
@@ -3545,7 +3551,9 @@
     // The family line (oldest first) and the generation; heirs from before dynasties default to generation 2.
     var line = h.line == null ? [h.parent] : h.line, gen = h.gen == null ? 2 : h.gen;
     if (!Array.isArray(line) || !line.length || line.length > 8 || line.some(function (n) { return typeof n !== 'string' || !n || n.length > 24; }) || !int(gen, 2, 50)) return null;
-    return { name: h.name, parent: h.parent, inherit: h.inherit, school: h.school || null, as: h.as, bond: h.bond, line: line.slice(), gen: gen };
+    var out = { name: h.name, parent: h.parent, inherit: h.inherit, school: h.school || null, as: h.as, bond: h.bond, line: line.slice(), gen: gen };
+    if (h.boosted === true) out.boosted = true; // money that came from a top-up stays Boosted down the family line
+    return out;
   }
   // When a life with children ends: each child's share of the estate, and the family line.
   function heirOffers(s) {
@@ -3554,7 +3562,7 @@
     var share = Math.min(HEIR_CAP, roundTo(estate * (1 - ESTATE_CUT) / s.kids.length, 1000));
     var me = String(s.name || 'Ade').slice(0, 24), line = ((s.heir && s.heir.line) || []).concat([me]).slice(-8), gen = (s.heir ? s.heir.gen || 2 : 1) + 1;
     return s.kids.map(function (k, i) {
-      return cleanHeir({ name: kidName(s, i), parent: me, inherit: share, school: k.school || null, line: line, gen: Math.min(50, gen),
+      return cleanHeir({ name: kidName(s, i), parent: me, inherit: share, boosted: !!s.boosted || !!(s.heir && s.heir.boosted), school: k.school || null, line: line, gen: Math.min(50, gen),
         as: Math.min(50, (k.reports || []).filter(function (r) { return r.grade === 'A'; }).length), bond: Math.round(k.bond || 0) });
     }).filter(Boolean);
   }
@@ -3593,7 +3601,7 @@
     };
     e.score = scoreOf(e);
     if (s.heir) { e.inherit = s.heir.inherit; e.gen = s.heir.gen || 2; }
-    if (s.replay) { e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, rules: s.replay.rules, challenge: s.replay.challenge || null, acts: s.replay.acts }; if (s.replay.heir) e.replay.heir = s.replay.heir; }
+    if (s.replay) { e.replay = { seed: s.replay.seed, goal: s.replay.goal, origin: s.replay.origin, rules: s.replay.rules, challenge: s.replay.challenge || null, acts: s.replay.acts }; ['heir', 'traits', 'home', 'look', 'outfit'].forEach(function (k) { if (s.replay[k] != null) e.replay[k] = s.replay[k]; }); } // everything replayLife needs to rebuild the same life
     return e;
   }
 
@@ -3648,9 +3656,12 @@
 
   // Rebuild an entry's life and check it lands exactly where it claims.
   function verifyFame(raw) { try { return verifyFame0(raw); } catch (x) { return { ok: false, entry: null, reason: 'replay failed' }; } }
+  // Gems and streaks are claimed by real calendar date: a proof that claims a date after today (the verifier's clock) is forged.
+  function futureDates(rp) { var t = new Date(Date.now() + 36 * 3600000).toISOString().slice(0, 10); return (rp && Array.isArray(rp.acts) ? rp.acts : []).some(function (a) { return Array.isArray(a) && (a[0] === 'gm' || a[0] === 'ds') && typeof a[1] === 'string' && a[1] > t; }); }
   function verifyFame0(raw) {
     var e = checkFame(raw);
     if (!e || !raw.replay) return { ok: false, entry: e, reason: e ? 'no replay' : 'malformed' };
+    if (futureDates(raw.replay)) return { ok: false, entry: null, reason: 'dates in the future' };
     var s = replayLife(raw.replay);
     if (!s) return { ok: false, entry: e, reason: 'replay failed' };
     if (s.boosted) return { ok: false, entry: e, reason: 'boosted' }; // bought money never ranks
@@ -3752,8 +3763,8 @@
     return Math.sqrt(-2 * Math.log(u1 || 1e-9)) * Math.cos(2 * Math.PI * u2);
   }
   function stockPrice(s, id, d) {
-    if (!D.STOCKS[id]) return 0;
-    d = d == null ? day(s) : Math.max(0, d);
+    if (!own(D.STOCKS, id)) return 0;
+    d = d == null ? day(s) : Math.max(0, Math.min(day(s), d)); // never a future price
     var p = Math.exp(stockSeries(s.seed, id, d)[d]);
     return p < 10 ? Math.round(p * 100) / 100 : Math.round(p * 10) / 10;
   }
@@ -4809,6 +4820,7 @@
   function verifyChallenge0(raw, id) {
     if (!raw || raw.challenge !== id || !CHALLENGE_ID.test(id) || !raw.replay || raw.replay.challenge !== id) return { ok: false, reason: 'wrong week' };
     if (typeof raw.worth !== 'number' || typeof raw.seal !== 'string') return { ok: false, reason: 'malformed' };
+    if (futureDates(raw.replay)) return { ok: false, reason: 'dates in the future' };
     var s = replayLife(raw.replay);
     if (!s || !s.over) return { ok: false, reason: 'not finished' };
     var got = challengeEntry(s);

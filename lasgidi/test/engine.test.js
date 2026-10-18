@@ -694,7 +694,7 @@ test('driving: pick which car you drive; selling keeps the pick right', () => {
 });
 
 test('replay codes: a life that buys a business and a bill replays to the same seal', () => {
-  const s = L.newGame({ seed: 23, origin: 'nepo', goal: 'freestyle' });
+  const s = L.newGame({ seed: 23, origin: 'nepo', goal: 'freestyle', rules: 19 }); // site-less buys are rules 19 and older
   assert.ok(L.buyBusiness(s, 'pos').ok);
   assert.ok(L.buyBond(s, 20000).ok);
   for (let i = 0; i < 3; i++) { while (s.pending.length) L.resolveChoice(s, 1); L.wait(s, 24 * 60); }
@@ -705,7 +705,7 @@ test('replay codes: a life that buys a business and a bill replays to the same s
 
 test('businesses: build on a site, upgrade, hire a manager; old-style buys unchanged', () => {
   // Old-style buy (no site) behaves exactly as before: same seal as a life without the new code paths.
-  const a = L.newGame({ seed: 24, origin: 'nepo', goal: 'freestyle' });
+  const a = L.newGame({ seed: 24, origin: 'nepo', goal: 'freestyle', rules: 19 });
   assert.ok(L.buyBusiness(a, 'pos').ok);
   assert.equal(a.businesses[0].site, undefined);
   assert.equal(L.upgradeBusiness(a, 0).ok, false, 'no growth without a site');
@@ -2617,7 +2617,7 @@ test('rules 19: report a theft, follow the case; recovery is half at most and ca
   let solved = 0, maxBack = 0;
   for (let i = 0; i < 30; i++) {
     const s = L.newGame({ seed: 1200 + i, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-    assert.equal(s.rules, 19); s.loc = 'ikeja'; atMonth(s, 9, 1, 1, 10); s.needs.energy = 100;
+    assert.ok(s.rules >= 19); s.loc = 'ikeja'; atMonth(s, 9, 1, 1, 10); s.needs.energy = 100;
     s.lastLoss = { amt: 100000, what: 'Phone snatched', day: L.day(s), reported: false };
     let r = L.doAction(s, 'police_ikeja_report'); assert.ok(r.ok, r.msg); assert.equal(s.cases.length, 1); assert.ok(s.lastLoss.reported);
     assert.match(L.availableActions(s).find(a => a.id === 'police_ikeja_report').disabled || '', /Once a day/);
@@ -2742,4 +2742,23 @@ test('rules 19: wallet top-ups credit the pack once per receipt, mark the life B
   const old = L.newGame({ seed: 1801, origin: 'nepo', goal: 'freestyle', rules: 18 }); assert.equal(L.topUp(old, 'topup_jollof', 'lsg_abc123def456').ok, false);
   const clean = L.newGame({ seed: 1802, origin: 'nepo', goal: 'freestyle' }); while (clean.pending.length) L.resolveChoice(clean, 0); L.wait(clean, 60);
   assert.equal(L.verifyFame(L.fameEntry(clean)).ok, true, 'an unboosted life still verifies');
+});
+test('review fixes: proofs carry traits, start home, look and outfit, so an onboarded life verifies on the Hall of Fame', () => {
+  const s = L.newGame({ seed: 42, origin: 'mid', goal: 'freestyle', startHome: (D.START_HOMES.mid || [])[0], traits: Object.keys(D.TRAITS).slice(0, 2), look: { skin: 1, hair: 2, shape: 0 } });
+  while (s.pending.length) L.resolveChoice(s, 0);
+  for (let i = 0; i < 7; i++) { L.wait(s, 24 * 60); while (s.pending.length) L.resolveChoice(s, 0); }
+  const v = L.verifyFame(L.fameEntry(s)); assert.ok(v.ok, v.reason);
+});
+test('rules 20: walking out of an ajo after collecting leaves a debt and an 8-week ban; businesses need a site; options are whole numbers', () => {
+  const s = L.newGame({ seed: 1900, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 20);
+  assert.equal(L.buyBusiness(s, 'pos').ok, false, 'a site is required');
+  s.pending.push({ id: 'police', title: '', text: '', options: ['a', 'b'] }); assert.equal(L.resolveChoice(s, 0.5).ok, false); assert.equal(L.resolveChoice(s, NaN).ok, false); assert.equal(s.pending.length, 1);
+  assert.equal(L.stockPrice(s, Object.keys(D.STOCKS)[0], L.day(s) + 30), L.stockPrice(s, Object.keys(D.STOCKS)[0]), 'no future prices');
+  assert.equal(L.stockPrice(s, 'constructor'), 0);
+});
+test('review fixes: a proof that claims gems on future dates does not verify', () => {
+  const s = L.newGame({ seed: 1901, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const e = L.fameEntry(s); e.replay = Object.assign({}, e.replay, { acts: e.replay.acts.concat([['gm', '2099-01-01', 0]]) });
+  assert.equal(L.verifyFame(e).reason, 'dates in the future');
 });

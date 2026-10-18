@@ -45,7 +45,9 @@ function store(dir) {
   };
   return {
     order: ref => db.orders[ref] || null,
-    addOrder: o => { db.orders[o.ref] = o; save(); },
+    addOrder: o => { Object.keys(db.orders).forEach(k => { const x = db.orders[k]; if (x.status === 'pending' && Date.now() - Date.parse(x.created) > 7 * 86400000) delete db.orders[k]; }); db.orders[o.ref] = o; save(); }, // week-old unpaid orders are dropped
+    pendingItem: (acc, item) => Object.keys(db.orders).some(k => { const o = db.orders[k]; return o.account === acc && o.item === item && o.status === 'pending' && Date.now() - Date.parse(o.created) < 86400000; }),
+    pendingAll: () => Object.keys(db.orders).filter(k => db.orders[k].status === 'pending' && Date.now() - Date.parse(db.orders[k].created) < 86400000).length,
     pendingFor: acc => Object.keys(db.orders).filter(k => db.orders[k].account === acc && db.orders[k].status === 'pending' && Date.now() - Date.parse(db.orders[k].created) < 86400000).length,
     owned: acc => db.grants[acc] || [],
     // Idempotent: the same payment reference never grants twice.
@@ -90,7 +92,7 @@ function limiter(rate, per) {
   return ip => {
     const now = Date.now(), b = bucket.get(ip) || { t: now, n: rate };
     b.n = Math.min(rate, b.n + (now - b.t) * rate / per); b.t = now;
-    if (bucket.size > 5000) bucket.clear();
+    if (bucket.size > 5000) { const old = bucket.keys().next().value; bucket.delete(old); } // drop the oldest, never everyone's limit
     if (b.n < 1) { bucket.set(ip, b); return false; }
     b.n -= 1; bucket.set(ip, b); return true;
   };
@@ -98,7 +100,10 @@ function limiter(rate, per) {
 function same(a, b) { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); }
 
 function createApp(cfg, fetchImpl) {
-  const f = fetchImpl || fetch, db = store(cfg.dataDir);
+  const inflight = new Map();
+  const f0 = fetchImpl || fetch, db = store(cfg.dataDir);
+  // Provider calls give up after 15 seconds instead of hanging a request.
+  const f = (u, o) => f0(u, Object.assign({}, o, typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? { signal: AbortSignal.timeout(15000) } : {}));
   const providers = { flutterwave: !!cfg.flw, paypal: !!cfg.paypal };
 
   async function paypalToken() {
@@ -107,12 +112,16 @@ function createApp(cfg, fetchImpl) {
   }
 
   async function checkout(body) {
-    const item = COSMETICS[body.item] || TOPUPS[body.item];
+    const has = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+    const item = has(COSMETICS, body.item) ? COSMETICS[body.item] : has(TOPUPS, body.item) ? TOPUPS[body.item] : null;
     if (!item) return [400, { error: 'No such item' }];
+    if (typeof body.account !== 'string') return [400, { error: 'Bad shop key' }];
     if (!ACCOUNT.test(body.account || '')) return [400, { error: 'Bad shop key' }];
     if (body.adult !== true) return [400, { error: 'Purchases are for players aged 18 or over' }];
     if (!TOPUPS[body.item] && db.owned(body.account).some(g => g.item === body.item)) return [409, { error: 'You already own this' }]; // top-ups can be bought again
     if (db.pendingFor(body.account) >= 5) return [429, { error: 'Too many unfinished payments. Finish or wait a day.' }];
+    if (!TOPUPS[body.item] && db.pendingItem(body.account, body.item)) return [409, { error: 'You already started paying for this. Finish that payment, or wait a day.' }];
+    if (db.pendingAll() >= 2000) return [503, { error: 'The shop is busy. Try again later.' }];
     const ref = 'lsg_' + crypto.randomBytes(12).toString('hex');
     if (body.provider === 'flutterwave' && cfg.flw) {
       if (!cfg.flw.receipt) return [503, { error: 'The shop owner has not set a receipts address' }];
@@ -147,26 +156,36 @@ function createApp(cfg, fetchImpl) {
     if (!r.ok || !d || d.status !== 'successful') return false;
     if (!/^lsg_[0-9a-f]{24}$/.test(String(d.tx_ref || ''))) return false;
     const o = db.order(d.tx_ref); if (!o || o.provider !== 'flutterwave') return false;
-    if (d.currency !== o.currency || Number(d.amount) < Number(o.amount)) return false;
+    if (d.currency !== o.currency || !(Number(d.amount) >= Number(o.amount))) return false; // NaN never passes
     db.grant(o.ref, d.id); return o.ref;
   }
   async function paypalCapture(ref, token) {
     if (!/^[A-Z0-9-]{5,40}$/.test(token)) return false;
     const o = db.order(ref); if (!o || o.provider !== 'paypal' || o.providerOrder !== token) return false;
     if (o.status === 'paid') return ref;
-    const tok = await paypalToken();
-    const r = await f(cfg.paypal.api + '/v2/checkout/orders/' + encodeURIComponent(token) + '/capture', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' } });
-    const j = await r.json();
-    const cap = j && j.purchase_units && j.purchase_units[0] && j.purchase_units[0].payments && j.purchase_units[0].payments.captures && j.purchase_units[0].payments.captures[0];
-    if (!r.ok || j.status !== 'COMPLETED' || !cap || cap.status !== 'COMPLETED') return false;
-    if (cap.amount.currency_code !== o.currency || cap.amount.value !== o.amount) return false;
-    db.grant(ref, cap.id); return ref;
+    if (inflight.has(ref)) return inflight.get(ref); // a second return while the first is capturing waits for it
+    const job = (async () => {
+      const tok = await paypalToken();
+      const firstCap = j => j && j.purchase_units && j.purchase_units[0] && j.purchase_units[0].payments && j.purchase_units[0].payments.captures && j.purchase_units[0].payments.captures[0];
+      let j = null, okr = false;
+      try { const r = await f(cfg.paypal.api + '/v2/checkout/orders/' + encodeURIComponent(token) + '/capture', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' } }); okr = r.ok; j = await r.json(); } catch (e) { j = null; }
+      // If the capture failed or its answer was lost (it may already have been captured), ask PayPal for the order itself.
+      if (!okr || !j || j.status !== 'COMPLETED') { const r2 = await f(cfg.paypal.api + '/v2/checkout/orders/' + encodeURIComponent(token), { headers: { Authorization: 'Bearer ' + tok } }); j = r2.ok ? await r2.json() : null; }
+      const cap = firstCap(j);
+      if (!j || j.status !== 'COMPLETED' || !cap || cap.status !== 'COMPLETED') return false;
+      if (cap.amount.currency_code !== o.currency || cap.amount.value !== o.amount) return false;
+      db.grant(ref, cap.id); return ref;
+    })();
+    inflight.set(ref, job);
+    try { return await job; } finally { inflight.delete(ref); }
   }
 
   function serveStatic(req, res, url) {
     let p = decodeURIComponent(url.pathname); if (p === '/') p = '/index.html';
     if (p === '/terms.html') return fs.createReadStream(path.join(__dirname, 'terms.html')).on('open', () => res.writeHead(200, Object.assign({ 'Content-Type': TYPES['.html'] }, SEC))).pipe(res);
     const file = path.normalize(path.join(cfg.root, p));
+    const dataDir = path.resolve(cfg.dataDir || '');
+    if (file === dataDir || file.startsWith(dataDir + path.sep)) return send(res, 404, 'Not found'); // shop.json holds every key
     if (!file.startsWith(cfg.root + path.sep) || file.includes(path.sep + 'server' + path.sep) || file.includes(path.sep + 'node_modules' + path.sep) || /(^|[\\/])\./.test(path.relative(cfg.root, file))) return send(res, 404, 'Not found');
     fs.stat(file, (err, st) => {
       if (err || !st.isFile()) return send(res, 404, 'Not found');
@@ -175,7 +194,7 @@ function createApp(cfg, fetchImpl) {
         res.writeHead(200, Object.assign({ 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-cache' }, SEC)); return res.end(html);
       }
       res.writeHead(200, Object.assign({ 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' }, SEC));
-      fs.createReadStream(file).pipe(res);
+      fs.createReadStream(file).on('error', () => res.destroy()).pipe(res);
     });
   }
 
@@ -185,7 +204,7 @@ function createApp(cfg, fetchImpl) {
     try {
       if (url.pathname.startsWith('/api/')) {
         // Behind a trusted proxy (SHOP_TRUST_PROXY=1), limit by the client address it forwards; otherwise by the socket.
-        const ip = cfg.trustProxy && req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : (req.socket.remoteAddress || '');
+        const ip = cfg.trustProxy && req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',').pop().trim() : (req.socket.remoteAddress || '');
         if (!allow(ip)) return send(res, 429, { error: 'Slow down' });
         if (req.method === 'POST' && !/^application\/json\b/.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'Send JSON' });
       }
@@ -219,7 +238,7 @@ function createApp(cfg, fetchImpl) {
         if (!cfg.adminToken || !local) return send(res, 404, { error: 'Not found' });
         if (!same(req.headers['x-admin-token'] || '', cfg.adminToken)) return send(res, 401, { error: 'Bad token' });
         let b; try { b = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'Bad request' }); }
-        if (!/^lsg_[0-9a-f]{24}$/.test(b.ref || '') || !ACCOUNT.test(b.account || '')) return send(res, 400, { error: 'Give a receipt (lsg_…) and a shop key' });
+        if (!b || typeof b !== 'object' || typeof b.account !== 'string' || !/^lsg_[0-9a-f]{24}$/.test(b.ref || '') || !ACCOUNT.test(b.account || '')) return send(res, 400, { error: 'Give a receipt (lsg_…) and a shop key' });
         const err = db.restore(b.ref, b.account); return send(res, err ? 409 : 200, err ? { error: err } : { ok: true });
       }
       if (url.pathname.startsWith('/api/')) return send(res, 404, { error: 'Not found' });
