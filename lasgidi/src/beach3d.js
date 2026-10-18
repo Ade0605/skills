@@ -665,7 +665,7 @@
       // Passengers waiting on the quay and the pier.
       var NW = 46, wr = rnd(29), wb = []; for (var w = 0; w < NW; w++) wb.push(w < 26 ? [-10 + wr() * 20, -24 + wr() * 8, wr() * 6] : [(wr() - 0.5) * 4, -8 + wr() * 36, wr() * 6]);
       JT.people = squad(NW, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec][i % 7]; }, 1, jetG); JT.peopleBase = wb;
-      if (/^(cms|lagoon_cruise|lagoon_jetty)$/.test(id)) partyBoat();
+      if (/^(cms|lagoon_cruise|lagoon_jetty|ph_bonny_pl)$/.test(id)) partyBoat();
     }
     // The Lagoon party boat (the island jetty and the Lagoon Boat Cruise): moored by the pier, with the deck bar,
     // the captain's helm, an LED dance floor, speaker stacks, a sun deck with loungers, rails and life rings.
@@ -696,7 +696,7 @@
       for (var l = 0; l < 3; l++) { var lg = new T.Group(); lg.position.set(4 + 0, 1.9, -13 + l * 0 + 0); lg.position.x = -4 + l * 4; lg.add(mesh(new T.BoxGeometry(1.4, 0.3, 3), mat('lounger', { color: 0xf4f3ec }), 0, 0.4, 0)); var back = mesh(new T.BoxGeometry(1.4, 0.2, 1.2), mat('lounger', {}), 0, 0.9, -1.4); back.rotation.x = -0.6; lg.add(back); B.add(lg); }
       [[6.85, -4], [-6.85, 6], [6.85, 9]].forEach(function (q) { var ring = new T.Mesh(new T.TorusGeometry(0.55, 0.16, 8, 20), mat('lring', { color: 0xff3b2f })); ring.position.set(q[0], 2.7, q[1]); ring.rotation.y = Math.PI / 2; B.add(ring); });
       // a sign on two poles
-      var st = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#17213a'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 54px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LAGOON CRUISE', w / 2, h / 2); });
+      var st = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#17213a'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 54px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(/^ph_/.test(sc.placeId || '') ? 'RIVER CRUISE' : 'LAGOON CRUISE', w / 2, h / 2); });
       [-3, 3].forEach(function (x) { B.add(mesh(new T.CylinderGeometry(0.08, 0.08, 4, 6), rail, x, 4, 14)); }); var sm = new T.Mesh(new T.PlaneGeometry(7, 1.3), new T.MeshBasicMaterial({ map: st, side: T.DoubleSide })); sm.position.set(0, 6, 14); sm.rotation.y = Math.PI; B.add(sm);
       var L0 = new T.PointLight(0xff3fb4, 0, 22, 1.4); L0.position.set(0, 7, 0); B.add(L0); JT.party.light = L0;
       mergeStatic(B, [wheel]);
@@ -714,7 +714,7 @@
       var su = ((t + 20) % 30) / 30, sx = -200 + su * 400; JT.speed.position.set(sx, Math.sin(t * 4) * 0.12, 70); JT.speed.rotation.y = 0; JT.speed.rotation.z = 0.05;
       var cu = ((t + 7) % 80) / 80; JT.canoe.position.set(60 - cu * 120, Math.sin(t * 2) * 0.05, -12); JT.canoe.rotation.y = Math.PI;
       JT.wakes.forEach(function (w) { var o = w.o, moving = o === JT.speed || u < 0.35 || u > 0.65; w.m.visible = moving; w.m.position.set(o.position.x - Math.cos(o.rotation.y) * (o === JT.ferry ? 14 : 6), -0.3, o.position.z + Math.sin(o.rotation.y) * (o === JT.ferry ? 14 : 6)); w.m.rotation.y = o.rotation.y; w.m.scale.set(o === JT.ferry ? 16 : 10, 1, o === JT.ferry ? 5 : 2.4); w.m.material.opacity = 0.35 + Math.sin(t * 5) * 0.1; });
-      var dest = ['Ikorodu', 'CMS', 'Falomo', 'Ebute-Ero', 'Tarkwa Bay'][Math.floor(t / 60) % 5], docked = u >= 0.35 && u < 0.65;
+      var dest = (/^ph_/.test(sc.placeId || '') ? ['Bonny', 'Onne', 'Okrika', 'Abonnema', 'Bonny'] : /^abj_/.test(sc.placeId || '') ? ['the north shore', 'the island', 'the marina', 'the north shore', 'the island'] : ['Ikorodu', 'CMS', 'Falomo', 'Ebute-Ero', 'Tarkwa Bay'])[Math.floor(t / 60) % 5], docked = u >= 0.35 && u < 0.65;
       label(JT.labels[0], docked ? '⛴ Boarding · to ' + dest : u < 0.35 ? '⛴ Arriving from ' + dest : '⛴ Departed · to ' + dest, docked ? '#1d7a43' : 'rgba(23,24,26,.8)', '#fff'); JT.labels[0].position.set(fx, 9, fz);
       label(JT.labels[1], '🚤 Water taxi', 'rgba(23,24,26,.8)', '#fff'); JT.labels[1].position.set(JT.speed.position.x, 5, 70);
       JT.boats.forEach(function (b) { b.o.position.y = Math.sin(t * 1.2 + b.ph) * 0.1; b.o.rotation.z = Math.sin(t * 0.9 + b.ph) * 0.02; });
@@ -755,7 +755,7 @@
       var ch = new T.Group(); ch.position.set(0, 0, -62); ch.add(mesh(new T.BoxGeometry(34, 9, 14), mat('chw', { color: 0xf4efe4, roughness: 0.6 }), 0, 4.5, 0)); ch.add(mesh(new T.BoxGeometry(37, 1, 17), mat('chr', { color: 0x2b3a2b }), 0, 9.5, 0));
       for (var w2 = 0; w2 < 8; w2++) ch.add(mesh(new T.BoxGeometry(2.6, 3.4, 0.2), glassM, -14 + w2 * 4, 4.4, 7.05)); ch.add(mesh(new T.BoxGeometry(34, 0.4, 7), mat('terr', { color: 0xb08a5a }), 0, 0.6, 10.5));
       for (var u = 0; u < 4; u++) { ch.add(mesh(new T.CylinderGeometry(1, 1, 0.1, 16), mat('ttop', { color: 0xf4f3ec }), -12 + u * 8, 2, 10.5)); ch.add(mesh(new T.CylinderGeometry(0.1, 0.1, 4, 6), mat('upole', { color: 0x666666 }), -12 + u * 8, 2.6, 10.5)); ch.add(mesh(new T.ConeGeometry(2.6, 1.2, 8), mat('umb', { color: 0x1f5a3c }), -12 + u * 8, 4.6, 10.5)); }
-      var st = canvasTex(1024, 128, function (g, w, h) { g.fillStyle = '#1f3a2a'; g.fillRect(0, 0, w, h); g.fillStyle = '#d4af37'; g.font = '800 64px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('IKOYI GOLF CLUB · MEMBERS', w / 2, h / 2); });
+      var st = canvasTex(1024, 128, function (g, w, h) { g.fillStyle = '#1f3a2a'; g.fillRect(0, 0, w, h); g.fillStyle = '#d4af37'; g.font = '800 64px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText((sc.placeId === 'golf_abuja' ? 'ABUJA HILLS GOLF CLUB' : 'IKOYI GOLF CLUB') + ' · MEMBERS', w / 2, h / 2); });
       var sm = new T.Mesh(new T.PlaneGeometry(22, 2.75), new T.MeshBasicMaterial({ map: st })); sm.position.set(0, 7.6, 7.12); ch.add(sm); parkG.add(ch);
       // buggies and golfers mid-swing
       PK.golfers = [];
@@ -870,6 +870,7 @@
     function campusSign(text, bg, fg, w, x, y, z, ry, grp) { var t = canvasTex(1024, 160, function (g, cw, ch) { g.fillStyle = bg; g.fillRect(0, 0, cw, ch); g.fillStyle = fg; g.font = '900 88px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, cw / 2, ch / 2 + 4, cw - 40); }); var m = new T.Mesh(new T.PlaneGeometry(w, w * 0.156), new T.MeshBasicMaterial({ map: t, side: T.DoubleSide })); m.position.set(x, y, z); m.rotation.y = ry || 0; (grp || plzG).add(m); return m; }
     function campusFig(i, x, z, ry, sit) { var f = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('unilag', i), 130 + i) : person(130 + i, i % 2 === 1); f.position.set(x, sit ? 0.5 : 0.05, z); f.rotation.y = ry || 0; if (sit && f.userData.legs) f.userData.legs.forEach(function (l) { l.rotation[f.userData.axis || 'z'] = -1.2; }); plzG.add(f); return f; }
     function campusBuild() {
+      var UP = sc.placeId === 'ph_uniport';
       var wall = mat('cwall', { color: 0xf1ede4, roughness: 0.7 }), wood = mat('cwood', { color: 0x8a5a33, roughness: 0.8 }), dark = mat('cdark', { color: 0x1f2a44 });
       // the Senate Building: a tall white tower with window bands, and the admissions desk at its foot
       var sen = new T.Group(); sen.position.set(0, 0, 70); sen.add(mesh(new T.BoxGeometry(26, 48, 16), wall, 0, 24, 0)); for (var fl = 1; fl < 12; fl++) sen.add(mesh(new T.BoxGeometry(26.2, 1.4, 16.2), glassM, 0, fl * 4, 0)); plzG.add(sen);
@@ -887,7 +888,7 @@
       var bu = new T.Group(); bu.position.set(30, 0, -26); bu.add(mesh(new T.BoxGeometry(12, 0.3, 6), mat('canopyB', { color: 0xe0c27a }), 0, 4.6, 0)); [[-5.6, -2.6], [5.6, -2.6], [-5.6, 2.6], [5.6, 2.6]].forEach(function (q) { bu.add(mesh(new T.CylinderGeometry(0.12, 0.12, 4.6, 6), mat('cpost', { color: 0x666666 }), q[0], 2.3, q[1])); });
       bu.add(mesh(new T.BoxGeometry(10, 1.8, 2), mat('bcounter', { color: 0x1f3b9a }), 0, 0.9, 1.6)); for (var pt = 0; pt < 4; pt++) bu.add(mesh(new T.CylinderGeometry(0.8, 0.7, 1, 16), mat('pot', { color: 0x3a3a3a, metalness: 0.5 }), -3.6 + pt * 2.4, 2.3, 1.6));
       for (var bt = 0; bt < 2; bt++) { bu.add(mesh(new T.BoxGeometry(8, 0.2, 2), wood, 0, 1.4, -4.5 - bt * 4)); bu.add(mesh(new T.BoxGeometry(8, 0.2, 0.7), wood, 0, 0.8, -3.2 - bt * 4)); bu.add(mesh(new T.BoxGeometry(8, 0.2, 0.7), wood, 0, 0.8, -5.8 - bt * 4)); bu.add(mesh(new T.CylinderGeometry(0.5, 0.5, 0.06, 14), mat('plate', { color: 0xffffff }), -2 + bt * 3, 1.55, -4.5 - bt * 4)); }
-      plzG.add(bu); campusSign("MAMA B'S BUKA · RICE AND BEANS N1200", '#1f3b9a', '#ffffff', 11, 30, 3.6, -24.25, Math.PI); campusFig(10, 30, -22.6, -Math.PI / 2); campusFig(11, 28, -30.5, Math.PI / 2, true);
+      plzG.add(bu); campusSign(UP ? "MAMA NGOZI'S BUKA · RICE AND BEANS N1200" : "MAMA B'S BUKA · RICE AND BEANS N1200", '#1f3b9a', '#ffffff', 11, 30, 3.6, -24.25, Math.PI); campusFig(10, 30, -22.6, -Math.PI / 2); campusFig(11, 28, -30.5, Math.PI / 2, true);
       // a hall of residence room, cut away: bunk beds, a locker and a red bucket
       var hr = new T.Group(); hr.position.set(-32, 0, -26); hr.add(mesh(new T.BoxGeometry(12, 0.2, 10), mat('hfloor', { color: 0x9a9a9a }), 0, 0.1, 0)); hr.add(mesh(new T.BoxGeometry(12, 6, 0.3), mat('hwall', { color: 0xdfe8d8 }), 0, 3, 5)); hr.add(mesh(new T.BoxGeometry(0.3, 6, 10), mat('hwall', {}), -6, 3, 0));
       [0, 1].forEach(function (bb) { var bx = -3 + bb * 5.5; [0.9, 3].forEach(function (y) { hr.add(mesh(new T.BoxGeometry(4, 0.4, 2), mat('bunkm', { color: 0x1f3b9a }), bx, y, 2.6)); }); [[-2, 1.6], [2, 1.6], [-2, 3.6], [2, 3.6]].forEach(function (q) { hr.add(mesh(new T.BoxGeometry(0.15, 4, 0.15), mat('bunkf', { color: 0x2b2d33 }), bx + q[0], 2, q[1])); }); });
@@ -898,7 +899,7 @@
       // the lagoon front, the gate sign
       var lag = new T.Mesh(new T.PlaneGeometry(200, 30).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x3a7f9f, roughness: 0.08, clearcoat: 1 })); lag.position.set(0, 0.04, -62); plzG.add(lag);
       for (var lb = 0; lb < 5; lb++) plzG.add(mesh(new T.BoxGeometry(3, 0.25, 0.8), wood, -24 + lb * 12, 0.9, -45)); campusFig(24, -12, -44.4, Math.PI / 2, true); campusFig(25, -10.6, -44.4, Math.PI / 2, true);
-      [-10, 10].forEach(function (x) { plzG.add(mesh(new T.BoxGeometry(1.4, 8, 1.4), wall, x, 4, 18)); }); campusSign('UNIVERSITY OF LAGOS', '#1f2a44', '#f2c200', 18, 0, 8.6, 18, Math.PI);
+      [-10, 10].forEach(function (x) { plzG.add(mesh(new T.BoxGeometry(1.4, 8, 1.4), wall, x, 4, 18)); }); campusSign(UP ? 'UNIVERSITY OF PORT HARCOURT' : 'UNIVERSITY OF LAGOS', '#1f2a44', '#f2c200', 18, 0, 8.6, 18, Math.PI);
     }
     function buildPlaza() {
       wipe(plzG); var id = sc.placeId || 'plaza'; PZ = { glow: [], domes: [], flags: [], lamps: [], towers: [] };
@@ -914,7 +915,7 @@
         var st = mat('stand', { color: 0xf4f1ea, roughness: 0.7 }); for (var tier = 0; tier < 8; tier++) plzG.add(mesh(new T.BoxGeometry(120, 1.2, 3), st, 0, 0.6 + tier * 1.2, 70 + tier * 3)); var can = mesh(new T.BoxGeometry(124, 0.6, 30), mat('canopy', { color: 0x1d7a43, roughness: 0.5 }), 0, 16, 80); can.rotation.x = -0.08; plzG.add(can); for (var cp = -60; cp <= 60; cp += 15) plzG.add(mesh(new T.CylinderGeometry(0.5, 0.5, 16, 8), st, cp, 8, 94));
         if (/tbs/.test(id)) { [-30, 30].forEach(function (hx) { var hs = new T.Group(); hs.position.set(hx, 0, 30); hs.add(mesh(new T.BoxGeometry(6, 4, 6), st, 0, 2, 0)); var hm = mat('bronze', { color: 0x6b4a2b, metalness: 0.6, roughness: 0.4 }); hs.add(mesh(new T.CapsuleGeometry(1.2, 4, 4, 8).rotateZ(Math.PI / 2 - 0.5), hm, 0, 7, 0)); hs.add(mesh(new T.CapsuleGeometry(0.6, 2, 4, 8).rotateZ(-0.6), hm, 2.6, 9.2, 0)); [[-1.6, -0.8], [-1.6, 0.8], [1.2, -0.8], [1.2, 0.8]].forEach(function (lq) { hs.add(mesh(new T.CylinderGeometry(0.3, 0.3, 3, 6), hm, lq[0], 5, lq[1])); }); plzG.add(hs); }); }
         else { var eg = new T.Group(); eg.position.set(0, 0, 36); eg.add(mesh(new T.CylinderGeometry(3, 4, 8, 12), st, 0, 4, 0)); var em = mat('eagle', { color: 0x2b2f36, metalness: 0.6, roughness: 0.35 }); eg.add(mesh(new T.SphereGeometry(2, 16, 12), em, 0, 10, 0)); [-1, 1].forEach(function (sd) { var wg = mesh(new T.BoxGeometry(9, 0.4, 2.6), em, sd * 5, 11.5, 0); wg.rotation.z = sd * 0.35; eg.add(wg); }); eg.add(mesh(new T.ConeGeometry(0.7, 2, 8), mat('gold', { color: 0xd4af37, metalness: 0.8 }), 0, 11.2, -2.2)); plzG.add(eg); }
-      } else if (id === 'unilag') { campusBuild(); }
+      } else if (id === 'unilag' || id === 'ph_uniport') { campusBuild(); }
       else stateHouse(0, 60, /threearms/.test(id));
       // Flags along the plaza, a fountain at its heart, lamps, palms, and the city behind.
       var flagT = canvasTex(96, 64, function (c, w, h) { c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
@@ -928,7 +929,7 @@
       // People crossing the plaza; a crowd on worship days (Friday at the mosque, Sunday at the church).
       var NW = 140, wr = rnd(43), wb = []; for (var w = 0; w < NW; w++) wb.push([-40 + wr() * 80, -36 + wr() * 70, (wr() - 0.5) * 2, (wr() - 0.5) * 2, wr() * 6]);
       PZ.walkers = squad(NW, function (i) { return [0xf4f3ec, 0xf4f3ec, 0x2f6fa0, 0x1d7a43, 0xc0392b, 0x8e44ad, 0xf2b600][i % 7]; }, 1, plzG); PZ.walkBase = wb;
-      if (id === 'unilag') mergeStatic(plzG, [pave, gr].concat(PZ.spray || [], PZ.flags || [], PZ.ball ? [PZ.ball] : []));
+      if (id === 'unilag' || id === 'ph_uniport') mergeStatic(plzG, [pave, gr].concat(PZ.spray || [], PZ.flags || [], PZ.ball ? [PZ.ball] : []));
     }
     function plazaFrame(t, night) {
       if (PZ.ball) { var bu = t * 0.7; PZ.ball.position.set(Math.sin(bu) * 7, 0.35 + Math.abs(Math.sin(t * 3)) * 0.6, Math.sin(bu * 1.7) * 3.5); (PZ.players || []).forEach(function (f, k) { var lg = f.userData.legs; f.position.x = -20 + (k - 1.5) * 4 + Math.sin(bu + k) * 1.5; if (lg && !reduce) { lg[0].rotation[f.userData.axis || 'z'] = Math.sin(t * 7 + k) * 0.5; lg[1].rotation[f.userData.axis || 'z'] = -Math.sin(t * 7 + k) * 0.5; } }); }

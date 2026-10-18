@@ -309,6 +309,9 @@
         { id: 'diamond', label: 'Order the ₦1bn diamond bottle', mins: 60, cost: 1000000000, fx: { fun: 100, social: 100 }, when: { from: 19, to: 24 } },
         { id: 'cup', label: 'Enter the Saturday Club Cup (6 holes)', mins: 30, cost: 1000000, golf: 'cup', when: { days: [5], from: 7, to: 12 } }
       ] },
+    // Rules 19: the same members' course in Abuja, on the Maitama hills. One Club Cup a week across both clubs.
+    abjgolf: { name: 'Abuja Hills Golf Club', icon: '⛳', district: 'abj_maitama', place: 'golf_abuja', where: 'Maitama, Abuja', join: 10000000, weekly: 1000000, minWorth: 1000000000, referStatus: 90, referCharisma: 6, rules: 19,
+      text: 'Members only: a net worth of ₦1bn gets you through the gate. Six holes under the hills, single malts, quiet deals with the capital\'s old money.', acts: null },
     powerboat: { name: 'Harbour Powerboat Club', icon: '🚤', district: 'vi', place: 'club_powerboat', where: 'Eko Atlantic harbour', join: 3000000, weekly: 400000, minWorth: 300000000, referStatus: 55, referCharisma: 4,
       text: 'Race-tuned powerboats, a pit lane on the water and a timing board in the bar.',
       acts: [
@@ -316,6 +319,7 @@
         { id: 'raceday', label: 'Race day: watch from the pit pontoon', mins: 240, cost: 80000, fx: { fun: 45, social: 30, energy: -10 }, when: { days: [5, 6], from: 11, to: 18 } }
       ] }
   };
+  CLUBS.abjgolf.acts = CLUBS.golf.acts.map(function (a) { return JSON.parse(JSON.stringify(a)); });
   var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC' };
   var AIR = { rushFrom: 6, rushTo: 9, rush: 1.5, insure: 0.06, lostBag: 25000, lostOdds: 0.08, jetFuel: 5000000, charter: 12000000, chopperCity: 1500000, chopperIntercity: 4000000 };
   // Flight and bus times (minutes) and base fares between cities.
@@ -911,6 +915,7 @@
     { id: 'club_jetski', icon: '🌊', name: 'Five Cowries Jet Ski Club', type: 'outdoors', glyph: 'club', district: 'ikoyi', x: 19.9, y: 20.7, acts: [], club: 'jetski', nogem: true, text: 'A members\' pontoon on the lagoon.' },
     { id: 'club_yacht', icon: '🛥️', name: 'Atlantic Marina Yacht Club', type: 'outdoors', glyph: 'yacht', district: 'vi', x: 14.2, y: 29.4, acts: [], club: 'yacht', nogem: true, text: 'Members only, at the Eko Atlantic marina.' },
     { id: 'golf_ikoyi', icon: '⛳', name: 'Ikoyi Golf Club', type: 'outdoors', glyph: 'tree', district: 'ikoyi', x: 20.4, y: 21.2, acts: [], club: 'golf', nogem: true, text: 'Members only: six holes, the lake, the clubhouse terrace and the Saturday Club Cup.' },
+    { id: 'golf_abuja', icon: '⛳', name: 'Abuja Hills Golf Club', type: 'outdoors', glyph: 'tree', district: 'abj_maitama', x: 13.2, y: 6.2, acts: [], club: 'abjgolf', nogem: true, text: 'Members only: six holes under the Maitama hills, the clubhouse terrace and the Saturday Club Cup.' },
     { id: 'club_powerboat', icon: '🚤', name: 'Harbour Powerboat Club', type: 'outdoors', glyph: 'club', district: 'vi', x: 18.9, y: 29.6, acts: [], club: 'powerboat', nogem: true, text: 'Members only, on the Eko Atlantic harbour.' },
     { id: 'ph_waterfront', icon: '⛵', name: 'Port Harcourt waterfront', type: 'outdoors', glyph: 'wave', district: 'ph_borokiri', x: 16.6, y: 19.6, acts: ['ph_waterfront', 'ph_fish_gig'], text: 'Boats, fishermen and the Bonny River.' },
     { id: 'abj_mosque_pl', icon: '🕌', name: 'National Mosque', type: 'culture', glyph: 'mosque', district: 'abj_garki', x: 18.0, y: 13.0, acts: ['abj_mosque'], text: 'Golden dome and four minarets on the edge of the Central Area.' },
@@ -1744,13 +1749,19 @@
     ['abj_casino', '🎰', 'Wuse Casino', 'nightlife', 'dice', 'abj_wuse', 11.6, 11.4, 'casino', 'Slots, roulette and blackjack. 18 and over. The house always wins in the end.'],
     ['ph_casino', '🎰', 'Trans-Amadi Casino', 'nightlife', 'dice', 'ph_transamadi', 21.6, 11.4, 'casino', 'Slots, roulette and blackjack. 18 and over. The house always wins in the end.'],
     ['abj_court', '⚖️', 'FCT High Court, Garki', 'services', 'gavel', 'abj_garki', 16.4, 14.6, 'court', 'The bench, the dock, the witness box and a public gallery.'],
-    ['ph_court', '⚖️', 'Rivers High Court, Old GRA', 'services', 'gavel', 'ph_oldgra', 13.6, 14.6, 'court', 'The bench, the dock, the witness box and a public gallery.']
+    ['ph_court', '⚖️', 'Rivers High Court, Old GRA', 'services', 'gavel', 'ph_oldgra', 13.6, 14.6, 'court', 'The bench, the dock, the witness box and a public gallery.'],
+    ['abj_library', '📚', 'Wuse Public Library', 'learn', 'book', 'abj_wuse', 12.8, 11.0, 'library', 'Rows of shelves, reading tables, a computer room and a strict librarian.'],
+    ['ph_library', '📚', 'Garden City Library, GRA', 'learn', 'book', 'ph_gra', 12.2, 10.6, 'library', 'Rows of shelves, reading tables, a computer room and a strict librarian.'],
+    ['abj_office', '🏢', 'Garki Office Towers', 'services', 'tower', 'abj_garki', 14.2, 16.8, 'office', 'Glass towers by the business district: a co-working floor, meeting rooms and the canteen.'],
+    ['ph_office', '🏢', 'Trans-Amadi Business Tower', 'services', 'tower', 'ph_transamadi', 22.6, 12.6, 'office', 'Glass towers on the industrial layout: a co-working floor, meeting rooms and the canteen.']
   ].forEach(function (q) {
     var pfx = q[0].split('_')[0];
     CIVIC_PLACES.push({ id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8], text: q[9] });
     CIVIC_ACTS[q[0]] = q[8] === 'hospital' ? cloneActs(CIVIC_ACTS.gen_hosp, 'hosp_gen_hosp_', 'hosp_' + q[0] + '_')
       : q[8] === 'hotel' ? cloneActs(CIVIC_ACTS.grand_hotel, 'hotel_', 'hotel_' + pfx + '_')
       : q[8] === 'casino' ? cloneActs(CIVIC_ACTS.lagoon_casino, 'casino_', 'casino_' + pfx + '_')
+      : q[8] === 'library' ? cloneActs(CIVIC_ACTS.city_library, 'lib_', 'lib_' + pfx + '_')
+      : q[8] === 'office' ? cloneActs(CIVIC_ACTS.office_tower, 'office_', 'office_' + pfx + '_')
       : cloneActs(CIVIC_ACTS.high_court, 'court_', 'court_' + pfx + '_');
   });
   // Wallet top-ups sold by the self-hosted shop (rules 19): the naira here is what a verified purchase credits.
@@ -1759,10 +1770,10 @@
   // Places added after the gem hunt began stay out of its pool, so old lives' gems (and their seals) replay.
   CIVIC_PLACES.forEach(function (p) { p.nogem = true; PLACES.push(p); });
   // Rules 19: the Lagoon party boat moored at the island jetties.
-  ['cms', 'lagoon_cruise', 'lagoon_jetty'].forEach(function (pid) {
+  ['cms', 'lagoon_cruise', 'lagoon_jetty', 'ph_bonny_pl'].forEach(function (pid) {
     var id = 'boat_' + pid;
     CIVIC_ACTS[pid] = [
-      { id: id + '_party', label: 'Party cruise on the deck (two hours round the lagoon)', mins: 120, cost: 15000, fx: { fun: 30, social: 20, energy: -10 }, when: { from: 16, to: 24 } },
+      { id: id + '_party', label: 'Party cruise on the deck (two hours round the ' + (pid === 'ph_bonny_pl' ? 'river' : 'lagoon') + ')', mins: 120, cost: 15000, fx: { fun: 30, social: 20, energy: -10 }, when: { from: 16, to: 24 } },
       { id: id + '_deckbar', label: 'Chapman at the deck bar', mins: 15, cost: 3500, fx: { fun: 4, hunger: 3 }, when: { from: 12, to: 24 } },
       { id: id + '_sundeck', label: 'Lie on the sun deck', mins: 60, cost: 5000, fx: { stress: -12, fun: 5 }, when: { from: 9, to: 18 } },
       { id: id + '_helm', label: 'Stand with the captain at the helm', mins: 30, fx: { fun: 8 }, when: { from: 9, to: 20 } },
@@ -1801,6 +1812,8 @@
       ['shoot', 'Lagoon front photoshoot', 45, 3000, 0, { fun: 8, social: 4 }, null, { from: 9, to: 18 }]
     ];
     CIVIC_ACTS.unilag = U.map(function (u) { var a = { id: 'uni_' + u[0], label: u[1], mins: u[2], fx: u[5] }; if (u[3]) a.cost = u[3]; if (u[4]) { a.earn = u[4]; a.gig = true; a.fest = true; } if (u[6]) a.xp = u[6]; if (u[7]) a.when = u[7]; return a; });
+    // and the University of Port Harcourt, the same campus life under its own ids (Mama Ngozi runs the buka there).
+    CIVIC_ACTS.ph_uniport = cloneActs(CIVIC_ACTS.unilag, 'uni_', 'uniport_').map(function (a) { a.label = a.label.replace(/Mama B/g, 'Mama Ngozi').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river'); return a; });
   })();
   // Rules 19: Lekki Conservation Centre, close up.
   CIVIC_ACTS.lcc = [

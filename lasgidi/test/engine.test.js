@@ -2710,7 +2710,7 @@ test('rules 19: rent a sea block for 7 days at ₦500 a plot; rented plots are n
   const old = L.newGame({ seed: 1602, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (old.pending.length) L.resolveChoice(old, 0); assert.equal(L.rentSeaPlots(old, 0, 0, 1, 1).ok, false);
 });
 test('gems still replay: places added in rules 18-19 stay out of the gem pool, and the pool is pinned', () => {
-  for (const p of D.PLACES) if (p.civic || p.chain === 'pulse' || p.club === 'golf') assert.ok(p.nogem, p.id + ' must be nogem');
+  for (const p of D.PLACES) if (p.civic || p.chain === 'pulse' || p.club === 'golf' || p.club === 'abjgolf') assert.ok(p.nogem, p.id + ' must be nogem');
   assert.deepEqual(L.gemsFor('2026-10-12').map(g => g.place), ['vi_food', 'banks', 'vip_jetty', 'tailor', 'studio']);
   assert.deepEqual(L.gemsFor('2026-10-17').map(g => g.place), ['palms', 'pitch', 'berger_cars', 'ikeja_mall', 'festac_market']);
 });
@@ -2761,4 +2761,25 @@ test('review fixes: a proof that claims gems on future dates does not verify', (
   const s = L.newGame({ seed: 1901, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
   const e = L.fameEntry(s); e.replay = Object.assign({}, e.replay, { acts: e.replay.acts.concat([['gm', '2099-01-01', 0]]) });
   assert.equal(L.verifyFame(e).reason, 'dates in the future');
+});
+test('rules 19: Abuja and PH extras: libraries, offices, the Uniport campus, the PH party boat, Abuja Hills Golf Club', () => {
+  for (const [pid, d] of [['abj_library', 'abj_wuse'], ['ph_library', 'ph_gra'], ['abj_office', 'abj_garki'], ['ph_office', 'ph_transamadi'], ['ph_uniport', 'ph_choba'], ['ph_bonny_pl', 'ph_borokiri']]) {
+    const p = D.PLACES.find(x => x.id === pid); assert.ok(p && p.district === d, pid);
+    if (p.civic) assert.ok(p.nogem, pid + ' nogem');
+    const ids = D.CIVIC_ACTS[pid].map(a => a.id); assert.ok(ids.length >= 5, pid);
+    for (const k of Object.keys(D.CIVIC_ACTS)) if (k !== pid) for (const a of D.CIVIC_ACTS[k]) assert.ok(ids.indexOf(a.id) < 0, 'unique id ' + a.id);
+    const s = L.newGame({ seed: 1600, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.loc = d;
+    const o = L.newGame({ seed: 1600, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (o.pending.length) L.resolveChoice(o, 0); o.loc = d;
+    assert.ok(L.availableActions(s).some(a => a.id === ids[0]), pid + ' in rules 19');
+    assert.ok(!L.availableActions(o).some(a => ids.indexOf(a.id) >= 0), pid + ' not in rules 18');
+  }
+  assert.ok(D.CIVIC_ACTS.ph_uniport.every(a => !/Mama B'|lagoon/i.test(a.label)));
+  const s = L.newGame({ seed: 1601, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.match(L.clubQuote(s, 'abjgolf', 'worth').disabled || '', /Net worth/);
+  const old = L.newGame({ seed: 1602, origin: 'nepo', goal: 'freestyle', rules: 18 }); assert.match(L.clubQuote(old, 'abjgolf', 'worth').disabled || '', /Not open/);
+  s.clubs = { abjgolf: { joined: true, via: 'worth', until: s.t + 70 * 1440 } }; s.loc = 'abj_maitama'; s.cash = 5e6;
+  while (L.dow(s) !== 5) s.t += 1440; s.t = s.t - (s.t % 1440) + 8 * 60;
+  assert.ok(L.clubAct(s, 'abjgolf', 'cup').ok); while (s.pending.length && s.pending[0].id === 'golfhole') L.resolveChoice(s, 0);
+  s.clubs.golf = { joined: true, via: 'worth', until: s.t + 70 * 1440 };
+  assert.match(L.clubActOptions(s, 'golf').find(a => a.id === 'cup').disabled || '', /One Club Cup a week|Go to/);
 });
