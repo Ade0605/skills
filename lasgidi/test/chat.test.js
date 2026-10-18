@@ -26,3 +26,10 @@ test('chat: handles and pacing', () => {
   assert.match(C.canSend([9000], 10000), /Slow/);
   assert.match(C.canSend(Array.from({ length: 12 }, (_, i) => 1000 + i * 3000), 40000), /lot/);
 });
+test('chat: invisible characters, full-width digits and look-alike letters do not slip past the filter', () => {
+  const C = require('../src/chat.js');
+  assert.equal(C.clean('I want s­e­x now').ok, false);
+  assert.equal(C.clean('call 0８0３1234567').ok, false);
+  assert.equal(C.clean('ѕех tonight').ok, false);
+  assert.equal(C.clean('see you at the beach').ok, true);
+});

@@ -65,32 +65,35 @@
   function inPhase(at, wk, ph) { if (typeof at !== 'number' || !isFinite(at)) return false; var dt = new Date(at); return weekId(dt) === wk && phase(dt) === ph; }
   // Each doc keeps this week's entry and the one before it ({week, ..., prev: {week, ...}}).
   function weekVal(raw, wk) { if (!raw || typeof raw !== 'object') return null; if (raw.week === wk) return raw; if (raw.prev && raw.prev.week === wk) return raw.prev; return null; }
-  function byId(list) { var m = {}; (list || []).forEach(function (r) { if (r && typeof r.id === 'string') m[r.id] = r.raw; }); return m; }
+  // Own keys only: shared docs are untrusted, so 'constructor' or '__proto__' must never match a table entry.
+  function own(o, k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k); }
+  function dict() { return Object.create(null); }
+  function byId(list) { var m = dict(); (list || []).forEach(function (r) { if (r && typeof r.id === 'string') m[r.id] = r.raw; }); return m; }
 
   // Party members this week: { id: party }.
   function members(parties, wk) {
-    var m = {};
-    (parties || []).forEach(function (r) { var v = weekVal(r.raw, wk); if (v && PARTIES[v.party]) m[r.id] = v.party; });
+    var m = dict();
+    (parties || []).forEach(function (r) { var v = weekVal(r.raw, wk); if (v && own(PARTIES, v.party) && typeof r.id === 'string') m[r.id] = v.party; });
     return m;
   }
 
   // Candidates, primaries and the tickets on the ballot.
   function nominees(runs, parties, primaries, wk) {
-    var mem = members(parties, wk), partyDocs = byId(parties), cands = {};
+    var mem = members(parties, wk), partyDocs = byId(parties), cands = dict();
     (runs || []).forEach(function (r) {
       var v = weekVal(r.raw, wk);
-      if (!v || !PARTIES[v.party] || mem[r.id] !== v.party || !inPhase(v.at, wk, 'primaries')) return;
+      if (!v || typeof r.id !== 'string' || !own(PARTIES, v.party) || mem[r.id] !== v.party || !inPhase(v.at, wk, 'primaries')) return;
       if (typeof v.motto !== 'number' || !MOTTOS[v.motto]) return;
-      var planks = Array.isArray(v.planks) ? v.planks.filter(function (p, i, a) { return PLANKS[p] && a.indexOf(p) === i; }).slice(0, 3) : [];
+      var planks = Array.isArray(v.planks) ? v.planks.filter(function (p, i, a) { return own(PLANKS, p) && a.indexOf(p) === i; }).slice(0, 3) : [];
       var camp = {};
       if (v.camp && typeof v.camp === 'object') Object.keys(CAMPAIGN).forEach(function (k) { var n = +v.camp[k]; if (n > 0 && n < 10) camp[k] = Math.floor(n); });
       cands[r.id] = { id: r.id, party: v.party, motto: v.motto, planks: planks, camp: camp, at: v.at, deputyAsk: typeof v.deputy === 'string' ? v.deputy : null, primary: 0 };
     });
     (primaries || []).forEach(function (r) {
-      var v = weekVal(r.raw, wk), c = v && cands[v.cand];
+      var v = weekVal(r.raw, wk), c = v && typeof v.cand === 'string' && cands[v.cand];
       if (c && mem[r.id] === c.party && inPhase(v.at, wk, 'primaries')) c.primary++;
     });
-    var out = {};
+    var out = dict();
     Object.keys(cands).forEach(function (k) {
       var c = cands[k], best = out[c.party];
       if (!best || c.primary > best.primary || (c.primary === best.primary && c.at < best.at)) out[c.party] = c;
@@ -107,14 +110,14 @@
 
   // Collate the election: polling unit (district) totals, then the state.
   function election(tickets, votes, wk, units) {
-    var onBallot = {}, unitSet = units || null;
-    (tickets || []).forEach(function (t) { if (t.deputy) onBallot[t.id] = { ticket: t, votes: 0, units: {} }; });
-    var unitTotals = {}, voters = {};
+    var onBallot = dict(), unitSet = units || null;
+    (tickets || []).forEach(function (t) { if (t.deputy) onBallot[t.id] = { ticket: t, votes: 0, units: dict() }; });
+    var unitTotals = dict(), voters = dict();
     (votes || []).forEach(function (r) {
-      var v = weekVal(r.raw, wk), e = v && onBallot[v.cand];
+      var v = weekVal(r.raw, wk), e = v && typeof v.cand === 'string' && typeof r.id === 'string' && onBallot[v.cand];
       if (!e || !inPhase(v.at, wk, 'election')) return;
       voters[r.id] = v.cand;
-      var u = typeof v.unit === 'string' && (!unitSet || unitSet[v.unit]) ? v.unit : 'other';
+      var u = typeof v.unit === 'string' && v.unit.length <= 40 && (!unitSet || own(unitSet, v.unit)) ? v.unit : 'other';
       e.votes++; e.units[u] = (e.units[u] || 0) + 1; unitTotals[u] = (unitTotals[u] || 0) + 1;
     });
     var unitIds = Object.keys(unitTotals), need = Math.ceil(unitIds.length * SPREAD_UNITS);

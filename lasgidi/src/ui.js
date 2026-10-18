@@ -42,6 +42,10 @@
   }
 
   var LIVES_KEY = 'lasgidi.lives.v1', PREF_KEY = 'lasgidi.prefs.v1';
+  // Own keys only, for lookups keyed by other players' docs ('constructor' and '__proto__' never match a table).
+  // A short fingerprint of what an editor saw, so approving checks it is still the same picture (and caption/link).
+  function seenHash(r) { var t = String(r && r.img || '') + '|' + String(r && r.cap || '') + '|' + String(r && r.link || ''), h = 2166136261; for (var i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619); return (h >>> 0).toString(36); }
+  function own(o, k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k); }
   function readJSON(k, fallback) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
   function writeJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
   var prefs = readJSON(PREF_KEY, { sound: false });
@@ -117,9 +121,11 @@
     if (!raw || typeof raw.title !== 'string' || !Array.isArray(raw.slots)) return null;
     var t = CH.clean(raw.title.slice(0, 40)); if (!t.ok) return null;
     var st = RADIO_STYLES.some(function (x) { return x[0] === raw.style; }) ? raw.style : 'afro', now = radioSlotNow();
-    return { title: t.text, style: st, slots: raw.slots.filter(function (n) { return typeof n === 'number' && n >= now - 1 && n < now + 400; }).slice(0, 40) };
+    return { title: t.text, style: st, at: plausibleAt(raw.at), slots: raw.slots.filter(function (n, i, a) { return Number.isInteger(n) && n >= now - 1 && n < now + 400 && a.indexOf(n) === i; }).slice(0, 40) };
   }
-  function radioAll() { var out = []; (online.radio || []).forEach(function (r) { if (online.muted[r.id]) return; var c = radioClean(r.raw); if (c) c.slots.forEach(function (n) { out.push({ n: n, id: r.id, title: c.title, style: c.style }); }); }); return out.sort(function (a, b) { return a.n - b.n; }); }
+  // A slot belongs to whoever booked it first (by a plausible booking time).
+  function radioAll() { var docs = [], taken = {}, out = []; (online.radio || []).forEach(function (r) { if (online.muted[r.id]) return; var c = radioClean(r.raw); if (c) docs.push({ id: r.id, c: c }); }); docs.sort(function (a, b) { return a.c.at - b.c.at || (a.id < b.id ? -1 : 1); });
+    docs.forEach(function (d) { d.c.slots.forEach(function (n) { if (taken[n]) return; taken[n] = 1; out.push({ n: n, id: d.id, title: d.c.title, style: d.c.style }); }); }); return out.sort(function (a, b) { return a.n - b.n; }); }
   function radioPlaying() { var now = radioSlotNow(); return radioAll().filter(function (x) { return x.n === now; })[0] || null; }
   function slotTime(n) { var d = new Date(n * RADIO_MS); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
   function radioView() {
@@ -151,7 +157,7 @@
     if (picks.length < n || picks[picks.length - 1] >= now + 400) { online.radioStatus = 'Not enough free slots in the next two days. Try fewer.'; render(); return; }
     var r = L.radioBook(S, n); if (!r.ok) { online.radioStatus = r.msg; render(); return; }
     save(); var mineOld = ((online.radio || []).filter(function (x) { return x.id === online.me; })[0] || {}).raw, keep = mineOld && Array.isArray(mineOld.slots) ? mineOld.slots.filter(function (k2) { return k2 >= now; }) : [];
-    online.db.doc('clubradio/' + online.me).set({ title: c.text, style: ui.radioStyle || 'afro', slots: keep.concat(picks).slice(-40), at: Date.now() }).then(function () { online.radioStatus = r.msg + ' First play at ' + slotTime(picks[0]) + '.'; render(); }, function () { online.radioStatus = 'Paid, but the schedule could not be saved. Try again in a moment.'; render(); });
+    online.db.doc('clubradio/' + online.me).set({ title: c.text, style: ui.radioStyle || 'afro', slots: keep.concat(picks).slice(-40), at: mineOld && plausibleAt(mineOld.at) !== Infinity ? mineOld.at : Date.now() }).then(function () { online.radioStatus = r.msg + ' First play at ' + slotTime(picks[0]) + '.'; render(); }, function () { online.radioStatus = 'Paid, but the schedule could not be saved. Try again in a moment.'; render(); });
   }
   function musicWanted() {
     if (!prefs.sound || document.hidden || !window.LasgidiMusic || !S) return null;
@@ -311,7 +317,7 @@
    * Both light up only inside claude.ai; the game is complete without them.
    * No chat and no free text travel between players: presence carries a
    * district key, the board carries numbers. */
-  var online = { govrun: [], govvote: [], govparty: [], govprimary: [], govcab: [], govconfirm: [], photos: {}, photoOff: {}, chats: {}, unread: {}, sentTimes: [], muted: (function () { try { return JSON.parse(localStorage.getItem('lasgidi.muted.v1') || '{}') || {}; } catch (e) { return {}; } })(), photoreview: [], myPhotoReview: null, votes: [], sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
+  var online = { verified: {}, govrun: [], govvote: [], govparty: [], govprimary: [], govcab: [], govconfirm: [], photos: {}, photoOff: {}, chats: {}, unread: {}, sentTimes: [], muted: (function () { try { return JSON.parse(localStorage.getItem('lasgidi.muted.v1') || '{}') || {}; } catch (e) { return {}; } })(), photoreview: [], myPhotoReview: null, votes: [], sea: [], seaimg: {}, seareview: [], mySeaReview: null, ads: [], sponsored: [], db: null, user: null, room: null, me: null, fame: [], hidden: 0, unverified: 0, names: {}, peers: {}, others: 0, canWrite: null, sentLoc: null, status: '', checked: {}, adimg: [], adpaid: {}, adreview: [], myReview: null, canEdit: false, picStatus: '', peerList: [], homes: {}, giftsIn: [], waved: {}, sentHome: '' };
 
   // Each player's row is a small summary at fame/<id>; the replay log lives
   // beside it at fame/<id>/proof/log. Load every summary (no ordering: a
@@ -334,7 +340,7 @@
     var rows = [], pending = 0;
     cands.forEach(function (c) {
       var v = online.checked[c.key];
-      if (v === 'ok') rows.push(Object.assign(c.e, { id: c.id }));
+      if (v === 'ok' && online.verified[c.key]) rows.push(Object.assign({}, online.verified[c.key], { id: c.id })); // the replayed entry, never the doc's own fields
       else if (v === 'bad') failed++;
       else pending++;
     });
@@ -348,15 +354,15 @@
   }
 
   function verifyNext(cands) {
-    var next = null, fetched = Object.keys(online.checked).length;
+    var next = null, fetched = Object.keys(online.checked).filter(function (k) { return k.indexOf('w:') !== 0; }).length;
     for (var i = 0; i < cands.length; i++) if (!online.checked[cands[i].key]) { next = cands[i]; break; }
     if (!next || fetched >= MAX_PROOFS) { online.pending = 0; scheduleRender(); return; }
     verifying = true;
     online.db.doc('fame/' + next.id + '/proof/log').get().then(function (snap) {
       var proof = snap.exists ? snap.data() : null;
-      var ok = !!(proof && proof.seal === next.raw.seal && L.verifyFame(Object.assign({}, next.raw, { replay: proof.replay })).ok);
-      online.checked[next.key] = ok ? 'ok' : 'bad';
-    }, function () { online.checked[next.key] = 'bad'; }).then(function () {
+      var v = proof && proof.seal === next.raw.seal ? L.verifyFame(Object.assign({}, next.raw, { replay: proof.replay })) : null;
+      online.checked[next.key] = v && v.ok && v.entry ? 'ok' : 'bad'; if (v && v.ok && v.entry) { var en0 = Object.assign({}, v.entry); delete en0.replay; online.verified[next.key] = en0; }
+    }, function () { online.checked[next.key] = 'bad'; }).then(null, function () { online.checked[next.key] = 'bad'; }).then(function () {
       verifying = false;
       setTimeout(rankFame, 0);
     });
@@ -482,7 +488,7 @@
       try {
         db.collection('homes').limit(300).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.homes = m; scheduleRender(); }, function () { online.homes = {}; });
         db.collection('gifts').limit(300).onSnapshot(function (snap) {
-          online.giftsIn = snap.docs.map(function (d) { return { from: d.id, raw: d.data() }; }).filter(function (g) { return g.raw && g.raw.to === online.me && D.GIFTS[g.raw.gift] && typeof g.raw.at === 'number'; });
+          online.giftsIn = snap.docs.map(function (d) { return { from: d.id, raw: d.data() }; }).filter(function (g) { return g.raw && g.raw.to === online.me && own(D.GIFTS, g.raw.gift) && typeof g.raw.at === 'number'; });
           var ids = online.giftsIn.map(function (g) { return g.from; });
           if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
           scheduleRender();
@@ -513,12 +519,12 @@
         ch.peers.forEach(function (p) {
           if (p.isMe || p.kind !== 'viewer') return;
           var d = p.presence && p.presence.d;
-          if (typeof d !== 'string' || !D.DISTRICTS[d]) return;
+          if (!own(D.DISTRICTS, d)) return;
           counts[d] = (counts[d] || 0) + 1; others++;
         });
         online.peers = counts; online.others = others;
         var seen = {};
-        online.peerList = ch.peers.filter(function (p) { return !p.isMe && p.kind === 'viewer' && p.by && p.presence && typeof p.presence.d === 'string' && D.DISTRICTS[p.presence.d]; })
+        online.peerList = ch.peers.filter(function (p) { return !p.isMe && p.kind === 'viewer' && p.by && p.presence && own(D.DISTRICTS, p.presence.d); })
           .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look), party: cleanParty(p.presence.party), at: typeof p.presence.at === 'string' && p.presence.at.length < 80 ? p.presence.at : null, act: typeof p.presence.a === 'string' && Object.prototype.hasOwnProperty.call(ACTIVITIES, p.presence.a) ? p.presence.a : null }; });
         var ids = online.peerList.map(function (p) { return p.by; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
@@ -793,7 +799,7 @@
       var r = d.raw;
       if (!r || r.challenge !== id || typeof r.worth !== 'number' || typeof r.seal !== 'string') return;
       var key = 'w:' + id + ':' + d.id + ':' + r.seal + ':' + r.lines, v = online.checked[key];
-      if (v === 'ok') rows.push({ id: d.id, worth: r.worth, origin: D.ORIGINS[r.origin] ? r.origin : null, career: D.CAREERS[r.career] ? r.career : null, level: r.level | 0 });
+      var ve = online.verified[key]; if (v === 'ok' && ve) rows.push({ id: d.id, worth: ve.worth, origin: ve.origin, career: ve.career, level: ve.level | 0 }); // from the replay
       else if (!v) pending.push({ id: d.id, raw: r, key: key });
     });
     rows.sort(function (a, b) { return b.worth - a.worth; });
@@ -801,14 +807,15 @@
     online.wPending = pending.length;
     if (online.user && online.weekly.length) online.user.profiles(online.weekly.map(function (r) { return r.id; })).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
     scheduleRender();
-    if (wVerifying || !pending.length || Object.keys(online.checked).length > 60) return;
+    if (wVerifying || !pending.length || Object.keys(online.checked).filter(function (k) { return k.indexOf('w:') === 0; }).length > 60) return;
     pending.sort(function (a, b) { return b.raw.worth - a.raw.worth; });
     var next = pending[0];
     wVerifying = true;
     online.db.doc('weekly/' + next.id + '/proof/log').get().then(function (snap) {
       var proof = snap.exists ? snap.data() : null;
-      online.checked[next.key] = proof && proof.seal === next.raw.seal && L.verifyChallenge(Object.assign({}, next.raw, { replay: proof.replay }), id).ok ? 'ok' : 'bad';
-    }, function () { online.checked[next.key] = 'bad'; }).then(function () { wVerifying = false; setTimeout(rankWeekly, 0); });
+      var v = proof && proof.seal === next.raw.seal ? L.verifyChallenge(Object.assign({}, next.raw, { replay: proof.replay }), id) : null;
+      online.checked[next.key] = v && v.ok && v.entry ? 'ok' : 'bad'; if (v && v.ok && v.entry) { var en0 = Object.assign({}, v.entry); delete en0.replay; online.verified[next.key] = en0; }
+    }, function () { online.checked[next.key] = 'bad'; }).then(null, function () { online.checked[next.key] = 'bad'; }).then(function () { wVerifying = false; setTimeout(rankWeekly, 0); });
   }
   function postWeekly() {
     if (!online.db || !online.me) return Promise.resolve('The weekly board works when the game is opened on claude.ai.');
@@ -1143,12 +1150,12 @@
   }
   // Check a visitor's snapshot against the game's own data before drawing it.
   function checkHome(raw) {
-    if (!raw || typeof raw !== 'object' || !D.HOMES[raw.home] || D.HOMES[raw.home].hidden) return null;
+    if (!raw || typeof raw !== 'object' || !own(D.HOMES, raw.home) || D.HOMES[raw.home].hidden) return null;
     var h = D.HOMES[raw.home], sz = D.ROOM_SIZES[h.type] || D.ROOM_SIZES.room;
     var items = Array.isArray(raw.items) ? raw.items.slice(0, 60).filter(function (it) {
-      return it && D.FURNITURE[it.id] && Number.isInteger(it.x) && Number.isInteger(it.y) && it.x >= 0 && it.y >= 0 && it.x < sz[0] && it.y < sz[1];
+      return it && own(D.FURNITURE, it.id) && Number.isInteger(it.x) && Number.isInteger(it.y) && it.x >= 0 && it.y >= 0 && it.x < sz[0] && it.y < sz[1];
     }).map(function (it) { return { id: it.id, x: it.x, y: it.y, r: it.r ? 1 : 0 }; }) : [];
-    var vehicles = Array.isArray(raw.vehicles) ? raw.vehicles.slice(0, 24).filter(function (v) { return D.VEHICLES[v]; }).map(function (v) { return { id: v }; }) : [];
+    var vehicles = Array.isArray(raw.vehicles) ? raw.vehicles.slice(0, 24).filter(function (v) { return own(D.VEHICLES, v); }).map(function (v) { return { id: v }; }) : [];
     return { home: raw.home, h: h, size: sz, items: items, vehicles: vehicles };
   }
   function peopleHere() {
@@ -1277,7 +1284,7 @@
   function paidAds(boardId) {
     var now = Date.now();
     return online.ads.map(function (d) { var a = L.checkAd(d.raw, now); return a && a.board === boardId ? Object.assign(a, { by: d.id }) : null; })
-      .filter(Boolean).sort(function (a, b) { return b.at - a.at; }).slice(0, 3);
+      .filter(Boolean).sort(newestFirst).slice(0, 3);
   }
   // Sponsored ads are written only by the artifact's owner and editors; still shown with care.
   function sponsoredAds(boardId) {
@@ -1296,7 +1303,7 @@
   function pictureAds(boardId) {
     var now = Date.now();
     return online.adimg.map(function (d) { var a = L.checkPictureAd(d.raw, online.adpaid[d.id], now); return a && a.board === boardId ? Object.assign(a, { by: d.id, paid: true, picture: true, text: 'Picture ad', color: D.AD_COLORS[0], emoji: '🖼️' }) : null; })
-      .filter(Boolean).sort(function (a, b) { return b.at - a.at; }).slice(0, 3);
+      .filter(Boolean).sort(newestFirst).slice(0, 3);
   }
   function sponsoredPictures(boardId) {
     var now = Date.now();
@@ -1370,9 +1377,9 @@
     var html = '<div class="section"><h3>Review picture ads <span class="muted">· ' + q.length + ' waiting</span></h3>';
     if (!q.length) return html + '<p class="note">Nothing to review.</p></div>';
     return html + '<div class="list">' + q.map(function (r) {
-      var who = (online.names[r.id] && online.names[r.id].name) || 'A Lagosian', P = D.AD_PLANS[r.raw.plan];
+      var who = (online.names[r.id] && online.names[r.id].name) || 'A Lagosian', P = own(D.AD_PLANS, r.raw.plan) ? D.AD_PLANS[r.raw.plan] : null;
       return '<div class="item review">' + adPreview({ img: r.raw.img }, false) + '<div><h3>' + esc(who) + '</h3><div class="meta"><span>' + esc(boardName(r.raw.board)) + '</span><span>' + esc(P ? P.name : '') + '</span></div>' +
-        '<div class="inline"><button class="btn sm" id="rv-ok-' + esc(r.id) + '" data-rvok="' + esc(r.id) + '">Approve</button><button class="btn sm ghost" id="rv-no-' + esc(r.id) + '" data-rvno="' + esc(r.id) + '">Reject</button></div></div></div>';
+        '<div class="inline"><button class="btn sm" id="rv-ok-' + esc(r.id) + '" data-rvok="' + esc(r.id) + '" data-seen="' + seenHash(r.raw) + '">Approve</button><button class="btn sm ghost" id="rv-no-' + esc(r.id) + '" data-rvno="' + esc(r.id) + '">Reject</button></div></div></div>';
     }).join('') + '</div></div>';
   }
   // Read a picked file, crop it to the board's 2:1 shape and re-encode as JPEG.
@@ -2610,10 +2617,13 @@
   function myRentDoc() { return online.me ? ((online.sea || []).filter(function (d) { return d.id === online.me; })[0] || {}).raw || null : null; }
   function myRentEnded() { var d = myRentDoc(); return !!(d && typeof d.until === 'number' && d.until < Date.now()); }
   function rentLeft() { var d = myRentDoc(); if (!d || typeof d.until !== 'number') return ''; var ms = d.until - Date.now(); if (ms <= 0) return 'Your rental has ended. Rent the block again to put it back on the water.'; var dd = Math.floor(ms / 86400000), hh = Math.floor(ms % 86400000 / 3600000); return 'Rented: ' + (dd ? dd + 'd ' : '') + hh + 'h left.'; }
+  // A self-reported time is only believed if it is plausible (after launch, not in the future); otherwise it sorts last.
+  function plausibleAt(at) { return typeof at === 'number' && at >= 1735689600000 && at <= Date.now() + 120000 ? at : Infinity; }
+  function newestFirst(a, b) { var x = plausibleAt(a.at), y = plausibleAt(b.at); return (y === Infinity ? -1 : y) - (x === Infinity ? -1 : x); }
   function cleanRect(r) {
     var S = D.SEA, i = function (v) { return typeof v === 'number' && Math.round(v) === v && v >= 0; };
     if (!r || !i(r.x) || !i(r.y) || !i(r.w) || !i(r.h) || r.w < 1 || r.h < 1 || r.w > S.maxSide || r.h > S.maxSide || r.x + r.w > S.cols || r.y + r.h > S.rows) return null;
-    return { x: r.x, y: r.y, w: r.w, h: r.h, at: typeof r.at === 'number' ? r.at : 0 };
+    return { x: r.x, y: r.y, w: r.w, h: r.h, at: plausibleAt(r.at) };
   }
   function overlap(a, b) { return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
   // A sea plot ad's link: https only, a real host name, no user name or password in it, 120 characters at most.
@@ -2703,7 +2713,7 @@
     if (online.canEdit) {
       var q = (online.seareview || []).filter(function (r) { return okImg(r.raw.img) && cleanRect(r.raw); });
       html += '<div class="section"><h3>Review sea pictures <span class="muted">· ' + q.length + ' waiting</span></h3>' + (q.length ? '<div class="list">' + q.map(function (r) {
-        return '<div class="item review"><img class="sea-prev" alt="" src="' + r.raw.img + '"><div><h3>' + esc(nameOf(r.id)) + '</h3><div class="meta"><span>' + r.raw.w + '×' + r.raw.h + '</span>' + (adCap(r.raw.cap) ? '<span>“' + esc(adCap(r.raw.cap)) + '”</span>' : '') + (adLink(r.raw.link) ? '<span>🔗 ' + esc(adLink(r.raw.link)) + '</span>' : '') + '</div><div class="inline"><button class="btn sm" id="sr-ok-' + esc(r.id) + '" data-srok="' + esc(r.id) + '">Approve</button><button class="btn sm ghost" id="sr-no-' + esc(r.id) + '" data-srno="' + esc(r.id) + '">Reject</button></div></div></div>';
+        return '<div class="item review"><img class="sea-prev" alt="" src="' + r.raw.img + '"><div><h3>' + esc(nameOf(r.id)) + '</h3><div class="meta"><span>' + r.raw.w + '×' + r.raw.h + '</span>' + (adCap(r.raw.cap) ? '<span>“' + esc(adCap(r.raw.cap)) + '”</span>' : '') + (adLink(r.raw.link) ? '<span>🔗 ' + esc(adLink(r.raw.link)) + '</span>' : '') + '</div><div class="inline"><button class="btn sm" id="sr-ok-' + esc(r.id) + '" data-srok="' + esc(r.id) + '" data-seen="' + seenHash(r.raw) + '">Approve</button><button class="btn sm ghost" id="sr-no-' + esc(r.id) + '" data-srno="' + esc(r.id) + '">Reject</button></div></div></div>';
       }).join('') + '</div>' : '<p class="note">Nothing to review.</p>') + '</div>';
     }
     return html;
@@ -3332,9 +3342,9 @@
   // Another player's shared CV, checked against the game's data before it is drawn.
   function checkCv(raw) {
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.work)) return null;
-    var work = raw.work.slice(0, 10).filter(function (w) { return w && D.CAREERS[w.id] && Number.isInteger(w.level) && w.level >= 0 && w.level < D.CAREERS[w.id].titles.length; }).map(function (w) { var c = D.CAREERS[w.id]; return { title: c.titles[w.level], org: c.name, current: !!w.current, shifts: Math.max(0, Math.min(9999, w.shifts | 0)), why: w.why === 'dismissed' ? 'dismissed' : w.why === 'resigned' ? 'resigned' : null }; });
-    var edu = (Array.isArray(raw.edu) ? raw.edu : []).filter(function (e) { return EDU[e]; }).map(function (e) { return { icon: EDU[e][0], title: EDU[e][1] }; });
-    var skills = (Array.isArray(raw.skills) ? raw.skills : []).filter(function (k) { return k && D.SKILLS[k.id] && Number.isInteger(k.level) && k.level > 0 && k.level < 10; }).slice(0, 4).map(function (k) { return { name: D.SKILLS[k.id], level: k.level }; });
+    var work = raw.work.slice(0, 10).filter(function (w) { return w && own(D.CAREERS, w.id) && Number.isInteger(w.level) && w.level >= 0 && w.level < D.CAREERS[w.id].titles.length; }).map(function (w) { var c = D.CAREERS[w.id]; return { title: c.titles[w.level], org: c.name, current: !!w.current, shifts: Math.max(0, Math.min(9999, w.shifts | 0)), why: w.why === 'dismissed' ? 'dismissed' : w.why === 'resigned' ? 'resigned' : null }; });
+    var edu = (Array.isArray(raw.edu) ? raw.edu : []).filter(function (e) { return own(EDU, e); }).map(function (e) { return { icon: EDU[e][0], title: EDU[e][1] }; });
+    var skills = (Array.isArray(raw.skills) ? raw.skills : []).filter(function (k) { return k && own(D.SKILLS, k.id) && Number.isInteger(k.level) && k.level > 0 && k.level < 10; }).slice(0, 4).map(function (k) { return { name: D.SKILLS[k.id], level: k.level }; });
     return { weeks: Math.max(1, Math.min(999, raw.weeks | 0)), work: work, edu: edu, skills: skills, record: { clean: true } };
   }
   function cvHtml(c, who) {
@@ -3623,7 +3633,7 @@
       var q = online.photoreview || [];
       html += '<div class="section"><h3>Review player photos <span class="muted">· ' + q.length + ' waiting</span></h3>' + (q.length ? '<div class="list">' + q.slice(0, 10).map(function (r) {
         return '<div class="item review"><img class="pphoto lg" alt="" src="' + r.raw.img + '"><div><h3>' + esc(nameOf(r.id)) + '</h3><div class="meta"><span>Submitted ' + new Date(r.raw.at || 0).toLocaleString() + '</span></div></div>' +
-          '<div class="inline"><button class="btn sm go" id="phok-' + esc(r.id) + '" data-phok="' + esc(r.id) + '">Approve</button><button class="btn sm ghost" id="phno-' + esc(r.id) + '" data-phno="' + esc(r.id) + '">Reject</button></div></div>';
+          '<div class="inline"><button class="btn sm go" id="phok-' + esc(r.id) + '" data-phok="' + esc(r.id) + '" data-seen="' + seenHash(r.raw) + '">Approve</button><button class="btn sm ghost" id="phno-' + esc(r.id) + '" data-phno="' + esc(r.id) + '">Reject</button></div></div>';
       }).join('') + '</div>' : '<p class="note">Nothing to review.</p>') + '</div>';
     }
     return html;
@@ -4376,6 +4386,7 @@
     if ((ds.phok || ds.phno) && online.db && online.canEdit) {
       var pid = ds.phok || ds.phno, pr = (online.photoreview || []).filter(function (x) { return x.id === pid; })[0];
       if (!pr) return;
+      if (ds.phok && t.getAttribute('data-seen') !== seenHash(pr.raw)) { online.photoStatus = 'That picture just changed. Look at it again before approving.'; render(); return; }
       if (ds.phno) { online.db.doc('photoreview/' + pid).update({ status: 'rejected' }).then(function () { render(); }, function () {}); return; }
       online.db.doc('photo/' + pid).set({ img: pr.raw.img, approvedAt: Date.now() }).then(function () { return online.db.doc('photoreview/' + pid).update({ status: 'approved' }); }).then(function () { render(); }, function () {});
       return;
@@ -4383,6 +4394,7 @@
     if (ds.srok || ds.srno) {
       var rid = ds.srok || ds.srno, rr = (online.seareview || []).filter(function (x) { return x.id === rid; })[0];
       if (!rr || !online.db) return;
+      if (ds.srok && t.getAttribute('data-seen') !== seenHash(rr.raw)) { online.seaStatus = 'That picture just changed. Look at it again before approving.'; render(); return; }
       if (ds.srno) { online.db.doc('seareview/' + rid).update({ status: 'rejected' }).then(function () { render(); }); return; }
       var ok0 = { img: rr.raw.img, x: rr.raw.x, y: rr.raw.y, w: rr.raw.w, h: rr.raw.h, approvedAt: Date.now() }; if (adCap(rr.raw.cap)) ok0.cap = adCap(rr.raw.cap); if (adLink(rr.raw.link)) ok0.link = adLink(rr.raw.link);
       online.db.doc('seaimg/' + rid).set(ok0)
@@ -4474,6 +4486,7 @@
     if (ds.rvok || ds.rvno) {
       var rid = ds.rvok || ds.rvno, row = online.adreview.filter(function (r) { return r.id === rid; })[0];
       if (!row) return;
+      if (ds.rvok && t.getAttribute('data-seen') !== seenHash(row.raw)) { online.picStatus = 'That picture just changed. Look at it again before approving.'; render(); return; }
       var done = function () { online.adreview = online.adreview.filter(function (r) { return r.id !== rid; }); render(); };
       if (ds.rvno) { online.db.doc('adreview/' + rid).update({ status: 'rejected' }).then(done, function (err) { online.picStatus = picWriteError(err); render(); }); return; }
       var rr = row.raw;

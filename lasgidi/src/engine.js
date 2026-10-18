@@ -320,12 +320,14 @@
 
   /* ---------- new game ---------- */
   function cleanTraits(t) {
-    if (!Array.isArray(t) || t.length !== 2 || t[0] === t[1] || !D.TRAITS[t[0]] || !D.TRAITS[t[1]]) return null;
+    if (!Array.isArray(t) || t.length !== 2 || t[0] === t[1] || !own(D.TRAITS, t[0]) || !own(D.TRAITS, t[1])) return null;
     return [String(t[0]), String(t[1])];
   }
+  // Own keys only, for lookups keyed by untrusted data (shared docs, replays): 'constructor' or '__proto__' never match.
+  function own(o, k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k); }
   function cleanStarter(o) {
     if (!o || typeof o !== 'object') return null;
-    var C = D.CLOTHES, t = C[o.top], b = C[o.bottom];
+    var C = D.CLOTHES, t = own(C, o.top) && C[o.top], b = own(C, o.bottom) && C[o.bottom];
     return t && b && t.starter && b.starter && t.slot === 'top' && b.slot === 'bottom' ? { top: o.top, bottom: o.bottom } : null;
   }
   function cleanLook0(l) {
@@ -3539,7 +3541,7 @@
     if (!h || typeof h !== 'object') return null;
     var int = function (v, lo, hi) { return typeof v === 'number' && Math.round(v) === v && v >= lo && v <= hi; };
     if (typeof h.name !== 'string' || !h.name || h.name.length > 24 || typeof h.parent !== 'string' || h.parent.length > 24) return null;
-    if (!int(h.inherit, 0, HEIR_CAP) || !int(h.as, 0, 50) || !int(h.bond, 0, 100) || (h.school != null && !SCHOOLS[h.school])) return null;
+    if (!int(h.inherit, 0, HEIR_CAP) || !int(h.as, 0, 50) || !int(h.bond, 0, 100) || (h.school != null && !own(SCHOOLS, h.school))) return null;
     // The family line (oldest first) and the generation; heirs from before dynasties default to generation 2.
     var line = h.line == null ? [h.parent] : h.line, gen = h.gen == null ? 2 : h.gen;
     if (!Array.isArray(line) || !line.length || line.length > 8 || line.some(function (n) { return typeof n !== 'string' || !n || n.length > 24; }) || !int(gen, 2, 50)) return null;
@@ -3601,14 +3603,14 @@
     var e = {};
     var int = function (v, lo, hi) { return typeof v === 'number' && isFinite(v) && Math.round(v) === v && v >= lo && v <= hi; };
     if (!int(raw.weeks, 1, 5200) || !int(raw.worth, -1e9, 1e12) || !int(raw.achievements, 0, Object.keys(ACHIEVEMENTS).length) || !int(raw.level, 0, 4)) return null;
-    if (typeof raw.won !== 'boolean' || !D.ORIGINS[raw.origin] || !D.GOALS[raw.goal]) return null;
+    if (typeof raw.won !== 'boolean' || !own(D.ORIGINS, raw.origin) || !own(D.GOALS, raw.goal)) return null;
     if (raw.married != null && typeof raw.married !== 'boolean') return null;
     if (raw.kids != null && !int(raw.kids, 0, 3)) return null;
     if (raw.status != null && !int(raw.status, 0, 100000)) return null;
     Object.keys(FAME_FIELDS).forEach(function (k) { e[k] = raw[k]; });
     e.married = !!raw.married; e.kids = raw.kids || 0; e.status = raw.status || 0;
-    e.career = typeof raw.career === 'string' && D.CAREERS[raw.career] ? raw.career : null;
-    e.home = typeof raw.home === 'string' && D.HOMES[raw.home] ? raw.home : null;
+    e.career = own(D.CAREERS, raw.career) ? raw.career : null;
+    e.home = own(D.HOMES, raw.home) ? raw.home : null;
     // Ceiling on wealth: starting cash plus a generous ₦3m a week.
     if (e.origin === 'heir') { if (!int(raw.inherit, 0, HEIR_CAP)) return null; e.inherit = raw.inherit; if (raw.gen != null) { if (!int(raw.gen, 2, 50)) return null; e.gen = raw.gen; } }
     else if (raw.gen != null) return null;
@@ -3629,13 +3631,13 @@
 
   function replayLife(rp) {
     if (!rp || typeof rp.seed !== 'number' || !Array.isArray(rp.acts) || rp.acts.length > MAX_ACTS) return null;
-    if (!D.GOALS[rp.goal] || (rp.origin !== null && !D.ORIGINS[rp.origin])) return null;
+    if (!own(D.GOALS, rp.goal) || (rp.origin !== null && !own(D.ORIGINS, rp.origin))) return null;
     var rules = rp.rules == null ? 5 : rp.rules;
     if (!(rules >= 5 && rules <= RULES && Math.round(rules) === rules)) return null;
     if (rp.challenge != null && !CHALLENGE_ID.test(rp.challenge)) return null;
     if (rp.origin === 'heir' && !cleanHeir(rp.heir)) return null;
     if (rp.traits != null && !cleanTraits(rp.traits)) return null;
-    var s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined, heir: rp.heir, traits: rp.traits, startHome: rp.home, look: rp.look, outfit: rp.outfit });
+    var s; try { s = newGame({ seed: rp.seed, goal: rp.goal, origin: rp.origin || undefined, name: 'Replay', rules: rules, challenge: rp.challenge || undefined, heir: rp.heir, traits: rp.traits, startHome: rp.home, look: rp.look, outfit: rp.outfit }); } catch (e) { return null; }
     for (var i = 0; i < rp.acts.length; i++) {
       var a = rp.acts[i];
       if (!Array.isArray(a) || !RECORDED[a[0]]) return null;
@@ -3645,15 +3647,16 @@
   }
 
   // Rebuild an entry's life and check it lands exactly where it claims.
-  function verifyFame(raw) {
+  function verifyFame(raw) { try { return verifyFame0(raw); } catch (x) { return { ok: false, entry: null, reason: 'replay failed' }; } }
+  function verifyFame0(raw) {
     var e = checkFame(raw);
     if (!e || !raw.replay) return { ok: false, entry: e, reason: e ? 'no replay' : 'malformed' };
     var s = replayLife(raw.replay);
     if (!s) return { ok: false, entry: e, reason: 'replay failed' };
     if (s.boosted) return { ok: false, entry: e, reason: 'boosted' }; // bought money never ranks
     var got = fameEntry(s);
-    var same = got.seal === raw.seal && got.lines === raw.lines && got.score === e.score && got.weeks === e.weeks && got.worth === e.worth;
-    return { ok: same, entry: same ? got : e, reason: same ? null : 'does not match its replay' };
+    var same = got.seal === raw.seal && got.lines === raw.lines && got.score === e.score && got.weeks === e.weeks && got.worth === e.worth && got.career === e.career && got.home === e.home && got.origin === e.origin && got.level === e.level;
+    return { ok: same, entry: same ? got : null, reason: same ? null : 'does not match its replay' };
   }
 
   /* ---------- gifts between players (mood only, never cash) ---------- */
@@ -4802,7 +4805,8 @@
   }
 
   // A weekly entry counts only if it is finished and replays to the same result.
-  function verifyChallenge(raw, id) {
+  function verifyChallenge(raw, id) { try { return verifyChallenge0(raw, id); } catch (x) { return { ok: false, reason: 'replay failed' }; } }
+  function verifyChallenge0(raw, id) {
     if (!raw || raw.challenge !== id || !CHALLENGE_ID.test(id) || !raw.replay || raw.replay.challenge !== id) return { ok: false, reason: 'wrong week' };
     if (typeof raw.worth !== 'number' || typeof raw.seal !== 'string') return { ok: false, reason: 'malformed' };
     var s = replayLife(raw.replay);

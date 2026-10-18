@@ -17,15 +17,17 @@
   var MAP = { '0': 'o', '1': 'i', '!': 'i', '3': 'e', '4': 'a', '@': 'a', '5': 's', '$': 's', '7': 't', '8': 'b', '9': 'g', '+': 't' };
 
   function squeeze(w) { return w.replace(/(.)\1+/g, '$1'); }
+  // Cyrillic and Greek letters that look Latin, so 'ѕех' is read as 'sex'.
+  var LOOK = { 'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'у': 'y', 'х': 'x', 'к': 'k', 'і': 'i', 'ѕ': 's', 'м': 'm', 'т': 't', 'н': 'h', 'в': 'b', 'α': 'a', 'ο': 'o', 'ε': 'e', 'ι': 'i', 'κ': 'k', 'ν': 'v', 'τ': 't', 'χ': 'x' };
   function norm(s) {
-    return String(s).toLowerCase().replace(/[0-9!@$+]/g, function (c) { return MAP[c] || c; });
+    return String(s).toLowerCase().replace(/[аеорсухкіѕмтнвαοειкντχ]/g, function (c) { return LOOK[c] || c; }).replace(/[0-9!@$+]/g, function (c) { return MAP[c] || c; });
   }
   var SEX = {}, AB = {};
   SEXUAL.forEach(function (w) { SEX[squeeze(w)] = 1; });
   ABUSE.forEach(function (w) { AB[squeeze(w)] = 1; });
 
   function why(text) {
-    var raw = String(text == null ? '' : text);
+    var raw = String(text == null ? '' : text); raw = raw.replace(/[аеорсухкіѕмтнвαοειкντχАЕОРСУХКІЅМТНВ]/g, function (c) { return LOOK[c.toLowerCase()] || c; });
     if (/[^\s@]+@[^\s@]+\.[a-z]{2,}/i.test(raw)) return 'No emails in chat.';
     if (/(https?:|www\.|\.(com|net|org|ng|io|me|xyz|link)\b|t\.me|wa\.me)/i.test(raw)) return 'No links in chat.';
     if ((raw.replace(/[^0-9]/g, '').length >= 7)) return 'No phone numbers or account numbers in chat.';
@@ -48,7 +50,8 @@
   }
   // Returns { ok, text } with the cleaned text, or { ok: false, why }.
   function clean(text) {
-    var t = String(text == null ? '' : text).replace(/[\u0000-\u001f\u007f​-‏‪-‮]/g, '').replace(/\s+/g, ' ').trim();
+    var t0 = String(text == null ? '' : text); try { t0 = t0.normalize('NFKC').replace(/\p{Cf}/gu, ''); } catch (e) { /* old browsers */ } // full-width digits become digits; invisible joiners go
+    var t = t0.replace(/[\u0000-\u001f\u007f​-‏‪-‮]/g, '').replace(/\s+/g, ' ').trim();
     if (!t) return { ok: false, why: 'Type a message.' };
     if (t.length > MAX) return { ok: false, why: 'Keep it under ' + MAX + ' characters.' };
     if (/(.)\1{9,}/.test(t)) return { ok: false, why: 'No spam.' };
