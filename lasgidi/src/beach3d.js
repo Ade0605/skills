@@ -225,6 +225,8 @@
     /* ---------- Harbour Live: fountain show, concert stage, crowd, LED bridges, billboards, the private club ---------- */
     var harbourG = new T.Group(); harbourG.visible = false; S3.add(harbourG); var harbourBuilt = false, HB = { jets: [], beams: [], cables: [], screens: [], crowd: null, crowdN: 0, boards: [] };
     var HEADLINERS = ['KAYODE BLAZE', 'AMARA SOL', 'DJ TIDEWAVE', 'BIG TEMI', 'ZINO'];
+    // Redraw a canvas screen at most hz times a second (uploading a 1024px canvas every frame is heavy on phones).
+    function redrawAt(tx, t, hz) { var u = tx.userData; if (u.last != null && t - u.last < 1 / hz && t >= u.last) return; u.last = t; var c = u.canvas; u.redraw(c.getContext('2d'), c.width, c.height, t); tx.needsUpdate = true; }
     function screenTex(w, h, draw) { var t = canvasTex(w, h, function () {}); t.userData.redraw = draw; return t; }
     function emissiveMat(color, opacity) { return new T.MeshBasicMaterial({ color: color, transparent: true, opacity: opacity == null ? 0.85 : opacity, blending: T.AdditiveBlending, depthWrite: false }); }
     function cableBridge(x0, z0, x1, z1) {
@@ -1420,7 +1422,7 @@
     function build() {
       var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.rooftop ? 'r' : '') + (sc.name || ''); if (key === built) return; built = key; WK.reset = true;
       DOLL = /^(police|polling|hospital|court|library|hotel|casino|office)$/.test(sc.kind || '') && (sc.mode === 'hall'); ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; MKT = sc.mode === 'market'; JTY = sc.mode === 'jetty'; PRK = sc.mode === 'park'; PLZ = sc.mode === 'plaza'; GAL = sc.mode === 'gallery' || sc.mode === 'hall'; STR = sc.mode === 'street'; if (sc.mode === 'gallery') buildGallery(); if (sc.mode === 'hall') buildHall(); if (STR) buildStreet(); if (PLZ) buildPlaza(); if (PRK) buildPark(); if (MKT) buildMarket(); if (JTY) buildJetty(); if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
-      harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; mktG.visible = MKT; jetG.visible = JTY; parkG.visible = PRK; plzG.visible = PLZ; galG.visible = GAL; strG.visible = STR; sky.visible = !(CLUB && !ROOF) && !GAL; S3.environment = (CLUB && !ROOF) || GAL ? null : envRT.texture; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
+      harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; mktG.visible = MKT; jetG.visible = JTY; parkG.visible = PRK; plzG.visible = PLZ; galG.visible = GAL; strG.visible = STR; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
       // Frame: the estate uses a wider lens so the pool below and the skyline above both fit, as in a terrace photo.
       orbit.ty = 0; if (PLZ && /abj_tower/.test(sc.placeId || '')) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.42; orbit.r = 120; orbit.tx = 0; orbit.ty = 55; orbit.tz = 40; } else if (STR) { cam.fov = 52; orbit.az = 0; orbit.pol = 1.25; orbit.pol = 1.32; orbit.r = sc.kind === 'refinery' ? 90 : sc.kind === 'hospital' || sc.kind === 'motorpark' || sc.kind === 'airport' ? 60 : 38; orbit.tx = 0; orbit.ty = sc.kind === 'refinery' ? 10 : 3; orbit.tz = 14; } else if (GAL && DOLL) { var narrow0 = (root.innerWidth || 1000) < 700; cam.fov = 50; orbit.az = narrow0 ? 1.25 : 0.5; orbit.pol = 0.9; orbit.r = narrow0 ? 84 : 52; orbit.tx = 0; orbit.ty = 0; orbit.tz = 2; } else if (GAL) { cam.fov = 60; orbit.az = 0; orbit.pol = 1.25; orbit.r = 24; orbit.tx = 0; orbit.ty = 1; orbit.tz = 6; } else if (PLZ) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.3; orbit.r = 70; orbit.tx = 0; orbit.ty = 12; orbit.tz = 20; } else if (PRK) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.18; orbit.r = 50; orbit.tx = 0; orbit.tz = 8; } else if (JTY) { cam.fov = 52; orbit.az = 0.35; orbit.pol = 1.2; orbit.r = 52; orbit.tx = 0; orbit.tz = 8; } else if (MKT) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.16; orbit.r = 36; orbit.tx = 0; orbit.tz = 4; } else if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 84; orbit.tx = 0; orbit.tz = sc.street ? 2 : 4; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
       cam.updateProjectionMatrix(); place();
@@ -1541,12 +1543,12 @@
       crowd.forEach(function (p, i) {
         var d = (sc.people || [])[i]; if (!p.visible || !d) return; var ddx = WK.x - p.position.x, ddz = WK.z - p.position.z, dist = Math.hypot(ddx, ddz);
         var inner0 = p.children && p.children[0], arms0 = inner0 && inner0.userData && inner0.userData.arms;
-        if (dist > 3.2 && arms0 && arms0[1] && arms0[1].rotation.x < -1.5) arms0[1].rotation.x = 0; // stop waving once you have walked on
+        if (dist > 3.2 && arms0 && arms0[1] && inner0.userData.waving) { arms0[1].rotation.x = inner0.userData.armRest || 0; inner0.userData.waving = false; } // stop waving once you have walked on (an umbrella arm stays up)
         if (dist > 6) { seen[i] = false; return; } if (dist > 3.2) return;
         p.rotation.y = Math.atan2(-ddz, ddx); // face you
         var inner = p.children && p.children[0], arms = inner && inner.userData && inner.userData.arms;
         if (d.line && !seen[i]) { seen[i] = true; if (!bubble) { bubble = sprite('', '#fff', '#17181a', 9); world.add(bubble); } label(bubble, ((d.label || '') + ': ' + d.line).slice(0, 48), '#ffffff', '#17181a'); bubble.position.copy(p.position).add(new T.Vector3(0, 3.2, 0)); bubble.visible = true; bubbleAt = performance.now(); WK.greeted = (WK.greeted || 0) + 1; }
-        else if (!d.line && arms && arms[1]) arms[1].rotation.x = -2.6 + Math.sin(t * 10) * 0.35; // a wave
+        else if (!d.line && arms && arms[1]) { if (!inner.userData.waving) { inner.userData.armRest = arms[1].rotation.x; inner.userData.waving = true; } arms[1].rotation.x = -2.6 + Math.sin(t * 10) * 0.35; } // a wave
       });
       // The nearest sign within reach lights up, with a "Do it" button.
       var near = -1, best = 3.6; (sc.acts || []).slice(0, 8).forEach(function (a, i) { if (!a) return; var q = SP()[i]; var dd2 = Math.hypot(q[0] - WK.x, q[1] - WK.z); if (dd2 < best) { best = dd2; near = i; } });
@@ -1567,14 +1569,14 @@
         HB.jets.forEach(function (j) { var h = j.ring === 3 ? 26 + 10 * Math.abs(Math.sin(t * 1.3)) : (8 + 10 * Math.abs(Math.sin(t * 2 + j.i * 0.4 + j.ring))) * (j.ring === 0 ? 1.1 : 1); j.m.scale.y = h * jk; j.m.material.color.setHSL(((t * 0.08 + j.i / 30 + j.ring * 0.2) % 1), night ? 0.9 : 0.15, night ? 0.6 : 0.95); j.m.material.opacity = night ? 0.8 : 0.65; });
         HB.beams.forEach(function (b, i) { b.visible = show; b.rotation.z = Math.sin(t * 0.9 + i) * 0.5; b.rotation.x = -0.6 + Math.cos(t * 0.7 + i) * 0.3; b.material.color.setHSL((t * 0.1 + i / 8) % 1, 0.9, 0.6); b.material.opacity = 0.05 + 0.12 * lit; });
         HB.cables.forEach(function (c) { c.l.material.color.setHSL((t * 0.12 + c.k * 0.06 + (c.sd > 0 ? 0.3 : 0)) % 1, 0.9, night ? 0.6 : 0.85); });
-        HB.screens.forEach(function (st) { var cv0 = st.userData.canvas; st.userData.redraw(cv0.getContext('2d'), cv0.width, cv0.height, t); st.needsUpdate = true; });
+        HB.screens.forEach(function (st) { redrawAt(st, t, 12); });
         (HB.towers || []).forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); HB.boards.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0.2; }); HB.clubGlass.emissiveIntensity = night ? 0.6 : 0;
         HB.water.material.color.set(night ? 0x0b2236 : 0x1b4f6e); HB.lights.forEach(function (L0) { L0.intensity = night ? L0.userData.max * 3 : 0; }); if (night) hemi.intensity = 0.55;
         var mx = new T.Matrix4(); for (var ci = 0; ci < HB.crowdN; ci++) { var cb = HB.crowdBase[ci], jump = show && (night || reduce) ? Math.max(0, Math.sin(t * 6 + cb[2])) * 0.6 * beat : 0; mx.makeTranslation(cb[0], 1.2 + jump, cb[1]); HB.crowd.setMatrixAt(ci, mx); HB.heads.setMatrixAt(ci, mx); } HB.crowd.count = HB.heads.count = show ? HB.crowdN : 40; HB.crowd.instanceMatrix.needsUpdate = true; HB.heads.instanceMatrix.needsUpdate = true;
       } else if (STR) {
         streetFrame(reduce ? 30 : t, !!night); if (night) hemi.intensity = 0.4;
       } else if (GAL) {
-        galleryFrame(reduce ? 30 : t); flowFrame(reduce ? 30 : t); if (GL.screens) GL.screens.forEach(function (m, k) { m.color.setHSL(0.6 + Math.sin(t * 0.3 + k) * 0.05, 0.6, 0.45); }); if (GL.screenTex) { var cs2 = GL.screenTex.userData.canvas; GL.screenTex.userData.redraw(cs2.getContext('2d'), cs2.width, cs2.height, t); GL.screenTex.needsUpdate = true; } hemi.intensity = 0.9; hemi.color.set(0xffffff); sun.intensity = 0; S3.fog.density = 0.002;
+        galleryFrame(reduce ? 30 : t); flowFrame(reduce ? 30 : t); if (GL.screens) GL.screens.forEach(function (m, k) { m.color.setHSL(0.6 + Math.sin(t * 0.3 + k) * 0.05, 0.6, 0.45); }); if (GL.screenTex) redrawAt(GL.screenTex, t, 4); hemi.intensity = 0.9; hemi.color.set(0xffffff); sun.intensity = 0; S3.fog.density = 0.002;
       } else if (PLZ) {
         plazaFrame(reduce ? 30 : t, !!night); if (night) hemi.intensity = 0.4;
       } else if (PRK) {
@@ -1590,7 +1592,7 @@
         matchFrame(reduce ? 30 : t, live || !!ST.street);
         ST.lights.forEach(function (L0) { L0.intensity = flood ? 900 : 0; }); ST.banks.forEach(function (m) { m.color.set(flood ? 0xffffff : 0x555a60); });
         ST.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); if (night && flood) hemi.intensity = 0.45;
-        if (ST.board) { var cb = ST.board.userData.canvas; ST.board.userData.redraw(cb.getContext('2d'), cb.width, cb.height, t); ST.board.needsUpdate = true; }
+        if (ST.board) redrawAt(ST.board, t, 2);
       } else if (CLUB) {
         var open = !!(ROOF || night), A = CB.pal[0], B = CB.pal[1], kick = Math.pow(Math.abs(Math.sin(t * 3.9)), 3), cc = new T.Color(); CB.open = open;
         if (!ROOF) { hemi.intensity = open ? 0.16 : 1.4; hemi.color.copy(open ? B : new T.Color(0xffffff)); sun.intensity = 0; S3.fog.color.copy(open ? CB.pal[2] : new T.Color(0x24262c)); S3.fog.density = open ? 0.014 : 0.004; }
@@ -1604,7 +1606,7 @@
         if (CB.poles) CB.poles.forEach(function (P, i) { var a6 = reduce ? P.ph : t * 1.2 + P.ph, up = reduce ? 0.6 : 0.6 + Math.max(0, Math.sin(t * 0.6 + P.ph)) * 2.2; P.g.position.set(P.x + Math.cos(a6) * 0.45, up, P.z + Math.sin(a6) * 0.45); P.g.rotation.y = -a6 + Math.PI; var lg6 = P.g.userData.legs; if (lg6) { lg6[0].rotation[P.g.userData.axis || 'z'] = up > 1 ? 0.9 : Math.sin(t * 4 + i) * 0.3; lg6[1].rotation[P.g.userData.axis || 'z'] = up > 1 ? -0.3 : -Math.sin(t * 4 + i) * 0.3; } });
         if (CB.owambe) CB.owambe.forEach(function (f, i) { var u = f.userData, a5 = Math.sin(t * 6 + i) * 0.5; if (u.arms) u.arms.forEach(function (l, k) { l.rotation.x = open && i >= 4 && i % 2 ? -1.8 - Math.sin(t * 6 + i + k * 3) * 0.5 : (k ? a5 : -a5) * 0.4; }); if (u.legs && i >= 4) u.legs.forEach(function (l, k) { l.rotation.x = open ? (k ? -a5 : a5) * 0.6 : 0; }); });
         CB.sparks.forEach(function (pt) { pt.visible = open; var a = pt.geometry.attributes.position; for (var k = 0; k < a.count; k++) { var u = Math.random(), an = Math.random() * 6.283, rr2 = u * 0.5; a.setXYZ(k, Math.cos(an) * rr2, u * 1.1, Math.sin(an) * rr2); } a.needsUpdate = true; });
-        CB.screens.forEach(function (st) { var cv0 = st.userData.canvas; st.userData.redraw(cv0.getContext('2d'), cv0.width, cv0.height, t); st.needsUpdate = true; });
+        CB.screens.forEach(function (st) { redrawAt(st, t, CB.open ? 12 : 0.5); });
         CB.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); if (CB.bulbs) CB.bulbs.color.set(night ? 0xffd27a : 0x6b6458); if (CB.water) CB.water.material.color.set(night ? 0x0b2236 : 0x1b4f6e);
         if (CB.flame) { CB.flame.scale.set(1 + Math.sin(t * 11) * 0.08, 0.85 + Math.abs(Math.sin(t * 7.3)) * 0.35, 1 + Math.cos(t * 9) * 0.08); CB.flame.material.opacity = night ? 0.85 : 0.5; }
         if (CB.crowd) { var cm = new T.Matrix4(), cnt = open ? CB.n : 0; CB.crowd.count = CB.heads.count = cnt; for (var di = 0; di < cnt; di++) { var db = CB.base[di], hop = ROOF ? Math.max(0, Math.sin(t * 2 + db[2])) * 0.08 : Math.max(0, Math.sin(t * 7.8 + db[2])) * 0.45 * (0.4 + 0.6 * kick); cm.makeRotationY(db[2]); cm.setPosition(db[0], hop, db[1]); CB.crowd.setMatrixAt(di, cm); CB.heads.setMatrixAt(di, cm); } CB.crowd.instanceMatrix.needsUpdate = true; CB.heads.instanceMatrix.needsUpdate = true; }

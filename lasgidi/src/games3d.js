@@ -114,7 +114,8 @@
         sync: function (list, place) {
           var seen = new Set();
           list.forEach(function (it, i) { var m = map.get(it); if (!m) { m = make(it, i); parent.add(m); map.set(it, m); } seen.add(it); m.visible = true; place(m, it, i); });
-          map.forEach(function (m, it) { if (!seen.has(it)) { parent.remove(m); map.delete(it); } });
+          // Gone from the game: free its geometry and materials (shared ones are simply uploaded again if used later).
+          map.forEach(function (m, it) { if (!seen.has(it)) { parent.remove(m); map.delete(it); m.traverse(function (o) { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(function (mm) { mm.dispose(); }); }); } });
         },
         map: map
       };

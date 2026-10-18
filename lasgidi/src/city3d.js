@@ -37,8 +37,10 @@
 
     /* ---------- build a city from the 2D map's world ---------- */
     var DYN = { cars: null, carPath: [], boats: [], boatPath: [], pins: [], areas: [], labels: [], towersM: null, lamps: null, me: null, plane: null, runway: null, flare: null, cables: [] };
+    // Free a group's GPU memory (geometries, materials and their maps), then empty it.
+    function wipe(g) { g.traverse(function (o) { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(function (m) { ['map', 'emissiveMap', 'alphaMap', 'normalMap', 'roughnessMap'].forEach(function (k) { if (m[k] && m[k].dispose) m[k].dispose(); }); m.dispose(); }); }); g.clear(); }
     function build(name) {
-      city = name; world.clear(); LV.key = ''; var Wd = PG.worldFor(name), G = Wd.GEO[name], box = G.box, x0 = box[0], x1 = box[1], y0 = box[2], y1 = box[3], bw = x1 - x0, bh = y1 - y0;
+      city = name; wipe(world); LV.key = ''; var Wd = PG.worldFor(name), G = Wd.GEO[name], box = G.box, x0 = box[0], x1 = box[1], y0 = box[2], y1 = box[3], bw = x1 - x0, bh = y1 - y0;
       DYN = { cars: null, carPath: [], boats: [], boatPath: [], pins: [], areas: Wd.AREAS || {}, labels: [], towersM: null, lamps: null, me: null, plane: null, runway: null, flare: null, cables: [] };
       // Water, then the land with a district-tinted ground texture painted from the 2D map's tiles.
       var water = new T.Mesh(new T.PlaneGeometry(bw * K * 3, bh * K * 3).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x2f86b0, roughness: 0.42, metalness: 0.05, clearcoat: 0.4, clearcoatRoughness: 0.5 })); water.position.set((x0 + bw / 2) * K, -0.4, (y0 + bh / 2) * K); world.add(water); DYN.water = water;
@@ -114,7 +116,7 @@
     function orbitFacing() { return 0; }
     function liveKey() { return JSON.stringify([city, sc.board, sc.sel, sc.home, (sc.gems || []).map(function (g) { return g.place + g.n; }), (sc.biz || []).map(function (b) { return b.district + b.icon; }), (sc.players || []).map(function (p) { return p.by + p.d + (p.unread || 0); }), sc.layers && sc.layers.boards, Object.keys(sc.boards || {}).map(function (k) { return (sc.boards[k] || []).length; })]); }
     function buildLive() {
-      LIVE.clear(); LV = { boards: [], gems: [], players: [], ring: null, key: liveKey(), imgs: LV.imgs || {} };
+      wipe(LIVE); LV = { boards: [], gems: [], players: [], ring: null, key: liveKey(), imgs: LV.imgs || {} };
       var post = mat('bpost', { color: 0x4b4f55, metalness: 0.5 }), frameMat = mat('bframe2', { color: 0x202226 });
       if (city === 'lagos' && !(sc.layers && sc.layers.boards === false)) D.BILLBOARDS.forEach(function (b) {
         var ads = (sc.boards && sc.boards[b.id]) || []; if (!ads.length) return; var g = new T.Group(); g.position.set(b.x * K, 0, b.y * K);
@@ -143,10 +145,10 @@
       var slot = Math.floor(now / 6000); LV.boards.forEach(function (b, bi) { var k = (slot + bi) % b.ads.length; if (k !== b.at) { b.at = k; if (b.face.map) b.face.map.dispose(); b.face.map = adFace(b.ads[k], sc.board === b.id); b.face.needsUpdate = true; } });
       LV.gems.forEach(function (g, i) { g.rotation.y = t * 1.6 + i; g.position.y = 8.5 + Math.sin(t * 2 + i) * 0.5; });
       if (LV.ring) { var s = 1 + Math.sin(t * 3) * 0.08; LV.ring.scale.set(s, 1, s); }
-      var tr = sc.trip; if (tr && (!TRIP || TRIP.at !== tr.at)) { if (TRIP && TRIP.v) LIVE.remove(TRIP.v); var a = D.DISTRICTS[tr.from], b2 = D.DISTRICTS[tr.to]; TRIP = a && b2 ? { at: tr.at, a: a, b: b2, mode: tr.mode, v: tripVehicle(tr.mode), t0: now } : null; }
+      var tr = sc.trip; if (tr && (!TRIP || TRIP.at !== tr.at)) { if (TRIP && TRIP.v) { LIVE.remove(TRIP.v); wipe(TRIP.v); } var a = D.DISTRICTS[tr.from], b2 = D.DISTRICTS[tr.to]; TRIP = a && b2 ? { at: tr.at, a: a, b: b2, mode: tr.mode, v: tripVehicle(tr.mode), t0: now } : null; }
       if (TRIP && TRIP.v) { var u = Math.min(1, (now - TRIP.t0) / 2600), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, x = (TRIP.a.x + (TRIP.b.x - TRIP.a.x) * e) * K, z = (TRIP.a.y + (TRIP.b.y - TRIP.a.y) * e) * K, air = TRIP.mode === 'heli' || TRIP.mode === 'jet' ? Math.sin(u * Math.PI) * 30 + 2 : 0, ang = Math.atan2((TRIP.b.y - TRIP.a.y), (TRIP.b.x - TRIP.a.x));
         TRIP.v.position.set(x, air + (TRIP.mode === 'ferry' || TRIP.mode === 'boat' ? 0 : 0.2), z); TRIP.v.rotation.y = -ang; fly = { tx: x, tz: z, r: Math.min(orbit.r, 140) };
-        if (u >= 1) { LIVE.remove(TRIP.v); TRIP.v = null; TRIP.done = true; }
+        if (u >= 1) { LIVE.remove(TRIP.v); wipe(TRIP.v); TRIP.v = null; TRIP.done = true; }
       }
       if (DYN.me) DYN.me.visible = DYN.me.visible && !(TRIP && TRIP.v);
     }
