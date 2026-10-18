@@ -307,7 +307,7 @@
         { id: 'deals', label: 'Talk billion-naira deals on the terrace', mins: 120, fx: { social: 15, stress: 6 }, xp: { charisma: 1 }, when: { from: 10, to: 20 } },
         { id: 'champagne', label: 'Vintage champagne on the terrace', mins: 60, cost: 900000, fx: { fun: 25, social: 20 }, when: { from: 16, to: 23 } },
         { id: 'diamond', label: 'Order the ₦1bn diamond bottle', mins: 60, cost: 1000000000, fx: { fun: 100, social: 100 }, when: { from: 19, to: 24 } },
-        { id: 'cup', label: 'Enter the Saturday Club Cup (6 holes)', mins: 30, cost: 500000, golf: 'cup', when: { days: [5], from: 7, to: 12 } }
+        { id: 'cup', label: 'Enter the Saturday Club Cup (6 holes)', mins: 30, cost: 1000000, golf: 'cup', when: { days: [5], from: 7, to: 12 } }
       ] },
     powerboat: { name: 'Harbour Powerboat Club', icon: '🚤', district: 'vi', place: 'club_powerboat', where: 'Eko Atlantic harbour', join: 3000000, weekly: 400000, minWorth: 300000000, referStatus: 55, referCharisma: 4,
       text: 'Race-tuned powerboats, a pit lane on the water and a timing board in the bar.',
@@ -1642,7 +1642,7 @@
 
   // Letter hunts: a fictional headliner's new single, its letters hidden around Lagos. Solve a riddle, go there,
   // catch the glowing letter in the walk-in. One hunt a real week, in turn. A badge only: no money, no game state.
-  PULSE_PLACES.forEach(function (p) { PLACES.push(p); });
+  PULSE_PLACES.forEach(function (p) { p.nogem = true; PLACES.push(p); });
 
   // Rules 19: police divisions, polling units and hospital rooms (CIVIC_ACTS, keyed by place, like BRANCH_ACTS).
   // Cases, the cell and the hospital doctor are engine specials; the live boards and the ballot itself are drawing and
@@ -1732,7 +1732,8 @@
     { id: 'office_view', label: 'Take the lift to the sky lobby view', mins: 30, fx: { fun: 6, stress: -3 }, when: { from: 8, to: 19 } },
     { id: 'office_clean', label: 'Evening cleaning shift', mins: 240, earn: 2400, fx: { energy: -14, hygiene: -8 }, gig: true, fest: true, when: { from: 17, to: 23 } }
   ];
-  CIVIC_PLACES.forEach(function (p) { PLACES.push(p); });
+  // Places added after the gem hunt began stay out of its pool, so old lives' gems (and their seals) replay.
+  CIVIC_PLACES.forEach(function (p) { p.nogem = true; PLACES.push(p); });
   // Rules 19: the Lagoon party boat moored at the island jetties.
   ['cms', 'lagoon_cruise', 'lagoon_jetty'].forEach(function (pid) {
     var id = 'boat_' + pid;

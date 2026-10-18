@@ -2709,3 +2709,8 @@ test('rules 19: rent a sea block for 7 days at ₦500 a plot; rented plots are n
   o.bank += 0; assert.ok(L.buySeaPlots(o, 0, 0, 1, 1).ok); assert.match(L.rentSeaPlots(o, 5, 5, 1, 1).msg, /Let it go/);
   const old = L.newGame({ seed: 1602, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (old.pending.length) L.resolveChoice(old, 0); assert.equal(L.rentSeaPlots(old, 0, 0, 1, 1).ok, false);
 });
+test('gems still replay: places added in rules 18-19 stay out of the gem pool, and the pool is pinned', () => {
+  for (const p of D.PLACES) if (p.civic || p.chain === 'pulse' || p.club === 'golf') assert.ok(p.nogem, p.id + ' must be nogem');
+  assert.deepEqual(L.gemsFor('2026-10-12').map(g => g.place), ['vi_food', 'banks', 'vip_jetty', 'tailor', 'studio']);
+  assert.deepEqual(L.gemsFor('2026-10-17').map(g => g.place), ['palms', 'pitch', 'berger_cars', 'ikeja_mall', 'festac_market']);
+});

@@ -1613,9 +1613,9 @@
       subs: [Math.round(o.drive * 100) + '% birdie · risk of a double bogey', Math.round(o.iron * 100) + '% birdie · usually par', Math.round(o.wedge * 100) + '% par · otherwise bogey'] });
   }
   function golfPrize(s, over) {
-    if (over <= -4) return { place: 1, cash: price(s, 20000000), gift: 'The Club Cup trophy and a gold-plated set of clubs' };
-    if (over <= -2) return { place: 2, cash: price(s, 5000000), gift: 'A crystal decanter and a year of free green fees' };
-    if (over <= 0) return { place: 3, cash: price(s, 1000000), gift: 'A Club Cup polo and a signed flag' };
+    if (over <= -4) return { place: 1, cash: price(s, 10000000), gift: 'The Club Cup trophy and a gold-plated set of clubs' };
+    if (over <= -2) return { place: 2, cash: price(s, 2500000), gift: 'A crystal decanter and a year of free green fees' };
+    if (over <= 0) return { place: 3, cash: price(s, 600000), gift: 'A Club Cup polo and a signed flag' };
     return null;
   }
   function queueAreaBoys(s) {

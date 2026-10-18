@@ -146,6 +146,9 @@
     if (!c.ok) { online.radioStatus = 'That title is not allowed. Keep it clean.'; render(); return; }
     var taken = {}, now = radioSlotNow(), picks = []; radioAll().forEach(function (x) { taken[x.n] = 1; });
     for (var k = now + 1; picks.length < n && k < now + 400; k += 3) { while (taken[k] && k < now + 400) k++; picks.push(k); }
+    var keep0 = (((online.radio || []).filter(function (x) { return x.id === online.me; })[0] || {}).raw || {}).slots, kept = Array.isArray(keep0) ? keep0.filter(function (k2) { return k2 >= now; }).length : 0;
+    if (kept + n > 40) { online.radioStatus = 'You already have ' + kept + ' slots coming up. You can hold 40 at most.'; render(); return; }
+    if (picks.length < n || picks[picks.length - 1] >= now + 400) { online.radioStatus = 'Not enough free slots in the next two days. Try fewer.'; render(); return; }
     var r = L.radioBook(S, n); if (!r.ok) { online.radioStatus = r.msg; render(); return; }
     save(); var mineOld = ((online.radio || []).filter(function (x) { return x.id === online.me; })[0] || {}).raw, keep = mineOld && Array.isArray(mineOld.slots) ? mineOld.slots.filter(function (k2) { return k2 >= now; }) : [];
     online.db.doc('clubradio/' + online.me).set({ title: c.text, style: ui.radioStyle || 'afro', slots: keep.concat(picks).slice(-40), at: Date.now() }).then(function () { online.radioStatus = r.msg + ' First play at ' + slotTime(picks[0]) + '.'; render(); }, function () { online.radioStatus = 'Paid, but the schedule could not be saved. Try again in a moment.'; render(); });
@@ -2154,7 +2157,7 @@
     var worksHere = S.job && careersAt(pl).indexOf(S.job.id) >= 0, h0 = L.hour(S), bub = ui.venueBubble && ui.venueBubble.place === pl.id && Date.now() - ui.venueBubble.at < 7000 ? ui.venueBubble.text : null;
     return {
       name: pl.name, set: set, acts: acts, people: people, commuters: commuters, night: h0 >= 19 || h0 < 6, weather: L.weatherNow(S) || 'clear',
-      rain: (ui.rainUntil && Date.now() < ui.rainUntil) || (NIGHT3D(pl) && vHash(pl.id + ':rain', Math.floor(Date.now() / 300000)) % 4 === 0), letter: huntLetterAt(pl), civic: pl.civic || (D.insideKind(pl) === 'hospital' ? 'hospital' : null), board: civicBoard(pl),
+      rain: (ui.rainUntil && Date.now() < ui.rainUntil && ui.rainPlace === pl.id) || (NIGHT3D(pl) && vHash(pl.id + ':rain', Math.floor(Date.now() / 300000)) % 4 === 0), letter: huntLetterAt(pl), civic: pl.civic || (D.insideKind(pl) === 'hospital' ? 'hospital' : null), board: civicBoard(pl),
       gem: (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? { n: gm.n, slot: vHash(pl.id, 7 + gm.n) % 8 } : null; })(),
       sign: pl.name.toUpperCase().slice(0, 30), signBg: set === 'refinery' ? '#1f3b63' : set === 'nightlife' ? '#8e24aa' : '#1f3b63',
       shuttle: set === 'refinery' ? 'staff' : set === 'airport' || set === 'govt' || set === 'estate' || set === 'dealer' ? 'cab' : set === 'stadium' || set === 'campus' ? 'brt' : ['danfo', 'keke', 'okada', 'cab'][vHash(pl.id, 3) % 4],
@@ -2224,10 +2227,11 @@
         foot: V.phase === 'election' ? 'LIVE COUNT · ' + V.total + ' VOTES HERE · ' + V.all + ' IN LAGOS' : 'POLLS OPEN SATURDAY' }; }
     return null;
   }
-  function accreditedNow() { return S.accredited != null && L.week(S) - S.accredited <= 1; }
+  function accreditedNow() { return readJSON('lasgidi.accr.v1', '') === townWeek(); }
   // Club moments (rules 19): raining money and shutting the club down show in the room for a while.
   function clubMoment(id) {
-    if (/^club_.*_(rain|bottle|vip|shutdown)$/.test(id)) ui.rainUntil = Date.now() + (/_shutdown$/.test(id) ? 120000 : 25000);
+    if (/^club_.*_(rain|bottle|vip|shutdown)$/.test(id)) { ui.rainUntil = Date.now() + (/_shutdown$/.test(id) ? 120000 : 25000); ui.rainPlace = ui.venueOpen; }
+    if (/^poll_.*_accredit$/.test(id)) writeJSON('lasgidi.accr.v1', townWeek()); // accreditation counts for this real election week
     if (/^club_.*_shutdown$/.test(id)) ui.shutdown = { at: Date.now(), place: ui.venueOpen };
   }
   function radioBanner(pl) {
