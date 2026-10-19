@@ -1767,7 +1767,6 @@
   // Wallet top-ups sold by the self-hosted shop (rules 19): the naira here is what a verified purchase credits.
   // Taking one marks the life Boosted: it can never go on the Hall of Fame or the weekly board.
   var TOPUP_PACKS = { topup_jollof: { name: 'Jollof pack', naira: 50000 }, topup_owambe: { name: 'Owambe pack', naira: 300000 }, topup_bigboy: { name: 'Big boy pack', naira: 700000 }, topup_odogwu: { name: 'Odogwu pack', naira: 1600000 } };
-  // Places added after the gem hunt began stay out of its pool, so old lives' gems (and their seals) replay.
   // Rules 19: more of the capital, each with an inside and its own acts. Public landmarks keep their names; the businesses are made up.
   function act(id, label, mins, cost, earn, fx, xp, when) { var a = { id: id, label: label, mins: mins, fx: fx }; if (cost) a.cost = cost; if (earn) { a.earn = earn; a.gig = true; a.fest = true; } if (xp) a.xp = xp; if (when) a.when = when; return a; }
   var WK = [0, 1, 2, 3, 4], CAMPUS_CLONES = [];
@@ -1828,13 +1827,78 @@
       act('cmot_browse', 'Browse the showroom', 30, 0, 0, { fun: 5 }, null, { from: 9, to: 18 }),
       act('cmot_test', 'Test drive a new SUV', 45, 0, 0, { fun: 14 }, null, { days: WK, from: 10, to: 17 }),
       act('cmot_wash', 'Wash and polish the showroom cars', 180, 0, 1800, { energy: -10, hygiene: -6 }, null, { from: 8, to: 17 })
+    ]],
+    ['abj_idu_rail', '🚆', 'Idu Rail Station', 'transport', 'bus', 'abj_jabi', 4.4, 9.6, 'rail', 'The light rail terminus: platforms under a long canopy, the ticket gate and trains to the airport line.', [
+      act('idu_card', 'Buy a rail card and top it up', 15, 1000, 0, { stress: -2 }, null, { from: 6, to: 21 }),
+      act('idu_ride', 'Ride the train out to the airport and back', 90, 1500, 0, { fun: 12, stress: -6 }, null, { from: 6, to: 20 }),
+      act('idu_watch', 'Watch the trains come in', 15, 0, 0, { fun: 5 }, null, { from: 6, to: 21 }),
+      act('idu_recharge', 'Sell recharge cards on the concourse', 180, 0, 1600, { energy: -6, social: 4 }, null, { from: 7, to: 20 }),
+      act('idu_clean', 'Platform cleaning shift', 240, 0, 2200, { energy: -12, hygiene: -6 }, null, { from: 5, to: 21 })
+    ]],
+    ['abj_polo', '🐎', 'Capital Polo Grounds, Maitama', 'outdoors', 'tree', 'abj_maitama', 16.4, 6.4, 'polo', 'A green polo field, the stand, the members\' pavilion and ponies in the lines.', [
+      act('polo_chukka', 'Watch a chukka from the stand', 60, 2000, 0, { fun: 14, social: 6 }, null, { days: [4, 5, 6], from: 15, to: 18 }),
+      act('polo_pavilion', 'Mocktail on the pavilion lawn', 30, 6000, 0, { fun: 8, social: 8 }, null, { from: 12, to: 20 }),
+      act('polo_lesson', 'Riding lesson on a club pony', 60, 40000, 0, { fun: 16, energy: -10 }, { fitness: 1 }, { from: 7, to: 11 }),
+      act('polo_groom', 'Groom and water the ponies', 180, 0, 1800, { energy: -12, hygiene: -10 }, { fitness: 1 }, { from: 6, to: 12 })
+    ]],
+    // Port Harcourt, the same way.
+    ['ph_mile3_park', '🚌', 'Mile 3 Motor Park', 'transport', 'bus', 'ph_dline', 8.2, 12.6, null, 'Ticket office, the loading shed, a tea and bread stall, the drivers\' bench, and coaches to Lagos, Aba and Abuja.', [
+      act('m3park_tea', 'Tea and bread at the stall', 15, 700, 0, { hunger: 18, fun: 2 }, null, { from: 5, to: 23 }),
+      act('m3park_bench', 'Gist with the drivers on the bench', 30, 0, 0, { social: 8, fun: 4 }, null, { from: 6, to: 21 }),
+      act('m3park_load', 'Load bags onto the buses (park boy shift)', 180, 0, 2000, { energy: -14, hygiene: -8 }, { fitness: 1 }, { from: 5, to: 20 }),
+      act('m3park_tout', 'Call passengers for a driver', 120, 0, 1400, { energy: -8, social: 4 }, { charisma: 1 }, { from: 6, to: 20 })
+    ]],
+    ['ph_creek_mkt', '🧺', 'Creek Road Market', 'food', 'basket', 'ph_borokiri', 15.4, 18.0, null, 'Fresh and smoked fish, periwinkle, crayfish and foodstuff by the creek.', [
+      act('creek_fish', 'Buy fresh fish and periwinkle', 30, 5000, 0, { hunger: 26 }, null, { from: 6, to: 18 }),
+      act('creek_barter', 'Haggle for crayfish and stockfish', 45, 7000, 0, { hunger: 20, fun: 6 }, { charisma: 1 }, { from: 7, to: 18 }),
+      act('creek_soup', 'Native soup and starch at a mama put', 30, 2000, 0, { hunger: 34 }, null, { from: 11, to: 20 }),
+      act('creek_porter', 'Carry fish baskets from the boats', 180, 0, 1800, { energy: -16, hygiene: -12 }, { fitness: 1 }, { from: 5, to: 15 })
+    ]],
+    ['ph_assembly', '🏛️', 'Rivers State House of Assembly', 'outdoors', 'dome', 'ph_oldgra', 11.6, 14.4, null, 'The state assembly: the chamber, the public gallery and the lawns.', [
+      act('rsha_tour', 'Join the guided tour of the chamber', 60, 0, 0, { fun: 6 }, { charisma: 1 }, { days: WK, from: 10, to: 15 }),
+      act('rsha_sitting', 'Watch a sitting from the gallery', 120, 0, 0, { fun: 5, stress: 3 }, null, { days: [1, 2, 3], from: 10, to: 14 }),
+      act('rsha_photo', 'Photo by the assembly gate', 15, 0, 0, { fun: 4 }, null, { from: 8, to: 18 })
+    ]],
+    ['ph_secretariat', '🏢', 'Rivers State Secretariat', 'services', 'tower', 'ph_oldgra', 15.6, 13.2, null, 'The state ministries: long corridors, file rooms and the canteen.', [
+      act('rss_file', 'Chase your file from desk to desk', 120, 0, 0, { stress: 12, energy: -6 }, null, { days: WK, from: 8, to: 16 }),
+      act('rss_canteen', 'Rice and plantain at the staff canteen', 30, 1500, 0, { hunger: 28 }, null, { days: WK, from: 11, to: 15 }),
+      act('rss_messenger', 'Messenger shift (files and tea)', 240, 0, 2200, { energy: -10 }, null, { days: WK, from: 8, to: 16 })
+    ]],
+    ['ph_conference', '🎤', 'Garden City Conference Hall, GRA', 'services', 'tower', 'ph_gra', 10.4, 11.0, 'conference', 'The big hall: tiered seats, the stage and podium, flags and the screens.', [
+      act('gcc_summit', 'Sit in on an oil and gas summit', 120, 0, 0, { fun: 5, stress: 2 }, { charisma: 1 }, { days: WK, from: 9, to: 17 }),
+      act('gcc_expo', 'Walk the trade expo stands', 60, 2000, 0, { fun: 8, social: 6 }, null, { days: [3, 4, 5], from: 10, to: 18 }),
+      act('gcc_usher', 'Usher at the conference', 240, 0, 2600, { energy: -12, social: 6 }, { charisma: 1 }, { days: WK, from: 8, to: 18 })
+    ]],
+    ['ph_funpark', '🎡', 'Riverside Fun Park, Rumuokoro', 'outdoors', 'tree', 'ph_rumuokoro', 14.8, 6.2, 'funpark', 'A Ferris wheel, a carousel, bumper cars and candy floss.', [
+      act('rfun_wheel', 'Ride the Ferris wheel', 15, 2000, 0, { fun: 14 }, null, { from: 11, to: 22 }),
+      act('rfun_bumper', 'Bumper cars', 15, 1500, 0, { fun: 12, stress: -4 }, null, { from: 11, to: 22 }),
+      act('rfun_carousel', 'Carousel with the kids', 15, 1000, 0, { fun: 8, social: 6 }, null, { from: 11, to: 20 }),
+      act('rfun_ops', 'Run a ride for the evening', 240, 0, 2200, { energy: -10 }, null, { from: 15, to: 22 })
+    ]],
+    ['ph_sky_lounge', '🍸', 'Rooftop Lounge, GRA Phase 2', 'nightlife', 'glass', 'ph_gra', 13.2, 10.8, null, 'A rooftop over GRA: city lights, a DJ, mocktails and cocktails.', [
+      act('phsky_sunset', 'Sundowner on the roof', 60, 9000, 0, { fun: 14, social: 8, stress: -6 }, null, { from: 17, to: 20 }),
+      act('phsky_dj', 'Friday DJ night', 180, 15000, 0, { fun: 30, social: 18, energy: -12 }, null, { days: [4, 5], from: 21, to: 24 }),
+      act('phsky_wait', 'Waiter shift on the roof', 240, 0, 2600, { energy: -12 }, null, { from: 17, to: 24 })
+    ]],
+    ['ph_motors', '🚗', 'Garden City Motors, Trans-Amadi', 'services', 'car', 'ph_transamadi', 20.4, 12.8, null, 'A glass showroom of saloons, SUVs and pickups for the oil field.', [
+      act('gcm_browse', 'Browse the showroom', 30, 0, 0, { fun: 5 }, null, { from: 9, to: 18 }),
+      act('gcm_test', 'Test drive a new pickup', 45, 0, 0, { fun: 14 }, null, { days: WK, from: 10, to: 17 }),
+      act('gcm_wash', 'Wash and polish the showroom cars', 180, 0, 1800, { energy: -10, hygiene: -6 }, null, { from: 8, to: 17 })
+    ]],
+    ['ph_rsu', '🎓', 'Rivers State University', 'learn', 'cap', 'ph_rumuokoro', 11.0, 7.0, null, 'The Senate building, lecture theatre, library, a buka and the halls.', 'rsu_'],
+    ['ph_jetty_fish', '🛶', 'Borokiri Fishing Jetty', 'outdoors', 'boat', 'ph_borokiri', 17.6, 20.6, null, 'Wooden boats, nets drying on the rails and fish smoking in drums.', [
+      act('bfj_watch', 'Watch the boats come in', 30, 0, 0, { fun: 6, stress: -4 }, null, { from: 6, to: 18 }),
+      act('bfj_smoked', 'Buy smoked fish off the drums', 15, 3000, 0, { hunger: 20 }, null, { from: 7, to: 18 }),
+      act('bfj_nets', 'Mend nets with the fishermen', 180, 0, 1800, { energy: -10, hygiene: -6 }, null, { from: 6, to: 16 }),
+      act('bfj_canoe', 'Paddle a canoe round the creek', 45, 1500, 0, { fun: 12, energy: -6 }, { fitness: 1 }, { from: 7, to: 17 })
     ]]
   ].forEach(function (q) {
-    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || 'abuja', text: q[9] };
+    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : 'abuja'), text: q[9] };
     if (q[8]) p.inside = q[8];
     CIVIC_PLACES.push(p);
     if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
   });
+  // Places added after the gem hunt began stay out of its pool, so old lives' gems (and their seals) replay.
   CIVIC_PLACES.forEach(function (p) { p.nogem = true; PLACES.push(p); });
   // Rules 19: the Lagoon party boat moored at the island jetties.
   ['cms', 'lagoon_cruise', 'lagoon_jetty', 'ph_bonny_pl'].forEach(function (pid) {
@@ -1882,7 +1946,7 @@
     // and the University of Port Harcourt, the same campus life under its own ids (Mama Ngozi runs the buka there).
     CIVIC_ACTS.ph_uniport = cloneActs(CIVIC_ACTS.unilag, 'uni_', 'uniport_').map(function (a) { a.label = a.label.replace(/Mama B/g, 'Mama Ngozi').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river'); return a; });
     // and the Abuja campuses (Mama Hauwa's buka; lawns and hills where Lagos has the lagoon).
-    CAMPUS_CLONES.forEach(function (c) { CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
+    CAMPUS_CLONES.forEach(function (c) { var ph = /^ph_/.test(c[0]); CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = ph ? a.label.replace(/Mama B/g, 'Mama Ibiere').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river') : a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
   })();
   // Rules 19: Lekki Conservation Centre, close up.
   CIVIC_ACTS.lcc = [

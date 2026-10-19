@@ -57,6 +57,14 @@ function store(dir) {
       (db.grants[o.account] = db.grants[o.account] || []).push({ item: o.item, ref: o.ref, provider: o.provider, amount: o.amount, currency: o.currency, at: o.paidAt });
       save(); return true;
     },
+    // A wallet top-up is credited to one life only: the first life that claims its receipt keeps it.
+    claim: (acc, ref, life) => {
+      const g = (db.grants[acc] || []).filter(x => x.ref === ref)[0]; if (!g) return 'none';
+      if (!/^topup_/.test(g.item)) return 'notopup';
+      if (g.life && g.life !== life) return 'used';
+      if (!g.life) { g.life = life; save(); }
+      return 'ok';
+    },
     // Owner restore: move a paid order's item to a new shop key (the old key loses it, so items can't be shared).
     restore: (ref, acc) => {
       const o = db.orders[ref]; if (!o || o.status !== 'paid') return 'No paid order with that receipt';
@@ -212,6 +220,13 @@ function createApp(cfg, fetchImpl) {
       if (url.pathname === '/api/owned' && req.method === 'GET') {
         const acc = url.searchParams.get('account') || ''; if (!ACCOUNT.test(acc)) return send(res, 400, { error: 'Bad shop key' });
         return send(res, 200, { items: db.owned(acc) });
+      }
+      if (url.pathname === '/api/claim' && req.method === 'POST') {
+        let body; try { body = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'Bad request' }); }
+        const acc = body && body.account, ref = body && body.ref, life = body && body.life;
+        if (typeof acc !== 'string' || !ACCOUNT.test(acc) || typeof ref !== 'string' || ref.length > 80 || typeof life !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(life)) return send(res, 400, { error: 'Bad request' });
+        const r = db.claim(acc, ref, life);
+        return r === 'ok' ? send(res, 200, { ok: true }) : send(res, r === 'used' ? 409 : 404, { error: r === 'used' ? 'That top-up went to another life' : 'No top-up with that receipt' });
       }
       if (url.pathname === '/api/checkout' && req.method === 'POST') {
         let body; try { body = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'Bad request' }); }

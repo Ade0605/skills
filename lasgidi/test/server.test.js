@@ -153,3 +153,17 @@ test('shop security: a damaged purchase file stops the shop instead of wiping pu
   assert.throws(() => createApp(config({ DATA_DIR: dir })), /damaged/);
   assert.equal(fs.readFileSync(path.join(dir, 'shop.json'), 'utf8'), '{"orders":', 'the file is left as it was');
 });
+test('shop: a wallet top-up is claimed by one life only; cosmetics cannot be claimed', async () => {
+  await withServer(KEYS, async (req, st) => {
+    st.flwOverride = { amount: 1000 };
+    const c = await (await post(req, '/api/checkout', { account: ACC, item: 'topup_jollof', provider: 'flutterwave', adult: true })).json(); assert.ok(c.url);
+    assert.match((await req('/api/flutterwave/return?status=successful&transaction_id=555')).headers.get('location'), /shop=ok/);
+    const g = (await (await req('/api/owned?account=' + ACC)).json()).items[0]; assert.equal(g.item, 'topup_jollof');
+    assert.equal((await post(req, '/api/claim', { account: ACC, ref: g.ref, life: 'L1-nepo-freestyle' })).status, 200);
+    assert.equal((await post(req, '/api/claim', { account: ACC, ref: g.ref, life: 'L1-nepo-freestyle' })).status, 200, 'the same life may ask again');
+    assert.equal((await post(req, '/api/claim', { account: ACC, ref: g.ref, life: 'L2-nepo-freestyle' })).status, 409, 'a new life cannot');
+    assert.equal((await (await req('/api/owned?account=' + ACC)).json()).items[0].life, 'L1-nepo-freestyle');
+    assert.equal((await post(req, '/api/claim', { account: ACC, ref: 'nope', life: 'L1' })).status, 404);
+    assert.equal((await post(req, '/api/claim', { account: ACC, ref: g.ref, life: '<bad>' })).status, 400);
+  });
+});

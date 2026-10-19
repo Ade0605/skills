@@ -486,7 +486,7 @@
         db.collection('photooff').limit(500).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { var v = d.data(); m[d.id] = !!(v && v.off); }); online.photoOff = m; scheduleRender(); }, function () { online.photoOff = {}; });
       } catch (e) { online.sea = []; online.seaimg = {}; }
       try {
-        db.collection('homes').limit(300).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.homes = m; scheduleRender(); }, function () { online.homes = {}; });
+        db.collection('homes').limit(300).onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); online.homes = m; var ids = Object.keys(m).filter(function (k) { var v = m[k]; return v && Array.isArray(v.biz) && v.biz.length && !online.names[k]; }).slice(0, 100); if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); }).catch(function () {}); scheduleRender(); }, function () { online.homes = {}; });
         db.collection('gifts').limit(300).onSnapshot(function (snap) {
           online.giftsIn = snap.docs.map(function (d) { return { from: d.id, raw: d.data() }; }).filter(function (g) { return g.raw && g.raw.to === online.me && own(D.GIFTS, g.raw.gift) && typeof g.raw.at === 'number'; });
           var ids = online.giftsIn.map(function (g) { return g.from; });
@@ -577,19 +577,26 @@
     renderTimer = setTimeout(function () { renderTimer = null; render(); }, 400);
   }
 
-  // Other players' shops, from their live presence: only known businesses in real business districts, at most 12.
-  function cleanBiz(v) { return Array.isArray(v) ? v.slice(0, 12).filter(function (x) { return Array.isArray(x) && typeof x[0] === 'string' && typeof x[1] === 'string' && own(D.BUSINESSES, x[0]) && own(D.BUSINESS_SITES, x[1]); }).map(function (x) { return [x[0], x[1]]; }) : []; }
+  // Your shops as [business, district, level], shared in your presence and your home snapshot (homes/{you}, written only by you).
+  function myBiz() { return (S.businesses || []).filter(function (b) { return b.site; }).slice(0, 12).map(function (b) { return [b.id, b.site, Math.max(1, Math.min(3, b.level | 0 || 1))]; }); }
+  // Other players' shops: only known businesses in real business districts, at most 12, with a level of 1 to 3.
+  function cleanBiz(v) { return Array.isArray(v) ? v.slice(0, 12).filter(function (x) { return Array.isArray(x) && typeof x[0] === 'string' && typeof x[1] === 'string' && own(D.BUSINESSES, x[0]) && own(D.BUSINESS_SITES, x[1]); }).map(function (x) { return [x[0], x[1], x[2] === 2 || x[2] === 3 ? x[2] : 1]; }) : []; }
+  function bizName(id, lv) { var g = own(D.BUSINESS_GROWTH, id) ? D.BUSINESS_GROWTH[id] : null; return (g && g.names && g.names[(lv || 1) - 1]) || D.BUSINESSES[id].name; }
   function shopsCard(pl) {
     if (!own(D.BUSINESS_SITES, pl.district)) return '';
-    var rows = (S.businesses || []).filter(function (b) { return b.site === pl.district && own(D.BUSINESSES, b.id); }).map(function (b) { return [D.BUSINESSES[b.id].name, 'Yours' + (b.level ? ' · level ' + b.level : '')]; });
-    (online.peerList || []).filter(function (p) { return !online.muted[p.by]; }).forEach(function (p) { (p.biz || []).forEach(function (x) { if (x[1] === pl.district && rows.length < 16) rows.push([D.BUSINESSES[x[0]].name, handleOf(p.by) + ' · online now']); }); });
-    var dn = D.DISTRICTS[pl.district].name;
-    return '<div class="card-lite"><h3>🏪 Player shops in ' + esc(dn) + '</h3>' + (rows.length ? '<div class="list">' + rows.map(function (r) { return '<div class="item"><div><h3>' + esc(r[0]) + '</h3><div class="meta"><span>' + esc(r[1]) + '</span></div></div></div>'; }).join('') + '</div>' : '<p class="note">No player shops here right now. Open one from the Bank app under Businesses, and pick ' + esc(dn) + '.</p>') + '</div>';
+    var seen = {}, rows = [];
+    function add(by, id, lv, who) { var k = by + '|' + id; if (seen[k] || rows.length >= 16) return; seen[k] = true; rows.push([bizName(id, lv), who]); }
+    (S.businesses || []).forEach(function (b, i) { if (b.site === pl.district && own(D.BUSINESSES, b.id)) add('me#' + i, b.id, b.level, 'Yours' + (b.level > 1 ? ' · level ' + b.level : '')); });
+    var live = {};
+    (online.peerList || []).forEach(function (p) { if (p.by === online.me || online.muted[p.by]) return; live[p.by] = true; (p.biz || []).forEach(function (x) { if (x[1] === pl.district) add(p.by, x[0], x[2], handleOf(p.by) + ' · online now'); }); });
+    Object.keys(online.homes || {}).forEach(function (by) { if (by === online.me || online.muted[by] || live[by]) return; var raw = online.homes[by]; cleanBiz(raw && raw.biz).forEach(function (x) { if (x[1] === pl.district) add(by, x[0], x[2], handleOf(by)); }); });
+    if (!rows.length) return '';
+    return '<div class="list"><div class="item"><div><h3>🏪 Player shops in ' + esc(D.DISTRICTS[pl.district].name) + '</h3></div></div>' + rows.map(function (r) { return '<div class="item"><div><h3>' + esc(r[0]) + '</h3><div class="meta"><span>' + esc(r[1]) + '</span></div></div></div>'; }).join('') + '</div>';
   }
   function syncPresence() {
     if (!online.room) return;
     var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null, pt = myParty();
-    var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : S && S.room && L.roomIn(S, S.room.id) ? 'room:' + S.room.id + ':' + S.room.spot : ui.visit || null, a: S ? myActivity() : null, biz: S && S.businesses ? S.businesses.filter(function (b) { return b.site; }).slice(0, 12).map(function (b) { return [b.id, b.site]; }) : null };
+    var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : S && S.room && L.roomIn(S, S.room.id) ? 'room:' + S.room.id + ':' + S.room.spot : ui.visit || null, a: S ? myActivity() : null, biz: S ? myBiz() : null };
     var key = JSON.stringify(pres);
     if (key === online.sentLoc) return;
     online.sentLoc = key;
@@ -1143,7 +1150,7 @@
   function homeSnapshot() {
     var h = L.homeDef(S);
     return { home: S.home, items: S.items.filter(function (it) { return it.x != null; }).slice(0, 60).map(function (it) { return { id: it.id, x: it.x, y: it.y, r: it.r ? 1 : 0 }; }),
-      vehicles: S.vehicles.slice(0, 24).map(function (v) { return v.id; }), party: myParty(), at: Date.now() };
+      vehicles: S.vehicles.slice(0, 24).map(function (v) { return v.id; }), party: myParty(), biz: myBiz(), at: Date.now() };
   }
   var homeTimer = null;
   function publishHome() {
@@ -1151,7 +1158,7 @@
     if (homeTimer) return;
     homeTimer = setTimeout(function () {
       homeTimer = null;
-      var snap = homeSnapshot(), key = JSON.stringify([snap.home, snap.items, snap.vehicles, snap.party]);
+      var snap = homeSnapshot(), key = JSON.stringify([snap.home, snap.items, snap.vehicles, snap.party, snap.biz]);
       if (key === online.sentHome) return;
       online.sentHome = key;
       online.db.doc('homes/' + online.me).set(snap).catch(function () { online.sentHome = ''; });
@@ -2049,7 +2056,7 @@
   var VENUE_CREW = {
     refinery: [['Plant hand', 'Shift change is at two. Hard hat on before the gate.', 1], ['Process engineer', 'Column three is running hot today.', 1], ['Security', 'Visitors sign the book first, abeg.', 0], ['Tanker driver', 'Loading since six. Na so the work be.', 1], ['Visitor', 'The flare stack is bigger than I thought.', 0]],
     airport: [['Traveller', 'Boarding in forty minutes. Where is gate three?', 0], ['Ground crew', 'Chocks in, fuel truck next.', 1], ['Pilot', 'Clear skies over Abuja this evening.', 0], ['Cab driver', 'Island or mainland? Traffic is bad at Ikeja.', 0]],
-    transport: [['Conductor', 'Oshodi! Oshodi! Enter with your change!', 0], ['Driver', 'We move when the bus full.', 0], ['Passenger', 'This queue no dey move at all.', 0], ['Hawker', 'Gala, Lacasera, pure water!', 0]],
+    transport: [['Conductor', 'Last two seats! Enter with your change!', 0], ['Driver', 'We move when the bus full.', 0], ['Passenger', 'This queue no dey move at all.', 0], ['Hawker', 'Gala, Lacasera, pure water!', 0]],
     food: [['Mama Put', 'Rice, beans, dodo. Wetin you go chop?', 0], ['Customer', 'The stew here is sweet die.', 0], ['Waiter', 'Small chops are coming now.', 0]],
     nightlife: [['DJ', 'Next song go burst your head.', 0], ['Bouncer', 'No shorts tonight, boss.', 0], ['Raver', 'This party no get part two!', 0]],
     culture: [['Guide', 'This piece is older than Lagos itself.', 0], ['Artist', 'I paint the danfos at dawn.', 0], ['Tourist', 'Take my picture with the statue, please.', 0]],
@@ -2089,7 +2096,7 @@
   var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', badge: 'govt', ballot: 'govt', gavel: 'govt', book: 'campus', hotel: 'nightlife', dice: 'nightlife', tower: 'tech', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
   // Nightlife rooms drawn in 3D: the club strips, lounges and the members' house (not the harbour, which has its own scene).
   // Every other kind of place opens as a street scene or an interior hall in 3D; music venues use the club hall.
-  var PLACE3D = { conference: 'hall', funpark: 'park', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
+  var PLACE3D = { conference: 'hall', funpark: 'park', rail: 'street', polo: 'park', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
   function NIGHT3D(pl) { return (pl.type === 'nightlife' && pl.glyph === 'glass' && !/^harbour_/.test(pl.id)) || pl.id === 'club_tidewater'; }
   function venueSet(pl) {
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
@@ -2296,7 +2303,7 @@
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
-    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
+    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
     if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
@@ -2568,7 +2575,7 @@
   // Mounted outside the app so live re-renders never restart it. Tap anywhere or Arrive to skip.
   // Towns on the road between the cities, for the coach (the real routes, in order).
   var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'] };
-  // Abuja's own words for the same rides (display only: the engine and its ledger keep the mode names).
+  // Abuja's and Port Harcourt's own words for the same rides (display only: the engine and its ledger keep the mode names).
   var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' } };
   function modeName(o) { var m = CITY_MODE_NAMES[L.cityOf(S)]; return (m && own(m, o.mode)) ? m[o.mode] : o.name; }
   var RIDE_NAMES = { coach: 'Savanna Line coach', danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
@@ -4836,10 +4843,17 @@
   // Paid top-ups (verified by the shop server) are credited to this life once each, by receipt.
   function applyTopups() {
     if (!S || S.rules < 19 || S.challenge) return;
-    var done = S.topups || [], added = 0;
-    (online.owned || []).forEach(function (g) { if (!g || !D.TOPUP_PACKS[g.item] || typeof g.ref !== 'string' || done.indexOf(g.ref) >= 0) return; var r = L.topUp(S, g.item, g.ref); if (r.ok) { added++; ui.toasts.push({ msg: r.msg, ok: true }); } });
-    if (added) { save(); render(); }
+    // Each receipt belongs to one life: the shop server binds it to the first life that claims it, so a new life can't credit it again.
+    var done = S.topups || [], life = lifeTag(), me = S;
+    (online.owned || []).forEach(function (g) {
+      if (!g || !D.TOPUP_PACKS[g.item] || typeof g.ref !== 'string' || done.indexOf(g.ref) >= 0 || (g.life && g.life !== life)) return;
+      fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account: shopKey(), ref: g.ref, life: life }) }).then(function (r) {
+        if (!r.ok || S !== me || (S.topups || []).indexOf(g.ref) >= 0) return;
+        var res = L.topUp(S, g.item, g.ref); if (res.ok) { ui.toasts.push({ msg: res.msg, ok: true }); save(); render(); }
+      }).catch(function () {});
+    });
   }
+  function lifeTag() { return ('L' + S.seed + '-' + S.origin + '-' + S.goal).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); }
   function topupView() {
     var sh = online.shop, P = sh.providers, packs = Object.keys(sh.catalog).filter(function (k) { return sh.catalog[k].kind === 'topup' && D.TOPUP_PACKS[k]; });
     if (!packs.length) return '';
