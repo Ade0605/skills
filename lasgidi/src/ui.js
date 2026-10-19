@@ -164,7 +164,7 @@
     if (ui.huntListenUntil && Date.now() < ui.huntListenUntil) return { style: huntNow().style }; // the hunt's single
     if (mini) return mini.kind === 'dance' ? { style: 'afro', bpm: 112 } : null;
     if (ui.venueOpen) {
-      var pl = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0], hr = L.hour(S), night = hr >= 19 || hr < 5;
+      var pl = placeById(ui.venueOpen), hr = L.hour(S), night = hr >= 19 || hr < 5;
       if (!pl) return null; if (pl.id === 'owambe_hall') return { style: 'highlife' };
       if ((pl.type === 'nightlife' || pl.type === 'music') && night) { var rp = radioPlaying(); return { style: rp ? rp.style : 'afro' }; }
       var ik = D.insideKind(pl); return (ik === 'market' || ik === 'motorpark') && hr >= 7 && hr < 19 ? { style: 'fuji', vol: 0.1 } : null; // fuji from a stall's speaker by day
@@ -582,16 +582,37 @@
   // Other players' shops: only known businesses in real business districts, at most 12, with a level of 1 to 3.
   function cleanBiz(v) { return Array.isArray(v) ? v.slice(0, 12).filter(function (x) { return Array.isArray(x) && typeof x[0] === 'string' && typeof x[1] === 'string' && own(D.BUSINESSES, x[0]) && own(D.BUSINESS_SITES, x[1]); }).map(function (x) { return [x[0], x[1], x[2] === 2 || x[2] === 3 ? x[2] : 1]; }) : []; }
   function bizName(id, lv) { var g = own(D.BUSINESS_GROWTH, id) ? D.BUSINESS_GROWTH[id] : null; return (g && g.names && g.names[(lv || 1) - 1]) || D.BUSINESSES[id].name; }
+  // Shops you can walk into: your own (myshop_<index>) and another player's (pshop, from their checked shop list). UI only: no engine change.
+  var SHOP_GROUP = { buka: 'food', smallchops: 'food', catering: 'food', pos: 'kiosk', recharge: 'kiosk', phonefix: 'kiosk', reseller: 'kiosk', barber: 'salon', salon: 'salon', laundry: 'salon', stall: 'shop', import: 'shop', school: 'shop', carwash: 'yard', carrental: 'yard', haulage: 'yard', danfo: 'yard', okada: 'yard', delivery: 'yard', construction: 'yard', nightclub: 'big', tech: 'big', oilgas: 'big', event: 'big', shortlet: 'big' };
+  function shopPlace(id) {
+    var m = /^myshop_(\d{1,2})$/.exec(id || ''), b, bid, lv, d, owner = '';
+    if (m && S) { b = (S.businesses || [])[+m[1]]; if (!b || !b.site || !own(D.BUSINESSES, b.id) || !own(D.DISTRICTS, b.site)) return null; bid = b.id; lv = b.level || 1; d = b.site; }
+    else if (id === 'pshop' && ui.pshop) { bid = ui.pshop.id; lv = ui.pshop.lv; d = ui.pshop.d; owner = handleOf(ui.pshop.by); if (!own(D.BUSINESSES, bid) || !own(D.DISTRICTS, d)) return null; }
+    else return null;
+    var g = own(D.BUSINESS_GROWTH, bid) ? D.BUSINESS_GROWTH[bid] : null;
+    return { id: id, icon: (g && g.icon) || '🏪', name: bizName(bid, lv) + (owner ? ' · ' + owner : ' (yours)'), type: 'services', glyph: 'basket', district: d, x: 0, y: 0, acts: [], civic: 'shop', inside: 'shop', text: '', shop: { group: SHOP_GROUP[bid] || 'shop', level: lv, owner: owner, idx: m ? +m[1] : -1, biz: bid } };
+  }
+  function placeById(id) { return D.PLACES.filter(function (p) { return p.id === id; })[0] || shopPlace(id); }
+  function shopPanel(pl) {
+    var sp = pl.shop, here = S.loc === pl.district;
+    if (sp.idx < 0) return '<p class="note">This is ' + esc(sp.owner) + '’s shop. You can look around; only the owner runs it.</p>';
+    var b = S.businesses[sp.idx], up = b.level && b.level < 3 ? L.upgradeCost(S, b) : 0;
+    return '<p class="note">Your ' + esc(bizName(b.id, b.level)) + ' in ' + esc(D.DISTRICTS[pl.district].name) + '. About ' + N(L.businessEstimate ? L.businessEstimate(S, b) : 0) + ' a day. ' + (here ? '' : 'Go to ' + esc(D.DISTRICTS[pl.district].name) + ' to check in.') + '</p><div class="inline">' +
+      (here ? '<button class="btn sm" id="shop-visit" data-visit="1">Check in on your shops</button>' : '') +
+      (up ? '<button class="btn sm ghost" id="shop-up" data-upb="' + sp.idx + '"' + (S.cash + S.bank >= up ? '' : ' disabled') + '>Upgrade ' + N(up) + '</button>' : '') + '</div>';
+  }
+  var PSHOPS = []; function pshopBtn(by, x) { var k = PSHOPS.length; if (k > 40) return ''; PSHOPS.push({ by: by, id: x[0], lv: x[2], d: x[1] }); return '<button class="btn sm ghost" id="psh-' + k + '" data-pshop="' + k + '">Visit</button>'; }
   function shopsCard(pl) {
+    PSHOPS = [];
     if (!own(D.BUSINESS_SITES, pl.district)) return '';
     var seen = {}, rows = [];
-    function add(by, id, lv, who) { var k = by + '|' + id; if (seen[k] || rows.length >= 16) return; seen[k] = true; rows.push([bizName(id, lv), who]); }
-    (S.businesses || []).forEach(function (b, i) { if (b.site === pl.district && own(D.BUSINESSES, b.id)) add('me#' + i, b.id, b.level, 'Yours' + (b.level > 1 ? ' · level ' + b.level : '')); });
+    function add(by, id, lv, who, btn) { var k = by + '|' + id; if (seen[k] || rows.length >= 16) return; seen[k] = true; rows.push([bizName(id, lv), who, btn]); }
+    (S.businesses || []).forEach(function (b, i) { if (b.site === pl.district && own(D.BUSINESSES, b.id)) add('me#' + i, b.id, b.level, 'Yours' + (b.level > 1 ? ' · level ' + b.level : ''), '<button class="btn sm ghost" id="msh-' + i + '" data-venue="myshop_' + i + '">🚪 Walk in</button>'); });
     var live = {};
-    (online.peerList || []).forEach(function (p) { if (p.by === online.me || online.muted[p.by]) return; live[p.by] = true; (p.biz || []).forEach(function (x) { if (x[1] === pl.district) add(p.by, x[0], x[2], handleOf(p.by) + ' · online now'); }); });
-    Object.keys(online.homes || {}).forEach(function (by) { if (by === online.me || online.muted[by] || live[by]) return; var raw = online.homes[by]; cleanBiz(raw && raw.biz).forEach(function (x) { if (x[1] === pl.district) add(by, x[0], x[2], handleOf(by)); }); });
+    (online.peerList || []).forEach(function (p) { if (p.by === online.me || online.muted[p.by]) return; live[p.by] = true; (p.biz || []).forEach(function (x) { if (x[1] === pl.district) add(p.by, x[0], x[2], handleOf(p.by) + ' · online now', pshopBtn(p.by, x)); }); });
+    Object.keys(online.homes || {}).forEach(function (by) { if (by === online.me || online.muted[by] || live[by]) return; var raw = online.homes[by]; cleanBiz(raw && raw.biz).forEach(function (x) { if (x[1] === pl.district) add(by, x[0], x[2], handleOf(by), pshopBtn(by, x)); }); });
     if (!rows.length) return '';
-    return '<div class="list"><div class="item"><div><h3>🏪 Player shops in ' + esc(D.DISTRICTS[pl.district].name) + '</h3></div></div>' + rows.map(function (r) { return '<div class="item"><div><h3>' + esc(r[0]) + '</h3><div class="meta"><span>' + esc(r[1]) + '</span></div></div></div>'; }).join('') + '</div>';
+    return '<div class="list"><div class="item"><div><h3>🏪 Player shops in ' + esc(D.DISTRICTS[pl.district].name) + '</h3></div></div>' + rows.map(function (r) { return '<div class="item"><div><h3>' + esc(r[0]) + '</h3><div class="meta"><span>' + esc(r[1]) + '</span></div></div>' + (r[2] || '') + '</div>'; }).join('') + '</div>';
   }
   function syncPresence() {
     if (!online.room) return;
@@ -2096,7 +2117,7 @@
   var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', badge: 'govt', ballot: 'govt', gavel: 'govt', book: 'campus', hotel: 'nightlife', dice: 'nightlife', tower: 'tech', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
   // Nightlife rooms drawn in 3D: the club strips, lounges and the members' house (not the harbour, which has its own scene).
   // Every other kind of place opens as a street scene or an interior hall in 3D; music venues use the club hall.
-  var PLACE3D = { conference: 'hall', funpark: 'park', rail: 'street', polo: 'park', waterpark: 'park', bowling: 'hall', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
+  var PLACE3D = { shop: 'street', conference: 'hall', funpark: 'park', rail: 'street', polo: 'park', waterpark: 'park', bowling: 'hall', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
   function NIGHT3D(pl) { return (pl.type === 'nightlife' && pl.glyph === 'glass' && !/^harbour_/.test(pl.id)) || pl.id === 'club_tidewater'; }
   function venueSet(pl) {
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
@@ -2216,7 +2237,7 @@
     return '<div class="ap-head"><b>' + esc(pl.icon || '📍') + ' ' + esc(pl.name) + '</b><span class="muted">' + esc(D.DISTRICTS[pl.district].name) + ' · ' + crowd + ' here · ' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="venue-fold" data-venuefold="1" aria-expanded="' + !ui.venueFold + '" aria-label="' + (ui.venueFold ? 'Show the panel' : 'Fold the panel away') + '">' + (ui.venueFold ? '▴' : '▾') + '</button><button class="btn sm ghost" id="venue-close" data-venueclose="1" aria-label="Leave the scene">✕</button></div>' +
       (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? '<div class="gem-here"><span>💎 A gem is hidden in this yard. Tap it' + (here ? '' : ' once you are here') + '.</span>' + (here ? '<button class="btn sm" id="vgem-' + gm.n + '" data-gem="' + gm.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '') + '</div>' : ''; })() +
       (venueNamed(pl).length ? '<p class="note">Here: ' + venueNamed(pl).map(function (n) { return '<b>' + esc(n.name) + '</b> (' + esc(n.role) + ')'; }).join(', ') + '. Tap them in the yard.</p>' : '') +
-      (here ? venueTabs(pl, acts) : '<p class="note">You are in ' + esc(D.DISTRICTS[S.loc].name) + '. Take a ride to ' + esc(D.DISTRICTS[pl.district].name) + ': it pulls up at the gate and you walk in.</p>' + rideRow(pl.district) + venueExtras(pl)) +
+      (pl.shop ? shopPanel(pl) : '') + (pl.shop ? (here ? '' : rideRow(pl.district)) : here ? venueTabs(pl, acts) : '<p class="note">You are in ' + esc(D.DISTRICTS[S.loc].name) + '. Take a ride to ' + esc(D.DISTRICTS[pl.district].name) + ': it pulls up at the gate and you walk in.</p>' + rideRow(pl.district) + venueExtras(pl)) +
       (S.loc === pl.district ? venueChatView(pl) : '');
   }
   // A place's own desks and boards: departures, clubs, the cruise, rooms, the estate office, japa, HR desks, shares.
@@ -2300,10 +2321,10 @@
       (acts.length ? '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; }).join('') + '</div>' : '<p class="note">Nothing to do here yet. Try the other tabs.</p>');
   }
   function mountVenue() {
-    var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0] : null;
+    var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? placeById(ui.venueOpen) : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
-    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
+    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling|shop)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
     if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
@@ -2319,7 +2340,7 @@
     var html = venuePanel(pl), pn0 = document.getElementById('venue-panel');
     if (html !== venueKey) { var inp = document.getElementById('venue-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'venue-in'; pn0.innerHTML = html; venueKey = html; var ni = document.getElementById('venue-in'); if (ni) { ni.value = val; if (foc) ni.focus(); } }
     ov.classList.toggle('folded', !!ui.venueFold);
-    var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; sc.mode = pl.id === 'lekki_hyde_park' ? 'estate' : /^harbour_/.test(pl.id) ? 'harbour' : NIGHT3D(pl) ? 'club' : venueSet(pl) === 'stadium' ? 'stadium' : D.insideKind(pl) === 'market' ? 'market' : D.insideKind(pl) === 'jetty' ? 'jetty' : D.insideKind(pl) === 'park' ? 'park' : /^(church|mosque|govt)$/.test(D.insideKind(pl)) || /^(theatre|abj_tower_pl)$/.test(pl.id) ? 'plaza' : pl.id === 'abj_crafts_pl' ? 'market' : D.insideKind(pl) === 'culture' ? 'gallery' : PLACE3D[D.insideKind(pl)] || 'beach'; sc.kind = D.insideKind(pl); if (pl.id === 'freedom') sc.mode = 'park'; if (sc.kind === 'campus') sc.mode = 'plaza'; sc.street = pl.id === 'pitch'; sc.day = L.day(S); sc.club = pl.id === 'harbour_club'; sc.placeId = pl.id; sc.month = L.monthIndex(S); sc.rooftop = /lounge/.test(pl.id); sc.hour = L.hour(S);
+    var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; sc.mode = pl.id === 'lekki_hyde_park' ? 'estate' : /^harbour_/.test(pl.id) ? 'harbour' : NIGHT3D(pl) ? 'club' : venueSet(pl) === 'stadium' ? 'stadium' : D.insideKind(pl) === 'market' ? 'market' : D.insideKind(pl) === 'jetty' ? 'jetty' : D.insideKind(pl) === 'park' ? 'park' : /^(church|mosque|govt)$/.test(D.insideKind(pl)) || /^(theatre|abj_tower_pl)$/.test(pl.id) ? 'plaza' : pl.id === 'abj_crafts_pl' ? 'market' : D.insideKind(pl) === 'culture' ? 'gallery' : PLACE3D[D.insideKind(pl)] || 'beach'; sc.kind = D.insideKind(pl); if (pl.id === 'freedom') sc.mode = 'park'; if (sc.kind === 'campus') sc.mode = 'plaza'; sc.street = pl.id === 'pitch'; sc.day = L.day(S); sc.club = pl.id === 'harbour_club'; sc.placeId = pl.id; sc.shop = pl.shop || null; sc.month = L.monthIndex(S); sc.rooftop = /lounge/.test(pl.id); sc.hour = L.hour(S);
     var gig = (D.PLACE_ACTIONS.island || []).filter(function (x) { return x.id === 'isl_harbour_concert'; })[0]; sc.show = !!gig && L.inWindow(S, gig.when); venueStage.update(sc); venueStage.start();
     ambience(prefs.sound && !document.hidden ? AMBIENCE_OF[sc.set] || 'street' : null);
   }
@@ -2327,10 +2348,10 @@
   function venueCallbacks() {
     return {
         walk: prefs.walk3d !== false, onWalk: function (on) { prefs.walk3d = !!on; writeJSON(PREF_KEY, prefs); }, // walking in 3D (🚶), remembered
-        onPhoto: function (cv) { var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0]; ui.photoFrom = 'venue'; takePhoto(cv, p0 ? p0.name : 'Lasgidi'); },
-        onLetter: function () { var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0]; if (p0) huntCatch(p0); },
+        onPhoto: function (cv) { var p0 = placeById(ui.venueOpen); ui.photoFrom = 'venue'; takePhoto(cv, p0 ? p0.name : 'Lasgidi'); },
+        onLetter: function () { var p0 = placeById(ui.venueOpen); if (p0) huntCatch(p0); },
         onGem: function (n) {
-          var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0];
+          var p0 = placeById(ui.venueOpen);
           if (!p0 || S.loc !== p0.district) { ui.toasts.push({ msg: 'Ride there first, then pick up the gem.', ok: false }); renderToasts(); return; }
           var gid = gemToday(); run(function () { return L.collectGem(S, gid, n); });
         },
@@ -2341,7 +2362,7 @@
           run(function () { return L.doAction(S, a.id); });
         },
         onAct: function (i) {
-        var p0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0], x = p0 && venueActs(p0)[i]; if (!x) return;
+        var p0 = placeById(ui.venueOpen), x = p0 && venueActs(p0)[i]; if (!x) return;
         if (S.loc !== p0.district) { ui.toasts.push({ msg: 'Ride to ' + D.DISTRICTS[p0.district].name + ' first, then walk in.', ok: false }); renderToasts(); return; }
         if (!x.a || x.a.disabled) { ui.toasts.push({ msg: (x.a && x.a.disabled) || (x.def.when ? 'Open ' + whenText(x.def.when) : 'Not open now'), ok: false }); renderToasts(); return; }
         ui.venueSlot = i; run(function () { var r = L.doAction(S, x.id); if (r && r.ok) { ui.activity = activityFor(x.id); ui.activityAt = Date.now(); if (x.id === 'work_shift') ui.venueBubble = { place: p0.id, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; });
@@ -3269,6 +3290,7 @@
       if (b.manager) meta.push('Manager ' + N(L.managerPay(S, b)) + '/wk');
       else meta.push('Last visit ' + (idle ? idle + ' days ago' : 'today') + (idle > 7 ? ' <span class="cost">· staff are stealing</span>' : ''));
       var btns = '';
+      if (b.site && own(D.DISTRICTS, b.site)) btns += '<button class="btn sm ghost" id="wib-' + i + '" data-venue="myshop_' + i + '">🚪 Walk in</button>';
       if (b.level && b.level < 3) btns += '<button class="btn sm" id="upb-' + i + '" data-upb="' + i + '"' + (S.cash + S.bank >= up ? '' : ' disabled') + '>Upgrade ' + N(up) + '</button>';
       if (b.level) btns += b.manager ? '<button class="btn sm ghost" id="fmb-' + i + '" data-fmb="' + i + '">Let manager go</button>' : '<button class="btn sm ghost" id="hmb-' + i + '" data-hmb="' + i + '">Hire manager</button>';
       btns += '<button class="link-btn" id="sell-' + i + '" data-sellb="' + i + '">Sell (60%)</button>';
@@ -4574,7 +4596,7 @@
     if (ds.fishsell) { run(function () { return L.sellFish(S); }); return; }
     if (ds.fishcook) { run(function () { return L.cookFish(S); }); return; }
     if (ds.photo) { ui.photoFrom = ds.photo; if (ds.photo === 'cruise') takePhoto(document.querySelector('#cruise-view .cruise-canvas'), 'Lagoon Boat Cruise'); else if (ds.photo === 'airport') takePhoto(document.querySelector('.airport-canvas'), ui.airportName || 'Airport'); else if (ds.photo === 'room') takePhoto(document.querySelector('#room-view .cruise-canvas'), D.ROOMS[S.room.id].name); else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); return; }
-    if (ds.photoretake) { var pv = document.getElementById('photo-view'); if (pv) pv.remove(); setTimeout(function () { if (ui.photoFrom === 'cruise') takePhoto(document.querySelector('#cruise-view .cruise-canvas'), 'Lagoon Boat Cruise'); else if (ui.photoFrom === 'venue' && venueStage && document.getElementById('venue-view')) { var vp0 = D.PLACES.filter(function (p) { return p.id === ui.venueOpen; })[0]; takePhoto(venueStage.canvas, vp0 ? vp0.name : 'Lasgidi'); } else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); }, 80); return; }
+    if (ds.photoretake) { var pv = document.getElementById('photo-view'); if (pv) pv.remove(); setTimeout(function () { if (ui.photoFrom === 'cruise') takePhoto(document.querySelector('#cruise-view .cruise-canvas'), 'Lagoon Boat Cruise'); else if (ui.photoFrom === 'venue' && venueStage && document.getElementById('venue-view')) { var vp0 = placeById(ui.venueOpen); takePhoto(venueStage.canvas, vp0 ? vp0.name : 'Lasgidi'); } else takePhoto(document.querySelector('.pg-canvas'), D.DISTRICTS[S.loc].name); }, 80); return; }
     if (ds.photoclose) { ui.photo = null; var pv2 = document.getElementById('photo-view'); if (pv2) pv2.remove(); return; }
     if (ds.photosave) { savePhoto(); return; }
     if (ds.cruisefold) { ui.cruiseFold = !ui.cruiseFold; mountCruise(); return; }
@@ -4584,6 +4606,7 @@
     if (ds.fidstab) { ui.fidsTab = ds.fidstab; mountAirport(); return; }
     if (ds.layer) { var ly = mapLayers(); ly[ds.layer] = !ly[ds.layer]; try { localStorage.setItem(LAYER_KEY, JSON.stringify(ly)); } catch (e) {} render(); return; }
     if (ds.roomenter) { var re0 = ds.roomenter; run(function () { var r = L.roomEnter(S, re0); if (r.ok) { ui.roomOpen = re0; ui.cruiseOpen = false; ui.airportOpen = false; } return r; }); syncPresence(); return; }
+    if (ds.pshop != null && ds.pshop !== '') { var ps = PSHOPS[+ds.pshop]; if (ps) { ui.pshop = ps; ui.venueOpen = 'pshop'; ui.venueSlot = null; ui.venueTab = null; ui.cruiseOpen = false; ui.airportOpen = false; render(); } return; }
     if (ds.venue) { ui.venueOpen = ds.venue; ui.venueSlot = null; ui.venueTab = null; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.venuesend) { var vi = document.getElementById('venue-in'); sendVenue(vi ? vi.value : ''); return; }
     if (ds.venuefold) { ui.venueFold = !ui.venueFold; mountVenue(); return; }
