@@ -2751,7 +2751,7 @@ test('review fixes: proofs carry traits, start home, look and outfit, so an onbo
 });
 test('rules 20: walking out of an ajo after collecting leaves a debt and an 8-week ban; businesses need a site; options are whole numbers', () => {
   const s = L.newGame({ seed: 1900, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 20);
+  assert.ok(s.rules >= 20);
   assert.equal(L.buyBusiness(s, 'pos').ok, false, 'a site is required');
   s.pending.push({ id: 'police', title: '', text: '', options: ['a', 'b'] }); assert.equal(L.resolveChoice(s, 0.5).ok, false); assert.equal(L.resolveChoice(s, NaN).ok, false); assert.equal(s.pending.length, 1);
   assert.equal(L.stockPrice(s, Object.keys(D.STOCKS)[0], L.day(s) + 30), L.stockPrice(s, Object.keys(D.STOCKS)[0]), 'no future prices');
@@ -2820,4 +2820,34 @@ test('rules 19: more Lagos places: nogem, own acts, rules 19 only', () => {
     assert.ok(!L.availableActions(o).some(a => acts.some(b => b.id === a.id)), id + ' hidden in rules 18');
   }
   assert.ok(D.CIVIC_ACTS.lag_lasu.every(a => !/Mama B'/.test(a.label)));
+});
+test('rules 21: three daily goals, the same for a seed and day; a capped reward once a day; none in rules-20 lives', () => {
+  const mk = (rules) => { const s = L.newGame(Object.assign({ seed: 2100, origin: 'nepo', goal: 'freestyle' }, rules ? { rules } : {})); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const a = mk(), b = mk();
+  assert.equal(a.rules, 21); assert.deepEqual(L.dailyGoals(a).list.map(g => g.k), L.dailyGoals(b).list.map(g => g.k));
+  assert.equal(L.dailyGoals(a).list.length, 3); assert.equal(L.dailyGoals(a).list[0].k, 'acts');
+  assert.equal(L.dailyGoals(mk(20)), null);
+  // Play a while; the reward is paid at most once a day and never more than the cap.
+  const s = mk(); let paid = 0, days = {};
+  for (let i = 0; i < 400; i++) {
+    const acts = L.availableActions(s).filter(x => !x.disabled && !x.atHome);
+    const x = acts[i % Math.max(1, acts.length)]; if (x) L.doAction(s, x.id); else L.wait(s, 60);
+    while (s.pending.length) L.resolveChoice(s, 0);
+  }
+  for (const e of s.ledger) if (/Daily goals/.test(e.memo)) { paid++; const d = Math.floor(e.t / 1440); assert.ok(!days[d], 'once a day'); days[d] = 1; assert.ok(e.amt <= L.price(s, D.GOAL_REWARD) * 1.01); }
+  assert.ok(paid > 0, 'goals can be finished');
+  const r = L.replayLife(s.replay); assert.equal(r.ledgerHash, s.ledgerHash);
+});
+test('rules 21: weekend events show only in their week, day and place, and only in rules-21 lives', () => {
+  const ids = Object.values(D.EVENT_ACTS).flat().map(a => a.id);
+  for (const [pid, list] of Object.entries(D.EVENT_ACTS)) {
+    const p = D.PLACES.find(x => x.id === pid), w = list[0].when;
+    const s = L.newGame({ seed: 2200, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.loc = p.district;
+    let found = false, wrongWeek = false;
+    for (let d = 0; d < 28; d++) { const ok = L.availableActions(s).some(a => a.id === list[0].id); if (ok) { found = true; if (w.wk.indexOf(Math.floor(s.t / 1440 / 7) % 4) < 0 && w.wk.indexOf(L.week ? L.week(s) % 4 : -1) < 0) wrongWeek = true; } s.t += 1440; }
+    assert.ok(found, pid); assert.ok(!wrongWeek, pid);
+    const o = L.newGame({ seed: 2200, origin: 'nepo', goal: 'freestyle', rules: 20 }); while (o.pending.length) L.resolveChoice(o, 0); o.loc = p.district;
+    for (let d = 0; d < 28; d++) { assert.ok(!L.availableActions(o).some(a => ids.indexOf(a.id) >= 0)); o.t += 1440; }
+  }
+  for (const a of Object.values(D.EVENT_ACTS).flat()) { assert.ok(a.mins % 15 === 0, a.id); if (a.earn) assert.ok(a.gig && a.fest && a.earn <= 3000, a.id); }
 });

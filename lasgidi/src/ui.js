@@ -3168,6 +3168,12 @@
         '<button class="btn sm" id="lodge-' + o.id + '" data-lodge="' + o.id + '"' + (o.disabled ? ' disabled' : '') + '>Sleep here</button></div>';
     }).join('') + '</div></div>';
   }
+  // Rules 21: today's three goals, with a small capped reward for all three.
+  function goalsCard() {
+    var g = L.dailyGoals ? L.dailyGoals(S) : null; if (!g) return '';
+    return '<div class="list"><div class="item"><div><h3>🎯 Today\u2019s goals' + (g.streak > 1 ? ' · 🔥 ' + g.streak + '-day streak' : '') + '</h3><div class="meta"><span>' + (g.done ? '<span class="gain">Done: ' + N(g.reward) + ' paid</span>' : 'All three pay ' + N(g.reward)) + '</span></div></div></div>' +
+      g.list.map(function (x) { var ok = x.have >= x.need; return '<div class="item"><div><h3>' + (ok ? '✅ ' : x.icon + ' ') + esc(x.label) + '</h3><div class="meta"><span>' + x.have + ' / ' + x.need + '</span></div></div></div>'; }).join('') + '</div>';
+  }
   function doView() {
     var acts = L.availableActions(S);
     var home = acts.filter(function (a) { return a.atHome; });
@@ -3175,7 +3181,7 @@
     var d = D.DISTRICTS[S.loc];
     var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + tourCard() + streakCard() + partyInvites() + visitView() + adviceView() + gemHere() + giftInbox();
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
-    html += sickCard() + dettyCard();
+    html += sickCard() + dettyCard() + goalsCard();
     html += '<div class="list">' + place.sort(sortOpen).map(actionRow).join('') + '</div>';
     html += fishingCard() + peopleHere() + gemCard();
     if (home.length) html += '<div class="section"><h3>At home · ' + esc(L.homeDef(S).name) + '</h3><div class="list">' + home.sort(sortOpen).map(actionRow).join('') + '</div></div>';

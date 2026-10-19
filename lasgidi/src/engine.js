@@ -46,7 +46,9 @@
   // a night in the cell after a bad checkpoint argument, the doctor for malaria, and street area boys on foot or danfo.
   // 20 closes holes found in a review: the ajo walk-out after collecting (you owe the rest, 8-week ban), and
   // businesses bought without a site (now need one, and count toward the cap of 12).
-  var RULES = 20;
+  // 21 adds three daily goals (picked from the day and the life's seed, a small capped reward when all three are done)
+  // and weekend events on a fixed rotation (D.EVENT_ACTS): the Abuja polo final, the PH regatta, the Lagos night market special.
+  var RULES = 21;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -198,7 +200,7 @@
 
   // Spending and income categories for the weekly report.
   var FOOD_LABELS = {}, GIG_LABELS = {};
-  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; }), Object.keys(D.BRANCH_ACTS).map(function (k) { return D.BRANCH_ACTS[k]; }), Object.keys(D.CIVIC_ACTS).map(function (k) { return D.CIVIC_ACTS[k]; })).forEach(function (list) {
+  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; }), Object.keys(D.BRANCH_ACTS).map(function (k) { return D.BRANCH_ACTS[k]; }), Object.keys(D.CIVIC_ACTS).map(function (k) { return D.CIVIC_ACTS[k]; }), Object.keys(D.EVENT_ACTS).map(function (k) { return D.EVENT_ACTS[k]; })).forEach(function (list) {
     list.forEach(function (a) {
       if ((a.fx && a.fx.hunger > 0) || a.special === 'pantry7') FOOD_LABELS[a.label] = true;
       if (a.gig) GIG_LABELS[a.label] = true;
@@ -725,6 +727,51 @@
     var d = s.loc;
     return CIVIC_AT[d] || (CIVIC_AT[d] = D.PLACES.filter(function (p) { return p.district === d && D.CIVIC_ACTS[p.id]; }).reduce(function (o, p) { return o.concat(D.CIVIC_ACTS[p.id]); }, []));
   }
+  // Rules 21: weekend events at their places, on a fixed four-week rotation (when.wk), listed only in their week.
+  var EVENT_AT = {};
+  function eventActions(s) {
+    var d = s.loc, all = EVENT_AT[d] || (EVENT_AT[d] = D.PLACES.filter(function (p) { return p.district === d && D.EVENT_ACTS[p.id]; }).reduce(function (o, p) { return o.concat(D.EVENT_ACTS[p.id]); }, []));
+    return all.filter(function (a) { return !a.when || !a.when.wk || a.when.wk.indexOf(week(s) % 4) >= 0; });
+  }
+  // Rules 21: three daily goals, the same for a life on a given day (a hash of the seed and the day, not the dice).
+  var CIVIC_IDS = {}; Object.keys(D.CIVIC_ACTS).forEach(function (k) { D.CIVIC_ACTS[k].forEach(function (a) { CIVIC_IDS[a.id] = true; }); });
+  function goalHash(s, n) { var h = 2166136261, str = String(s.seed) + ':' + day(s) + ':' + n; for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619); return h >>> 0; }
+  function dailyGoals(s, peek) {
+    if (!(s.rules >= 21)) return null;
+    var g = s.goals;
+    if (!g || g.day !== day(s)) {
+      var pool = D.DAILY_GOALS.filter(function (x) { return x.k !== 'acts' && (x.k !== 'shop' || (s.businesses || []).length); }), pick = [D.DAILY_GOALS[0]];
+      for (var n = 0; pick.length < 3 && n < 20; n++) { var c = pool[goalHash(s, n) % pool.length]; if (pick.indexOf(c) < 0) pick.push(c); }
+      g = { day: day(s), list: pick.map(function (x) { return x.k; }), have: {}, done: false };
+      if (!peek) s.goals = g; // the page only peeks; a recorded action stores the day's goals
+    }
+    return g;
+  }
+  function goalMatch(k, kind, a) {
+    if (k === 'acts') return kind === 'act';
+    if (k === 'travel' || k === 'shop') return kind === k;
+    if (kind !== 'act' || !a) return false;
+    if (k === 'eat') return !!(a.fx && a.fx.hunger > 0 && a.cost > 0);
+    if (k === 'gig') return !!a.gig;
+    if (k === 'social') return !!(a.fx && a.fx.social > 0);
+    if (k === 'sight') return !!a.sight;
+    if (k === 'newplace') return !!CIVIC_IDS[a.id];
+    return false;
+  }
+  function goalTick(s, kind, a) {
+    var g = dailyGoals(s); if (!g || g.done) return;
+    g.list.forEach(function (k) { if (goalMatch(k, kind, a)) g.have[k] = (g.have[k] || 0) + 1; });
+    var met = g.list.every(function (k) { var G = D.DAILY_GOALS.filter(function (x) { return x.k === k; })[0]; return (g.have[k] || 0) >= G.n; });
+    if (!met) return;
+    g.done = true;
+    s.goalStreak = s.goalLast === day(s) - 1 ? (s.goalStreak || 0) + 1 : 1; s.goalLast = day(s);
+    var pay = price(s, D.GOAL_REWARD); earn(s, pay, 'Daily goals');
+    log(s, '🎯 Daily goals done: ' + naira(pay) + '. Streak ' + s.goalStreak + (s.goalStreak > 1 ? ' days' : ' day') + '.', 'good');
+  }
+  function goalsView(s) {
+    var g = dailyGoals(s, true); if (!g) return null;
+    return { done: g.done, streak: s.goalStreak || 0, reward: price(s, D.GOAL_REWARD), list: g.list.map(function (k) { var G = D.DAILY_GOALS.filter(function (x) { return x.k === k; })[0]; return { k: k, label: G.label, icon: G.icon, have: Math.min(G.n, g.have[k] || 0), need: G.n }; }) };
+  }
   function openCase(s) { return (s.cases || []).filter(function (c) { return c.status === 'open'; })[0] || null; }
   // Rules 19: remember the last thing taken from you, so you can report it. No random numbers.
   function noteLoss(s, amt, what) { if (s.rules >= 19 && amt > 0) s.lastLoss = { amt: amt, what: what, day: day(s), reported: false }; }
@@ -745,6 +792,7 @@
     if (s.rules >= 17) list = list.concat(insideActions(s.loc));
     if (s.rules >= 18) list = list.concat(festivalActions(s));
     if (s.rules >= 19) list = list.concat(civicActions(s));
+    if (s.rules >= 21) list = list.concat(eventActions(s));
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
@@ -911,6 +959,7 @@
     }
     var sp = specials[a.special];
     if (sp) msg = sp(s, a) || msg;
+    if (s.rules >= 21) goalTick(s, 'act', a);
     return finish(s, ok(msg));
   }
 
@@ -1600,6 +1649,7 @@
       if (lost) { post(s, 'cash', -lost, 'Phone snatched in traffic'); noteLoss(s, lost, 'Phone and cash snatched in traffic'); msg += ' Someone snatched your phone and cash on the way.'; }
     }
     if (s.rules >= 19 && STREET_BOYS[dest] && /^(trek|danfo|okada|keke)$/.test(mode) && !s.pending.length && rand(s) < 0.06) queueStreetBoys(s);
+    if (s.rules >= 21) goalTick(s, 'travel', null);
     return finish(s, ok(msg));
   }
 
@@ -2144,6 +2194,7 @@
     advance(s, 120);
     s.businesses.forEach(function (b) { b.visit = day(s); });
     applyFx(s, { stress: 4 });
+    if (s.rules >= 21) goalTick(s, 'shop', null);
     return finish(s, ok('You checked the books and the staff. Everything is in order.'));
   }
 
@@ -4885,7 +4936,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

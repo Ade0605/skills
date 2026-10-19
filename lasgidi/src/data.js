@@ -1946,6 +1946,32 @@
     CIVIC_PLACES.push(p);
     if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
   });
+  // Rules 21: the daily goals (three a day; the first is always 'do 3 activities') and the reward for all three.
+  var DAILY_GOALS = [
+    { k: 'acts', n: 3, icon: '✅', label: 'Do 3 activities' },
+    { k: 'eat', n: 1, icon: '🍲', label: 'Eat out somewhere' },
+    { k: 'gig', n: 1, icon: '💼', label: 'Do one small gig' },
+    { k: 'social', n: 1, icon: '🗣️', label: 'Do something social' },
+    { k: 'travel', n: 1, icon: '🚌', label: 'Take a ride across town' },
+    { k: 'sight', n: 1, icon: '📸', label: 'See a sight' },
+    { k: 'newplace', n: 1, icon: '📍', label: 'Do an activity at one of the new places' },
+    { k: 'shop', n: 1, icon: '🏪', label: 'Check in on your shops' }
+  ], GOAL_REWARD = 5000;
+  // Rules 21: weekend events on a four-week rotation (when.wk is the week of the month), at their places.
+  var EVENT_ACTS = {
+    abj_polo: [
+      { id: 'ev_polo_final', label: 'Polo final: watch from the stand (Saturday, week 1)', mins: 180, cost: 8000, fx: { fun: 30, social: 18 }, when: { wk: [0], days: [5], from: 14, to: 19 } },
+      { id: 'ev_polo_usher', label: 'Polo final: usher in the stand', mins: 240, earn: 2600, fx: { energy: -12, social: 6 }, gig: true, fest: true, when: { wk: [0], days: [5], from: 12, to: 20 } }
+    ],
+    ph_jetty_fish: [
+      { id: 'ev_regatta_watch', label: 'River regatta: watch the canoe races (Saturday, week 2)', mins: 120, cost: 2000, fx: { fun: 26, social: 14 }, when: { wk: [1], days: [5], from: 10, to: 17 } },
+      { id: 'ev_regatta_paddle', label: 'River regatta: paddle in the open race', mins: 120, cost: 5000, fx: { fun: 30, energy: -18 }, xp: { fitness: 1 }, when: { wk: [1], days: [5], from: 10, to: 15 } }
+    ],
+    lag_night_mkt: [
+      { id: 'ev_nmkt_fest', label: 'Night market special: the street-food festival (Fri–Sat, week 3)', mins: 120, cost: 7000, fx: { hunger: 40, fun: 24, social: 14 }, when: { wk: [2], days: [4, 5], from: 18, to: 24 } },
+      { id: 'ev_nmkt_stall', label: 'Night market special: work a festival stall', mins: 240, earn: 2800, fx: { energy: -14, hygiene: -8 }, gig: true, fest: true, when: { wk: [2], days: [4, 5], from: 17, to: 24 } }
+    ]
+  };
   // Places added after the gem hunt began stay out of its pool, so old lives' gems (and their seals) replay.
   CIVIC_PLACES.forEach(function (p) { p.nogem = true; PLACES.push(p); });
   // Rules 19: the Lagoon party boat moored at the island jetties.
@@ -2126,7 +2152,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, insideKind: insideKind
   };
 
   // Keyed tables have no prototype, so an id like 'constructor' or '__proto__' from a save, a replay or another player's
