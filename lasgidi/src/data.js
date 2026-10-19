@@ -1886,6 +1886,54 @@
       act('gcm_wash', 'Wash and polish the showroom cars', 180, 0, 1800, { energy: -10, hygiene: -6 }, null, { from: 8, to: 17 })
     ]],
     ['ph_rsu', '🎓', 'Rivers State University', 'learn', 'cap', 'ph_rumuokoro', 11.0, 7.0, null, 'The Senate building, lecture theatre, library, a buka and the halls.', 'rsu_'],
+    // Lagos, more of it.
+    ['lag_alaba', '🧺', 'Alaba International Market', 'food', 'basket', 'festac', 1.4, 16.4, null, 'Lanes and lanes of electronics: TVs, sound systems, generators and spare parts.', [
+      act('alaba_browse', 'Price TVs and sound systems down the lanes', 60, 0, 0, { fun: 6, stress: 3 }, null, { days: [0, 1, 2, 3, 4, 5], from: 8, to: 18 }),
+      act('alaba_haggle', 'Haggle for a cheap Bluetooth speaker', 30, 9000, 0, { fun: 10 }, { charisma: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 8, to: 18 }),
+      act('alaba_rice', 'Ofada rice at a lane buka', 30, 1800, 0, { hunger: 32 }, null, { from: 10, to: 18 }),
+      act('alaba_carry', 'Carry cartons for a trader', 180, 0, 1800, { energy: -16, hygiene: -8 }, { fitness: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 8, to: 17 })
+    ]],
+    ['lag_night_mkt', '🌙', 'Lekki Night Market', 'food', 'basket', 'lekki', 26.0, 25.2, null, 'Food stalls, thrift racks, a DJ and fairy lights after dark.', [
+      act('nmkt_food', 'Asun, suya and boli from the stalls', 30, 4000, 0, { hunger: 30, fun: 6 }, null, { from: 18, to: 24 }),
+      act('nmkt_thrift', 'Dig through the thrift racks', 45, 6000, 0, { fun: 10 }, null, { from: 18, to: 24 }),
+      act('nmkt_dj', 'Dance by the DJ booth', 60, 0, 0, { fun: 14, social: 10, energy: -8 }, null, { days: [4, 5], from: 20, to: 24 }),
+      act('nmkt_stall', 'Help run a food stall for the night', 240, 0, 2600, { energy: -12, hygiene: -8 }, null, { from: 17, to: 24 })
+    ]],
+    ['lag_waterpark', '🌊', 'Lekki Leisure Waterpark', 'outdoors', 'tree', 'lekki', 29.4, 25.6, 'waterpark', 'Slides, a wave pool, a lazy river and loungers under umbrellas.', [
+      act('wpk_slides', 'Day pass: the slides and the wave pool', 180, 12000, 0, { fun: 30, stress: -12, energy: -12, hygiene: -4 }, { fitness: 1 }, { from: 10, to: 18 }),
+      act('wpk_kids', 'Splash pad with the kids', 60, 5000, 0, { fun: 12, social: 8 }, null, { from: 10, to: 18 }),
+      act('wpk_lounger', 'Rent a lounger and an umbrella', 60, 4000, 0, { stress: -10, fun: 4 }, null, { from: 10, to: 18 }),
+      act('wpk_guard', 'Pool attendant shift', 240, 0, 2600, { energy: -10 }, { fitness: 1 }, { from: 9, to: 18 })
+    ]],
+    ['lag_bowling', '🎳', 'Strike Zone Bowling, VI', 'nightlife', 'tower', 'vi', 18.2, 24.2, 'bowling', 'Ten lanes, glow-in-the-dark nights, a snack bar and arcade machines.', [
+      act('bowl_game', 'Bowl two games', 60, 7000, 0, { fun: 16, social: 8 }, null, { from: 12, to: 24 }),
+      act('bowl_glow', 'Glow bowling night', 90, 10000, 0, { fun: 22, social: 12 }, null, { days: [4, 5], from: 20, to: 24 }),
+      act('bowl_snack', 'Hot dog and a milkshake at the snack bar', 15, 4500, 0, { hunger: 18, fun: 3 }, null, { from: 12, to: 24 }),
+      act('bowl_shoes', 'Shoe desk and lane cleaning shift', 240, 0, 2400, { energy: -10 }, null, { from: 12, to: 24 })
+    ]],
+    ['lag_assembly', '🏛️', 'Lagos State House of Assembly, Alausa', 'outdoors', 'dome', 'ikeja', 11.0, 5.4, null, 'The state assembly at Alausa: the chamber, the public gallery and the lawns.', [
+      act('lsha_tour', 'Join the guided tour of the chamber', 60, 0, 0, { fun: 6 }, { charisma: 1 }, { days: WK, from: 10, to: 15 }),
+      act('lsha_sitting', 'Watch a sitting from the gallery', 120, 0, 0, { fun: 5, stress: 3 }, null, { days: [1, 2, 3], from: 10, to: 14 }),
+      act('lsha_photo', 'Photo by the assembly gate', 15, 0, 0, { fun: 4 }, null, { from: 8, to: 18 })
+    ]],
+    ['lag_secretariat', '🏢', 'Alausa Secretariat', 'services', 'tower', 'ikeja', 9.0, 5.2, null, 'The state ministries at Alausa: long corridors, file rooms and the canteen.', [
+      act('lsec_file', 'Chase your file from desk to desk', 120, 0, 0, { stress: 12, energy: -6 }, null, { days: WK, from: 8, to: 16 }),
+      act('lsec_canteen', 'Amala and ewedu at the staff canteen', 30, 1500, 0, { hunger: 28 }, null, { days: WK, from: 11, to: 15 }),
+      act('lsec_messenger', 'Messenger shift (files and tea)', 240, 0, 2200, { energy: -10 }, null, { days: WK, from: 8, to: 16 })
+    ]],
+    ['lag_lasu', '🎓', 'Lagos State University (LASU), Ojo', 'learn', 'cap', 'festac', 1.0, 18.2, null, 'The Senate building, lecture theatre, library, a buka and the halls.', 'lasu_'],
+    ['lag_yabatech', '🎓', 'Yaba College of Technology', 'learn', 'cap', 'yaba', 16.2, 15.0, null, 'Workshops, lecture halls, the library, a buka and the hostels.', 'ytech_'],
+    ['lag_sky_lounge', '🍸', 'Skyfall Rooftop Lounge, Ikoyi', 'nightlife', 'glass', 'ikoyi', 21.6, 21.4, null, 'A rooftop over Ikoyi: the lagoon lights, a DJ, mocktails and cocktails.', [
+      act('lsky_sunset', 'Sundowner over the lagoon', 60, 12000, 0, { fun: 14, social: 8, stress: -6 }, null, { from: 17, to: 20 }),
+      act('lsky_dj', 'Friday DJ night', 180, 20000, 0, { fun: 30, social: 18, energy: -12 }, null, { days: [4, 5], from: 21, to: 24 }),
+      act('lsky_wait', 'Waiter shift on the roof', 240, 0, 2600, { energy: -12 }, null, { from: 17, to: 24 })
+    ]],
+    ['lag_epe_fish', '🐟', 'Epe Fish Market', 'food', 'basket', 'ajah', 46.2, 23.0, null, 'Fresh catch from the lagoon: tilapia, catfish, croaker and smoked fish.', [
+      act('epe_fish', 'Buy fresh catfish and croaker', 30, 6000, 0, { hunger: 28 }, null, { from: 6, to: 16 }),
+      act('epe_smoked', 'Smoked fish for the soup pot', 15, 3500, 0, { hunger: 16 }, null, { from: 6, to: 17 }),
+      act('epe_pepper', 'Point-and-kill pepper soup', 45, 4000, 0, { hunger: 34, fun: 6 }, null, { from: 11, to: 20 }),
+      act('epe_clean', 'Clean and gut fish for the sellers', 180, 0, 1800, { energy: -12, hygiene: -14 }, null, { from: 6, to: 15 })
+    ]],
     ['ph_jetty_fish', '🛶', 'Borokiri Fishing Jetty', 'outdoors', 'boat', 'ph_borokiri', 17.6, 20.6, null, 'Wooden boats, nets drying on the rails and fish smoking in drums.', [
       act('bfj_watch', 'Watch the boats come in', 30, 0, 0, { fun: 6, stress: -4 }, null, { from: 6, to: 18 }),
       act('bfj_smoked', 'Buy smoked fish off the drums', 15, 3000, 0, { hunger: 20 }, null, { from: 7, to: 18 }),
@@ -1893,7 +1941,7 @@
       act('bfj_canoe', 'Paddle a canoe round the creek', 45, 1500, 0, { fun: 12, energy: -6 }, { fitness: 1 }, { from: 7, to: 17 })
     ]]
   ].forEach(function (q) {
-    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : 'abuja'), text: q[9] };
+    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : 'lagos'), text: q[9] };
     if (q[8]) p.inside = q[8];
     CIVIC_PLACES.push(p);
     if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
@@ -1946,7 +1994,7 @@
     // and the University of Port Harcourt, the same campus life under its own ids (Mama Ngozi runs the buka there).
     CIVIC_ACTS.ph_uniport = cloneActs(CIVIC_ACTS.unilag, 'uni_', 'uniport_').map(function (a) { a.label = a.label.replace(/Mama B/g, 'Mama Ngozi').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river'); return a; });
     // and the Abuja campuses (Mama Hauwa's buka; lawns and hills where Lagos has the lagoon).
-    CAMPUS_CLONES.forEach(function (c) { var ph = /^ph_/.test(c[0]); CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = ph ? a.label.replace(/Mama B/g, 'Mama Ibiere').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river') : a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
+    CAMPUS_CLONES.forEach(function (c) { var ph = /^ph_/.test(c[0]), lag = /^lag_/.test(c[0]), mama = c[0] === 'lag_lasu' ? 'Mama Toyin' : 'Mama Kemi'; CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = lag ? a.label.replace(/Mama B/g, mama).replace(/Lagoon front/g, 'Campus field').replace(/the lagoon/g, 'the campus').replace(/lagoon/g, 'campus') : ph ? a.label.replace(/Mama B/g, 'Mama Ibiere').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river') : a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
   })();
   // Rules 19: Lekki Conservation Centre, close up.
   CIVIC_ACTS.lcc = [

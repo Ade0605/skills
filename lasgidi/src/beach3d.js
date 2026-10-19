@@ -789,7 +789,7 @@
       PK.monkeys = []; plats.forEach(function (p, i) { var m = new T.Group(), fur = mat('fur', { color: 0x6b5a45, roughness: 1 }); m.add(mesh(new T.SphereGeometry(0.35, 10, 8), fur, 0, 0, 0)); m.add(mesh(new T.SphereGeometry(0.22, 10, 8), fur, 0.3, 0.3, 0)); var tl = mesh(new T.CylinderGeometry(0.04, 0.03, 1, 5), fur, -0.4, -0.3, 0); tl.rotation.z = 0.8; m.add(tl); m.position.set(p[0] + 1.5, 12, p[1]); parkG.add(m); PK.monkeys.push({ m: m, p: p, ph: i }); });
     }
     function buildPark() {
-      wipe(parkG); var id = sc.placeId || 'park', r = rnd(hashStr(id)); PK = { lamps: [], towers: [], spray: [] }; var golf = /^golf_/.test(id), open = golf || /polo|funpark/.test(id); // golf and polo clear the middle of the park
+      wipe(parkG); var id = sc.placeId || 'park', r = rnd(hashStr(id)); PK = { lamps: [], towers: [], spray: [] }; var golf = /^golf_/.test(id), open = golf || /polo|funpark|waterpark/.test(id); // golf and polo clear the middle of the park
       var lawn = mesh(new T.PlaneGeometry(500, 500).rotateX(-Math.PI / 2), mat('parklawn', { map: grassTex, roughness: 0.95 }), 0, 0, 0); lawn.castShadow = false; parkG.add(lawn);
       if (!open) {
       // The looping path, as short paving segments.
@@ -814,12 +814,12 @@
       else if (/gate/.test(id)) { var gateM = mat('gate', { color: 0xf1ece2, roughness: 0.6 }); [-16, 16].forEach(function (x) { parkG.add(mesh(new T.BoxGeometry(5, 26, 5), gateM, x, 13, 70)); }); parkG.add(mesh(new T.BoxGeometry(40, 5, 6), gateM, 0, 28, 70)); parkG.add(mesh(new T.TorusGeometry(10, 1.2, 8, 32, Math.PI), mat('gateG', { color: 0x1d7a43 }), 0, 30, 70)); }
       else if (/lcc/.test(id)) { for (var cw = 0; cw < 8; cw++) { var x0 = -40 + cw * 12, pts = []; for (var cu = 0; cu <= 10; cu++) { var uu = cu / 10; pts.push(new T.Vector3(x0 + uu * 12, 12 - Math.sin(uu * Math.PI) * 1.4, 40 + Math.sin(cw) * 6)); } parkG.add(new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x5a4632 }))); parkG.add(mesh(new T.CylinderGeometry(0.4, 0.5, 13, 6), trunkM, x0, 6.5, 40 + Math.sin(cw) * 6)); var plat = mesh(new T.CylinderGeometry(1.6, 1.6, 0.3, 10), mat('plank0', { color: 0x7a5a3a }), x0, 12, 40 + Math.sin(cw) * 6); parkG.add(plat); } }
       else if (/zoo/.test(id)) { [[-34, 40], [0, 46], [34, 40]].forEach(function (zq, zi) { for (var zp = 0; zp < 14; zp++) { var za = zp / 14 * Math.PI * 2; parkG.add(mesh(new T.CylinderGeometry(0.1, 0.1, 2.4, 6), frameM, zq[0] + Math.cos(za) * 9, 1.2, zq[1] + Math.sin(za) * 6)); } var an = new T.Group(); an.position.set(zq[0], 0, zq[1]); var am = mat('animal' + zi, { color: [0xc9a46a, 0x6b6b6b, 0x8a5a3c][zi], roughness: 0.8 }); an.add(mesh(new T.CapsuleGeometry(0.7, 1.6, 4, 8).rotateZ(Math.PI / 2), am, 0, 1.4, 0)); an.add(mesh(new T.SphereGeometry(0.5, 10, 8), am, 1.5, 1.9, 0)); [[-0.8, -0.4], [-0.8, 0.4], [0.8, -0.4], [0.8, 0.4]].forEach(function (lq) { an.add(mesh(new T.CylinderGeometry(0.12, 0.12, 1, 6), am, lq[0], 0.5, lq[1])); }); parkG.add(an); }); }
-      if (golf) golfCourse(r); if (/lcc/.test(id)) lccExtras(r); if (/funpark/.test(id)) funRides(); if (/polo/.test(id)) poloField();
+      if (golf) golfCourse(r); if (/lcc/.test(id)) lccExtras(r); if (/funpark/.test(id)) funRides(); if (/polo/.test(id)) poloField(); if (/waterpark/.test(id)) waterPark();
       var rs = rnd(81); for (var tb = 0; tb < 26; tb++) { var ta = -1.2 + rs() * 2.4, td = 160 + rs() * 120; towerBlock(Math.sin(ta) * td, Math.cos(ta) * td + 40, 14 + rs() * 12, (/abj|ph_/.test(id) ? 12 : 25) + rs() * 70, 14 + rs() * 10, parkG, 0, PK.towers); }
       // Joggers and strollers going round the path, families on picnic blankets.
       var NW = golf ? 6 : 60, wb = [], wr = rnd(37); for (var w = 0; w < NW; w++) wb.push([wr(), (wr() < 0.3 ? 2.2 : 1) * (wr() < 0.5 ? 1 : -1) * (0.008 + wr() * 0.006), (wr() - 0.5) * 1.6, wr() * 6]);
       PK.walkers = squad(NW, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec][i % 7]; }, 1, parkG); PK.walkBase = wb; if (golf) { PK.walkers.body.visible = PK.walkers.head.visible = false; }
-      if (golf || /lcc|funpark|zoo|polo/.test(id)) mergeStatic(parkG, [lawn].concat(PK.spray || [], PK.flags || [], (PK.golfers || []).map(function (g) { return g.pv; }), PK.ball ? [PK.ball] : [], (PK.monkeys || []).map(function (k) { return k.m; })));
+      if (golf || /lcc|funpark|zoo|polo|waterpark/.test(id)) mergeStatic(parkG, [lawn].concat(PK.spray || [], PK.flags || [], (PK.golfers || []).map(function (g) { return g.pv; }), PK.ball ? [PK.ball] : [], (PK.monkeys || []).map(function (k) { return k.m; })));
       for (var pc = 0; pc < (open ? 0 : 6); pc++) { var px = -24 + pc * 9 + r() * 3, pz = -12 + (pc % 2) * 30; var bl = mesh(new T.BoxGeometry(3, 0.04, 2.4), mat('blanket' + pc % 3, { color: [0xc0392b, 0x1f5fa0, 0xf2b600][pc % 3], roughness: 0.9 }), px, 0.05, pz); bl.castShadow = false; parkG.add(bl); }
     }
     // Capital Polo Grounds: a striped field with goal posts, the stand, the members' pavilion and six riders after the ball.
@@ -837,6 +837,17 @@
       var sgT = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#1f5a3c'; g.fillRect(0, 0, w, h); g.fillStyle = '#f4f1ea'; g.font = '800 46px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CAPITAL POLO GROUNDS', w / 2, h / 2, w - 24); }), sg = new T.Mesh(new T.PlaneGeometry(14, 2.6), new T.MeshBasicMaterial({ map: sgT })); sg.position.set(0, 9, 25.4); sg.rotation.y = Math.PI; parkG.add(sg);
       PK.ponies = []; for (var h = 0; h < 6; h++) { var hr = horse([0x6b3f22, 0x2b1a10, 0x9a6a3a][h % 3], h); parkG.add(hr); hr.position.set(-12 + h * 5, 0, 2 + (h % 2) * 8); PK.ponies.push({ g: hr, ph: h * 0.9, team: h % 2 }); }
       PK.poloBall = mesh(new T.SphereGeometry(0.25, 10, 8), white, 0, 0.3, 6); PK.poloBall.userData.dyn = true; parkG.add(PK.poloBall);
+    }
+    // Lekki Leisure Waterpark: a wave pool, three slides from a tower, a lazy river ring, loungers and umbrellas.
+    function waterPark() {
+      var water = new T.MeshPhysicalMaterial({ color: 0x3fc1e0, roughness: 0.05, clearcoat: 1, emissive: 0x0a3a4a, emissiveIntensity: 0.3 }), tile = mat('wpTile', { color: 0xf4f3ec, roughness: 0.4 });
+      parkG.add(mesh(new T.BoxGeometry(34, 0.4, 20), tile, 0, 0.2, 8)); var wpool = new T.Mesh(new T.BoxGeometry(32, 0.2, 18), water); wpool.position.set(0, 0.42, 8); parkG.add(wpool); PK.wave = wpool; wpool.userData.dyn = true;
+      var ring = new T.Mesh(new T.TorusGeometry(26, 2, 6, 48).rotateX(Math.PI / 2), water); ring.scale.y = 0.15; ring.position.set(0, 0.3, 8); parkG.add(ring);
+      var tw = new T.Group(); tw.position.set(-28, 0, 34); tw.add(mesh(new T.BoxGeometry(6, 14, 6), mat('wpTower', { color: 0xf2b600 }), 0, 7, 0)); tw.add(mesh(new T.BoxGeometry(7, 0.4, 7), tile, 0, 14.2, 0)); parkG.add(tw);
+      [[0xc0392b, 0.2], [0x2f6fa0, 0.7], [0x16a35a, 1.2]].forEach(function (q, i) { var pts = []; for (var k = 0; k <= 24; k++) { var u = k / 24, a = q[1] + u * 3.2; pts.push(new T.Vector3(-28 + Math.cos(a) * (4 + u * 10), 14 - u * 13.4, 34 + Math.sin(a) * (4 + u * 10) - u * 14)); } var sl = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 48, 0.9, 8, false), mat('wpSlide' + i, { color: q[0], roughness: 0.3, side: T.DoubleSide })); sl.castShadow = true; parkG.add(sl); });
+      for (var lg = 0; lg < 10; lg++) { var lx = -20 + lg * 4.4, lz = -6; parkG.add(mesh(new T.BoxGeometry(1.4, 0.35, 3.2), mat('wpLounger', { color: 0xffffff }), lx, 0.4, lz)); if (lg % 2 === 0) { parkG.add(mesh(new T.CylinderGeometry(0.06, 0.06, 3.4, 6), frameM, lx + 2.2, 1.7, lz)); parkG.add(mesh(new T.ConeGeometry(2, 0.8, 10, 1, true), mat('wpUmb' + (lg % 4), { color: [0xc0392b, 0xf2b600, 0x2f6fa0, 0x16a35a][lg % 4], side: T.DoubleSide }), lx + 2.2, 3.4, lz)); } }
+      PK.swimmers = []; for (var sw = 0; sw < 14; sw++) { var b = mesh(new T.SphereGeometry(0.32, 8, 6), mat('skin' + sw % 4, { color: [0x5a341f, 0x8d5a3b, 0x3d2416, 0x6b4029][sw % 4] }), -12 + (sw % 7) * 4, 0.7, 2 + Math.floor(sw / 7) * 8); b.userData.dyn = true; parkG.add(b); PK.swimmers.push({ m: b, ph: sw * 0.7 }); }
+      var sgT = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#2f6fa0'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 50px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LEKKI LEISURE WATERPARK', w / 2, h / 2, w - 24); }), sg = new T.Mesh(new T.PlaneGeometry(14, 2.6), new T.MeshBasicMaterial({ map: sgT })); sg.position.set(0, 7, 40); sg.rotation.y = Math.PI; parkG.add(sg);
     }
     // Capital Fun Park: a Ferris wheel, a carousel and a bumper-car rink.
     function funRides() {
@@ -862,6 +873,7 @@
       if (PK.flags) PK.flags.forEach(function (f, i) { f.rotation.y = Math.sin(t * 2 + i) * 0.3; });
       if (PK.golfers) { PK.golfers.forEach(function (g, i) { var c = ((t * 0.5 + g.ph) % 3), sw = c < 1 ? -c * 2.2 : c < 1.2 ? -2.2 + (c - 1) * 22 : 2.2 - Math.min(2.2, (c - 1.2) * 3); g.pv.rotation.z = sw * 0.8; });
         var h = GOLF_HOLES[Math.floor(t / 5) % GOLF_HOLES.length], u = (t % 5) / 5; PK.ball.position.set(h[0] + (h[2] - h[0]) * u, 0.2 + Math.sin(u * Math.PI) * 14, h[1] + (h[3] - h[1]) * u); }
+      if (PK.swimmers) { PK.wave.position.y = 0.42 + Math.sin(t * 1.5) * 0.08; PK.swimmers.forEach(function (w) { w.m.position.y = 0.62 + Math.sin(t * 2 + w.ph) * 0.12; }); }
       if (PK.ponies) { var bx = Math.sin(t * 0.21) * 32, bz = 6 + Math.sin(t * 0.37) * 10; PK.poloBall.position.set(bx, 0.3, bz); PK.ponies.forEach(function (p, i) { var ax = bx + Math.sin(t * 0.5 + p.ph) * 6 - (p.team ? 4 : -4), az = bz + Math.cos(t * 0.4 + p.ph) * 5, o = p.g.position, dx = ax - o.x, dz = az - o.z; o.x += dx * 0.03; o.z += dz * 0.03; if (Math.abs(dx) + Math.abs(dz) > 0.1) p.g.rotation.y = Math.atan2(-dz, dx); if (!reduce) p.g.userData.hlegs.forEach(function (l, k) { l.rotation.z = Math.sin(t * 9 + k * 1.6 + i) * 0.5; }); }); }
       if (PK.wheel) { PK.wheel.rotation.z = t * 0.12; PK.cabins.forEach(function (c) { c.rotation.z = -t * 0.12; }); PK.carousel.rotation.y = t * 0.6; PK.carousel.children.forEach(function (h, i) { if (i > 2) h.position.y = Math.sin(t * 2 + i) * 0.4; }); PK.bumpers.forEach(function (b) { var a = t * 0.7 + b.ph; b.g.position.set(30 + Math.sin(a) * 7, 0, 28 + Math.sin(a * 1.6 + b.ph) * 4.5); b.g.rotation.y = a * 1.3; }); }
       if (PK.monkeys) PK.monkeys.forEach(function (k) { var a = t * 0.8 + k.ph; k.m.position.set(k.p[0] + Math.cos(a) * 2, 11.5 + Math.abs(Math.sin(t * 3 + k.ph)) * 0.8, k.p[1] + Math.sin(a) * 2); }); PK.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; });
@@ -904,7 +916,7 @@
     function campusSign(text, bg, fg, w, x, y, z, ry, grp) { var t = canvasTex(1024, 160, function (g, cw, ch) { g.fillStyle = bg; g.fillRect(0, 0, cw, ch); g.fillStyle = fg; g.font = '900 88px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, cw / 2, ch / 2 + 4, cw - 40); }); var m = new T.Mesh(new T.PlaneGeometry(w, w * 0.156), new T.MeshBasicMaterial({ map: t, side: T.DoubleSide })); m.position.set(x, y, z); m.rotation.y = ry || 0; (grp || plzG).add(m); return m; }
     function campusFig(i, x, z, ry, sit) { var f = root.LasgidiAvatar3D && root.LasgidiGames3D ? avatarFor(root.LasgidiGames3D.stranger('unilag', i), 130 + i) : person(130 + i, i % 2 === 1); f.position.set(x, sit ? 0.5 : 0.05, z); f.rotation.y = ry || 0; if (sit && f.userData.legs) f.userData.legs.forEach(function (l) { l.rotation[f.userData.axis || 'z'] = -1.2; }); plzG.add(f); return f; }
     function campusBuild() {
-      var CN = { ph_uniport: ['UNIVERSITY OF PORT HARCOURT', "MAMA NGOZI'S BUKA · RICE AND BEANS N1200"], abj_uni: ['UNIVERSITY OF ABUJA', "MAMA HAUWA'S BUKA · RICE AND BEANS N1200"], abj_chu: ['CAPITAL HEIGHTS UNIVERSITY', "MAMA HAUWA'S BUKA · RICE AND BEANS N1200"], ph_rsu: ['RIVERS STATE UNIVERSITY', "MAMA IBIERE'S BUKA · RICE AND BEANS N1200"] }[sc.placeId] || ['UNIVERSITY OF LAGOS', "MAMA B'S BUKA · RICE AND BEANS N1200"], DRY = /^abj_/.test(sc.placeId || '');
+      var CN = { ph_uniport: ['UNIVERSITY OF PORT HARCOURT', "MAMA NGOZI'S BUKA · RICE AND BEANS N1200"], abj_uni: ['UNIVERSITY OF ABUJA', "MAMA HAUWA'S BUKA · RICE AND BEANS N1200"], abj_chu: ['CAPITAL HEIGHTS UNIVERSITY', "MAMA HAUWA'S BUKA · RICE AND BEANS N1200"], ph_rsu: ['RIVERS STATE UNIVERSITY', "MAMA IBIERE'S BUKA · RICE AND BEANS N1200"], lag_lasu: ['LAGOS STATE UNIVERSITY', "MAMA TOYIN'S BUKA · RICE AND BEANS N1200"], lag_yabatech: ['YABA COLLEGE OF TECHNOLOGY', "MAMA KEMI'S BUKA · RICE AND BEANS N1200"] }[sc.placeId] || ['UNIVERSITY OF LAGOS', "MAMA B'S BUKA · RICE AND BEANS N1200"], DRY = /^abj_/.test(sc.placeId || '');
       var wall = mat('cwall', { color: 0xf1ede4, roughness: 0.7 }), wood = mat('cwood', { color: 0x8a5a33, roughness: 0.8 }), dark = mat('cdark', { color: 0x1f2a44 });
       // the Senate Building: a tall white tower with window bands, and the admissions desk at its foot
       var sen = new T.Group(); sen.position.set(0, 0, 70); sen.add(mesh(new T.BoxGeometry(26, 48, 16), wall, 0, 24, 0)); for (var fl = 1; fl < 12; fl++) sen.add(mesh(new T.BoxGeometry(26.2, 1.4, 16.2), glassM, 0, fl * 4, 0)); plzG.add(sen);
@@ -949,7 +961,7 @@
         var st = mat('stand', { color: 0xf4f1ea, roughness: 0.7 }); for (var tier = 0; tier < 8; tier++) plzG.add(mesh(new T.BoxGeometry(120, 1.2, 3), st, 0, 0.6 + tier * 1.2, 70 + tier * 3)); var can = mesh(new T.BoxGeometry(124, 0.6, 30), mat('canopy', { color: 0x1d7a43, roughness: 0.5 }), 0, 16, 80); can.rotation.x = -0.08; plzG.add(can); for (var cp = -60; cp <= 60; cp += 15) plzG.add(mesh(new T.CylinderGeometry(0.5, 0.5, 16, 8), st, cp, 8, 94));
         if (/tbs/.test(id)) { [-30, 30].forEach(function (hx) { var hs = new T.Group(); hs.position.set(hx, 0, 30); hs.add(mesh(new T.BoxGeometry(6, 4, 6), st, 0, 2, 0)); var hm = mat('bronze', { color: 0x6b4a2b, metalness: 0.6, roughness: 0.4 }); hs.add(mesh(new T.CapsuleGeometry(1.2, 4, 4, 8).rotateZ(Math.PI / 2 - 0.5), hm, 0, 7, 0)); hs.add(mesh(new T.CapsuleGeometry(0.6, 2, 4, 8).rotateZ(-0.6), hm, 2.6, 9.2, 0)); [[-1.6, -0.8], [-1.6, 0.8], [1.2, -0.8], [1.2, 0.8]].forEach(function (lq) { hs.add(mesh(new T.CylinderGeometry(0.3, 0.3, 3, 6), hm, lq[0], 5, lq[1])); }); plzG.add(hs); }); }
         else { var eg = new T.Group(); eg.position.set(0, 0, 36); eg.add(mesh(new T.CylinderGeometry(3, 4, 8, 12), st, 0, 4, 0)); var em = mat('eagle', { color: 0x2b2f36, metalness: 0.6, roughness: 0.35 }); eg.add(mesh(new T.SphereGeometry(2, 16, 12), em, 0, 10, 0)); [-1, 1].forEach(function (sd) { var wg = mesh(new T.BoxGeometry(9, 0.4, 2.6), em, sd * 5, 11.5, 0); wg.rotation.z = sd * 0.35; eg.add(wg); }); eg.add(mesh(new T.ConeGeometry(0.7, 2, 8), mat('gold', { color: 0xd4af37, metalness: 0.8 }), 0, 11.2, -2.2)); plzG.add(eg); }
-      } else if (/^(unilag|ph_uniport|abj_uni|abj_chu|ph_rsu)$/.test(id)) { campusBuild(); }
+      } else if (/^(unilag|ph_uniport|abj_uni|abj_chu|ph_rsu|lag_lasu|lag_yabatech)$/.test(id)) { campusBuild(); }
       else stateHouse(0, 60, /threearms/.test(id));
       // Flags along the plaza, a fountain at its heart, lamps, palms, and the city behind.
       var flagT = canvasTex(96, 64, function (c, w, h) { c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
@@ -963,7 +975,7 @@
       // People crossing the plaza; a crowd on worship days (Friday at the mosque, Sunday at the church).
       var NW = 140, wr = rnd(43), wb = []; for (var w = 0; w < NW; w++) wb.push([-40 + wr() * 80, -36 + wr() * 70, (wr() - 0.5) * 2, (wr() - 0.5) * 2, wr() * 6]);
       PZ.walkers = squad(NW, function (i) { return [0xf4f3ec, 0xf4f3ec, 0x2f6fa0, 0x1d7a43, 0xc0392b, 0x8e44ad, 0xf2b600][i % 7]; }, 1, plzG); PZ.walkBase = wb;
-      if (/^(unilag|ph_uniport|abj_uni|abj_chu|ph_rsu)$/.test(id)) mergeStatic(plzG, [pave, gr].concat(PZ.spray || [], PZ.flags || [], PZ.ball ? [PZ.ball] : []));
+      if (/^(unilag|ph_uniport|abj_uni|abj_chu|ph_rsu|lag_lasu|lag_yabatech)$/.test(id)) mergeStatic(plzG, [pave, gr].concat(PZ.spray || [], PZ.flags || [], PZ.ball ? [PZ.ball] : []));
     }
     function plazaFrame(t, night) {
       if (PZ.ball) { var bu = t * 0.7; PZ.ball.position.set(Math.sin(bu) * 7, 0.35 + Math.abs(Math.sin(t * 3)) * 0.6, Math.sin(bu * 1.7) * 3.5); (PZ.players || []).forEach(function (f, k) { var lg = f.userData.legs; f.position.x = -20 + (k - 1.5) * 4 + Math.sin(bu + k) * 1.5; if (lg && !reduce) { lg[0].rotation[f.userData.axis || 'z'] = Math.sin(t * 7 + k) * 0.5; lg[1].rotation[f.userData.axis || 'z'] = -Math.sin(t * 7 + k) * 0.5; } }); }
@@ -1203,7 +1215,7 @@
     // The High Court, the city library, the grand hotel, the casino and the office floor (rules 19 places).
     function buildMore(kind, room, floor, RW, RD, RH, DX, DZ) {
       var wood = mat('mwood', { color: 0x6b3f22, roughness: 0.6 }), gold = mat('mgold2', { color: 0xd4af37, metalness: 0.85, roughness: 0.25 });
-      poster(String(sc.name || '').replace(/,.*/, '').toUpperCase(), { court: '#3a2a12', library: '#1f3b63', hotel: '#17181a', casino: '#5a0f1a', office: '#1f2a44', conference: '#0b3d2a' }[kind], kind === 'hotel' || kind === 'casino' ? '#d4af37' : '#ffffff', 22, 1.8, 0, 8.4, RD / 2 - 0.3, Math.PI);
+      poster(String(sc.name || '').replace(/,.*/, '').toUpperCase(), { court: '#3a2a12', library: '#1f3b63', hotel: '#17181a', casino: '#5a0f1a', office: '#1f2a44', conference: '#0b3d2a', bowling: '#1a1030' }[kind], kind === 'hotel' || kind === 'casino' ? '#d4af37' : '#ffffff', 22, 1.8, 0, 8.4, RD / 2 - 0.3, Math.PI);
       if (kind === 'court') {
         room.material.color.set(0xe9dfc9); floor.material.color.set(0x8a6a4a);
         galG.add(mesh(new T.BoxGeometry(14, 3.2, 3), wood, 0, 1.6, 16)); galG.add(mesh(new T.BoxGeometry(14.4, 0.25, 3.4), wood, 0, 3.3, 16)); chair(0, 18, Math.PI, 0x7a1f1f); var judge = flowFig(140, 0x17181a); judge.position.set(0, 1.6, 17.6); judge.rotation.y = -Math.PI / 2;
@@ -1250,6 +1262,20 @@
         [-26.5, -23.5].forEach(function (x) { galG.add(mesh(new T.BoxGeometry(2, 0.5, 1), linen, x, 1.6, 20)); }); galG.add(mesh(new T.BoxGeometry(5.9, 0.2, 3), mat('throw', { color: 0xd4af37, roughness: 0.6 }), -25, 1.45, 15.6)); poster('PRESIDENTIAL SUITE', '#17181a', '#d4af37', 8, 1, -25, 6.4, RD / 2 - 0.35, Math.PI);
         HS.forEach(function (f) { mergeStatic(f, [], true); }); // these guests never move: one draw per material each
         flow(trolley, [[DX + 1.5, DZ], [-12, 11.6], [20, 16], [DX + 1.5, DZ]], 1.5, 0, 4); flow(flowFig(174, 0x7a1f3a), [[DX, DZ + 1], [-11, 11.6], [20, 17], [DX, DZ + 1]], 1.5, 0, 4); flow(flowFig(175), [[DX, DZ - 1], [12, -5], [DX, DZ - 1]], 1.8, 7, 8); flow(flowFig(176), [[DX, DZ + 2], [-6, -6], [-12, 11.6], [DX, DZ + 2]], 1.6, 12, 6); flow(flowFig(177), [[DX, DZ - 2], [24, -2], [DX, DZ - 2]], 1.4, 18, 10);
+      } else if (kind === 'bowling') {
+        // Ten lanes with pins and a scoreboard over each pair, the ball return, a snack bar and arcade cabinets; glow lights on the gutters.
+        room.material.color.set(0x1a1030); floor.material.color.set(0x2a2440);
+        var lane = mat('lane', { color: 0xd9a35a, roughness: 0.15, metalness: 0.1 }), pinM = mat('pin', { color: 0xffffff, roughness: 0.3 }), glow = new T.MeshBasicMaterial({ color: 0x7b5cff });
+        for (var ln = 0; ln < 10; ln++) { var lx = -22 + ln * 4.9; galG.add(mesh(new T.BoxGeometry(3.4, 0.12, 30), lane, lx, 0.08, 4)); [-1.9, 1.9].forEach(function (o) { galG.add(mesh(new T.BoxGeometry(0.3, 0.06, 30), glow, lx + o, 0.1, 4)); });
+          for (var pr = 0; pr < 4; pr++) for (var pc = 0; pc <= pr; pc++) galG.add(mesh(new T.CylinderGeometry(0.11, 0.16, 0.7, 8), pinM, lx + (pc - pr / 2) * 0.45, 0.45, 17.5 + pr * 0.45));
+          if (ln % 2 === 0) galG.add(mesh(new T.BoxGeometry(1, 0.8, 1.4), mat('ballret', { color: 0x2b2f36, metalness: 0.4 }), lx + 2.45, 0.4, -12)); }
+        var sb = screenTex(1024, 256, function (g, w, h, t) { g.fillStyle = '#0d0820'; g.fillRect(0, 0, w, h); g.font = '800 40px system-ui'; for (var k = 0; k < 5; k++) { g.fillStyle = ['#7ee787', '#ffd23f', '#ff7b72', '#79c0ff', '#d2a8ff'][k]; g.fillText('LANE ' + (k * 2 + 1) + '–' + (k * 2 + 2), 20 + k * 200, 70); g.fillStyle = '#fff'; g.fillText(String(60 + ((Math.floor(t / 4) * 7 + k * 13) % 90)), 40 + k * 200, 150); g.fillText(String(50 + ((Math.floor(t / 4) * 5 + k * 17) % 90)), 40 + k * 200, 210); } });
+        var sbm = new T.Mesh(new T.PlaneGeometry(40, 10), new T.MeshBasicMaterial({ map: sb })); sbm.position.set(0, 6.6, RD / 2 - 0.3); sbm.rotation.y = Math.PI; galG.add(sbm); GL.screenTex = sb; redrawAt(sb, 0, 1);
+        galG.add(mesh(new T.BoxGeometry(12, 2.2, 1.8), mat('snackbar', { color: 0xc0392b }), -18, 1.1, -19)); poster('SNACK BAR', '#c0392b', '#fff', 6, 1, -18, 4.2, -RD / 2 + 0.3, 0); var cook = flowFig(195, 0xffffff); cook.position.set(-18, 0.05, -20.6); cook.rotation.y = Math.PI / 2;
+        for (var ar = 0; ar < 4; ar++) { galG.add(mesh(new T.BoxGeometry(1.6, 3, 1.4), mat('arcade' + ar % 2, { color: ar % 2 ? 0x2f6fa0 : 0x8e44ad }), 10 + ar * 2.4, 1.5, -20.6)); galG.add(mesh(new T.PlaneGeometry(1.2, 1), new T.MeshBasicMaterial({ color: [0x7ee787, 0xffd23f, 0xff7b72, 0x79c0ff][ar] })).translateX(10 + ar * 2.4).translateY(2.2).translateZ(-19.85)); }
+        poster('ARCADE', '#8e44ad', '#fff', 5, 1, 14, 4.6, -RD / 2 + 0.3, 0);
+        for (var bw = 0; bw < 6; bw++) { var bf = flowFig(196 + bw); bf.position.set(-22 + bw * 9.8, 0.05, -10); bf.rotation.y = -Math.PI / 2; }
+        flow(flowFig(203), [[DX, DZ], [-18, -16], [DX, DZ]], 1.6, 0, 5); flow(flowFig(204), [[DX, DZ + 1], [12, -17], [DX, DZ + 1]], 1.6, 6, 6);
       } else if (kind === 'conference') {
         // The plenary hall: a stage with a podium and a big screen, flags, and tiered rows of delegates.
         room.material.color.set(0xe9e4da); floor.material.color.set(0x6a1f2a);
@@ -1293,7 +1319,7 @@
       var board = canvasTex(1024, 512, function () {}); GL.board = { tex: board, key: '', kind: kind };
       if (kind === 'police' || kind === 'polling') { var bm = new T.Mesh(new T.PlaneGeometry(12, 6), new T.MeshBasicMaterial({ map: board })); bm.position.set(0, 4, RD / 2 - 0.3); bm.rotation.y = Math.PI; galG.add(bm); galG.add(mesh(new T.BoxGeometry(12.6, 6.6, 0.3), mat('bframe', { color: 0x17181a }), 0, 4, RD / 2 - 0.1));
         poster(String(sc.name || '').toUpperCase(), kind === 'polling' ? '#16a35a' : '#1f2a44', '#ffffff', 22, 1.8, 0, 8.4, RD / 2 - 0.3, Math.PI); }
-      if (/^(court|library|hotel|casino|office|conference)$/.test(kind)) buildMore(kind, room, floor, RW, RD, RH, DX, DZ);
+      if (/^(court|library|hotel|casino|office|conference|bowling)$/.test(kind)) buildMore(kind, room, floor, RW, RD, RH, DX, DZ);
       else if (kind === 'police') {
         room.material.color.set(0xd6dde6); floor.material.color.set(0x9aa3ad);
         galG.add(mesh(new T.BoxGeometry(3, 2.4, 14), mat('pdesk', { color: 0x1f2a44, roughness: 0.5 }), -6, 1.2, 4)); galG.add(mesh(new T.BoxGeometry(3.4, 0.2, 14.4), mat('pdtop', { color: 0xd9d4c7 }), -6, 2.5, 4));
@@ -1396,7 +1422,7 @@
           var ps = new T.Mesh(new T.PlaneGeometry(10, 2.5), new T.MeshBasicMaterial({ map: pt })); ps.position.set(14, RH - 2.4, -RD / 2 + 0.4); galG.add(ps);
           for (var pl2 = 0; pl2 < 3; pl2++) { galG.add(mesh(new T.CylinderGeometry(0.7, 0.55, 1.2, 12), mat('pot', { color: 0xd8c3a5 }), RW / 2 - 4, 0.6, -16 + pl2 * 14)); galG.add(mesh(new T.ConeGeometry(0.9, 2.6, 7), mat('leaf', { color: 0x2f8f4a }), RW / 2 - 4, 2.4, -16 + pl2 * 14)); } // potted plants
         }
-      } else if (/^(police|polling|hospital|court|library|hotel|casino|office|conference)$/.test(kind)) {
+      } else if (/^(police|polling|hospital|court|library|hotel|casino|office|conference|bowling)$/.test(kind)) {
         tm.visible = false; buildCivic(kind, room, floor, RW, RD, RH);
         mergeStatic(galG, [room, floor].concat((GL.flow || []).map(function (f) { return f.g; }), GL.wheel ? [GL.wheel] : [], GL.steam || []));
       } else {
@@ -1410,9 +1436,9 @@
         galG.add(mesh(new T.CylinderGeometry(4, 4.4, 0.8, 32), mat('basin', { color: 0xc9ccd1 }), 0, 0.4, -2)); palm(0, -2, 6, 0.1);
       }
       GL.amb = new T.PointLight(0xffffff, 60, 90, 1); GL.amb.position.set(0, RH - 1, 0); galG.add(GL.amb);
-      var NW = kind === 'cinema' ? 70 : /^(police|polling|hospital|court|library|hotel|casino|office|conference)$/.test(kind) ? 1 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
+      var NW = kind === 'cinema' ? 70 : /^(police|polling|hospital|court|library|hotel|casino|office|conference|bowling)$/.test(kind) ? 1 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
       GL.walkers = squad(NW, function (i) { return [0x17181a, 0xf4f3ec, 0xc0392b, 0x2f6fa0, 0x8e44ad, 0xe67e22][i % 6]; }, 1, galG); GL.walkBase = wb;
-      if (!/^(police|polling|hospital|court|library|hotel|casino|office|conference)$/.test(kind)) mergeStatic(galG, [room, floor]); // civic rooms merged in their own branch
+      if (!/^(police|polling|hospital|court|library|hotel|casino|office|conference|bowling)$/.test(kind)) mergeStatic(galG, [room, floor]); // civic rooms merged in their own branch
     }
 
     /* ---------- weather: rain streaks (and lightning in a storm), harmattan dust ---------- */

@@ -2809,3 +2809,15 @@ test('rules 19: Port Harcourt expansion, Idu rail and the polo grounds: nogem, o
   assert.equal(D.insideKind(D.PLACES.find(x => x.id === 'abj_idu_rail')), 'rail'); assert.equal(D.insideKind(D.PLACES.find(x => x.id === 'abj_polo')), 'polo');
   assert.ok(D.CIVIC_ACTS.ph_rsu.every(a => !/lagoon|Mama B'|Mama Hauwa/i.test(a.label)));
 });
+test('rules 19: more Lagos places: nogem, own acts, rules 19 only', () => {
+  const ids = ['lag_alaba', 'lag_night_mkt', 'lag_waterpark', 'lag_bowling', 'lag_assembly', 'lag_secretariat', 'lag_lasu', 'lag_yabatech', 'lag_sky_lounge', 'lag_epe_fish'];
+  for (const id of ids) {
+    const p = D.PLACES.find(x => x.id === id); assert.ok(p && p.nogem && p.civic, id);
+    const acts = D.CIVIC_ACTS[id]; assert.ok(acts.length >= 3, id);
+    const s = L.newGame({ seed: 1900, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.loc = p.district;
+    const o = L.newGame({ seed: 1900, origin: 'nepo', goal: 'freestyle', rules: 18 }); while (o.pending.length) L.resolveChoice(o, 0); o.loc = p.district;
+    assert.ok(L.availableActions(s).some(a => a.id === acts[0].id), id);
+    assert.ok(!L.availableActions(o).some(a => acts.some(b => b.id === a.id)), id + ' hidden in rules 18');
+  }
+  assert.ok(D.CIVIC_ACTS.lag_lasu.every(a => !/Mama B'/.test(a.label)));
+});
