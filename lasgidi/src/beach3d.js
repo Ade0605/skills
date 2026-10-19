@@ -220,6 +220,7 @@
       // The city skyline on the horizon, larger here as in a view across the estate.
       var gt = mat('tower2', { color: 0x8aa0b2, roughness: 0.25, metalness: 0.5 });
       for (var sk = 0; sk < 46; sk++) { var h = 22 + r() * (sk % 5 === 0 ? 110 : 60), w = 9 + r() * 12, x = -700 + sk * 26 + r() * 14 + (sk > 26 ? 160 : 0); var tw = new T.Mesh(new T.BoxGeometry(w, h, w), gt); tw.position.set(x, h / 2, 760 + r() * 140); estateG.add(tw); if (r() < 0.35) { var sp2 = new T.Mesh(new T.ConeGeometry(w * 0.3, h * 0.25, 4), gt); sp2.position.set(x, h + h * 0.12, tw.position.z); estateG.add(sp2); } }
+      mergeStatic(estateG, spray); // everything but the fountain spray stands still
     }
 
     /* ---------- Harbour Live: fountain show, concert stage, crowd, LED bridges, billboards, the private club ---------- */
@@ -295,6 +296,7 @@
       var rs = rnd(77); for (var ti = 0; ti < 18; ti++) towerBlock(560 + rs() * 220, -160 + ti * 26, 18 + rs() * 12, 50 + rs() * 140, 18 + rs() * 10);
       for (var te = 0; te < 14; te++) towerBlock(220 + te * 28 + rs() * 10, 600 + rs() * 120, 18 + rs() * 10, 70 + rs() * 120, 18 + rs() * 10);
       for (var tm = 0; tm < 26; tm++) towerBlock(-700 + tm * 30 + rs() * 12, -300 - rs() * 140, 20 + rs() * 16, 10 + rs() * 30, 20 + rs() * 16);
+      mergeStatic(harbourG, HB.jets.map(function (j) { return j.m; }).concat(HB.beams, HB.water ? [HB.water] : []));
     }
 
 
