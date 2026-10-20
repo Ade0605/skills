@@ -43,7 +43,16 @@
     acc_labadi:   { city: 'accra', name: 'Labadi',       x: 24, y: 20, side: 'mainland', blurb: 'La beach, drummers and horse rides on the sand.' },
     acc_central:  { city: 'accra', name: 'Accra Central', x: 11, y: 19, side: 'mainland', blurb: 'Makola Market, Independence Square and the old town.' },
     acc_jamestown:{ city: 'accra', name: 'Jamestown',    x: 7,  y: 22, side: 'mainland', blurb: 'The lighthouse, fishing canoes and boxing gyms.' },
-    acc_korlebu:  { city: 'accra', name: 'Korle Bu',     x: 4,  y: 17, side: 'mainland', blurb: 'The teaching hospital by the Korle Lagoon.' }
+    acc_korlebu:  { city: 'accra', name: 'Korle Bu',     x: 4,  y: 17, side: 'mainland', blurb: 'The teaching hospital by the Korle Lagoon.' },
+    // London (rules 23): visit only, with a UK visitor visa. Its own frame, the Thames across the middle.
+    ldn_heathrow:  { city: 'ldn', name: 'Heathrow',       x: 2,  y: 11, side: 'mainland', blurb: 'Terminal 5 and the long walk to passport control.' },
+    ldn_wembley:   { city: 'ldn', name: 'Wembley',        x: 8,  y: 4,  side: 'mainland', blurb: 'The arch, the stadium and match-day crowds.' },
+    ldn_notting:   { city: 'ldn', name: 'Notting Hill',   x: 11, y: 9,  side: 'mainland', blurb: 'Painted houses, Portobello Road and the August carnival.' },
+    ldn_oxford:    { city: 'ldn', name: 'West End',       x: 16, y: 8,  side: 'mainland', blurb: 'Oxford Street shops, theatres and big prices.' },
+    ldn_westminster:{ city: 'ldn', name: 'Westminster',   x: 18, y: 12, side: 'mainland', blurb: 'Big Ben, Parliament and the Palace up the Mall.' },
+    ldn_southbank: { city: 'ldn', name: 'South Bank',     x: 18, y: 17, side: 'mainland', blurb: 'The London Eye, the river walk and St Thomas\' Hospital.' },
+    ldn_tower:     { city: 'ldn', name: 'Tower Hill',     x: 25, y: 12, side: 'mainland', blurb: 'Tower Bridge and the old Tower over the river.' },
+    ldn_peckham:   { city: 'ldn', name: 'Peckham',        x: 22, y: 22, side: 'mainland', blurb: 'Rye Lane: Naija shops, jollof, salons and church on Sunday.' }
   };
 
   // Cities you can live in. Travel between them is by plane or long-distance bus.
@@ -243,6 +252,8 @@
   var NYSC_RETAIN = { bank: 'bank', oil: 'oil', tech: 'tech', ministry: 'civil' };
   // Somewhere to sleep away from home. where: which districts offer each tier.
   var LODGING = {
+    ldnhotel: { name: 'London hotel room', icon: '🏨', price: 240000, sleep: 1.0, gen: false, fx: { hygiene: 30 }, where: ['ldn_heathrow', 'ldn_wembley', 'ldn_notting', 'ldn_oxford', 'ldn_westminster', 'ldn_southbank', 'ldn_tower', 'ldn_peckham'] },
+    ldnbnb: { name: 'Room at an aunty\'s in Peckham', icon: '🛏️', price: 60000, sleep: 0.9, gen: false, fx: { hygiene: 20, social: 6 }, where: ['ldn_peckham'] },
     guest:    { name: 'Guest house',         icon: '🛏️', price: 8000,   sleep: 0.8,  where: ['ikorodu', 'mushin', 'oshodi', 'festac', 'ajah', 'abj_nyanya', 'abj_kubwa', 'ph_borokiri', 'ph_dline', 'ph_rumuokoro', 'ph_choba'] },
     hotel:    { name: 'Hotel room',          icon: '🏨', price: 35000,  sleep: 1.0,  gen: true, fx: { hygiene: 30 }, where: ['ikeja', 'surulere', 'yaba', 'island', 'ikoyi', 'vi', 'lekki', 'abj_maitama', 'abj_wuse', 'abj_jabi', 'abj_asokoro', 'abj_garki', 'abj_airport', 'ph_airport', 'ph_gra', 'ph_transamadi', 'ph_oldgra'] },
     shortlet: { name: 'Short-let apartment', icon: '🏙️', price: 90000,  sleep: 1.1,  gen: true, fx: { hygiene: 35, stress: -10 }, where: ['ikoyi', 'vi', 'lekki', 'abj_maitama', 'abj_wuse', 'abj_jabi'] },
@@ -274,7 +285,8 @@
     lagos: { name: 'Lagos', airport: 'ikeja', park: 'oshodi', hospital: 'island', hospitalName: 'General Hospital, Lagos Island' },
     abuja: { name: 'Abuja', airport: 'abj_airport', park: 'abj_nyanya', hospital: 'abj_garki', hospitalName: 'National Hospital, Garki' },
     ph:    { name: 'Port Harcourt', airport: 'ph_airport', park: 'ph_rumuokoro', hospital: 'ph_choba', hospitalName: 'the teaching hospital near Choba' },
-    accra: { name: 'Accra', airport: 'acc_airport', park: 'acc_circle', hospital: 'acc_korlebu', hospitalName: 'Korle Bu Teaching Hospital', rules: 22, country: 'Ghana' }
+    accra: { name: 'Accra', airport: 'acc_airport', park: 'acc_circle', hospital: 'acc_korlebu', hospitalName: 'Korle Bu Teaching Hospital', rules: 22, country: 'Ghana' },
+    ldn:   { name: 'London', airport: 'ldn_heathrow', park: 'ldn_heathrow', hospital: 'ldn_southbank', hospitalName: 'St Thomas\' Hospital', rules: 23, country: 'UK', visit: true }
   };
   // Airport departures: cabin classes (fare multiples and how you arrive), city codes, jets, charters, choppers.
   var CABINS = {
@@ -331,7 +343,10 @@
       ] }
   };
   CLUBS.abjgolf.acts = CLUBS.golf.acts.map(function (a) { return JSON.parse(JSON.stringify(a)); });
-  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC' };
+  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', ldn: 'LHR' };
+  // London (rules 23): prices are written in pounds and kept in naira at a fixed £1 = ₦2,000; the visa is a fee plus proof of funds.
+  function gbp(p) { return Math.round(p * 2000); }
+  var UK_VISA = { fee: 250000, funds: 3000000, wait: 5, days: 28, fare: 1200000, mins: 390 };
   var AIR = { rushFrom: 6, rushTo: 9, rush: 1.5, insure: 0.06, lostBag: 25000, lostOdds: 0.08, jetFuel: 5000000, charter: 12000000, chopperCity: 1500000, chopperIntercity: 4000000 };
   // Flight and bus times (minutes) and base fares between cities.
   var INTERCITY = {
@@ -350,7 +365,8 @@
     ['ph_airport', 'ph_choba'], ['ph_airport', 'ph_rumuokoro'], ['ph_choba', 'ph_rumuokoro'], ['ph_rumuokoro', 'ph_gra'], ['ph_gra', 'ph_dline'],
     ['ph_gra', 'ph_transamadi'], ['ph_dline', 'ph_oldgra'], ['ph_oldgra', 'ph_borokiri'], ['ph_transamadi', 'ph_oldgra'], ['ph_gra', 'ph_oldgra'],
     ['acc_airport', 'acc_legon'], ['acc_legon', 'acc_eastlegon'], ['acc_airport', 'acc_eastlegon'], ['acc_airport', 'acc_circle'], ['acc_circle', 'acc_central'], ['acc_circle', 'acc_osu'],
-    ['acc_osu', 'acc_labadi'], ['acc_osu', 'acc_central'], ['acc_central', 'acc_jamestown'], ['acc_central', 'acc_korlebu'], ['acc_korlebu', 'acc_jamestown'], ['acc_eastlegon', 'acc_labadi']
+    ['acc_osu', 'acc_labadi'], ['acc_osu', 'acc_central'], ['acc_central', 'acc_jamestown'], ['acc_central', 'acc_korlebu'], ['acc_korlebu', 'acc_jamestown'], ['acc_eastlegon', 'acc_labadi'],
+    ['ldn_heathrow', 'ldn_wembley'], ['ldn_heathrow', 'ldn_notting'], ['ldn_wembley', 'ldn_notting'], ['ldn_notting', 'ldn_oxford'], ['ldn_oxford', 'ldn_westminster'], ['ldn_westminster', 'ldn_southbank'], ['ldn_westminster', 'ldn_tower'], ['ldn_southbank', 'ldn_peckham'], ['ldn_tower', 'ldn_peckham']
   ];
   var FERRY_STOPS = ['ikorodu', 'island', 'ikoyi', 'lekki'];
   var BRT_STOPS = ['ikorodu', 'ikeja', 'oshodi', 'yaba', 'island'];
@@ -1955,6 +1971,57 @@
       act('gcm_wash', 'Wash and polish the showroom cars', 180, 0, 1800, { energy: -10, hygiene: -6 }, null, { from: 8, to: 17 })
     ]],
     ['ph_rsu', '🎓', 'Rivers State University', 'learn', 'cap', 'ph_rumuokoro', 11.0, 7.0, null, 'The Senate building, lecture theatre, library, a buka and the halls.', 'rsu_'],
+    // London (rules 23): visit only. Fun costs pounds; nothing here pays.
+    ['ldn_lhr', '✈️', 'Heathrow Airport', 'transport', 'plane', 'ldn_heathrow', 2.6, 11.6, null, 'Terminal 5: flights home, duty free and a very long queue at the border.', [
+      act('lhr_dutyfree', 'Browse duty free', 30, 0, 0, { fun: 6 }, null, null),
+      act('lhr_meal', 'An airport meal deal', 15, gbp(6), 0, { hunger: 20 }, null, null)
+    ]],
+    ['ldn_wembley_st', '🏟️', 'Wembley Stadium', 'outdoors', 'stadium', 'ldn_wembley', 8.6, 4.6, null, 'The arch over 90,000 seats.', [
+      act('wem_match', 'Watch a match (Saturday)', 180, gbp(85), 0, { fun: 45, social: 20, energy: -10 }, null, { days: [5], from: 12, to: 20 }),
+      act('wem_tour', 'Stadium tour and the dressing room', 90, gbp(28), 0, { fun: 18 }, null, { from: 10, to: 17 })
+    ]],
+    ['ldn_carnival', '🎉', 'Notting Hill Carnival', 'outdoors', 'tree', 'ldn_notting', 10.6, 9.6, null, 'In August: steel bands, sound systems, jerk chicken and a million people.', [
+      act('nhc_parade', 'Dance with the carnival parade (August)', 180, 0, 0, { fun: 50, social: 30, energy: -20 }, null, { months: [7], from: 11, to: 20 }),
+      act('nhc_jerk', 'Jerk chicken and rice and peas', 30, gbp(12), 0, { hunger: 40, fun: 6 }, null, { from: 11, to: 21 }),
+      act('nhc_houses', 'Walk past the painted houses', 45, 0, 0, { fun: 8, stress: -4 }, null, { from: 8, to: 19 })
+    ]],
+    ['ldn_portobello', '🧺', 'Portobello Road Market', 'food', 'basket', 'ldn_notting', 12.2, 8.6, null, 'Antiques, vintage coats and street food on a Saturday.', [
+      act('ptb_vintage', 'Buy a vintage coat for the cold', 45, gbp(40), 0, { fun: 10, stress: -4 }, null, { days: [5], from: 9, to: 17 }),
+      act('ptb_food', 'Street food at the market', 30, gbp(9), 0, { hunger: 30 }, null, { from: 9, to: 18 })
+    ]],
+    ['ldn_oxford_st', '🛍️', 'Oxford Street shops', 'culture', 'film', 'ldn_oxford', 15.6, 8.4, null, 'Flagship stores, crowds and sales that are still expensive.', [
+      act('oxs_shop', 'A shopping spree (bags for everyone at home)', 120, gbp(450), 0, { fun: 30, social: 10 }, null, { from: 10, to: 21 }),
+      act('oxs_window', 'Window-shop and people-watch', 60, 0, 0, { fun: 8 }, null, { from: 10, to: 21 }),
+      act('oxs_theatre', 'A West End show', 180, gbp(95), 0, { fun: 40, social: 10 }, null, { from: 19, to: 23 })
+    ]],
+    ['ldn_bigben', '🕰️', 'Big Ben and Westminster', 'outdoors', 'dome', 'ldn_westminster', 17.4, 12.6, 'bigben', 'The clock tower, Parliament and Westminster Bridge.', [
+      act('bbn_photo', 'Photo with Big Ben', 15, 0, 0, { fun: 8 }, null, { from: 7, to: 21 }),
+      act('bbn_bridge', 'Walk over Westminster Bridge', 30, 0, 0, { fun: 8, stress: -4 }, null, null),
+      act('bbn_tour', 'Tour the Houses of Parliament', 90, gbp(33), 0, { fun: 14 }, { charisma: 1 }, { days: [5], from: 9, to: 16 })
+    ]],
+    ['ldn_palace', '👑', 'Buckingham Palace', 'outdoors', 'dome', 'ldn_westminster', 19.2, 11.2, null, 'From outside the railings: the guards, the balcony and St James\'s Park.', [
+      act('bkp_guard', 'Watch the Changing of the Guard', 60, 0, 0, { fun: 14 }, null, { days: [0, 2, 4, 6], from: 10, to: 12 }),
+      act('bkp_park', 'Feed the ducks in St James\'s Park', 45, 0, 0, { fun: 8, stress: -8 }, null, { from: 7, to: 19 })
+    ]],
+    ['ldn_eye', '🎡', 'The London Eye', 'outdoors', 'tree', 'ldn_southbank', 17.0, 16.6, 'londoneye', 'A slow turn in a glass capsule over the Thames.', [
+      act('eye_ride', 'Ride the London Eye', 45, gbp(36), 0, { fun: 24, stress: -6 }, null, { from: 10, to: 20 }),
+      act('eye_walk', 'Walk the South Bank', 60, 0, 0, { fun: 10, stress: -6 }, null, null),
+      act('eye_busker', 'Watch the buskers by the river', 30, 0, 0, { fun: 8, social: 4 }, null, { from: 11, to: 21 })
+    ]],
+    ['ldn_towerbridge', '🌉', 'Tower Bridge', 'outdoors', 'dome', 'ldn_tower', 24.6, 12.6, 'towerbridge', 'The bridge with two towers, and the Tower of London beside it.', [
+      act('twb_walk', 'Walk the glass walkway on top', 60, gbp(13), 0, { fun: 14 }, null, { from: 9, to: 18 }),
+      act('twb_jewels', 'See the Crown Jewels at the Tower', 120, gbp(34), 0, { fun: 18 }, null, { from: 9, to: 17 }),
+      act('twb_lift', 'Wait for the bridge to lift for a tall ship', 45, 0, 0, { fun: 10 }, null, { from: 9, to: 18 })
+    ]],
+    ['ldn_ryelane', '🍛', 'Rye Lane, Peckham', 'food', 'bowl', 'ldn_peckham', 21.4, 21.4, null, 'Naija shops, jollof spots, hair salons and aunties who know your mother.', [
+      act('rye_jollof', 'Jollof, plantain and chicken (it tastes like home)', 30, gbp(11), 0, { hunger: 42, fun: 8 }, null, { from: 11, to: 22 }),
+      act('rye_hair', 'Braids at a Rye Lane salon', 180, gbp(70), 0, { hygiene: 10, fun: 8, social: 8 }, null, { from: 9, to: 19 }),
+      act('rye_family', 'Visit your cousin in Peckham', 120, 0, 0, { social: 30, fun: 10, stress: -10 }, null, { from: 12, to: 21 })
+    ]],
+    ['ldn_church', '⛪', 'Grace Assembly, Peckham', 'services', 'dome', 'ldn_peckham', 22.8, 22.8, null, 'A Naija church in an old cinema: the choir, the pastor and jollof after.', [
+      act('gap_service', 'Sunday service with the choir', 180, 0, 0, { social: 20, stress: -15, fun: 6 }, null, { days: [6], from: 9, to: 14 }),
+      act('gap_offering', 'Give an offering', 15, gbp(20), 0, { social: 6, stress: -4 }, null, { days: [6], from: 9, to: 14 })
+    ]],
     // Accra (rules 22).
     ['acc_makola', '🧺', 'Makola Market', 'food', 'basket', 'acc_central', 10.4, 19.6, null, 'Cloth, beads, tomatoes and dried fish in lanes so tight you walk sideways.', [
       act('mak_cloth', 'Buy wax-print cloth from a market queen', 45, 9000, 0, { fun: 10 }, { charisma: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 7, to: 18 }),
@@ -2064,7 +2131,7 @@
       act('bfj_canoe', 'Paddle a canoe round the creek', 45, 1500, 0, { fun: 12, energy: -6 }, { fitness: 1 }, { from: 7, to: 17 })
     ]]
   ].forEach(function (q) {
-    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : 'lagos'), text: q[9] };
+    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^ldn_/.test(q[5]) ? 'london' : 'lagos'), text: q[9] };
     if (q[8]) p.inside = q[8];
     CIVIC_PLACES.push(p);
     if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
@@ -2275,7 +2342,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, insideKind: insideKind
   };
 
   // Keyed tables have no prototype, so an id like 'constructor' or '__proto__' from a save, a replay or another player's

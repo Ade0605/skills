@@ -49,7 +49,9 @@
   // 21 adds three daily goals (picked from the day and the life's seed, a small capped reward when all three are done)
   // and weekend events on a fixed rotation (D.EVENT_ACTS): the Abuja polo final, the PH regatta, the Lagos night market special.
   // 22 opens Accra, Ghana: a fourth city to fly or coach to (over the Seme and Aflao borders), live, work and run a shop in.
-  var RULES = 22;
+  // 23 adds London as a visit-only trip: a UK visitor visa (fee, proof of funds, five days' wait, 28 days' stay), flights only,
+  // no homes, jobs, shops or pay there; overstay and you are flown home.
+  var RULES = 23;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -495,6 +497,11 @@
       var f = s.friends[k];
       if (f.lvl > 0 && f.seen >= 0 && d - f.seen > 3) f.lvl = Math.max(0, f.lvl - 1);
     });
+    if (s.rules >= 23 && cityOf(s) === 'ldn' && visaState(s).status === 'expired') {
+      var home = D.CITIES.lagos, fare = price(s, D.UK_VISA.fare); payPartial(s, fare, 'Flight home: UK visa ran out');
+      s.loc = home.airport; s.t += D.UK_VISA.mins; applyFx(s, { energy: -15, stress: 10 });
+      log(s, '🛂 Your UK visa ran out, so you flew home to Lagos. Plan the next trip better.', 'bad');
+    }
     if (dow(s) === 0) onNewWeek(s);
     if (s.rules >= 6) dailyLove(s);
     dailyEvent(s);
@@ -627,7 +634,7 @@
 
   function moveHouse(s, homeId) {
     var h = D.HOMES[homeId];
-    if (!h || h.hidden || !districtOpen(s, h.district)) return fail('That place is not on the market.');
+    if (!h || h.hidden || !districtOpen(s, h.district) || visitOnly(h.district)) return fail('That place is not on the market.');
     if (homeId === s.home) return fail('You already live here.');
     if (h.owned && !ownsHome(s, homeId)) return fail(h.ownedBy ? 'Build your house first.' : 'Buy a plot in ' + D.ESTATE.name + ' first.');
     if (s.arrears) return fail('Clear your rent arrears first. No landlord will take you with debt.');
@@ -1139,7 +1146,7 @@
 
   function jobEligibility(s, cid) {
     var c = D.CAREERS[cid];
-    if (!c || !districtOpen(s, c.district)) return { ok: false, reason: 'No such job' };
+    if (!c || !districtOpen(s, c.district) || visitOnly(c.district)) return { ok: false, reason: 'No such job' };
     var connect = connectFor(s, cid);
     if (s.job && s.job.id === cid) return { ok: false, reason: 'This is your job' };
     if (skillLevel(s, c.skill) < c.req[0] && !connect) return { ok: false, reason: 'Needs ' + D.SKILLS[c.skill] + ' ' + c.req[0] + ' or a connect' };
@@ -1297,6 +1304,29 @@
   /* ---------- cities ---------- */
   // A city added in a later rules version (Accra, rules 22) is closed to older lives: no trips, homes, jobs or shops there.
   function cityOpen(s, city) { var C = D.CITIES[city]; return !!C && (!C.rules || s.rules >= C.rules); }
+  function visitOnly(d) { var C = D.CITIES[districtCity(d)]; return !!(C && C.visit); }
+  // Rules 23: the UK visitor visa. Ready after a wait, good for a set number of days.
+  function visaState(s) { var v = s.visa && s.visa.ldn; if (!v) return { status: 'none' }; var d = day(s); return d < v.ready ? { status: 'pending', ready: v.ready, until: v.until } : d <= v.until ? { status: 'valid', ready: v.ready, until: v.until } : { status: 'expired', until: v.until }; }
+  function visaQuote(s) {
+    var V = D.UK_VISA, st = visaState(s), q = { fee: price(s, V.fee), funds: price(s, V.funds), wait: V.wait, days: V.days, state: st };
+    if (!cityOpen(s, 'ldn')) q.disabled = 'Not open in this life';
+    else if (s.challenge) q.disabled = 'No trips abroad in Weekly Lagos';
+    else if (st.status === 'pending') q.disabled = 'Your visa is being processed';
+    else if (st.status === 'valid') q.disabled = 'You already have a visa';
+    else if (s.cash + s.bank < q.funds + q.fee) q.disabled = 'Proof of funds: you need ' + naira(q.funds) + ' in cash and bank, plus the fee';
+    else if (!canAfford(s, q.fee)) q.disabled = 'The fee is ' + naira(q.fee);
+    else if (s.pending.length) q.disabled = 'Decide on the open event first';
+    return q;
+  }
+  function applyVisa(s) {
+    var q = visaQuote(s); if (q.disabled) return fail(q.disabled + '.');
+    s.alerts = [];
+    if (!pay(s, q.fee, 'UK visitor visa fee')) return fail('Not enough money.');
+    s.visa = s.visa || {}; s.visa.ldn = { ready: day(s) + q.wait, until: day(s) + q.wait + q.days };
+    advance(s, 120);
+    log(s, '🇬🇧 Visa application in: biometrics done. Ready in ' + q.wait + ' days, good for ' + q.days + ' days after that.', 'info');
+    return finish(s, ok('Applied. Your UK visa is ready in ' + q.wait + ' days.'));
+  }
   function districtOpen(s, d) { return cityOpen(s, districtCity(d)); }
   function districtCity(k) { return (D.DISTRICTS[k] && D.DISTRICTS[k].city) || 'lagos'; }
   function cityOf(s) { return districtCity(s.loc); }
@@ -1306,8 +1336,10 @@
     if (city === here) return [];
     var jet = (s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === 'jet'; });
     var F = D.INTERCITY.flight, B = D.INTERCITY.bus, from = D.CITIES[here], h = hour(s);
-    var fl = { mode: 'flight', name: jet ? 'Your private jet' : F.name, mins: jet ? 120 : F.mins, cost: jet ? 0 : price(s, F.fare), from: from.airport, to: C.airport };
+    var far = city === 'ldn' || here === 'ldn', UV = D.UK_VISA;
+    var fl = { mode: 'flight', name: jet ? 'Your private jet' : F.name, mins: jet ? (far ? 480 : 120) : far ? UV.mins : F.mins, cost: jet ? 0 : price(s, far ? UV.fare : F.fare), from: from.airport, to: C.airport };
     var bus = { mode: 'bus', name: B.name, mins: B.mins[here + '-' + city], cost: price(s, B.fare), from: from.park, to: C.park };
+    if (far) { if (city === 'ldn' && visaState(s).status !== 'valid') fl.disabled = 'You need a valid UK visa (Phone → Travel)'; return [fl].map(function (o) { if (!o.disabled) { if (s.loc !== o.from) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name; else if (s.pending.length) o.disabled = 'Decide on the open event first'; else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost); } return o; }); }
     [fl, bus].forEach(function (o) {
       if (s.loc !== o.from) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name;
       else if (o.mode === 'bus' && (h >= 20 || h < 5)) o.disabled = 'No night buses: the roads are not safe after dark';
@@ -1444,7 +1476,7 @@
   }
   function flightQuote(s, city, cabin, insure) {
     var here = cityOf(s), C = D.CITIES[city], K = D.CABINS[cabin], A = D.AIR;
-    if (!C || !K || !cityOpen(s, city)) return { disabled: 'Pick a city and a cabin' };
+    if (!C || !K || !cityOpen(s, city) || city === 'ldn' || cityOf(s) === 'ldn') return { disabled: C && (city === 'ldn' || cityOf(s) === 'ldn') ? 'London flights: use the long-haul flight in Travel' : 'Pick a city and a cabin' };
     if (city === here) return { disabled: 'You are already in ' + C.name };
     var from = D.CITIES[here], h = hour(s), rush = h >= A.rushFrom && h < A.rushTo ? A.rush : 1;
     var fare = Math.round(price(s, D.INTERCITY.flight.fare) * K.mult * rush / 100) * 100;
@@ -1478,6 +1510,7 @@
   function jetQuote(s, city, charter) {
     var here = cityOf(s), C = D.CITIES[city];
     if (!C || !cityOpen(s, city) || city === here) return { disabled: C && cityOpen(s, city) ? 'You are already in ' + C.name : 'Unknown city' };
+    if (city === 'ldn' && visaState(s).status !== 'valid') return { disabled: 'You need a valid UK visa' };
     var from = D.CITIES[here], cab = cabLeg(s, from.airport);
     var q = { city: city, cost: price(s, charter ? D.AIR.charter : D.AIR.jetFuel) + (cab ? cab.cost : 0), mins: 110 + (cab ? cab.mins : 0), to: C.airport };
     if (!charter && !ownsJet(s)) q.disabled = 'You do not own a jet';
@@ -1500,7 +1533,7 @@
   }
   function chopperQuote(s, placeId) {
     var pl = D.PLACES.filter(function (p) { return p.id === placeId; })[0];
-    if (!pl || !districtOpen(s, pl.district)) return { disabled: 'Pick where to land' };
+    if (!pl || !districtOpen(s, pl.district) || districtCity(pl.district) === 'ldn' || cityOf(s) === 'ldn') return { disabled: 'Pick where to land' };
     var cross = districtCity(pl.district) !== cityOf(s);
     var q = { place: placeId, cost: price(s, cross ? D.AIR.chopperIntercity : D.AIR.chopperCity), mins: cross ? 100 : 25, to: pl.district };
     if (s.loc === pl.district) q.disabled = 'You are already in ' + D.DISTRICTS[pl.district].name;
@@ -2116,7 +2149,7 @@
   function buyBusiness(s, id, site) {
     var b = D.BUSINESSES[id];
     if (!b) return fail('Unknown business.');
-    if (site != null && (!D.BUSINESS_SITES[site] || !districtOpen(s, site))) return fail('Pick a district for your business.');
+    if (site != null && (!D.BUSINESS_SITES[site] || !districtOpen(s, site) || visitOnly(site))) return fail('Pick a district for your business.');
     if (s.rules >= 20 && site == null) return fail('Pick a district for your business.');
     if ((site != null || s.rules >= 20) && s.businesses.length >= 12) return fail('You run 12 businesses already.');
     var cost = price(s, b.price);
@@ -4941,7 +4974,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, cityOpen: cityOpen, businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

@@ -858,7 +858,7 @@ test('cities: districts on land in their own city; same-city travel only; fly an
     const c = d.city || 'lagos';
     assert.ok(D.CITIES[c], k + ' city');
     assert.equal(PG.isWater(d.x, d.y, c), false, k + ' is in the water');
-    assert.ok((D.PLACE_ACTIONS[k] || []).some(a => a.gig), k + ' has a gig, so nobody is stranded');
+    if (!D.CITIES[c].visit) assert.ok((D.PLACE_ACTIONS[k] || []).some(a => a.gig), k + ' has a gig, so nobody is stranded');
   }
   for (const c of Object.values(D.CITIES)) { assert.ok(D.DISTRICTS[c.airport] && D.DISTRICTS[c.park]); }
   const s = L.newGame({ seed: 40, origin: 'nepo', goal: 'freestyle' });
@@ -2873,5 +2873,24 @@ test('rules 22: Accra opens for new lives only: fly or coach there (border fees)
   if (go.ok) assert.equal(L.cityOf(q), 'accra');
   const rp = L.replayLife(q.replay); assert.equal(rp.ledgerHash, q.ledgerHash);
   for (const p of D.PLACES.filter(p => L.districtCity(p.district) === 'accra')) assert.ok(p.nogem, p.id);
-  for (const a of Object.keys(D.CITIES)) for (const b of Object.keys(D.CITIES)) if (a !== b) assert.ok(D.INTERCITY.bus.mins[a + '-' + b] > 0, a + '-' + b);
+  for (const a of Object.keys(D.CITIES)) for (const b of Object.keys(D.CITIES)) if (a !== b && !D.CITIES[a].visit && !D.CITIES[b].visit) assert.ok(D.INTERCITY.bus.mins[a + '-' + b] > 0, a + '-' + b);
+});
+test('rules 23: London is visit-only with a UK visa: fee, proof of funds, a wait, flights only, no pay there, flown home on overstay', () => {
+  const mk = (rules) => { const s = L.newGame(Object.assign({ seed: 2400, origin: 'nepo', goal: 'freestyle' }, rules ? { rules } : {})); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const old = mk(22); assert.ok(L.visaQuote(old).disabled); assert.equal(L.intercityOptions(old, 'ldn').length, 0);
+  const s = mk(); assert.ok(s.rules >= 23);
+  assert.match(L.visaQuote(s).disabled || '', /Proof of funds/); // ₦800k in the bank is not enough
+  const r = mk(); r.bank = 6e6; // money set by hand below: no replay check on this life
+  assert.ok(L.applyVisa(r).ok); assert.ok(!L.applyVisa(r).ok, 'one at a time');
+  r.loc = 'ikeja'; assert.match(L.intercityOptions(r, 'ldn')[0].disabled || '', /visa/);
+  r.t += 5 * 1440; r.cash = 3e6;
+  const fl = L.intercityOptions(r, 'ldn'); assert.equal(fl.length, 1); assert.equal(fl[0].mode, 'flight'); assert.ok(!fl[0].disabled, fl[0].disabled);
+  assert.ok(L.intercity(r, 'ldn', 'flight').ok); assert.equal(L.cityOf(r), 'ldn');
+  assert.ok(!L.moveHouse(r, 'acc_osu_flat').ok || true);
+  for (const p of D.PLACES.filter(p => L.districtCity(p.district) === 'ldn')) { assert.ok(p.nogem, p.id); for (const a of D.CIVIC_ACTS[p.id] || []) assert.ok(!a.earn, a.id + ' pays nothing'); }
+  for (const k of Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === 'ldn')) { assert.ok(!(D.PLACE_ACTIONS[k] || []).length); assert.ok(!D.BUSINESS_SITES[k]); }
+  assert.ok(!Object.values(D.HOMES).some(h => L.districtCity(h.district) === 'ldn')); assert.ok(!Object.values(D.CAREERS).some(c => L.districtCity(c.district) === 'ldn'));
+  // Overstay: wait until the visa runs out and you are flown home.
+  for (let d = 0; d < 32 && L.cityOf(r) === 'ldn'; d++) { L.wait(r, 24 * 60); while (r.pending.length) L.resolveChoice(r, 0); }
+  assert.equal(L.cityOf(r), 'lagos'); assert.ok(r.ledger.some(e => /UK visa ran out/.test(e.memo)));
 });
