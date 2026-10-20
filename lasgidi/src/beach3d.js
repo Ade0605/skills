@@ -791,7 +791,7 @@
       PK.monkeys = []; plats.forEach(function (p, i) { var m = new T.Group(), fur = mat('fur', { color: 0x6b5a45, roughness: 1 }); m.add(mesh(new T.SphereGeometry(0.35, 10, 8), fur, 0, 0, 0)); m.add(mesh(new T.SphereGeometry(0.22, 10, 8), fur, 0.3, 0.3, 0)); var tl = mesh(new T.CylinderGeometry(0.04, 0.03, 1, 5), fur, -0.4, -0.3, 0); tl.rotation.z = 0.8; m.add(tl); m.position.set(p[0] + 1.5, 12, p[1]); parkG.add(m); PK.monkeys.push({ m: m, p: p, ph: i }); });
     }
     function buildPark() {
-      wipe(parkG); var id = sc.placeId || 'park', r = rnd(hashStr(id)); PK = { lamps: [], towers: [], spray: [] }; var golf = /^golf_/.test(id), open = golf || /polo|funpark|waterpark/.test(id); // golf and polo clear the middle of the park
+      wipe(parkG); var id = sc.placeId || 'park', r = rnd(hashStr(id)); PK = { lamps: [], towers: [], spray: [] }; var golf = /^golf_/.test(id), open = golf || /polo|funpark|waterpark|ldn_eye/.test(id); // golf and polo clear the middle of the park
       var lawn = mesh(new T.PlaneGeometry(500, 500).rotateX(-Math.PI / 2), mat('parklawn', { map: grassTex, roughness: 0.95 }), 0, 0, 0); lawn.castShadow = false; parkG.add(lawn);
       if (!open) {
       // The looping path, as short paving segments.
@@ -816,12 +816,12 @@
       else if (/gate/.test(id)) { var gateM = mat('gate', { color: 0xf1ece2, roughness: 0.6 }); [-16, 16].forEach(function (x) { parkG.add(mesh(new T.BoxGeometry(5, 26, 5), gateM, x, 13, 70)); }); parkG.add(mesh(new T.BoxGeometry(40, 5, 6), gateM, 0, 28, 70)); parkG.add(mesh(new T.TorusGeometry(10, 1.2, 8, 32, Math.PI), mat('gateG', { color: 0x1d7a43 }), 0, 30, 70)); }
       else if (/lcc/.test(id)) { for (var cw = 0; cw < 8; cw++) { var x0 = -40 + cw * 12, pts = []; for (var cu = 0; cu <= 10; cu++) { var uu = cu / 10; pts.push(new T.Vector3(x0 + uu * 12, 12 - Math.sin(uu * Math.PI) * 1.4, 40 + Math.sin(cw) * 6)); } parkG.add(new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x5a4632 }))); parkG.add(mesh(new T.CylinderGeometry(0.4, 0.5, 13, 6), trunkM, x0, 6.5, 40 + Math.sin(cw) * 6)); var plat = mesh(new T.CylinderGeometry(1.6, 1.6, 0.3, 10), mat('plank0', { color: 0x7a5a3a }), x0, 12, 40 + Math.sin(cw) * 6); parkG.add(plat); } }
       else if (/zoo/.test(id)) { [[-34, 40], [0, 46], [34, 40]].forEach(function (zq, zi) { for (var zp = 0; zp < 14; zp++) { var za = zp / 14 * Math.PI * 2; parkG.add(mesh(new T.CylinderGeometry(0.1, 0.1, 2.4, 6), frameM, zq[0] + Math.cos(za) * 9, 1.2, zq[1] + Math.sin(za) * 6)); } var an = new T.Group(); an.position.set(zq[0], 0, zq[1]); var am = mat('animal' + zi, { color: [0xc9a46a, 0x6b6b6b, 0x8a5a3c][zi], roughness: 0.8 }); an.add(mesh(new T.CapsuleGeometry(0.7, 1.6, 4, 8).rotateZ(Math.PI / 2), am, 0, 1.4, 0)); an.add(mesh(new T.SphereGeometry(0.5, 10, 8), am, 1.5, 1.9, 0)); [[-0.8, -0.4], [-0.8, 0.4], [0.8, -0.4], [0.8, 0.4]].forEach(function (lq) { an.add(mesh(new T.CylinderGeometry(0.12, 0.12, 1, 6), am, lq[0], 0.5, lq[1])); }); parkG.add(an); }); }
-      if (golf) golfCourse(r); if (/lcc/.test(id)) lccExtras(r); if (/funpark/.test(id)) funRides(); if (/polo/.test(id)) poloField(); if (/waterpark/.test(id)) waterPark();
+      if (golf) golfCourse(r); if (/lcc/.test(id)) lccExtras(r); if (/funpark/.test(id)) funRides(); if (/polo/.test(id)) poloField(); if (/waterpark/.test(id)) waterPark(); if (id === 'ldn_eye') londonEye();
       var rs = rnd(81); for (var tb = 0; tb < 26; tb++) { var ta = -1.2 + rs() * 2.4, td = 160 + rs() * 120; towerBlock(Math.sin(ta) * td, Math.cos(ta) * td + 40, 14 + rs() * 12, (/abj|ph_/.test(id) ? 12 : 25) + rs() * 70, 14 + rs() * 10, parkG, 0, PK.towers); }
       // Joggers and strollers going round the path, families on picnic blankets.
       var NW = golf ? 6 : 60, wb = [], wr = rnd(37); for (var w = 0; w < NW; w++) wb.push([wr(), (wr() < 0.3 ? 2.2 : 1) * (wr() < 0.5 ? 1 : -1) * (0.008 + wr() * 0.006), (wr() - 0.5) * 1.6, wr() * 6]);
       PK.walkers = squad(NW, function (i) { return [0xc0392b, 0x2f6fa0, 0xf2b600, 0x2fa36b, 0x8e44ad, 0xe67e22, 0xf4f3ec][i % 7]; }, 1, parkG); PK.walkBase = wb; if (golf) { PK.walkers.body.visible = PK.walkers.head.visible = false; }
-      if (golf || /lcc|funpark|zoo|polo|waterpark/.test(id)) mergeStatic(parkG, [lawn].concat(PK.spray || [], PK.flags || [], (PK.golfers || []).map(function (g) { return g.pv; }), PK.ball ? [PK.ball] : [], (PK.monkeys || []).map(function (k) { return k.m; })));
+      if (golf || /lcc|funpark|zoo|polo|waterpark|ldn_eye/.test(id)) mergeStatic(parkG, [lawn].concat(PK.spray || [], PK.flags || [], (PK.golfers || []).map(function (g) { return g.pv; }), PK.ball ? [PK.ball] : [], (PK.monkeys || []).map(function (k) { return k.m; })));
       for (var pc = 0; pc < (open ? 0 : 6); pc++) { var px = -24 + pc * 9 + r() * 3, pz = -12 + (pc % 2) * 30; var bl = mesh(new T.BoxGeometry(3, 0.04, 2.4), mat('blanket' + pc % 3, { color: [0xc0392b, 0x1f5fa0, 0xf2b600][pc % 3], roughness: 0.9 }), px, 0.05, pz); bl.castShadow = false; parkG.add(bl); }
     }
     // Capital Polo Grounds: a striped field with goal posts, the stand, the members' pavilion and six riders after the ball.
@@ -949,6 +949,31 @@
       for (var lb = 0; lb < 5; lb++) plzG.add(mesh(new T.BoxGeometry(3, 0.25, 0.8), wood, -24 + lb * 12, 0.9, -45)); campusFig(24, -12, -44.4, Math.PI / 2, true); campusFig(25, -10.6, -44.4, Math.PI / 2, true);
       [-10, 10].forEach(function (x) { plzG.add(mesh(new T.BoxGeometry(1.4, 8, 1.4), wall, x, 4, 18)); }); campusSign(CN[0], '#1f2a44', '#f2c200', 18, 0, 8.6, 18, Math.PI);
     }
+    // London: the Elizabeth Tower (Big Ben) beside Parliament, and Tower Bridge over a river.
+    function bigBen(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var st = mat('bbStone', { color: 0xd9c79a, roughness: 0.75 }), gold = mat('bbGold', { color: 0xc9a227, metalness: 0.7, roughness: 0.35 });
+      g.add(mesh(new T.BoxGeometry(9, 56, 9), st, 0, 28, 0)); for (var b = 1; b < 9; b++) g.add(mesh(new T.BoxGeometry(9.3, 0.6, 9.3), mat('bbBand', { color: 0xb8a578 }), 0, b * 6.5, 0));
+      var face = new T.MeshStandardMaterial({ color: 0xfff6dc, emissive: 0xfff1c0, emissiveIntensity: 0.35 }); [0, 1, 2, 3].forEach(function (k) { var fc = new T.Mesh(new T.CircleGeometry(3.4, 32), face); var a = k * Math.PI / 2; fc.position.set(Math.sin(a) * 4.7, 47, -Math.cos(a) * 4.7); fc.rotation.y = -a + Math.PI; g.add(fc); var hd = mesh(new T.BoxGeometry(0.25, 2.6, 0.1), mat('bbHand', { color: 0x17181a }), Math.sin(a) * 4.8, 47.8, -Math.cos(a) * 4.8); hd.rotation.y = -a; g.add(hd); });
+      g.add(mesh(new T.BoxGeometry(10, 4, 10), gold, 0, 58, 0)); var sp = mesh(new T.ConeGeometry(5.6, 18, 4), mat('bbSpire', { color: 0x3a4a3f, metalness: 0.4 }), 0, 69, 0); sp.rotation.y = Math.PI / 4; g.add(sp);
+      g.add(mesh(new T.BoxGeometry(90, 18, 12), st, -52, 9, 4)); for (var tw = 0; tw < 12; tw++) g.add(mesh(new T.ConeGeometry(1.2, 6, 4), st, -94 + tw * 7.4, 21, 4));
+      plzG.add(g);
+    }
+    function towerBridge(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var st = mat('tbStone', { color: 0xcfc7b0, roughness: 0.7 }), blue = mat('tbBlue', { color: 0x2f6fa0, roughness: 0.5 });
+      var river = new T.Mesh(new T.PlaneGeometry(400, 50).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x5f7a86, roughness: 0.1, clearcoat: 1 })); river.position.set(0, 0.2, 0); g.add(river);
+      [-16, 16].forEach(function (px) { g.add(mesh(new T.BoxGeometry(10, 44, 10), st, px, 22, 0)); g.add(mesh(new T.ConeGeometry(4.2, 10, 4), mat('tbRoof', { color: 0x4a5560 }), px, 49, 0)); [-1, 1].forEach(function (c) { g.add(mesh(new T.ConeGeometry(1, 5, 4), mat('tbRoof', {}), px + c * 4.4, 46.5, 4.4)); }); });
+      g.add(mesh(new T.BoxGeometry(22, 3, 6), blue, 0, 38, 0)); g.add(mesh(new T.BoxGeometry(22, 2, 10), mat('tbDeck', { color: 0x6a6f76 }), 0, 9, 0));
+      [-1, 1].forEach(function (sd) { var pts = []; for (var k = 0; k <= 16; k++) { var u = k / 16; pts.push(new T.Vector3(sd * (21 + u * 40), 38 - Math.sin(u * Math.PI / 2) * 28, 0)); } g.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 24, 0.6, 6, false), blue)); g.add(mesh(new T.BoxGeometry(44, 2, 10), mat('tbDeck', {}), sd * 43, 9, 0)); });
+      plzG.add(g);
+    }
+    function londonEye() {
+      var steel = mat('eyeSteel', { color: 0xf4f6f8, metalness: 0.6, roughness: 0.25 }), W = new T.Group(); W.position.set(0, 34, 50);
+      W.add(mesh(new T.TorusGeometry(30, 0.5, 6, 64), steel, 0, 0, 0)); for (var sp = 0; sp < 16; sp++) { var a = sp / 16 * Math.PI * 2, spk = mesh(new T.BoxGeometry(0.2, 30, 0.2), steel, Math.cos(a) * 15, Math.sin(a) * 15, 0); spk.rotation.z = a - Math.PI / 2; W.add(spk); }
+      PK.cabins = []; var glassC = mat('eyeCap', { color: 0xbfe3f2, roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.8 }); for (var c = 0; c < 24; c++) { var ca = c / 24 * Math.PI * 2, cap = mesh(new T.CapsuleGeometry(1.1, 2.6, 4, 8).rotateZ(Math.PI / 2), glassC, Math.cos(ca) * 31.2, Math.sin(ca) * 31.2, 0); W.add(cap); PK.cabins.push(cap); }
+      W.userData.dyn = true; parkG.add(W); PK.wheel = W; PK.carousel = new T.Group(); PK.bumpers = [];
+      [-1, 1].forEach(function (sd) { var leg = mesh(new T.BoxGeometry(1.2, 40, 1.2), steel, sd * 3, 17, 46); leg.rotation.x = sd * 0.0; leg.rotation.z = 0.12 * sd; parkG.add(leg); });
+      var river = new T.Mesh(new T.PlaneGeometry(400, 40).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x5f7a86, roughness: 0.1, clearcoat: 1 })); river.position.set(0, 0.1, 86); parkG.add(river);
+    }
     // Accra's Independence Arch: a wide white gate with the black star on top, and the stands of the square either side.
     function blackStarGate(x, z) {
       var g = new T.Group(); g.position.set(x, 0, z); var wm = mat('bsgWhite', { color: 0xf4f1ea, roughness: 0.6 }), dk = mat('bsgStar', { color: 0x17181a, roughness: 0.4 });
@@ -971,6 +996,8 @@
       else if (id === 'theatre') theatre(0, 70);
       else if (/abj_tower/.test(id)) millenniumTower(0, 80);
       else if (id === 'acc_blackstar') blackStarGate(0, 60);
+      else if (id === 'ldn_bigben') bigBen(20, 95);
+      else if (id === 'ldn_towerbridge') towerBridge(0, 70);
       else if (/mosque/.test(id)) mosque(0, 50, 1.15);
       else if (/ecumenical/.test(id)) cathedral(0, 50, 1.2);
       else if (/eagle|tbs/.test(id)) {
@@ -980,7 +1007,7 @@
       } else if (/^(unilag|ph_uniport|abj_uni|abj_chu|ph_rsu|lag_lasu|lag_yabatech|acc_ug)$/.test(id)) { campusBuild(); }
       else stateHouse(0, 60, /threearms/.test(id));
       // Flags along the plaza, a fountain at its heart, lamps, palms, and the city behind.
-      var gh = /^acc_/.test(id), flagT = canvasTex(96, 64, function (c, w, h) { if (gh) { ['#ce1126', '#fcd116', '#006b3f'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#000'; c.font = '700 22px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('★', w / 2, h / 2 + 1); return; } c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
+      var gh = /^acc_/.test(id), uk = /^ldn_/.test(id), flagT = canvasTex(96, 64, function (c, w, h) { if (uk) { c.fillStyle = '#012169'; c.fillRect(0, 0, w, h); c.strokeStyle = '#fff'; c.lineWidth = 12; c.beginPath(); c.moveTo(0, 0); c.lineTo(w, h); c.moveTo(w, 0); c.lineTo(0, h); c.stroke(); c.strokeStyle = '#c8102e'; c.lineWidth = 4; c.stroke(); c.fillStyle = '#fff'; c.fillRect(w / 2 - 9, 0, 18, h); c.fillRect(0, h / 2 - 9, w, 18); c.fillStyle = '#c8102e'; c.fillRect(w / 2 - 5, 0, 10, h); c.fillRect(0, h / 2 - 5, w, 10); return; } if (gh) { ['#ce1126', '#fcd116', '#006b3f'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#000'; c.font = '700 22px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('★', w / 2, h / 2 + 1); return; } c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
       for (var fp = 0; fp < 10; fp++) { var fx = -45 + fp * 10, fz = 18; plzG.add(mesh(new T.CylinderGeometry(0.15, 0.18, 14, 6), mat('fpole2', { color: 0xdfe3e8, metalness: 0.6 }), fx, 7, fz)); var fg = new T.PlaneGeometry(4, 2.6, 12, 1); fg.translate(2, 0, 0); var flag = new T.Mesh(fg, new T.MeshStandardMaterial({ map: flagT, side: T.DoubleSide, roughness: 0.8 })); flag.position.set(fx, 12.6, fz); flag.userData.base = Float32Array.from(fg.attributes.position.array); plzG.add(flag); PZ.flags.push(flag); }
       plzG.add(mesh(new T.CylinderGeometry(9, 9.5, 1.2, 40), mat('basin', { color: 0xc9ccd1, roughness: 0.6 }), 0, 0.6, -4)); plzG.add(mesh(new T.CylinderGeometry(8.4, 8.4, 0.2, 40), new T.MeshPhysicalMaterial({ color: 0x5fb3cf, roughness: 0.05, clearcoat: 1 }), 0, 1.15, -4));
       PZ.spray = []; for (var sp2 = 0; sp2 < 50; sp2++) { var d = mesh(new T.SphereGeometry(0.14, 6, 4), mat('sprayM', { color: 0xf4fbff, roughness: 0.2, transparent: true, opacity: 0.8 }), 0, 1, -4); d.castShadow = false; plzG.add(d); PZ.spray.push(d); }
@@ -1721,7 +1748,7 @@
       root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var t = reduce ? 3 : now / 1000, night = sc.night ? 1 : 0, rain = sc.weather === 'rain' || sc.weather === 'storm';
       var nv = night ? 0.85 : 0; if (Math.abs(skyU.night.value - nv) > 0.01) { skyU.night.value += (nv - skyU.night.value) * 0.1; if (Math.abs(skyU.night.value - nv) <= 0.01) { skyU.night.value = nv; bakeEnv(); } } hemi.intensity = night ? 0.25 : rain ? 0.6 : 0.85; sun.intensity = night ? 0.15 : rain ? 0.7 : 2.2; sun.color.set(night ? 0x8fa8ff : 0xffe2b8); hemi.color.set(0xfff1dd); hemi.groundColor.set(GAL ? 0xf4f1ea : 0x8a9a6a);
-      S3.fog.color.set(night ? 0x0b1020 : rain ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD || MKT || JTY || PRK || PLZ || STR ? 0.45 : 1);
+      S3.fog.color.set(night ? 0x0b1020 : rain || sc.grey ? 0xa9b2b8 : sc.weather === 'harmattan' ? 0xd9c49a : HAZE); S3.fog.density = (rain ? 0.006 : sc.weather === 'harmattan' ? 0.0055 : 0.0029) * (HARBOUR || ROOF || STAD || MKT || JTY || PRK || PLZ || STR ? 0.45 : 1);
       poolM.emissive.set(night ? 0x1fa9c9 : 0x000000); poolM.emissiveIntensity = night ? 0.9 : 0; // underwater lights after dark
       if (HARBOUR) {
         var beat = Math.abs(Math.sin(t * 2.2)), lit = night ? 1 : 0.35, show = sc.show !== false, fshow = sc.hour == null || (sc.hour >= 19 && sc.hour < 23), jk = fshow ? 1 : 0.45;
