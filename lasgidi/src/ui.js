@@ -776,7 +776,7 @@
     var cityOfPlace = function (pid) { var pl = D.PLACES.filter(function (x) { return x.id === pid; })[0]; return pl ? L.districtCity(pl.district) : 'lagos'; };
     var PP = L.passportInfo(S);
     var roomRow = function (r) { return '<div class="item"><div><h3>' + esc(r[1]) + (PP.rooms[r[0]] != null ? ' <span class="stamp" title="Stamped">🛂 ✓</span>' : ' <span class="stamp new">New</span>') + '</h3><div class="meta"><span>' + (r[3] ? '👥 ' + r[3] + ' here now' : 'Quiet right now') + '</span></div></div><button class="btn sm ghost" id="lr-' + r[0] + '" data-place="' + r[2] + '" data-tab="map">Go</button></div>'; };
-    var cityOrder = [here].concat(Object.keys(D.CITIES).filter(function (c) { return c !== here; }));
+    var cityOrder = [here].concat(openCities().filter(function (c) { return c !== here; }));
     var passHtml = '<div class="passport"><b>🛂 Passport ' + PP.seen + '/' + PP.total + ' rooms</b> · ' + PP.nights + ' night' + (PP.nights === 1 ? '' : 's') + ' · ' + PP.hangs + ' catch-up' + (PP.hangs === 1 ? '' : 's') +
       '<div class="pp-badges">' + PP.badges.map(function (b) { return '<span class="pp-badge' + (b.got ? ' got' : '') + '" title="' + esc(b.text) + '">' + b.icon + ' ' + esc(b.name) + '</span>'; }).join('') + '</div></div>';
     var LO = L.localsInfo(S);
@@ -989,7 +989,7 @@
     var homeCity = function (r) { var h = D.HOMES[r.home]; return h ? L.districtCity(h.district) : null; };
     var rows = (city ? all.filter(function (r) { return homeCity(r) === city; }) : all).slice(0, 10);
     var html = '<div class="section"><h3>' + (city ? esc(D.CITIES[city].name) : 'Lasgidi') + ' Hall of Fame</h3>' +
-      '<div class="pg-chips" style="padding:0 0 8px" role="group" aria-label="Board">' + [['', 'All Nigeria']].concat(Object.keys(D.CITIES).map(function (k) { return [k, D.CITIES[k].name]; })).map(function (c) {
+      '<div class="pg-chips" style="padding:0 0 8px" role="group" aria-label="Board">' + [['', 'All cities']].concat(Object.keys(D.CITIES).map(function (k) { return [k, D.CITIES[k].name]; })).map(function (c) {
         return '<button type="button" class="pg-chip' + (c[0] === city ? ' sel' : '') + '" id="fc-' + (c[0] || 'all') + '" data-famecity="' + c[0] + '">' + esc(c[1]) + '</button>';
       }).join('') + '</div>';
     if (S) {
@@ -1084,11 +1084,15 @@
   var LAYER_KEY = 'lasgidi.layers.v1';
   function mapLayers() { if (!ui.layers) { try { ui.layers = JSON.parse(localStorage.getItem(LAYER_KEY) || 'null'); } catch (e) {} ui.layers = ui.layers || { names: true, boards: true, players: true }; } return ui.layers; }
   // The map bar: a city picker (where you are, or ✈ Fly), Names, More (the other layers), and the letter-hunt badge.
-  var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊' };
+  var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊', accra: '🇬🇭' };
+  // Cities this life can go to (Accra opens with rules 22).
+  // In Accra prices read in cedi first, at the game's fixed rate (₵1 = ₦130). The ledger stays in naira.
+  var CEDI = 130; function money(n) { return S && L.cityOf(S) === 'accra' ? '₵' + Math.max(1, Math.round(n / CEDI)).toLocaleString('en') + ' (' + N(n) + ')' : N(n); }
+  function openCities() { return Object.keys(D.CITIES).filter(function (c) { return !S || !L.cityOpen || L.cityOpen(S, c); }); }
   function layerChips() {
     var l = mapLayers(), here = L.cityOf(S), h = huntNow(), hs = huntState(), got = hs.found.length, tf = L.traffic ? L.traffic(S) : null;
     var road = tf == null ? '' : tf < 1.5 ? 'Free road' : tf < 2.3 ? 'Busy roads' : 'Go-slow';
-    var cityMenu = ui.cityMenu ? '<div class="mb-menu" role="menu" aria-label="Cities">' + Object.keys(D.CITIES).map(function (c) {
+    var cityMenu = ui.cityMenu ? '<div class="mb-menu" role="menu" aria-label="Cities">' + openCities().map(function (c) {
       return '<div class="mb-row"><span>' + (CITY_ICON[c] || '📍') + ' ' + esc(D.CITIES[c].name) + '</span>' + (c === here ? '<span class="mb-here">📍 You\'re here</span>' : '<button type="button" class="btn sm go" id="mb-fly-' + c + '" data-tab="phone" data-app="travel">✈ Fly</button>') + '</div>';
     }).join('') + (road ? '<p class="mb-road"><i class="' + (tf < 1.5 ? 'ok' : tf < 2.3 ? 'mid' : 'bad') + '"></i>Traffic in town: ' + road + '</p>' : '') + '</div>' : '';
     var moreMenu = ui.moreMenu ? '<div class="mb-menu mb-more" role="group" aria-label="More map layers">' + [['boards', '🪧 Billboards'], ['players', '👥 Players']].map(function (x) {
@@ -2370,7 +2374,7 @@
   }
   /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
   var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
-  var AIR_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC' };
+  var AIR_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC' };
   // A deterministic board for this game day, between Lagos, Port Harcourt and Abuja: an airliner about every
   // 30 minutes at gates 1–5, and a chopper shuttle about every 90 minutes from helipads H1–H4. Status follows the clock.
   function fids(kind) {
@@ -2511,9 +2515,9 @@
   }
   function airportGo(tab) { ui.airportOpen = false; ui.depTab = tab; clearPicks(); ui.place = ui.airportPlace || 'airport'; ui.tab = 'map'; render(); }
   /* ---------- airport departures: Air (cabins, insurance, boarding pass), My jet / charter, Chopper ---------- */
-  var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1 };
+  var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1, acc_kotoka: 1 };
   function departuresView(pl) {
-    var tab = ui.depTab || 'air', here = L.cityOf(S), cities = Object.keys(D.CITIES).filter(function (c) { return c !== here; });
+    var tab = ui.depTab || 'air', here = L.cityOf(S), cities = openCities().filter(function (c) { return c !== here; });
     var city = cities.indexOf(ui.depCity) >= 0 ? ui.depCity : cities[0], code = D.CITY_CODES;
     var tabs = '<div class="dep-tabs" role="tablist">' + [['air', '✈️ Air'], ['jet', '🛩️ My jet'], ['chopper', '🚁 Chopper']].map(function (x) {
       return '<button type="button" role="tab" aria-selected="' + (tab === x[0]) + '" class="dep-tab' + (tab === x[0] ? ' on' : '') + '" id="dep-' + x[0] + '" data-deptab="' + x[0] + '">' + x[1] + '</button>';
@@ -2555,7 +2559,7 @@
       var list = D.PLACES.filter(function (p) { return !/_site$/.test(p.id) && D.DISTRICTS[p.district] && (fc === 'all' || L.districtCity(p.district) === fc) && (!qv || (p.name + ' ' + D.DISTRICTS[p.district].name).toLowerCase().indexOf(qv) >= 0); }).slice(0, 30);
       body = '<p class="note">Straight to the door, any place in any city. Not cheap.</p>' +
         '<input type="search" class="chop-q" id="chop-q" placeholder="Search a place" value="' + esc(ui.chopQ || '') + '" aria-label="Search a place">' +
-        '<div class="dep-tabs sm">' + ['all'].concat(Object.keys(D.CITIES)).map(function (c) { return '<button type="button" class="dep-tab' + (fc === c ? ' on' : '') + '" id="chopc-' + c + '" data-chopcity="' + c + '">' + (c === 'all' ? 'All' : esc(D.CITIES[c].name)) + '</button>'; }).join('') + '</div>' +
+        '<div class="dep-tabs sm">' + ['all'].concat(openCities()).map(function (c) { return '<button type="button" class="dep-tab' + (fc === c ? ' on' : '') + '" id="chopc-' + c + '" data-chopcity="' + c + '">' + (c === 'all' ? 'All' : esc(D.CITIES[c].name)) + '</button>'; }).join('') + '</div>' +
         '<div class="list">' + list.map(function (p) {
           var cq2 = L.chopperQuote(S, p.id);
           return '<div class="item"><div><h3>' + (p.icon || '•') + ' ' + esc(p.name) + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[p.district].name) + '</span><span>' + dur(cq2.mins) + '</span><span class="cost">' + N(cq2.cost) + '</span></div></div><button class="btn sm" id="chop-' + p.id + '" data-chopper="' + p.id + '"' + (cq2.disabled ? ' disabled title="' + esc(cq2.disabled) + '"' : '') + '>Fly</button></div>';
@@ -2595,9 +2599,9 @@
   /* ---------- the ride view: a short journey scene with "Now passing" signs ---------- */
   // Mounted outside the app so live re-renders never restart it. Tap anywhere or Arrive to skip.
   // Towns on the road between the cities, for the coach (the real routes, in order).
-  var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'] };
+  var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'], 'lagos-accra': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'abuja-accra': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'ph-accra': ['Owerri', 'Benin City', 'Ore', 'Sagamu', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'] };
   // Abuja's and Port Harcourt's own words for the same rides (display only: the engine and its ledger keep the mode names).
-  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' } };
+  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' } };
   function modeName(o) { var m = CITY_MODE_NAMES[L.cityOf(S)]; return (m && own(m, o.mode)) ? m[o.mode] : o.name; }
   var RIDE_NAMES = { coach: 'Savanna Line coach', danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
   function showRide(from, to, mode, t0) {
@@ -2845,7 +2849,7 @@
   // Fly or take the bus to another city.
   function citiesView() {
     var here = L.cityOf(S), html = '<div class="section cities"><h3>✈️ Other cities</h3><p class="note">You are in ' + esc(D.CITIES[here].name) + '. Flights leave from ' + esc(D.DISTRICTS[D.CITIES[here].airport].name) + '; buses from ' + esc(D.DISTRICTS[D.CITIES[here].park].name) + ' (daytime only). Your home and rent stay where they are; you can move house to another city from its Homes list.</p>';
-    Object.keys(D.CITIES).filter(function (c) { return c !== here; }).forEach(function (c) {
+    openCities().filter(function (c) { return c !== here; }).forEach(function (c) {
       var opts = L.intercityOptions(S, c);
       html += '<div class="city-card"><h4>' + esc(D.CITIES[c].name) + '</h4><div class="list">' + opts.map(function (o) {
         var at = S.loc === o.from;
@@ -3056,7 +3060,7 @@
   function actIcon(a) { if (a.minigame) return '🎮'; if (a.isWork) return '💼'; for (var i = 0; i < ACT_ICONS.length; i++) if (ACT_ICONS[i][0].test(a.label)) return ACT_ICONS[i][1]; return '✨'; }
   function actionRow(a) {
     var meta = ['<span>' + dur(a.mins) + '</span>'];
-    if (a.price) meta.push('<span class="cost">' + N(a.price) + (a.gen ? ' incl. gen' : '') + '</span>');
+    if (a.price) meta.push('<span class="cost">' + money(a.price) + (a.gen ? ' incl. gen' : '') + '</span>');
     if (a.earnEst) meta.push('<span class="gain">~' + N(a.earnEst) + '</span>');
     if (a.xp) meta.push('<span>' + Object.keys(a.xp).map(function (k) { return '+' + D.SKILLS[k]; }).join(' ') + '</span>');
     if (a.whenLabel) meta.push('<span>' + esc(a.whenLabel) + '</span>');

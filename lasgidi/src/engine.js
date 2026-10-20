@@ -48,7 +48,8 @@
   // businesses bought without a site (now need one, and count toward the cap of 12).
   // 21 adds three daily goals (picked from the day and the life's seed, a small capped reward when all three are done)
   // and weekend events on a fixed rotation (D.EVENT_ACTS): the Abuja polo final, the PH regatta, the Lagos night market special.
-  var RULES = 21;
+  // 22 opens Accra, Ghana: a fourth city to fly or coach to (over the Seme and Aflao borders), live, work and run a shop in.
+  var RULES = 22;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -626,7 +627,7 @@
 
   function moveHouse(s, homeId) {
     var h = D.HOMES[homeId];
-    if (!h || h.hidden) return fail('That place is not on the market.');
+    if (!h || h.hidden || !districtOpen(s, h.district)) return fail('That place is not on the market.');
     if (homeId === s.home) return fail('You already live here.');
     if (h.owned && !ownsHome(s, homeId)) return fail(h.ownedBy ? 'Build your house first.' : 'Buy a plot in ' + D.ESTATE.name + ' first.');
     if (s.arrears) return fail('Clear your rent arrears first. No landlord will take you with debt.');
@@ -1138,7 +1139,7 @@
 
   function jobEligibility(s, cid) {
     var c = D.CAREERS[cid];
-    if (!c) return { ok: false, reason: 'No such job' };
+    if (!c || !districtOpen(s, c.district)) return { ok: false, reason: 'No such job' };
     var connect = connectFor(s, cid);
     if (s.job && s.job.id === cid) return { ok: false, reason: 'This is your job' };
     if (skillLevel(s, c.skill) < c.req[0] && !connect) return { ok: false, reason: 'Needs ' + D.SKILLS[c.skill] + ' ' + c.req[0] + ' or a connect' };
@@ -1294,11 +1295,14 @@
   /* ---------- travel ---------- */
 
   /* ---------- cities ---------- */
+  // A city added in a later rules version (Accra, rules 22) is closed to older lives: no trips, homes, jobs or shops there.
+  function cityOpen(s, city) { var C = D.CITIES[city]; return !!C && (!C.rules || s.rules >= C.rules); }
+  function districtOpen(s, d) { return cityOpen(s, districtCity(d)); }
   function districtCity(k) { return (D.DISTRICTS[k] && D.DISTRICTS[k].city) || 'lagos'; }
   function cityOf(s) { return districtCity(s.loc); }
   function intercityOptions(s, city) {
     var here = cityOf(s), C = D.CITIES[city];
-    if (!C) return [];
+    if (!C || !cityOpen(s, city)) return [];
     if (city === here) return [];
     var jet = (s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === 'jet'; });
     var F = D.INTERCITY.flight, B = D.INTERCITY.bus, from = D.CITIES[here], h = hour(s);
@@ -1324,6 +1328,7 @@
       var r = rand(s);
       if (r < 0.15) { mins += 180; msg = 'A breakdown on the expressway added three hours.'; }
       else if (r < 0.25) { payPartial(s, price(s, 2000), 'Checkpoint "settlement"'); msg = 'Checkpoints all the way. You "settled" one of them.'; }
+      if (city === 'accra' || cityOf(s) === 'accra') { payPartial(s, price(s, 3000), 'Border stamping fees (Seme and Aflao)'); msg = (msg ? msg + ' ' : '') + 'Four border posts: Seme, Kraké, Hilla-Condji and Aflao. Passport stamped at each.'; }
       advance(s, mins);
       applyFx(s, { energy: -25, hygiene: -25, stress: 12, hunger: -20 });
     } else {
@@ -1439,7 +1444,7 @@
   }
   function flightQuote(s, city, cabin, insure) {
     var here = cityOf(s), C = D.CITIES[city], K = D.CABINS[cabin], A = D.AIR;
-    if (!C || !K) return { disabled: 'Pick a city and a cabin' };
+    if (!C || !K || !cityOpen(s, city)) return { disabled: 'Pick a city and a cabin' };
     if (city === here) return { disabled: 'You are already in ' + C.name };
     var from = D.CITIES[here], h = hour(s), rush = h >= A.rushFrom && h < A.rushTo ? A.rush : 1;
     var fare = Math.round(price(s, D.INTERCITY.flight.fare) * K.mult * rush / 100) * 100;
@@ -1472,7 +1477,7 @@
   }
   function jetQuote(s, city, charter) {
     var here = cityOf(s), C = D.CITIES[city];
-    if (!C || city === here) return { disabled: C ? 'You are already in ' + C.name : 'Unknown city' };
+    if (!C || !cityOpen(s, city) || city === here) return { disabled: C && cityOpen(s, city) ? 'You are already in ' + C.name : 'Unknown city' };
     var from = D.CITIES[here], cab = cabLeg(s, from.airport);
     var q = { city: city, cost: price(s, charter ? D.AIR.charter : D.AIR.jetFuel) + (cab ? cab.cost : 0), mins: 110 + (cab ? cab.mins : 0), to: C.airport };
     if (!charter && !ownsJet(s)) q.disabled = 'You do not own a jet';
@@ -1495,7 +1500,7 @@
   }
   function chopperQuote(s, placeId) {
     var pl = D.PLACES.filter(function (p) { return p.id === placeId; })[0];
-    if (!pl) return { disabled: 'Pick where to land' };
+    if (!pl || !districtOpen(s, pl.district)) return { disabled: 'Pick where to land' };
     var cross = districtCity(pl.district) !== cityOf(s);
     var q = { place: placeId, cost: price(s, cross ? D.AIR.chopperIntercity : D.AIR.chopperCity), mins: cross ? 100 : 25, to: pl.district };
     if (s.loc === pl.district) q.disabled = 'You are already in ' + D.DISTRICTS[pl.district].name;
@@ -2111,7 +2116,7 @@
   function buyBusiness(s, id, site) {
     var b = D.BUSINESSES[id];
     if (!b) return fail('Unknown business.');
-    if (site != null && !D.BUSINESS_SITES[site]) return fail('Pick a district for your business.');
+    if (site != null && (!D.BUSINESS_SITES[site] || !districtOpen(s, site))) return fail('Pick a district for your business.');
     if (s.rules >= 20 && site == null) return fail('Pick a district for your business.');
     if ((site != null || s.rules >= 20) && s.businesses.length >= 12) return fail('You run 12 businesses already.');
     var cost = price(s, b.price);
@@ -4936,7 +4941,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, cityOpen: cityOpen, businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

@@ -2824,7 +2824,7 @@ test('rules 19: more Lagos places: nogem, own acts, rules 19 only', () => {
 test('rules 21: three daily goals, the same for a seed and day; a capped reward once a day; none in rules-20 lives', () => {
   const mk = (rules) => { const s = L.newGame(Object.assign({ seed: 2100, origin: 'nepo', goal: 'freestyle' }, rules ? { rules } : {})); while (s.pending.length) L.resolveChoice(s, 0); return s; };
   const a = mk(), b = mk();
-  assert.equal(a.rules, 21); assert.deepEqual(L.dailyGoals(a).list.map(g => g.k), L.dailyGoals(b).list.map(g => g.k));
+  assert.ok(a.rules >= 21); assert.deepEqual(L.dailyGoals(a).list.map(g => g.k), L.dailyGoals(b).list.map(g => g.k));
   assert.equal(L.dailyGoals(a).list.length, 3); assert.equal(L.dailyGoals(a).list[0].k, 'acts');
   assert.equal(L.dailyGoals(mk(20)), null);
   // Play a while; the reward is paid at most once a day and never more than the cap.
@@ -2850,4 +2850,28 @@ test('rules 21: weekend events show only in their week, day and place, and only 
     for (let d = 0; d < 28; d++) { assert.ok(!L.availableActions(o).some(a => ids.indexOf(a.id) >= 0)); o.t += 1440; }
   }
   for (const a of Object.values(D.EVENT_ACTS).flat()) { assert.ok(a.mins % 15 === 0, a.id); if (a.earn) assert.ok(a.gig && a.fest && a.earn <= 3000, a.id); }
+});
+test('rules 22: Accra opens for new lives only: fly or coach there (border fees), live, work and open a shop; older lives cannot', () => {
+  const mk = (rules) => { const s = L.newGame(Object.assign({ seed: 2300, origin: 'nepo', goal: 'freestyle' }, rules ? { rules } : {})); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const old = mk(21); old.loc = 'ikeja'; old.cash = 5e6;
+  assert.equal(L.intercityOptions(old, 'accra').length, 0); assert.ok(!L.intercity(old, 'accra', 'flight').ok);
+  assert.ok(!L.moveHouse(old, 'acc_osu_flat').ok); assert.ok(!L.buyBusiness(old, 'pos', 'acc_osu').ok);
+  const s = mk(); assert.ok(s.rules >= 22); s.cash = 5e6;
+  s.t = s.t - (s.t % 1440) + 1440 + 9 * 60; s.loc = 'oshodi';
+  const r = L.intercity(s, 'accra', 'bus'); assert.ok(r.ok, r.msg); assert.equal(L.cityOf(s), 'accra');
+  assert.ok(s.ledger.some(e => /Border stamping/.test(e.memo)));
+  while (s.pending.length) L.resolveChoice(s, 0);
+  assert.ok(L.buyBusiness(s, 'pos', 'acc_osu').ok);
+  const o = L.travelOptions(s, 'acc_central').find(x => !x.disabled); assert.ok(o); L.travel(s, 'acc_central', o.mode); while (s.pending.length) L.resolveChoice(s, 0);
+  const g = L.availableActions(s).find(a => a.gig && !a.disabled); if (g) L.doAction(s, g.id);
+  const back = L.intercityOptions(s, 'lagos'); assert.equal(back.length, 2);
+  // A life that gets there by its own moves replays to the same seal.
+  const q = mk(); let guard = 0;
+  while (q.loc !== 'oshodi' && guard++ < 5) { const t = L.travelOptions(q, 'oshodi').filter(x => !x.disabled).sort((x, y) => x.cost - y.cost)[0]; if (!t) break; L.travel(q, 'oshodi', t.mode); while (q.pending.length) L.resolveChoice(q, 0); }
+  while (L.hour(q) < 6 || L.hour(q) >= 19) { L.wait(q, 60); while (q.pending.length) L.resolveChoice(q, 0); }
+  const go = L.intercity(q, 'accra', 'bus'); while (q.pending.length) L.resolveChoice(q, 0);
+  if (go.ok) assert.equal(L.cityOf(q), 'accra');
+  const rp = L.replayLife(q.replay); assert.equal(rp.ledgerHash, q.ledgerHash);
+  for (const p of D.PLACES.filter(p => L.districtCity(p.district) === 'accra')) assert.ok(p.nogem, p.id);
+  for (const a of Object.keys(D.CITIES)) for (const b of Object.keys(D.CITIES)) if (a !== b) assert.ok(D.INTERCITY.bus.mins[a + '-' + b] > 0, a + '-' + b);
 });

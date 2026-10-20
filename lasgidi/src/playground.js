@@ -34,7 +34,9 @@
     abuja: { box: [-3, 35, -3, 28], land: [[[-3, -3], [35, -3], [35, 28], [-3, 28]]],
       water: [[[4.6, 12.8], [6.4, 12.4], [8.8, 12.9], [9.4, 14.0], [8.2, 15.0], [5.6, 14.9], [4.4, 14.0]]], label: [['Jabi Lake', 6.9, 13.8]] },
     ph: { box: [-2, 32, -2, 26], land: [[[-2, -2], [32, -2], [32, 8], [28, 12.5], [25, 17.5], [20.5, 21], [16.5, 21.6], [12, 21.2], [6, 19.8], [-2, 19]]],
-      water: [[[22.4, 13.6], [27.2, 12.6], [27.6, 13.4], [22.8, 14.6]]], label: [['Bonny River', 18, 24], ['Amadi Creek', 25.4, 14.6]] }
+      water: [[[22.4, 13.6], [27.2, 12.6], [27.6, 13.4], [22.8, 14.6]]], label: [['Bonny River', 18, 24], ['Amadi Creek', 25.4, 14.6]] },
+    accra: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 21], [28, 22.4], [24, 22.6], [18, 22.2], [12, 23.0], [8, 24.2], [4, 24.4], [-2, 22]]],
+      water: [[[2.4, 18.8], [5.0, 18.7], [5.6, 19.8], [4.4, 21.0], [2.8, 20.6]]], label: [['Gulf of Guinea', 16, 25.4], ['Korle Lagoon', 3.4, 20.2]] }
   };
 
   // Glass and stone tints for VI's towers, so the skyline isn't one grey wall.
@@ -68,12 +70,22 @@
     ph_transamadi:{ h: [6, 14], dens: 0.7, r: 3.2, foot: [0.75, 0.95], roof: '#7c8a8f', wall: '#a7a49c' },
     ph_dline:    { h: [4, 10], dens: 0.9, r: 2.8, foot: [0.65, 0.9], roof: '#8f5a3c', wall: '#bfa58a' },
     ph_oldgra:   { h: [5, 12], dens: 0.6, r: 3.0, foot: [0.55, 0.8], roof: '#9c6a4a', wall: '#cdb69c', trees: 0.3 },
-    ph_borokiri: { h: [4, 9], dens: 0.75, r: 2.6, foot: [0.6, 0.85], roof: '#c7a27a', wall: '#a8835c' }
+    ph_borokiri: { h: [4, 9], dens: 0.75, r: 2.6, foot: [0.6, 0.85], roof: '#c7a27a', wall: '#a8835c' },
+    acc_airport:  { h: [8, 30], dens: 0.5, r: 3.2, foot: [0.55, 0.8], roof: '#b8c4cc', wall: '#8a98a4' },
+    acc_legon:    { h: [4, 14], dens: 0.4, r: 3.0, foot: [0.5, 0.75], roof: '#c9b48a', wall: '#a8956c', trees: 0.4 },
+    acc_eastlegon:{ h: [3, 8], dens: 0.45, r: 3.0, foot: [0.55, 0.8], roof: '#9a6a4a', wall: '#e9e2d4', trees: 0.35 },
+    acc_circle:   { h: [4, 12], dens: 0.8, r: 2.8, foot: [0.6, 0.85], roof: '#b07a52', wall: '#c9b8a0' },
+    acc_osu:      { h: [4, 14], dens: 0.7, r: 2.8, foot: [0.55, 0.8], roof: '#c0563a', wall: '#e9d8c0', trees: 0.15 },
+    acc_labadi:   { h: [3, 8], dens: 0.55, r: 2.6, foot: [0.55, 0.8], roof: '#c7a27a', wall: '#e8dcc4', trees: 0.25 },
+    acc_central:  { h: [5, 16], dens: 0.8, r: 2.8, foot: [0.6, 0.85], roof: '#a87850', wall: '#d6c4a8' },
+    acc_jamestown:{ h: [3, 7], dens: 0.85, r: 2.4, foot: [0.6, 0.9], roof: '#b06a40', wall: '#c8a888' },
+    acc_korlebu:  { h: [4, 10], dens: 0.6, r: 2.4, foot: [0.6, 0.85], roof: '#c0b8a8', wall: '#e8e4dc', trees: 0.2 }
   };
   // Typical share of time each district has light.
   var GRID = { vi: 0.9, ikoyi: 0.95, lekki: 0.75, island: 0.6, ikeja: 0.6, yaba: 0.5, surulere: 0.55, festac: 0.55, ajah: 0.6, mushin: 0.35, oshodi: 0.4, ikorodu: 0.4,
     abj_kubwa: 0.5, abj_maitama: 0.92, abj_wuse: 0.75, abj_jabi: 0.75, abj_asokoro: 0.95, abj_garki: 0.85, abj_nyanya: 0.45, abj_airport: 0.8,
-    ph_airport: 0.7, ph_choba: 0.45, ph_rumuokoro: 0.45, ph_gra: 0.75, ph_transamadi: 0.65, ph_dline: 0.4, ph_oldgra: 0.55, ph_borokiri: 0.45 };
+    ph_airport: 0.7, ph_choba: 0.45, ph_rumuokoro: 0.45, ph_gra: 0.75, ph_transamadi: 0.65, ph_dline: 0.4, ph_oldgra: 0.55, ph_borokiri: 0.45,
+    acc_airport: 0.7, acc_legon: 0.5, acc_eastlegon: 0.65, acc_circle: 0.45, acc_osu: 0.5, acc_labadi: 0.5, acc_central: 0.45, acc_jamestown: 0.35, acc_korlebu: 0.5 };
   var FERRIES = [['ikorodu', 'island'], ['ikorodu', 'ikoyi'], ['island', 'lekki'], ['ikoyi', 'lekki']];
 
   function inPoly(x, y, pts) {
@@ -547,6 +559,7 @@
       });
       }
       if (CITY === 'abuja') drawAbuja(g, s);
+      if (CITY === 'accra') drawAccra(g, s);
       if (CITY === 'ph') drawPH(g, s);
 
       // Estate plots: a paved pad, lawns for duplexes and the mansion, a pool.
@@ -764,6 +777,14 @@
       poly(g, [[13.2, 9.6], [14.4, 9.6], [14.4, 10.0], [13.2, 10.0]], theme.road); // Garrison flyover deck
       var z = toScreen(19.4, 9.4, 0); g.beginPath(); g.ellipse(z.x, z.y, 0.9 * TW * s * 0.5, 0.7 * TH * s * 0.5, 0, 0, Math.PI * 2); g.fillStyle = theme.dark ? '#2f4a2c' : '#7fb35f'; g.fill(); // zoo grounds
       drawBuilding(g, { x: 10.8, y: 12.2, w: 0.7, dep: 0.5, h: 6, wall: '#d9c38f', roof: '#8a6a3a' }, s, 0, true); // cultural centre
+    }
+    function drawAccra(g, s) {
+      // The Black Star Gate on Independence Square, La beach, the Jamestown lighthouse and the Ring Road.
+      var gt = toScreen(13.6, 21.6, 0); g.fillStyle = theme.dark ? '#c9c2b4' : '#f1ece2'; g.fillRect(gt.x - 9 * s, gt.y - 16 * s, 4 * s, 16 * s); g.fillRect(gt.x + 5 * s, gt.y - 16 * s, 4 * s, 16 * s); g.fillRect(gt.x - 10 * s, gt.y - 20 * s, 20 * s, 5 * s);
+      g.fillStyle = '#17181a'; g.beginPath(); for (var k = 0; k < 10; k++) { var a = -Math.PI / 2 + k * Math.PI / 5, r = (k % 2 ? 1.2 : 2.8) * s; g.lineTo(gt.x + Math.cos(a) * r, gt.y - 23 * s + Math.sin(a) * r); } g.closePath(); g.fill();
+      poly(g, [[22.4, 21.6], [27.6, 21.6], [27.8, 22.4], [22.2, 22.6]], theme.sand || '#e8d6a8'); // La beach
+      var lh = toScreen(6.4, 22.8, 0); [0, 1, 2, 3].forEach(function (i) { g.fillStyle = i % 2 ? '#ffffff' : '#c0392b'; g.fillRect(lh.x - 2 * s, lh.y - (i + 1) * 5 * s, 4 * s, 5 * s); }); // lighthouse
+      g.strokeStyle = theme.road; g.lineWidth = Math.max(1, 2 * s); g.beginPath(); [[8, 10], [14, 8], [19, 11], [19, 16], [13, 17], [8, 15], [8, 10]].forEach(function (p, i) { var c = toScreen(p[0], p[1], 0); if (i) g.lineTo(c.x, c.y); else g.moveTo(c.x, c.y); }); g.stroke(); // Ring Road
     }
     function drawHydePark(g, s) {
       var B = D.HYDE_PARK.box, x0 = B[0], y0 = B[1], x1 = B[2], y1 = B[3];
