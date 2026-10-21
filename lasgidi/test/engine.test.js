@@ -2834,7 +2834,7 @@ test('rules 21: three daily goals, the same for a seed and day; a capped reward 
     const x = acts[i % Math.max(1, acts.length)]; if (x) L.doAction(s, x.id); else L.wait(s, 60);
     while (s.pending.length) L.resolveChoice(s, 0);
   }
-  for (const e of s.ledger) if (/Daily goals/.test(e.memo)) { paid++; const d = Math.floor(e.t / 1440); assert.ok(!days[d], 'once a day'); days[d] = 1; assert.ok(e.amt <= L.price(s, D.GOAL_REWARD) * 1.01); }
+  for (const e of s.ledger) if (/Daily goals/.test(e.memo)) { paid++; const m = /day (\d+)/.exec(e.memo), d = m ? +m[1] - 1 : Math.floor(e.t / 1440); assert.ok(!days[d], 'once a day'); days[d] = 1; assert.ok(e.amt <= L.price(s, D.GOAL_REWARD) * 1.01); }
   assert.ok(paid > 0, 'goals can be finished');
   const r = L.replayLife(s.replay); assert.equal(r.ledgerHash, s.ledgerHash);
 });
@@ -2930,4 +2930,36 @@ test('rules 24: the Club Cup is not a weekly income, even for the best player', 
   assert.ok(ev(s24) < fee(s24), 'expected Cup winnings stay below the entry fee');
   assert.ok(ev(s23) > ev(s24), 'rules 23 lives keep the bigger purses');
   assert.equal(L.golfPrize(s23, -4).cash, L.price(s23, 4000000));
+});
+
+test('rules 24: London trips respect the visa end; no double fare leaving at midnight; a jet takes the long-haul time', () => {
+  const mk = () => { const s = L.newGame({ seed: 2400, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.bank = 6e6; assert.ok(L.applyVisa(s).ok); s.cash = 5e6; return s; };
+  // Fly in on the visa's last evening: refused, you would land already overstaying.
+  const a = mk(), until = a.visa.ldn.until; a.loc = 'ikeja'; a.t = until * 1440 + 21 * 60;
+  assert.match(L.intercityOptions(a, 'ldn')[0].disabled || '', /runs out before you land/);
+  a.t = (until - 2) * 1440 + 9 * 60; assert.ok(!L.intercityOptions(a, 'ldn')[0].disabled);
+  assert.ok(L.intercity(a, 'ldn', 'flight').ok);
+  // Leave on the last day at 22:00: one fare, not two.
+  a.t = until * 1440 + 22 * 60; a.loc = D.CITIES.ldn.airport; while (a.pending.length) L.resolveChoice(a, 0);
+  const n0 = a.ledger.filter(e => /UK visa ran out/.test(e.memo)).length;
+  assert.ok(L.intercity(a, 'lagos', 'flight').ok); assert.equal(L.cityOf(a), 'lagos');
+  assert.equal(a.ledger.filter(e => /UK visa ran out/.test(e.memo)).length, n0, 'no second flight home');
+  assert.equal(a.transit, undefined);
+  // A charter jet to London takes the long-haul time.
+  const b = mk(); b.t += 6 * 1440; b.loc = 'ikeja'; const q = L.jetQuote(b, 'ldn', true);
+  assert.ok(q.mins >= 480, String(q.mins));
+});
+
+test('rules 24: an activity that runs past midnight counts for the day it started', () => {
+  const s = L.newGame({ seed: 2100, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  let crossed = 0;
+  for (let i = 0; i < 600 && crossed < 3; i++) {
+    const d0 = L.day(s), before = s.goals && s.goals.day === d0 && !s.goals.done ? JSON.stringify(s.goals.have) : null;
+    const acts = L.availableActions(s).filter(x => !x.disabled && !x.atHome), x = acts[i % Math.max(1, acts.length)];
+    if (x) L.doAction(s, x.id); else L.wait(s, 60);
+    while (s.pending.length) L.resolveChoice(s, 0);
+    if (x && L.day(s) !== d0 && before != null && s.goals.day === d0) { crossed++; assert.notEqual(JSON.stringify(s.goals.have), before, 'the late activity counted for day ' + d0); }
+  }
+  assert.ok(crossed > 0, 'the run had a late activity to check');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
