@@ -1,5 +1,6 @@
 # Publish the Lasgidi game (lasgidi/) to GitHub Pages: free hosting with HTTPS.
-# One-time setup in the repository: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# The built site is pushed to the gh-pages branch. GitHub usually turns Pages on for that branch by itself; if the site
+# 404s, set Settings → Pages → Build and deployment → Source: "Deploy from a branch", branch gh-pages, folder / (root).
 # Optional custom domain (for example gidilife.app): set a repository variable LASGIDI_DOMAIN, then add the DNS records
 # in lasgidi/docs/HOSTING.md. Runs on pushes to main that touch the game, or by hand from the Actions tab.
 name: Lasgidi on GitHub Pages
@@ -11,9 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: lasgidi-pages
@@ -46,16 +45,12 @@ jobs:
           if [ -n "${{ vars.LASGIDI_SUPABASE_URL }}" ] && [ -n "${{ vars.LASGIDI_SUPABASE_ANON }}" ]; then
             printf 'window.LASGIDI_ONLINE = { url: %s, anon: %s };\n' "$(node -e 'console.log(JSON.stringify(process.argv[1]))' "${{ vars.LASGIDI_SUPABASE_URL }}")" "$(node -e 'console.log(JSON.stringify(process.argv[1]))' "${{ vars.LASGIDI_SUPABASE_ANON }}")" > ../_site/src/online-config.js
           fi
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish to the gh-pages branch
+        working-directory: _site
+        run: |
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Publish Lasgidi from ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
