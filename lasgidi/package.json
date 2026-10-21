@@ -4,7 +4,7 @@
   "private": true,
   "description": "A Lagos life simulator that runs on any phone, even offline.",
   "scripts": {
-    "test": "node --test test/engine.test.js test/gov.test.js test/chat.test.js test/server.test.js",
+    "test": "node --test test/engine.test.js test/gov.test.js test/chat.test.js test/server.test.js test/shim.test.js",
     "shop": "node server/server.js",
     "shop:restore": "node server/restore.js",
     "build": "node tools/build-single.js",
@@ -12,6 +12,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "terser": "^5.51.2",
     "three": "^0.158.0"
   }

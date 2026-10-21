@@ -42,6 +42,10 @@ jobs:
           cp dist/lasgidi.html ../_site/play.html
           touch ../_site/.nojekyll
           if [ -n "${{ vars.LASGIDI_DOMAIN }}" ]; then echo "${{ vars.LASGIDI_DOMAIN }}" > ../_site/CNAME; fi
+          # Online features (optional): your Supabase project's URL and public anon key, from repository variables.
+          if [ -n "${{ vars.LASGIDI_SUPABASE_URL }}" ] && [ -n "${{ vars.LASGIDI_SUPABASE_ANON }}" ]; then
+            printf 'window.LASGIDI_ONLINE = { url: %s, anon: %s };\n' "$(node -e 'console.log(JSON.stringify(process.argv[1]))' "${{ vars.LASGIDI_SUPABASE_URL }}")" "$(node -e 'console.log(JSON.stringify(process.argv[1]))' "${{ vars.LASGIDI_SUPABASE_ANON }}")" > ../_site/src/online-config.js
+          fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

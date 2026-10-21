@@ -705,6 +705,10 @@ The engine is deterministic: all randomness comes from a seeded PRNG kept in the
 - **Where to read it:** a Safety and privacy card on the start screen and in the Guide app spells all of this out.
 - **Background:** `docs/REVIEW.md` section 6 compares this with a field review of Lagos Life.
 
+## Hosting on your own site
+
+`lasgidi/docs/HOSTING.md` covers free hosting on GitHub Pages (there's a ready workflow in `.github/workflows/lasgidi-pages.yml`), Netlify or Cloudflare Pages, a custom domain such as gidilife.app, and online features through a free Supabase project. `src/claude-shim.js` gives the game the same `window.claude` surface it uses on claude.ai, backed by Supabase with anonymous sign-in. `supabase/schema.sql` holds the tables and row-level security, which mirror the artifact's rules. The shim is never loaded on claude.ai, so the artifact build is unchanged.
+
 ## Real-cash cosmetics and wallet top-ups: the Style shop (self-hosted only)
 
 Real money buys **cosmetics**, in three kinds, and you wear one of each: name-tag colours for your @handle in live rooms and on the cruise; accessories drawn over your own avatar on your phone, in rooms and on the cruise (dark shades, a gold rope chain, a snapback cap, studio headphones); and house paint for your home's walls in the home designer and your home pin on the map (sage, terracotta, sky blue). Prices run from ₦1,500 to ₦3,000 ($1.99 to $3.99). What you wear is kept in this browser (`lasgidi.wear.v1`), never in a life's state. They never buy naira, status, skills or anything that changes a life, so the Hall of Fame and Weekly Lagos stay fair and money stays hard to make. The claude.ai artifact build has no shop at all.

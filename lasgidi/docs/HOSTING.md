@@ -7,10 +7,10 @@ Lasgidi is static files, so free hosts can serve it. The repository has a GitHub
 | | claude.ai artifact | Your own site (GitHub Pages, Netlify, Cloudflare Pages) |
 |---|---|---|
 | The whole single-player game, 3D, offline play, saves | ✅ | ✅ |
-| Hall of Fame, weekly board, chat, live players, governor race, shared ads | ✅ | ❌ (these use the claude.ai sign-in and shared storage) |
+| Hall of Fame, weekly board, chat, live players, governor race, shared ads | ✅ | ✅ with a free Supabase project (below); otherwise ❌ |
 | Real-money Style shop and top-ups | ❌ | Only with the Node shop server running somewhere (`npm run shop`) |
 
-On your own site the game runs alone in each player's browser. Saves stay on their device. Shared boards and chat need claude.ai, or a backend added later.
+Without the online setup below, the game on your own site runs alone in each player's browser, and saves stay on the device.
 
 ## Option 1: GitHub Pages (free, HTTPS, deploys on every push)
 
@@ -39,6 +39,29 @@ You have to own the domain first. `.app` domains cost money at any registrar (Na
 4. To add a custom domain, use the host's **Domain settings**. It shows you the DNS records to add.
 
 If you only want a single file, `dist/lasgidi.html` runs on its own on any static host.
+
+## Online features on your own site (free Supabase project)
+
+Hall of Fame, the weekly board, chat, live players on the map, the governor race, sea plots, ads, gifts, homes and player shops can all run on your own site. They use a free [Supabase](https://supabase.com) project. Players sign in anonymously, one id per device, with no email or password. The database enforces the same rules as the claude.ai version: anyone can read, each player writes only their own records, and a few collections are editor-only. The Hall of Fame still replays every life move by move before ranking it.
+
+1. **Create a project.** At supabase.com, make a free account and a new project. Any region near your players is fine, for example London or Frankfurt for Lagos.
+2. **Turn on anonymous sign-in.** In **Authentication → Sign In / Providers**, switch **Anonymous sign-ins** on.
+3. **Create the tables and rules.** Open the **SQL editor**, paste all of `lasgidi/supabase/schema.sql`, and click **Run**. It is safe to run again later.
+4. **Copy two values.** In **Project Settings → API**, copy the **Project URL** and the **anon public** key. The anon key is meant to be public: the database rules are what protect the data. Never use the `service_role` key in the game.
+5. **Add them to the repository.** In **Settings → Secrets and variables → Actions → Variables**, add `LASGIDI_SUPABASE_URL` and `LASGIDI_SUPABASE_ANON`.
+6. **Deploy.** Run the **Lasgidi on GitHub Pages** workflow. The site now has online features.
+7. **Make yourself the editor**, so you can review ads, sea-plot pictures, photos and reports.
+   - Open your site once.
+   - Find your id in the Supabase dashboard under **Authentication → Users** (the newest anonymous user is you).
+   - In the SQL editor run `insert into public.admins values ('<your id>');`.
+
+**Good to know**
+
+- **Names:** player names are the names players give themselves in the game, passed through the game's chat filter. There are no account names.
+- **Ids:** an id belongs to the browser. Clearing site data, or using another phone, gives a new id. Saves can still be moved with the game's save code.
+- **Chat:** messages are kept for at most 10 minutes, then deleted by a scheduled job. The database stamps who sent each one, so a message can't claim to be from someone else.
+- **Presence:** where players stand on the map is self-reported, the same as on claude.ai. The game treats it as untrusted and checks it.
+- **Free tier:** Supabase's free plan allows 50,000 monthly active users, a 500 MB database and limited Realtime connections. A free project pauses after a week with no activity, and you wake it from the dashboard.
 
 ## Keep in mind
 

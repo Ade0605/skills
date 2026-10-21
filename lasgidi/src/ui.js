@@ -420,7 +420,7 @@
     window.claude.use('user').then(function (u) {
       if (!u) return;
       online.user = u;
-      u.id().then(function (id) { online.me = id; scheduleRender(); subscribeMyReview(); });
+      u.id().then(function (id) { online.me = id; scheduleRender(); subscribeMyReview(); if (typeof u.setName === 'function' && S && S.name) u.setName(CH.clean ? CH.clean(S.name) : S.name); });
       if (typeof u.canEdit === 'function') u.canEdit().then(function (c) { online.canEdit = !!c; scheduleRender(); if (c) { subscribeReviews(); subscribeReports(); } }, function () {});
       u.can('data.write').then(function (c) { online.canWrite = c; scheduleRender(); });
     });
@@ -615,6 +615,7 @@
     return '<div class="list"><div class="item"><div><h3>🏪 Player shops in ' + esc(D.DISTRICTS[pl.district].name) + '</h3></div></div>' + rows.map(function (r) { return '<div class="item"><div><h3>' + esc(r[0]) + '</h3><div class="meta"><span>' + esc(r[1]) + '</span></div></div>' + (r[2] || '') + '</div>'; }).join('') + '</div>';
   }
   function syncPresence() {
+    if (online.user && typeof online.user.setName === 'function' && S && S.name && online.sentName !== S.name) { online.sentName = S.name; online.user.setName(CH.clean ? CH.clean(S.name) : S.name); } // own-site online: your game name is your profile name
     if (!online.room) return;
     var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null, pt = myParty();
     var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : S && S.room && L.roomIn(S, S.room.id) ? 'room:' + S.room.id + ':' + S.room.spot : ui.visit || null, a: S ? myActivity() : null, biz: S ? myBiz() : null };
