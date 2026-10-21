@@ -15,8 +15,8 @@ Without the online setup below, the game on your own site runs alone in each pla
 ## Option 1: GitHub Pages (free, HTTPS, deploys on every push)
 
 1. Merge the pull request into `main`.
-2. In the repository, open **Settings → Pages**. Under *Build and deployment*, set **Source** to **GitHub Actions**.
-3. Open **Actions → "Lasgidi on GitHub Pages" → Run workflow**, or push any change under `lasgidi/`.
+2. Open **Actions → "Lasgidi on GitHub Pages" → Run workflow**, or push any change under `lasgidi/`. The workflow builds the game, runs the tests and pushes the site to the `gh-pages` branch.
+3. GitHub usually turns Pages on for `gh-pages` by itself. If the address below shows a 404 after a few minutes, open **Settings → Pages** and under *Build and deployment* set **Source** to **Deploy from a branch**, branch **gh-pages**, folder **/ (root)**, then Save.
 4. The site goes live at `https://ade0605.github.io/skills/`. `play.html` is the single-file build.
 
 ### Use your own domain, such as gidilife.app
