@@ -612,7 +612,7 @@
     (online.peerList || []).forEach(function (p) { if (p.by === online.me || online.muted[p.by]) return; live[p.by] = true; (p.biz || []).forEach(function (x) { if (x[1] === pl.district) add(p.by, x[0], x[2], handleOf(p.by) + ' · online now', pshopBtn(p.by, x)); }); });
     Object.keys(online.homes || {}).forEach(function (by) { if (by === online.me || online.muted[by] || live[by]) return; var raw = online.homes[by]; cleanBiz(raw && raw.biz).forEach(function (x) { if (x[1] === pl.district) add(by, x[0], x[2], handleOf(by), pshopBtn(by, x)); }); });
     if (!rows.length) return '';
-    return '<div class="list"><div class="item"><div><h3>🏪 Player shops in ' + esc(D.DISTRICTS[pl.district].name) + '</h3></div></div>' + rows.map(function (r) { return '<div class="item"><div><h3>' + esc(r[0]) + '</h3><div class="meta"><span>' + esc(r[1]) + '</span></div></div>' + (r[2] || '') + '</div>'; }).join('') + '</div>';
+    return '<div class="list"><div class="item"><div><h3>🏪 Player shops in ' + esc(D.DISTRICTS[pl.district].name) + '</h3></div></div>' + rows.map(function (r) { return '<div class="item"><div><h3 class="clip" title="' + esc(r[0]) + '">' + esc(r[0]) + '</h3><div class="meta"><span>' + esc(r[1]) + '</span></div></div>' + (r[2] || '') + '</div>'; }).join('') + '</div>';
   }
   function syncPresence() {
     if (online.user && typeof online.user.setName === 'function' && S && S.name && online.sentName !== S.name) { online.sentName = S.name; online.user.setName(CH.clean ? CH.clean(S.name) : S.name); } // own-site online: your game name is your profile name

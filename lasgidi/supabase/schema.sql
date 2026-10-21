@@ -51,7 +51,7 @@ create policy admins_self on public.admins for select using (id = auth.uid());
 drop policy if exists docs_read on public.docs;
 create policy docs_read on public.docs for select using (
   case
-    when coll = 'reports' then public.is_admin()
+    when coll = 'reports' then owner = auth.uid() or public.is_admin() -- your own (an upsert needs it), never anyone else's
     when coll in ('adreview', 'seareview', 'photoreview') then owner = auth.uid() or public.is_admin()
     else true
   end);
