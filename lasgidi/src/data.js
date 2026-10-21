@@ -62,6 +62,15 @@
     ldn_westminster:{ city: 'ldn', name: 'Westminster',   x: 18, y: 12, side: 'mainland', blurb: 'Big Ben, Parliament and the Palace up the Mall.' },
     ldn_southbank: { city: 'ldn', name: 'South Bank',     x: 18, y: 17, side: 'mainland', blurb: 'The London Eye, the river walk and St Thomas\' Hospital.' },
     ldn_tower:     { city: 'ldn', name: 'Tower Hill',     x: 25, y: 12, side: 'mainland', blurb: 'Tower Bridge and the old Tower over the river.' },
+    // Dubai (rules 26): a visit, with a UAE tourist visa. The Gulf is to the north-west.
+    dxb_marina:   { city: 'dxb', name: 'Dubai Marina', x: 3,  y: 22, side: 'mainland', blurb: 'Towers round a man-made marina, JBR beach and the walk.' },
+    dxb_palm:     { city: 'dxb', name: 'The Palm',     x: 5,  y: 12, side: 'mainland', blurb: 'The palm-shaped island: villas on the fronds and a boardwalk round the crescent.' },
+    dxb_jumeirah: { city: 'dxb', name: 'Jumeirah',     x: 12, y: 14, side: 'mainland', blurb: 'Kite beach, villas and the sail-shaped hotel out on its island.' },
+    dxb_downtown: { city: 'dxb', name: 'Downtown',     x: 17, y: 16, side: 'mainland', blurb: 'The Burj Khalifa, the fountain and a mall the size of a town.' },
+    dxb_creek:    { city: 'dxb', name: 'Bur Dubai',    x: 20, y: 7,  side: 'mainland', blurb: 'The old town on the Creek: wind towers, the textile souk and the abras.' },
+    dxb_deira:    { city: 'dxb', name: 'Deira',        x: 26, y: 4,  side: 'mainland', blurb: 'The gold and spice souks, cheap hotels and a lot of Naija traders.' },
+    dxb_airport:  { city: 'dxb', name: 'DXB Airport',  x: 28, y: 10, side: 'mainland', blurb: 'One of the busiest airports in the world, open all night.' },
+    dxb_desert:   { city: 'dxb', name: 'The desert',   x: 24, y: 23, side: 'mainland', blurb: 'Red dunes past the last road: 4x4s, camels and a camp under the stars.' },
     ldn_peckham:   { city: 'ldn', name: 'Peckham',        x: 22, y: 22, side: 'mainland', blurb: 'Rye Lane: Naija shops, jollof, salons and church on Sunday.' }
   };
 
@@ -263,6 +272,8 @@
   // Somewhere to sleep away from home. where: which districts offer each tier.
   var LODGING = {
     ldnhotel: { name: 'London hotel room', icon: '🏨', price: 240000, sleep: 1.0, gen: false, fx: { hygiene: 30 }, where: ['ldn_heathrow', 'ldn_wembley', 'ldn_notting', 'ldn_oxford', 'ldn_westminster', 'ldn_southbank', 'ldn_tower', 'ldn_peckham'] },
+    dxbhotel: { name: 'Dubai hotel room', icon: '🏨', price: 170000, sleep: 1.0, gen: false, fx: { hygiene: 30 }, where: ['dxb_marina', 'dxb_palm', 'dxb_jumeirah', 'dxb_downtown', 'dxb_creek', 'dxb_deira', 'dxb_airport'] },
+    dxbhostel: { name: 'Bunk in a Deira guesthouse', icon: '🛏️', price: 40000, sleep: 0.85, gen: false, fx: { hygiene: 16, social: 4 }, where: ['dxb_deira', 'dxb_creek'] },
     ldnbnb: { name: 'Room at an aunty\'s in Peckham', icon: '🛏️', price: 60000, sleep: 0.9, gen: false, fx: { hygiene: 20, social: 6 }, where: ['ldn_peckham'] },
     guest:    { name: 'Guest house',         icon: '🛏️', price: 8000,   sleep: 0.8,  where: ['ikorodu', 'mushin', 'oshodi', 'festac', 'ajah', 'abj_nyanya', 'abj_kubwa', 'ph_borokiri', 'ph_dline', 'ph_rumuokoro', 'ph_choba'] },
     hotel:    { name: 'Hotel room',          icon: '🏨', price: 35000,  sleep: 1.0,  gen: true, fx: { hygiene: 30 }, where: ['ikeja', 'surulere', 'yaba', 'island', 'ikoyi', 'vi', 'lekki', 'abj_maitama', 'abj_wuse', 'abj_jabi', 'abj_asokoro', 'abj_garki', 'abj_airport', 'ph_airport', 'ph_gra', 'ph_transamadi', 'ph_oldgra'] },
@@ -297,6 +308,7 @@
     ph:    { name: 'Port Harcourt', airport: 'ph_airport', park: 'ph_rumuokoro', hospital: 'ph_choba', hospitalName: 'the teaching hospital near Choba' },
     accra: { name: 'Accra', airport: 'acc_airport', park: 'acc_circle', hospital: 'acc_korlebu', hospitalName: 'Korle Bu Teaching Hospital', rules: 22, country: 'Ghana' },
     kumasi: { name: 'Kumasi', airport: 'kum_airport', park: 'kum_kejetia', hospital: 'kum_bantama', hospitalName: 'Komfo Anokye Teaching Hospital', rules: 25, country: 'Ghana' },
+    dxb:   { name: 'Dubai', airport: 'dxb_airport', park: 'dxb_airport', hospital: 'dxb_downtown', hospitalName: 'Rashid Hospital', rules: 26, country: 'UAE', visit: true },
     ldn:   { name: 'London', airport: 'ldn_heathrow', park: 'ldn_heathrow', hospital: 'ldn_southbank', hospitalName: 'St Thomas\' Hospital', rules: 23, country: 'UK', visit: true }
   };
   // Airport departures: cabin classes (fare multiples and how you arrive), city codes, jets, charters, choppers.
@@ -354,10 +366,14 @@
       ] }
   };
   CLUBS.abjgolf.acts = CLUBS.golf.acts.map(function (a) { return JSON.parse(JSON.stringify(a)); });
-  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR' };
+  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR', dxb: 'DXB' };
   // London (rules 23): prices are written in pounds and kept in naira at a fixed £1 = ₦2,000; the visa is a fee plus proof of funds.
   function gbp(p) { return Math.round(p * 2000); }
   var UK_VISA = { fee: 250000, funds: 3000000, wait: 5, days: 28, fare: 1200000, mins: 390 };
+  // Rules 26: a visa per visit-only city. The UAE tourist visa: a smaller fee, a shorter wait, 30 days.
+  var UAE_VISA = { name: 'UAE tourist visa', fee: 160000, funds: 1500000, wait: 3, days: 30, fare: 850000, mins: 375 };
+  var VISAS = { ldn: Object.assign({ name: 'UK visitor visa' }, UK_VISA), dxb: UAE_VISA };
+  function aed(p) { return Math.round(p * 420); } // a fixed ₦420 to the dirham
   var AIR = { rushFrom: 6, rushTo: 9, rush: 1.5, insure: 0.06, lostBag: 25000, lostOdds: 0.08, jetFuel: 5000000, charter: 12000000, chopperCity: 1500000, chopperIntercity: 4000000 };
   // Flight and bus times (minutes) and base fares between cities.
   var INTERCITY = {
@@ -379,6 +395,8 @@
     ['acc_osu', 'acc_labadi'], ['acc_osu', 'acc_central'], ['acc_central', 'acc_jamestown'], ['acc_central', 'acc_korlebu'], ['acc_korlebu', 'acc_jamestown'], ['acc_eastlegon', 'acc_labadi'],
     ['kum_airport', 'kum_manhyia'], ['kum_airport', 'kum_knust'], ['kum_manhyia', 'kum_kejetia'], ['kum_bantama', 'kum_kejetia'], ['kum_kejetia', 'kum_adum'], ['kum_kejetia', 'kum_knust'],
     ['kum_adum', 'kum_asokwa'], ['kum_adum', 'kum_ahodwo'], ['kum_bantama', 'kum_ahodwo'], ['kum_knust', 'kum_asokwa'], ['kum_asokwa', 'kum_bosomtwe'],
+    ['dxb_marina', 'dxb_palm'], ['dxb_marina', 'dxb_jumeirah'], ['dxb_palm', 'dxb_jumeirah'], ['dxb_jumeirah', 'dxb_downtown'], ['dxb_downtown', 'dxb_creek'], ['dxb_creek', 'dxb_deira'],
+    ['dxb_deira', 'dxb_airport'], ['dxb_downtown', 'dxb_airport'], ['dxb_downtown', 'dxb_desert'], ['dxb_airport', 'dxb_desert'], ['dxb_marina', 'dxb_desert'],
     ['ldn_heathrow', 'ldn_wembley'], ['ldn_heathrow', 'ldn_notting'], ['ldn_wembley', 'ldn_notting'], ['ldn_notting', 'ldn_oxford'], ['ldn_oxford', 'ldn_westminster'], ['ldn_westminster', 'ldn_southbank'], ['ldn_westminster', 'ldn_tower'], ['ldn_southbank', 'ldn_peckham'], ['ldn_tower', 'ldn_peckham']
   ];
   var FERRY_STOPS = ['ikorodu', 'island', 'ikoyi', 'lekki'];
@@ -387,7 +405,13 @@
   // You ride within one line; trains run 06:00 to 21:00 at a flat fare.
   var RAIL_LINES = {
     blue: { name: 'Blue Line', color: '#2f6fa0', stops: ['island', 'surulere', 'festac'] },
-    red:  { name: 'Red Line',  color: '#c0392b', stops: ['ikeja', 'oshodi', 'mushin', 'yaba'] }
+    red:  { name: 'Red Line',  color: '#c0392b', stops: ['ikeja', 'oshodi', 'mushin', 'yaba'] },
+    // Rules 26: the London Underground (and the Overground to Peckham). A flat fare; it runs until midnight.
+    piccadilly: { name: 'Piccadilly line', color: '#003688', stops: ['ldn_heathrow', 'ldn_notting', 'ldn_oxford'], rules: 26, fare: 5600, hours: [5, 24] },
+    central:    { name: 'Central line', color: '#dc241f', stops: ['ldn_notting', 'ldn_oxford', 'ldn_tower'], rules: 26, fare: 5600, hours: [5, 24] },
+    jubilee:    { name: 'Jubilee line', color: '#868f98', stops: ['ldn_wembley', 'ldn_westminster', 'ldn_southbank', 'ldn_tower'], rules: 26, fare: 5600, hours: [5, 24] },
+    bakerloo:   { name: 'Bakerloo line', color: '#b36305', stops: ['ldn_oxford', 'ldn_westminster', 'ldn_southbank'], rules: 26, fare: 5600, hours: [5, 24] },
+    overground: { name: 'Overground', color: '#ee7c0e', stops: ['ldn_southbank', 'ldn_peckham'], rules: 26, fare: 5600, hours: [5, 24] }
   };
   // 2022 commercial okada ban LGAs, mapped onto our districts.
   var OKADA_BAN = ['ikeja', 'surulere', 'yaba', 'island', 'ikoyi', 'vi', 'lekki'];
@@ -2083,6 +2107,31 @@
       act('rye_hair', 'Braids at a Rye Lane salon', 180, gbp(70), 0, { hygiene: 10, fun: 8, social: 8 }, null, { from: 9, to: 19 }),
       act('rye_family', 'Visit your cousin in Peckham', 120, 0, 0, { social: 30, fun: 10, stress: -10 }, null, { from: 12, to: 21 })
     ]],
+    // More London (rules 26 for the small paid work, which a visitor may do: a speaker's fee, a steward's day rate).
+    ['ldn_camden', '🧺', 'Camden Market', 'food', 'basket', 'ldn_oxford', 14.6, 5.6, null, 'Canal-side stalls: street food from everywhere, vintage jackets and loud music.', [
+      act('cam_food', 'Street food by the canal', 30, gbp(11), 0, { hunger: 32, fun: 6 }, null, { from: 10, to: 21 }),
+      act('cam_vintage', 'Dig through the vintage stalls', 60, gbp(25), 0, { fun: 14 }, null, { from: 10, to: 19 }),
+      act('cam_lock', 'Watch the boats through Camden Lock', 30, 0, 0, { fun: 6, stress: -6 }, null, { from: 8, to: 20 })
+    ]],
+    ['ldn_brixton', '🍲', 'Brixton Market', 'food', 'basket', 'ldn_peckham', 20.2, 21.0, null, 'Arcades of Caribbean and African food: jerk, suya, plantain and a lot of aunties.', [
+      act('brx_jerk', 'Jerk chicken, rice and peas', 30, gbp(12), 0, { hunger: 38, fun: 6 }, null, { from: 11, to: 22 }),
+      act('brx_shop', 'Buy egusi, palm oil and yam to take back', 30, gbp(18), 0, { fun: 6, social: 4 }, null, { from: 9, to: 19 }),
+      Object.assign(act('brx_steward', 'Steward at a diaspora food festival (a day rate)', 240, 0, 3000, { energy: -14, social: 8 }, null, { days: [5], from: 10, to: 20 }), { minRules: 26, permitted: true })
+    ]],
+    ['ldn_museum', '🏛️', 'The British Museum', 'culture', 'frame', 'ldn_oxford', 17.6, 6.6, null, 'Free to enter: the Rosetta Stone, the Egyptian rooms and the Benin Bronzes.', [
+      act('bm_tour', 'Walk the great court and the Egyptian rooms', 120, 0, 0, { fun: 16 }, { charisma: 1 }, { from: 10, to: 17 }),
+      act('bm_benin', 'See the Benin Bronzes, and wonder when they go home', 45, 0, 0, { fun: 8, stress: 4 }, null, { from: 10, to: 17 })
+    ]],
+    ['ldn_hydepark', '🌳', 'Hyde Park', 'outdoors', 'tree', 'ldn_notting', 13.4, 10.4, null, 'Lawns, the Serpentine lake and Speakers\' Corner on a Sunday.', [
+      act('hp_walk', 'Walk round the Serpentine', 60, 0, 0, { fun: 10, stress: -10 }, null, { from: 6, to: 21 }),
+      act('hp_boat', 'Hire a pedalo on the lake', 30, gbp(15), 0, { fun: 14, energy: -6 }, null, { from: 10, to: 18 }),
+      act('hp_speak', 'Listen at Speakers\' Corner', 45, 0, 0, { fun: 10, social: 6 }, null, { days: [6], from: 10, to: 17 })
+    ]],
+    ['ldn_canary', '🏢', 'Canary Wharf', 'services', 'tower', 'ldn_tower', 27.4, 13.6, null, 'Glass towers on the old docks: banks, a Naija professionals\' breakfast club and the river bus.', [
+      act('cw_walk', 'Walk the docks between the towers', 45, 0, 0, { fun: 6 }, null, { from: 7, to: 21 }),
+      act('cw_coffee', 'A flat white with the bankers', 15, gbp(4), 0, { fun: 4, energy: 6 }, null, { from: 7, to: 18 }),
+      Object.assign(act('cw_talk', 'Speak at a diaspora business breakfast (a small fee)', 120, 0, 3000, { social: 12, stress: 6 }, { charisma: 1 }, { days: [1, 3], from: 7, to: 11 }), { minRules: 26, permitted: true })
+    ]],
     ['ldn_church', '⛪', 'Grace Assembly, Peckham', 'services', 'dome', 'ldn_peckham', 22.8, 22.8, null, 'A Naija church in an old cinema: the choir, the pastor and jollof after.', [
       act('gap_service', 'Sunday service with the choir', 180, 0, 0, { social: 20, stress: -15, fun: 6 }, null, { days: [6], from: 9, to: 14 }),
       act('gap_offering', 'Give an offering', 15, gbp(20), 0, { social: 6, stress: -4 }, null, { days: [6], from: 9, to: 14 })
@@ -2140,6 +2189,59 @@
     ['acc_harbour', '🛶', 'Jamestown Fishing Harbour', 'outdoors', 'boat', 'acc_jamestown', 5.6, 23.6, null, 'Painted canoes, nets, fish-smoking ovens and the shouting of the auction.', [
       act('jth_canoes', 'Watch the canoes land the catch', 30, 0, 0, { fun: 8, stress: -4 }, null, { from: 6, to: 12 }),
       act('jth_smoked', 'Buy smoked herring off the ovens', 15, 1300, 0, { hunger: 14 }, null, { from: 7, to: 17 })
+    ]],
+    // Dubai (rules 26): a visit; nothing here pays. Real landmarks keep their names; businesses are made up.
+    ['dxb_burj', '🗼', 'Burj Khalifa and the Fountain', 'outdoors', 'tower', 'dxb_downtown', 17.6, 15.4, 'burj', 'The tallest building in the world, and the fountain that dances in front of it at night.', [
+      act('bk_top', 'Go up to the observation deck', 90, aed(170), 0, { fun: 26, stress: -4 }, null, { from: 9, to: 23 }),
+      act('bk_fountain', 'Watch the fountain show', 30, 0, 0, { fun: 14, social: 4 }, null, { from: 18, to: 23 }),
+      act('bk_photo', 'Photo with the tower behind you', 15, 0, 0, { fun: 6 }, null, { from: 8, to: 23 })
+    ]],
+    ['dxb_mall', '🛍️', 'Downtown Grand Mall', 'culture', 'film', 'dxb_downtown', 16.2, 16.8, null, 'Twelve hundred shops, an aquarium wall, an ice rink and a cinema.', [
+      act('dgm_window', 'Window-shop the designer floor', 90, 0, 0, { fun: 10, stress: 4 }, null, { from: 10, to: 24 }),
+      act('dgm_film', 'Catch a film in the big cinema', 150, aed(55), 0, { fun: 28, social: 6 }, null, { from: 11, to: 24 }),
+      act('dgm_skate', 'Ice skating in the desert', 60, aed(90), 0, { fun: 20, energy: -8 }, { fitness: 1 }, { from: 10, to: 22 }),
+      act('dgm_food', 'Food court lunch', 30, aed(45), 0, { hunger: 32 }, null, { from: 10, to: 23 })
+    ]],
+    ['dxb_gold', '💍', 'Deira Gold Souk', 'food', 'basket', 'dxb_deira', 25.4, 3.4, null, 'Lanes of windows full of gold: chains, bangles and wedding sets, sold by the gram.', [
+      act('gs_window', 'Window-shop the gold lanes', 45, 0, 0, { fun: 10 }, null, { from: 10, to: 22 }),
+      act('gs_chain', 'Haggle for a thin gold chain', 30, aed(700), 0, { fun: 14 }, { charisma: 1 }, { from: 10, to: 22 })
+    ]],
+    ['dxb_spice', '🌶️', 'Spice Souk', 'food', 'basket', 'dxb_deira', 25.4, 6.2, null, 'Sacks of saffron, dried lemons, frankincense and dates.', [
+      act('ss_buy', 'Buy saffron and dates to carry home', 30, aed(60), 0, { fun: 8, social: 4 }, null, { from: 9, to: 22 }),
+      act('ss_smell', 'Walk the spice lanes', 30, 0, 0, { fun: 6 }, null, { from: 9, to: 22 })
+    ]],
+    ['dxb_abra', '🛶', 'Abra station, Dubai Creek', 'outdoors', 'boat', 'dxb_creek', 21.6, 5.6, null, 'Wooden water taxis across the Creek for one dirham, as they have for a hundred years.', [
+      act('ab_cross', 'Cross the Creek by abra', 15, aed(1), 0, { fun: 8 }, null, { from: 5, to: 24 }),
+      act('ab_dhow', 'Dinner cruise on a dhow', 120, aed(150), 0, { fun: 24, hunger: 34, social: 8 }, null, { from: 19, to: 23 })
+    ]],
+    ['dxb_jbr', '🏖️', 'JBR Beach', 'outdoors', 'wave', 'dxb_marina', 2.4, 20.6, null, 'Soft sand under the Marina towers, warm water and a long beach walk.', [
+      act('jbr_swim', 'Swim and sunbathe', 120, 0, 0, { fun: 22, stress: -12, hygiene: -4 }, null, { from: 7, to: 19 }),
+      act('jbr_walk', 'Evening walk along the beach front', 45, 0, 0, { fun: 8, stress: -6 }, null, { from: 17, to: 23 })
+    ]],
+    ['dxb_marina_yacht', '🛥️', 'Dubai Marina walk', 'outdoors', 'yacht', 'dxb_marina', 4.2, 21.6, null, 'Yachts tied up under the towers, cafés along the water.', [
+      act('mw_cruise', 'An hour on a shared yacht trip', 60, aed(120), 0, { fun: 22, social: 8 }, null, { from: 10, to: 22 }),
+      act('mw_shisha', 'Mint tea by the water', 45, aed(30), 0, { fun: 8, stress: -6 }, null, { from: 16, to: 24 })
+    ]],
+    ['dxb_kite', '🏄', 'Kite Beach, Jumeirah', 'outdoors', 'umbrella', 'dxb_jumeirah', 11.4, 12.8, null, 'Kite surfers, a running track and the sail-shaped hotel out on the water.', [
+      act('kb_kite', 'A kite-surfing taster lesson', 90, aed(250), 0, { fun: 26, energy: -14 }, { fitness: 1 }, { from: 9, to: 17 }),
+      act('kb_run', 'Run the beach track at sunrise', 45, 0, 0, { energy: -10, stress: -8 }, { fitness: 1 }, { from: 5, to: 8 })
+    ]],
+    ['dxb_palm_walk', '🌴', 'Palm boardwalk', 'outdoors', 'wave', 'dxb_palm', 5.6, 11.0, null, 'A boardwalk round the crescent, with the whole city skyline across the water.', [
+      act('pb_walk', 'Walk the boardwalk at sunset', 60, 0, 0, { fun: 12, stress: -8 }, null, { from: 16, to: 21 }),
+      act('pb_view', 'Look back at the skyline', 15, 0, 0, { fun: 6 }, null, { from: 6, to: 23 })
+    ]],
+    ['dxb_safari', '🐪', 'Al Sahra Dunes Camp', 'outdoors', 'tree', 'dxb_desert', 24.6, 22.4, 'desert', 'Dune bashing in a 4x4, camel rides, sandboarding and dinner in a camp under the stars.', [
+      act('ds_dunes', 'Dune bashing in a 4x4', 60, aed(150), 0, { fun: 30, stress: 6 }, null, { from: 14, to: 19 }),
+      act('ds_camel', 'A camel ride over the dunes', 30, aed(60), 0, { fun: 14 }, null, { from: 8, to: 19 }),
+      act('ds_board', 'Sandboard down a dune', 45, aed(50), 0, { fun: 18, energy: -12 }, { fitness: 1 }, { from: 8, to: 18 }),
+      act('ds_dinner', 'Camp dinner and a show under the stars', 120, aed(120), 0, { hunger: 40, fun: 20, social: 10 }, null, { from: 19, to: 23 })
+    ]],
+    ['dxb_kitchen', '🍲', 'Mama Ngozi\'s Kitchen, Deira', 'food', 'bowl', 'dxb_deira', 26.6, 5.4, null, 'Jollof, egusi and pepper soup for the traders and the homesick. Nollywood on the TV.', [
+      act('mnk_jollof', 'Jollof rice and chicken', 30, aed(35), 0, { hunger: 40, fun: 6 }, null, { from: 11, to: 23 }),
+      act('mnk_gist', 'Gist with the traders about home', 45, 0, 0, { social: 16, fun: 6 }, null, { from: 12, to: 22 })
+    ]],
+    ['dxb_dxb', '✈️', 'Dubai International Airport', 'transport', 'plane', 'dxb_airport', 28.4, 9.4, null, 'Duty free the size of a mall, open all night. Flights home to Lagos.', [
+      act('dxb_duty', 'Browse duty free', 60, 0, 0, { fun: 8 }, null, { from: 0, to: 24 })
     ]],
     // Kumasi (rules 25): real landmarks keep their names; the businesses are made up.
     ['kum_kejetia_mkt', '🧺', 'Kejetia Market', 'food', 'basket', 'kum_kejetia', 12.4, 11.6, null, 'Thousands of stalls under new roofs: kente, beads, shea butter, tomatoes and car parts.', [
@@ -2250,7 +2352,7 @@
       act('bfj_canoe', 'Paddle a canoe round the creek', 45, 1500, 0, { fun: 12, energy: -6 }, { fitness: 1 }, { from: 7, to: 17 })
     ]]
   ].forEach(function (q) {
-    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^ldn_/.test(q[5]) ? 'london' : 'lagos'), text: q[9] };
+    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^ldn_/.test(q[5]) ? 'london' : /^dxb_/.test(q[5]) ? 'dubai' : 'lagos'), text: q[9] };
     if (q[8]) p.inside = q[8];
     CIVIC_PLACES.push(p);
     if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
@@ -2465,7 +2567,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, insideKind: insideKind
   };
 
   // Keyed tables have no prototype, so an id like 'constructor' or '__proto__' from a save, a replay or another player's
