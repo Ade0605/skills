@@ -44,6 +44,16 @@
     acc_central:  { city: 'accra', name: 'Accra Central', x: 11, y: 19, side: 'mainland', blurb: 'Makola Market, Independence Square and the old town.' },
     acc_jamestown:{ city: 'accra', name: 'Jamestown',    x: 7,  y: 22, side: 'mainland', blurb: 'The lighthouse, fishing canoes and boxing gyms.' },
     acc_korlebu:  { city: 'accra', name: 'Korle Bu',     x: 4,  y: 17, side: 'mainland', blurb: 'The teaching hospital by the Korle Lagoon.' },
+    // Kumasi (rules 25): the Garden City, the seat of the Asante kingdom.
+    kum_airport:  { city: 'kumasi', name: 'Airport Roundabout', x: 22, y: 5,  side: 'mainland', blurb: 'Kumasi airport, the Prempeh I Airport road and new hotels.' },
+    kum_manhyia:  { city: 'kumasi', name: 'Manhyia',      x: 14, y: 5,  side: 'mainland', blurb: 'The Asantehene\'s palace, the museum and the festival grounds.' },
+    kum_bantama:  { city: 'kumasi', name: 'Bantama',      x: 5,  y: 10, side: 'mainland', blurb: 'Komfo Anokye Teaching Hospital, compound houses and the royal mausoleum.' },
+    kum_kejetia:  { city: 'kumasi', name: 'Kejetia',      x: 12, y: 11, side: 'mainland', blurb: 'One of the biggest markets in West Africa and the main lorry park.' },
+    kum_adum:     { city: 'kumasi', name: 'Adum',         x: 13, y: 15, side: 'mainland', blurb: 'Banks, shops, the cultural centre and the busiest streets in town.' },
+    kum_knust:    { city: 'kumasi', name: 'KNUST',        x: 24, y: 13, side: 'mainland', blurb: 'The university of science and technology, its halls and Ayeduase.' },
+    kum_asokwa:   { city: 'kumasi', name: 'Asokwa',       x: 18, y: 19, side: 'mainland', blurb: 'Baba Yara Stadium side: workshops, chop bars and football.' },
+    kum_ahodwo:   { city: 'kumasi', name: 'Ahodwo',       x: 9,  y: 20, side: 'mainland', blurb: 'Quiet roads, big houses, hotels and the Golden Tulip roundabout.' },
+    kum_bosomtwe: { city: 'kumasi', name: 'Lake Bosomtwe', x: 26, y: 23, side: 'mainland', blurb: 'A crater lake in the hills: wooden planks for boats and fishing villages.' },
     // London (rules 23): visit only, with a UK visitor visa. Its own frame, the Thames across the middle.
     ldn_heathrow:  { city: 'ldn', name: 'Heathrow',       x: 2,  y: 11, side: 'mainland', blurb: 'Terminal 5 and the long walk to passport control.' },
     ldn_wembley:   { city: 'ldn', name: 'Wembley',        x: 8,  y: 4,  side: 'mainland', blurb: 'The arch, the stadium and match-day crowds.' },
@@ -286,6 +296,7 @@
     abuja: { name: 'Abuja', airport: 'abj_airport', park: 'abj_nyanya', hospital: 'abj_garki', hospitalName: 'National Hospital, Garki' },
     ph:    { name: 'Port Harcourt', airport: 'ph_airport', park: 'ph_rumuokoro', hospital: 'ph_choba', hospitalName: 'the teaching hospital near Choba' },
     accra: { name: 'Accra', airport: 'acc_airport', park: 'acc_circle', hospital: 'acc_korlebu', hospitalName: 'Korle Bu Teaching Hospital', rules: 22, country: 'Ghana' },
+    kumasi: { name: 'Kumasi', airport: 'kum_airport', park: 'kum_kejetia', hospital: 'kum_bantama', hospitalName: 'Komfo Anokye Teaching Hospital', rules: 25, country: 'Ghana' },
     ldn:   { name: 'London', airport: 'ldn_heathrow', park: 'ldn_heathrow', hospital: 'ldn_southbank', hospitalName: 'St Thomas\' Hospital', rules: 23, country: 'UK', visit: true }
   };
   // Airport departures: cabin classes (fare multiples and how you arrive), city codes, jets, charters, choppers.
@@ -343,7 +354,7 @@
       ] }
   };
   CLUBS.abjgolf.acts = CLUBS.golf.acts.map(function (a) { return JSON.parse(JSON.stringify(a)); });
-  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', ldn: 'LHR' };
+  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR' };
   // London (rules 23): prices are written in pounds and kept in naira at a fixed £1 = ₦2,000; the visa is a fee plus proof of funds.
   function gbp(p) { return Math.round(p * 2000); }
   var UK_VISA = { fee: 250000, funds: 3000000, wait: 5, days: 28, fare: 1200000, mins: 390 };
@@ -351,7 +362,7 @@
   // Flight and bus times (minutes) and base fares between cities.
   var INTERCITY = {
     flight: { name: 'Flight', mins: 180, fare: 150000 },
-    bus:    { name: 'Long-distance bus', fare: 30000, mins: { 'lagos-abuja': 720, 'abuja-lagos': 720, 'lagos-ph': 660, 'ph-lagos': 660, 'abuja-ph': 690, 'ph-abuja': 690, 'lagos-accra': 720, 'accra-lagos': 720, 'abuja-accra': 1200, 'accra-abuja': 1200, 'ph-accra': 1140, 'accra-ph': 1140 } }
+    bus:    { name: 'Long-distance bus', fare: 30000, mins: { 'lagos-abuja': 720, 'abuja-lagos': 720, 'lagos-ph': 660, 'ph-lagos': 660, 'abuja-ph': 690, 'ph-abuja': 690, 'lagos-accra': 720, 'accra-lagos': 720, 'abuja-accra': 1200, 'accra-abuja': 1200, 'ph-accra': 1140, 'accra-ph': 1140, 'accra-kumasi': 300, 'kumasi-accra': 300, 'lagos-kumasi': 960, 'kumasi-lagos': 960, 'abuja-kumasi': 1380, 'kumasi-abuja': 1380, 'ph-kumasi': 1320, 'kumasi-ph': 1320 } }
   };
 
   // Drawn on the map only; travel uses straight-line distance x 1.3.
@@ -366,6 +377,8 @@
     ['ph_gra', 'ph_transamadi'], ['ph_dline', 'ph_oldgra'], ['ph_oldgra', 'ph_borokiri'], ['ph_transamadi', 'ph_oldgra'], ['ph_gra', 'ph_oldgra'],
     ['acc_airport', 'acc_legon'], ['acc_legon', 'acc_eastlegon'], ['acc_airport', 'acc_eastlegon'], ['acc_airport', 'acc_circle'], ['acc_circle', 'acc_central'], ['acc_circle', 'acc_osu'],
     ['acc_osu', 'acc_labadi'], ['acc_osu', 'acc_central'], ['acc_central', 'acc_jamestown'], ['acc_central', 'acc_korlebu'], ['acc_korlebu', 'acc_jamestown'], ['acc_eastlegon', 'acc_labadi'],
+    ['kum_airport', 'kum_manhyia'], ['kum_airport', 'kum_knust'], ['kum_manhyia', 'kum_kejetia'], ['kum_bantama', 'kum_kejetia'], ['kum_kejetia', 'kum_adum'], ['kum_kejetia', 'kum_knust'],
+    ['kum_adum', 'kum_asokwa'], ['kum_adum', 'kum_ahodwo'], ['kum_bantama', 'kum_ahodwo'], ['kum_knust', 'kum_asokwa'], ['kum_asokwa', 'kum_bosomtwe'],
     ['ldn_heathrow', 'ldn_wembley'], ['ldn_heathrow', 'ldn_notting'], ['ldn_wembley', 'ldn_notting'], ['ldn_notting', 'ldn_oxford'], ['ldn_oxford', 'ldn_westminster'], ['ldn_westminster', 'ldn_southbank'], ['ldn_westminster', 'ldn_tower'], ['ldn_southbank', 'ldn_peckham'], ['ldn_tower', 'ldn_peckham']
   ];
   var FERRY_STOPS = ['ikorodu', 'island', 'ikoyi', 'lekki'];
@@ -456,6 +469,9 @@
     ph_oldgra_bungalow:{ name: 'Bungalow, Old GRA', district: 'ph_oldgra', rent: 45000, power: 0.75, sleep: 1.05, type: 'flat3', x: 13.8, y: 15.0 },
     acc_jt_room:       { name: 'Room in a compound house, Jamestown', district: 'acc_jamestown', rent: 7000, power: 0.7, sleep: 0.9, type: 'room', x: 7.6, y: 21.4 },
     acc_osu_flat:      { name: '2-bed flat, Osu', district: 'acc_osu', rent: 42000, power: 0.85, sleep: 1, type: 'flat2', x: 18.6, y: 17.4 },
+    kum_bt_room:       { name: 'Room in a compound house, Bantama', district: 'kum_bantama', rent: 6000, power: 0.7, sleep: 0.9, type: 'room', x: 5.6, y: 10.6 },
+    kum_ah_flat:       { name: '2-bed flat, Ahodwo', district: 'kum_ahodwo', rent: 34000, power: 0.85, sleep: 1, type: 'flat2', x: 9.6, y: 20.4 },
+    kum_ah_house:      { name: 'House in Ahodwo', district: 'kum_ahodwo', rent: 72000, power: 0.9, sleep: 1.1, type: 'duplex', x: 8.4, y: 21.0 },
     acc_el_house:      { name: 'House in East Legon', district: 'acc_eastlegon', rent: 90000, power: 0.9, sleep: 1.1, type: 'duplex', x: 26.4, y: 6.6 },
     ph_oldgra_duplex:  { name: 'Duplex, Old GRA', district: 'ph_oldgra', rent: 90000, power: 0.85, sleep: 1.1, type: 'duplex', x: 14.6, y: 16.2, daily: { stress: -3 } },
     // Lekki Hyde Park: a gated estate on the lagoon side of the Lekki–Epe Expressway, in five zones.
@@ -555,6 +571,15 @@
     acc_guide:   { name: 'Tour Guiding (Accra)', district: 'acc_jamestown', skill: 'charisma', start: 9, end: 17, days: [1,2,3,4,5,6],
       titles: ['Trainee Guide', 'Guide', 'Senior Guide', 'Tour Lead', 'Tour Company Owner'],
       pay: [4500, 7000, 11000, 18000, 30000], req: [0, 2, 4, 6, 9] },
+    kum_kente:   { name: 'Kente Weaving (Kumasi)', district: 'kum_manhyia', skill: 'craft', start: 8, end: 17, days: [0,1,2,3,4,5],
+      titles: ['Thread Winder', 'Apprentice Weaver', 'Weaver', 'Master Weaver', 'Kente House Owner'],
+      pay: [4000, 6400, 10500, 17500, 30000], req: [0, 2, 4, 6, 9] },
+    kum_fitter:  { name: 'Fitting Shop (Suame Magazine)', district: 'kum_asokwa', skill: 'craft', start: 7, end: 18, days: [0,1,2,3,4,5],
+      titles: ['Shop Boy', 'Apprentice Fitter', 'Fitter', 'Master Fitter', 'Workshop Owner'],
+      pay: [4200, 6600, 10800, 18000, 31000], req: [0, 2, 4, 6, 9] },
+    kum_lab:     { name: 'Research Lab (KNUST)', district: 'kum_knust', skill: 'tech', start: 8, end: 17, days: [0,1,2,3,4],
+      titles: ['Lab Assistant', 'Technician', 'Research Officer', 'Senior Researcher', 'Lab Director'],
+      pay: [5000, 7800, 12500, 20000, 34000], req: [0, 2, 4, 6, 9] },
     acc_callc:   { name: 'Call Centre (Accra)', district: 'acc_airport', skill: 'tech', start: 8, end: 17, days: [0,1,2,3,4],
       titles: ['Agent', 'Senior Agent', 'Team Lead', 'Floor Manager', 'Site Director'],
       pay: [5000, 7800, 12500, 20000, 34000], req: [0, 2, 4, 6, 9] }
@@ -696,6 +721,43 @@
     acc_korlebu: [
       { id: 'acc_kb_waakye', label: 'Waakye from the hospital gate', mins: 30, cost: 1300, fx: { hunger: 32 }, when: { from: 6, to: 14 } },
       { id: 'acc_kb_gig', label: 'Porter shift at the hospital', mins: 180, earn: 2000, fx: { energy: -12 }, gig: true, when: { from: 7, to: 19 } }
+    ],
+    // Kumasi (rules 25).
+    kum_airport: [
+      { id: 'kum_air_spot', label: 'Watch the planes at Kumasi airport', mins: 45, fx: { fun: 8 }, when: { from: 7, to: 19 } },
+      { id: 'kum_air_gig', label: 'Load bags for the airport taxis', mins: 180, earn: 2200, fx: { energy: -14 }, xp: { hustle: 1 }, gig: true, when: { from: 6, to: 20 } }
+    ],
+    kum_manhyia: [
+      { id: 'kum_man_walk', label: 'Walk the palace grounds and the old trees', mins: 45, fx: { fun: 8, stress: -6 }, when: { from: 8, to: 18 } },
+      { id: 'kum_man_gig', label: 'Sweep the festival grounds after a durbar', mins: 120, earn: 1600, fx: { energy: -10 }, gig: true, when: { from: 7, to: 17 } }
+    ],
+    kum_bantama: [
+      { id: 'kum_bt_fufu', label: 'Fufu and goat light soup at a corner chop bar', mins: 30, cost: 2600, fx: { hunger: 40 }, when: { from: 11, to: 21 } },
+      { id: 'kum_bt_gig', label: 'Porter shift at Komfo Anokye hospital', mins: 180, earn: 2000, fx: { energy: -12 }, gig: true, when: { from: 7, to: 19 } }
+    ],
+    kum_kejetia: [
+      { id: 'kum_kej_kenkey', label: 'Kenkey and fried fish at the lorry park', mins: 30, cost: 1700, fx: { hunger: 34 }, when: { from: 6, to: 21 } },
+      { id: 'kum_kej_gig', label: 'Carry loads through the market (kayayo)', mins: 180, earn: 2000, fx: { energy: -18, hygiene: -10 }, xp: { fitness: 1 }, gig: true, when: { days: [0,1,2,3,4,5], from: 6, to: 17 } }
+    ],
+    kum_adum: [
+      { id: 'kum_adum_walk', label: 'Window-shop down the Adum streets', mins: 60, fx: { fun: 8 }, when: { from: 8, to: 19 } },
+      { id: 'kum_adum_gig', label: 'Sell airtime cards at a junction', mins: 180, earn: 1800, fx: { energy: -10, social: 4 }, xp: { hustle: 1 }, gig: true, when: { from: 7, to: 19 } }
+    ],
+    kum_knust: [
+      { id: 'kum_kn_walk', label: 'Walk the KNUST campus under the trees', mins: 60, fx: { fun: 8, stress: -6 }, when: { from: 7, to: 19 } },
+      { id: 'kum_kn_gig', label: 'Print and bind project work for students', mins: 120, earn: 1800, fx: { energy: -8 }, xp: { tech: 1 }, gig: true, when: { from: 9, to: 21 } }
+    ],
+    kum_asokwa: [
+      { id: 'kum_as_ball', label: 'Kick ball with the boys on a dusty pitch', mins: 60, fx: { fun: 14, energy: -12, social: 6 }, xp: { fitness: 1 }, when: { from: 15, to: 19 } },
+      { id: 'kum_as_gig', label: 'Hand tools to the fitters at a workshop', mins: 180, earn: 2200, fx: { energy: -14, hygiene: -10 }, xp: { craft: 1 }, gig: true, when: { days: [0,1,2,3,4,5], from: 7, to: 17 } }
+    ],
+    kum_ahodwo: [
+      { id: 'kum_ah_brunch', label: 'Brunch at a hotel café in Ahodwo', mins: 60, cost: 11000, fx: { hunger: 30, fun: 10, social: 6 }, when: { from: 9, to: 15 } },
+      { id: 'kum_ah_gig', label: 'Wash cars for the big houses', mins: 180, earn: 2200, fx: { energy: -14, hygiene: -8 }, gig: true, when: { from: 7, to: 17 } }
+    ],
+    kum_bosomtwe: [
+      { id: 'kum_bos_view', label: 'Look over the crater lake from the rim', mins: 30, fx: { fun: 10, stress: -8 }, when: { from: 7, to: 18 } },
+      { id: 'kum_bos_gig', label: 'Help the fishermen bring in the nets', mins: 180, earn: 2200, fx: { energy: -16, hygiene: -10 }, xp: { fitness: 1 }, gig: true, when: { from: 6, to: 12 } }
     ],
     mushin: [
       { id: 'mushin_boxing', label: 'Train at a boxing gym', mins: 90, cost: 1500, fx: { energy: -22, hygiene: -20, stress: -12, fun: 10 }, xp: { fitness: 4 }, sport: 'boxing', when: { from: 6, to: 20 } },
@@ -1392,7 +1454,8 @@
     vi: { mult: 1.25, rent: 40000 }, lekki: { mult: 1.25, rent: 30000 }, ajah: { mult: 0.95, rent: 8000 },
     abj_wuse: { mult: 1.1, rent: 16000 }, abj_garki: { mult: 1.05, rent: 14000 }, abj_kubwa: { mult: 0.85, rent: 4500 },
     ph_gra: { mult: 1.1, rent: 15000 }, ph_dline: { mult: 1.0, rent: 8000 }, ph_rumuokoro: { mult: 0.9, rent: 5000 },
-    acc_osu: { mult: 1.1, rent: 15000 }, acc_central: { mult: 1.0, rent: 9000 }, acc_eastlegon: { mult: 1.15, rent: 26000 }
+    acc_osu: { mult: 1.1, rent: 15000 }, acc_central: { mult: 1.0, rent: 9000 }, acc_eastlegon: { mult: 1.15, rent: 26000 },
+    kum_adum: { mult: 1.05, rent: 11000 }, kum_kejetia: { mult: 1.0, rent: 8000 }, kum_ahodwo: { mult: 1.1, rent: 20000 }
   };
   // Upgrades: what each business becomes at levels 2 and 3, and its emoji on the map.
   var BUSINESS_GROWTH = {
@@ -1838,6 +1901,8 @@
     ['acc_casino', '🎰', 'Labadi Casino', 'nightlife', 'dice', 'acc_labadi', 23.0, 19.2, 'casino', 'Slots, roulette and blackjack. 18 and over. The house always wins in the end.'],
     ['acc_court', '⚖️', 'High Court, Accra', 'services', 'gavel', 'acc_central', 12.2, 18.2, 'court', 'The bench, the dock, the witness box and a public gallery.'],
     ['acc_library', '📚', 'George Padmore Library', 'learn', 'book', 'acc_central', 10.0, 18.0, 'library', 'Rows of shelves, reading tables, a computer room and a strict librarian.'],
+    ['kum_komfo', '🏥', 'Komfo Anokye Teaching Hospital', 'services', 'cross', 'kum_bantama', 4.6, 9.4, 'hospital', 'Reception, the nurses\' station, the doctor, a ward and the pharmacy.'],
+    ['kum_hotel', '🏨', 'Garden City Hotel', 'nightlife', 'hotel', 'kum_ahodwo', 8.0, 19.0, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
     ['ph_office', '🏢', 'Trans-Amadi Business Tower', 'services', 'tower', 'ph_transamadi', 22.6, 12.6, 'office', 'Glass towers on the industrial layout: a co-working floor, meeting rooms and the canteen.']
   ].forEach(function (q) {
     var pfx = q[0].split('_')[0];
@@ -2076,6 +2141,60 @@
       act('jth_canoes', 'Watch the canoes land the catch', 30, 0, 0, { fun: 8, stress: -4 }, null, { from: 6, to: 12 }),
       act('jth_smoked', 'Buy smoked herring off the ovens', 15, 1300, 0, { hunger: 14 }, null, { from: 7, to: 17 })
     ]],
+    // Kumasi (rules 25): real landmarks keep their names; the businesses are made up.
+    ['kum_kejetia_mkt', '🧺', 'Kejetia Market', 'food', 'basket', 'kum_kejetia', 12.4, 11.6, null, 'Thousands of stalls under new roofs: kente, beads, shea butter, tomatoes and car parts.', [
+      act('kej_kente', 'Price kente cloth from a trader', 45, 0, 0, { fun: 8 }, { charisma: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 7, to: 18 }),
+      act('kej_food', 'Buy plantain, garden eggs and fish for the week', 30, 4500, 0, { hunger: 24 }, null, { from: 6, to: 18 }),
+      act('kej_shea', 'Buy shea butter and black soap', 15, 2600, 0, { hygiene: 10, fun: 4 }, null, { from: 7, to: 18 })
+    ]],
+    ['kum_manhyia_pal', '👑', 'Manhyia Palace Museum', 'culture', 'mask', 'kum_manhyia', 14.6, 4.6, null, 'The old palace of the Asantehene: wax figures of past kings, the royal regalia and a guide with stories.', [
+      act('mhp_tour', 'Guided tour of the palace museum', 60, 2600, 0, { fun: 12 }, { charisma: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 17 }),
+      act('mhp_photo', 'Photo by the palace gates', 15, 0, 0, { fun: 5 }, null, { from: 9, to: 17 })
+    ]],
+    ['kum_babayara', '🏟️', 'Baba Yara Sports Stadium', 'outdoors', 'stadium', 'kum_asokwa', 17.4, 18.0, null, 'Home of Asante Kotoko: drums, flags and the porcupine on every shirt.', [
+      act('bys_match', 'Watch Kotoko play at home', 150, 3900, 0, { fun: 34, social: 18, stress: -6 }, null, { days: [6], from: 15, to: 19 }),
+      act('bys_run', 'Run laps round the outside track', 45, 0, 0, { energy: -12, stress: -8 }, { fitness: 1 }, { from: 6, to: 9 }),
+      act('bys_sell', 'Sell water and plantain chips on match day', 180, 0, 2200, { energy: -12 }, null, { days: [6], from: 13, to: 19 })
+    ]],
+    ['kum_knust_uni', '🎓', 'KNUST campus', 'learn', 'cap', 'kum_knust', 24.4, 12.4, null, 'The great hall, engineering blocks, the library, a canteen and the halls of residence.', 'knust_'],
+    ['kum_culture', '🥁', 'Centre for National Culture', 'culture', 'mask', 'kum_adum', 14.2, 15.8, null, 'Craft shops, a kente loom, drummers in the courtyard and the Prempeh II museum.', [
+      act('cnc_drums', 'Watch the drummers and dancers', 60, 0, 0, { fun: 14, social: 6 }, null, { days: [4, 5, 6], from: 15, to: 19 }),
+      act('cnc_craft', 'Buy an adinkra print and a carving', 30, 5200, 0, { fun: 8 }, null, { from: 9, to: 17 }),
+      act('cnc_museum', 'Visit the Prempeh II Jubilee Museum', 45, 1300, 0, { fun: 10 }, { charisma: 1 }, { from: 9, to: 17 })
+    ]],
+    ['kum_sword', '🗡️', 'Okomfo Anokye Sword Site', 'culture', 'frame', 'kum_bantama', 6.2, 11.4, null, 'The sword stuck in the ground for three hundred years. Nobody can pull it out.', [
+      act('sws_see', 'See the sword and hear its story', 30, 1300, 0, { fun: 8 }, null, { from: 8, to: 17 })
+    ]],
+    ['kum_rattray', '🌳', 'Rattray Park', 'outdoors', 'tree', 'kum_adum', 11.6, 14.2, null, 'Lawns, fountains and a children\'s play area in the middle of town.', [
+      act('rat_walk', 'Walk round the fountains', 45, 600, 0, { fun: 8, stress: -8 }, null, { from: 8, to: 19 }),
+      act('rat_picnic', 'Picnic on the lawn', 60, 3000, 0, { hunger: 26, social: 8, fun: 6 }, null, { from: 10, to: 18 })
+    ]],
+    ['kum_chopbar', '🍲', 'Maame Afia\'s Chop Bar, Adum', 'food', 'bowl', 'kum_adum', 12.6, 16.2, null, 'Fufu pounded to order, palm nut soup, kontomire stew and ampesi.', [
+      act('maf_fufu', 'Fufu and palm nut soup', 30, 2600, 0, { hunger: 42, fun: 6 }, null, { from: 11, to: 21 }),
+      act('maf_ampesi', 'Ampesi with kontomire stew', 30, 2000, 0, { hunger: 36 }, null, { from: 8, to: 15 }),
+      act('maf_pound', 'Pound fufu for the kitchen', 120, 0, 1600, { energy: -14 }, { fitness: 1 }, { from: 10, to: 20 })
+    ]],
+    ['kum_lounge', '🍸', 'Ahodwo Garden Lounge', 'nightlife', 'glass', 'kum_ahodwo', 10.2, 19.4, null, 'A garden bar under fairy lights: highlife, grilled tilapia and a late crowd.', [
+      act('agl_night', 'Drinks and highlife under the lights', 120, 10000, 0, { fun: 24, social: 16, energy: -8 }, null, { from: 19, to: 24 }),
+      act('agl_wait', 'Waiter shift at the lounge', 240, 0, 2400, { energy: -12 }, null, { from: 17, to: 24 })
+    ]],
+    ['kum_airport_pl', '✈️', 'Kumasi Airport', 'transport', 'plane', 'kum_airport', 22.6, 4.4, null, 'A new terminal: flights to Accra, Lagos and Abuja.', [
+      act('kap_lounge', 'Wait in the departures lounge', 60, 5200, 0, { stress: -6, fun: 4 }, null, { from: 5, to: 22 })
+    ]],
+    ['kum_lorrypark', '🚌', 'Kejetia Lorry Park', 'transport', 'bus', 'kum_kejetia', 11.2, 12.4, null, 'Tro-tros and coaches to Accra, Tamale, Lomé and Lagos. Everyone shouting a town name.', [
+      act('klp_tea', 'Tea and bread at the station', 15, 700, 0, { hunger: 16 }, null, { from: 5, to: 22 }),
+      act('klp_mate', 'Work as a tro-tro mate for the morning', 180, 0, 2000, { energy: -12, social: 4 }, { hustle: 1 }, { from: 5, to: 13 })
+    ]],
+    ['kum_lake', '🛶', 'Lake Bosomtwe landing', 'outdoors', 'boat', 'kum_bosomtwe', 26.4, 23.6, null, 'A sacred crater lake: fishermen paddle on wooden planks, not canoes.', [
+      act('bos_plank', 'Paddle out on a fisherman\'s plank', 45, 2600, 0, { fun: 16, energy: -8 }, { fitness: 1 }, { from: 7, to: 17 }),
+      act('bos_swim', 'Swim off the beach at the lodge', 60, 1300, 0, { fun: 14, stress: -10, hygiene: -4 }, null, { from: 8, to: 17 }),
+      act('bos_tilapia', 'Grilled lake tilapia at a lodge', 30, 3600, 0, { hunger: 38, fun: 4 }, null, { from: 11, to: 20 })
+    ]],
+    ['kum_bonwire', '🧵', 'Bonwire Kente Village', 'learn', 'tool', 'kum_manhyia', 16.6, 3.4, null, 'A short trip out of town: rows of looms and weavers who learned from their grandfathers.', [
+      act('bon_watch', 'Watch the weavers at the looms', 45, 0, 0, { fun: 10 }, null, { days: [0, 1, 2, 3, 4, 5], from: 8, to: 17 }),
+      act('bon_learn', 'Weaving lesson on a loom', 120, 5200, 0, { fun: 12, stress: -4 }, { craft: 2 }, { days: [0, 1, 2, 3, 4, 5], from: 8, to: 16 }),
+      act('bon_strip', 'Buy a strip of kente', 15, 9000, 0, { fun: 8 }, null, { from: 8, to: 17 })
+    ]],
     // Lagos, more of it.
     ['lag_alaba', '🧺', 'Alaba International Market', 'food', 'basket', 'festac', 1.4, 16.4, null, 'Lanes and lanes of electronics: TVs, sound systems, generators and spare parts.', [
       act('alaba_browse', 'Price TVs and sound systems down the lanes', 60, 0, 0, { fun: 6, stress: 3 }, null, { days: [0, 1, 2, 3, 4, 5], from: 8, to: 18 }),
@@ -2131,7 +2250,7 @@
       act('bfj_canoe', 'Paddle a canoe round the creek', 45, 1500, 0, { fun: 12, energy: -6 }, { fitness: 1 }, { from: 7, to: 17 })
     ]]
   ].forEach(function (q) {
-    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^ldn_/.test(q[5]) ? 'london' : 'lagos'), text: q[9] };
+    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^ldn_/.test(q[5]) ? 'london' : 'lagos'), text: q[9] };
     if (q[8]) p.inside = q[8];
     CIVIC_PLACES.push(p);
     if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
@@ -2149,6 +2268,10 @@
   ], GOAL_REWARD = 5000;
   // Rules 21: weekend events on a four-week rotation (when.wk is the week of the month), at their places.
   var EVENT_ACTS = {
+    kum_manhyia_pal: [
+      { id: 'ev_akwasidae', label: 'Akwasidae: the Asantehene sits in state (Sunday, week 3)', mins: 180, fx: { fun: 30, social: 20, stress: -6 }, when: { wk: [2], days: [6], from: 9, to: 15 } },
+      { id: 'ev_akwasidae_drum', label: 'Akwasidae: carry water for the drummers', mins: 180, earn: 2200, fx: { energy: -12, social: 6 }, gig: true, fest: true, when: { wk: [2], days: [6], from: 8, to: 15 } }
+    ],
     abj_polo: [
       { id: 'ev_polo_final', label: 'Polo final: watch from the stand (Saturday, week 1)', mins: 180, cost: 8000, fx: { fun: 30, social: 18 }, when: { wk: [0], days: [5], from: 14, to: 19 } },
       { id: 'ev_polo_usher', label: 'Polo final: usher in the stand', mins: 240, earn: 2600, fx: { energy: -12, social: 6 }, gig: true, fest: true, when: { wk: [0], days: [5], from: 12, to: 20 } }
@@ -2210,7 +2333,7 @@
     // and the University of Port Harcourt, the same campus life under its own ids (Mama Ngozi runs the buka there).
     CIVIC_ACTS.ph_uniport = cloneActs(CIVIC_ACTS.unilag, 'uni_', 'uniport_').map(function (a) { a.label = a.label.replace(/Mama B/g, 'Mama Ngozi').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river'); return a; });
     // and the Abuja campuses (Mama Hauwa's buka; lawns and hills where Lagos has the lagoon).
-    CAMPUS_CLONES.forEach(function (c) { var ph = /^ph_/.test(c[0]), acc = /^acc_/.test(c[0]), lag = /^lag_/.test(c[0]), mama = c[0] === 'lag_lasu' ? 'Mama Toyin' : 'Mama Kemi'; CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = acc ? a.label.replace(/Mama B's/g, 'Auntie Akos\'s chop bar').replace(/Mama B/g, 'Auntie Akos').replace(/Lagoon front/g, 'Legon hill').replace(/the lagoon/g, 'the hill').replace(/lagoon/g, 'hill') : lag ? a.label.replace(/Mama B/g, mama).replace(/Lagoon front/g, 'Campus field').replace(/the lagoon/g, 'the campus').replace(/lagoon/g, 'campus') : ph ? a.label.replace(/Mama B/g, 'Mama Ibiere').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river') : a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
+    CAMPUS_CLONES.forEach(function (c) { var ph = /^ph_/.test(c[0]), acc = /^acc_/.test(c[0]), kum = /^kum_/.test(c[0]), lag = /^lag_/.test(c[0]), mama = c[0] === 'lag_lasu' ? 'Mama Toyin' : 'Mama Kemi'; CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = kum ? a.label.replace(/Mama B's/g, 'Auntie Abena\'s chop bar').replace(/Mama B/g, 'Auntie Abena').replace(/Lagoon front/g, 'Great Hall lawn').replace(/the lagoon/g, 'the lawns').replace(/lagoon/g, 'lawn') : acc ? a.label.replace(/Mama B's/g, 'Auntie Akos\'s chop bar').replace(/Mama B/g, 'Auntie Akos').replace(/Lagoon front/g, 'Legon hill').replace(/the lagoon/g, 'the hill').replace(/lagoon/g, 'hill') : lag ? a.label.replace(/Mama B/g, mama).replace(/Lagoon front/g, 'Campus field').replace(/the lagoon/g, 'the campus').replace(/lagoon/g, 'campus') : ph ? a.label.replace(/Mama B/g, 'Mama Ibiere').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river') : a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
   })();
   // Rules 19: Lekki Conservation Centre, close up.
   CIVIC_ACTS.lcc = [

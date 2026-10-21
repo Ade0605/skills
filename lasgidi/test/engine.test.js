@@ -2963,3 +2963,25 @@ test('rules 24: an activity that runs past midnight counts for the day it starte
   assert.ok(crossed > 0, 'the run had a late activity to check');
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('rules 25: Kumasi opens (closed in rules 24 lives); a domestic coach from Accra, border fees from Lagos; a real trip replays', () => {
+  const old = L.newGame({ seed: 2500, origin: 'nepo', goal: 'freestyle', rules: 24 });
+  assert.equal(L.cityOpen(old, 'kumasi'), false); assert.equal(L.intercityOptions(old, 'kumasi').length, 0);
+  assert.ok(Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === 'kumasi').every(k => !L.districtOpen || !L.districtOpen(old, k)));
+  assert.ok(L.ghana('kumasi') && L.ghana('accra') && !L.ghana('lagos') && !L.ghana('ldn'));
+  for (const p of D.PLACES.filter(p => L.districtCity(p.district) === 'kumasi')) assert.ok(D.insideKind(p), p.id);
+  // A real life: walk to the Lagos coach park, ride to Kumasi, do things there, then the coach to Accra.
+  const s = L.newGame({ seed: 2501, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.ok(s.rules >= 25);
+  const go = d => { if (s.loc === d) return true; const o = L.travelOptions(s, d).filter(o => !o.disabled).sort((a, b) => a.mins - b.mins)[0]; return !!o && L.travel(s, d, o.mode).ok; };
+  const ride = c => { const o = L.intercityOptions(s, c).find(o => o.mode === 'bus'); if (!o) return false; if (s.loc !== o.from) return go(o.from); return !o.disabled && L.intercity(s, c, o.mode); };
+  const fees = () => s.ledger.filter(e => /Border stamping/.test(e.memo)).length;
+  let r = null;
+  for (let g = 0; g < 300 && L.cityOf(s) !== 'kumasi'; g++) { while (s.pending.length) L.resolveChoice(s, 0); const x = ride('kumasi'); if (x && x.ok) r = x; else if (!x) L.wait(s, 60); }
+  assert.equal(L.cityOf(s), 'kumasi'); assert.equal(s.loc, D.CITIES.kumasi.park);
+  assert.equal(fees(), 1, 'Lagos to Kumasi crosses the borders'); assert.match(r.msg, /Aflao/);
+  for (let i = 0; i < 12; i++) { while (s.pending.length) L.resolveChoice(s, 0); const a = L.availableActions(s).find(a => !a.disabled && !a.atHome && !(a.cost > 5000)); if (a) L.doAction(s, a.id); else L.wait(s, 60); }
+  for (let g = 0; g < 300 && L.cityOf(s) !== 'accra'; g++) { while (s.pending.length) L.resolveChoice(s, 0); const x = ride('accra'); if (!x) L.wait(s, 60); }
+  assert.equal(L.cityOf(s), 'accra'); assert.equal(fees(), 1, 'Kumasi to Accra is a domestic coach');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

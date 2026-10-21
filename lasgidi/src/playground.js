@@ -37,6 +37,8 @@
       water: [[[22.4, 13.6], [27.2, 12.6], [27.6, 13.4], [22.8, 14.6]]], label: [['Bonny River', 18, 24], ['Amadi Creek', 25.4, 14.6]] },
     accra: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 21], [28, 22.4], [24, 22.6], [18, 22.2], [12, 23.0], [8, 24.2], [4, 24.4], [-2, 22]]],
       water: [[[2.4, 18.8], [5.0, 18.7], [5.6, 19.8], [4.4, 21.0], [2.8, 20.6]]], label: [['Gulf of Guinea', 16, 25.4], ['Korle Lagoon', 3.4, 20.2]] },
+    kumasi: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 27], [-2, 27]]],
+      water: [[[30.7, 24.2], [30.6, 25.1], [29.6, 25.7], [28.6, 25.9], [27.5, 25.7], [26.7, 25.1], [26.6, 24.2], [26.9, 23.4], [27.5, 22.7], [28.6, 22.5], [29.6, 22.7], [30.4, 23.3]], [[9.2, -2], [9.8, -2], [10.6, 6], [10.4, 12], [11.0, 17], [12.4, 22], [13.0, 27], [12.4, 27], [11.8, 22], [10.4, 17], [9.8, 12], [10.0, 6]]], label: [['Lake Bosomtwe', 28.6, 24.4], ['Subin River', 10.2, 8.4]] },
     ldn: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 27], [-2, 27]]],
       water: [[[-2, 13.6], [6, 13.8], [12, 14.4], [16, 14.0], [19, 14.6], [22, 15.6], [26, 14.4], [32, 14.2], [32, 15.6], [26, 15.8], [22, 17.0], [19, 16.0], [16, 15.4], [12, 15.8], [6, 15.2], [-2, 15.0]]], label: [['River Thames', 9, 14.6]] }
   };
@@ -82,6 +84,15 @@
     acc_central:  { h: [5, 16], dens: 0.8, r: 2.8, foot: [0.6, 0.85], roof: '#a87850', wall: '#d6c4a8' },
     acc_jamestown:{ h: [3, 7], dens: 0.85, r: 2.4, foot: [0.6, 0.9], roof: '#b06a40', wall: '#c8a888' },
     acc_korlebu:  { h: [4, 10], dens: 0.6, r: 2.4, foot: [0.6, 0.85], roof: '#c0b8a8', wall: '#e8e4dc', trees: 0.2 },
+    kum_airport:  { h: [3, 10], dens: 0.4, r: 3.0, foot: [0.55, 0.8], roof: '#b8c4cc', wall: '#8a98a4', trees: 0.3 },
+    kum_manhyia:  { h: [3, 8], dens: 0.45, r: 2.8, foot: [0.55, 0.8], roof: '#8a5a32', wall: '#e9dcc4', trees: 0.45 },
+    kum_bantama:  { h: [3, 8], dens: 0.75, r: 2.6, foot: [0.6, 0.85], roof: '#a86a3e', wall: '#cdb08c', trees: 0.2 },
+    kum_kejetia:  { h: [4, 12], dens: 0.9, r: 2.8, foot: [0.6, 0.9], roof: '#3f8a4a', wall: '#d8c79a' },
+    kum_adum:     { h: [5, 16], dens: 0.8, r: 2.8, foot: [0.6, 0.85], roof: '#a87850', wall: '#d6c4a8', trees: 0.1 },
+    kum_knust:    { h: [4, 12], dens: 0.4, r: 3.0, foot: [0.5, 0.75], roof: '#c9a05a', wall: '#ece2c8', trees: 0.55 },
+    kum_asokwa:   { h: [3, 9], dens: 0.7, r: 2.6, foot: [0.6, 0.85], roof: '#9a6a4a', wall: '#c8b090', trees: 0.15 },
+    kum_ahodwo:   { h: [3, 9], dens: 0.45, r: 3.0, foot: [0.55, 0.8], roof: '#8a4a3a', wall: '#ece4d4', trees: 0.45 },
+    kum_bosomtwe: { h: [2, 5], dens: 0.2, r: 2.4, foot: [0.5, 0.75], roof: '#8a6a4a', wall: '#d8c8a8', trees: 0.7 },
     ldn_heathrow: { h: [4, 12], dens: 0.4, r: 3.0, foot: [0.6, 0.85], roof: '#9aa4ac', wall: '#c9cdd1' },
     ldn_wembley:  { h: [4, 10], dens: 0.6, r: 2.8, foot: [0.6, 0.85], roof: '#8a6a5a', wall: '#b08a70', trees: 0.2 },
     ldn_notting:  { h: [5, 9], dens: 0.75, r: 2.6, foot: [0.6, 0.85], roof: '#5a5f66', wall: '#f2d6e0', trees: 0.3 },
@@ -96,6 +107,7 @@
     abj_kubwa: 0.5, abj_maitama: 0.92, abj_wuse: 0.75, abj_jabi: 0.75, abj_asokoro: 0.95, abj_garki: 0.85, abj_nyanya: 0.45, abj_airport: 0.8,
     ph_airport: 0.7, ph_choba: 0.45, ph_rumuokoro: 0.45, ph_gra: 0.75, ph_transamadi: 0.65, ph_dline: 0.4, ph_oldgra: 0.55, ph_borokiri: 0.45,
     acc_airport: 0.7, acc_legon: 0.5, acc_eastlegon: 0.65, acc_circle: 0.45, acc_osu: 0.5, acc_labadi: 0.5, acc_central: 0.45, acc_jamestown: 0.35, acc_korlebu: 0.5,
+    kum_airport: 0.65, kum_manhyia: 0.7, kum_bantama: 0.45, kum_kejetia: 0.45, kum_adum: 0.55, kum_knust: 0.6, kum_asokwa: 0.4, kum_ahodwo: 0.65, kum_bosomtwe: 0.25,
     ldn_heathrow: 0.7, ldn_wembley: 0.55, ldn_notting: 0.5, ldn_oxford: 0.4, ldn_westminster: 0.5, ldn_southbank: 0.5, ldn_tower: 0.55, ldn_peckham: 0.45 };
   var FERRIES = [['ikorodu', 'island'], ['ikorodu', 'ikoyi'], ['island', 'lekki'], ['ikoyi', 'lekki']];
 
@@ -571,6 +583,7 @@
       }
       if (CITY === 'abuja') drawAbuja(g, s);
       if (CITY === 'accra') drawAccra(g, s);
+      if (CITY === 'kumasi') drawKumasi(g, s);
       if (CITY === 'ldn') drawLondon(g, s);
       if (CITY === 'ph') drawPH(g, s);
 
@@ -804,6 +817,14 @@
       poly(g, [[22.4, 21.6], [27.6, 21.6], [27.8, 22.4], [22.2, 22.6]], theme.sand || '#e8d6a8'); // La beach
       var lh = toScreen(6.4, 22.8, 0); [0, 1, 2, 3].forEach(function (i) { g.fillStyle = i % 2 ? '#ffffff' : '#c0392b'; g.fillRect(lh.x - 2 * s, lh.y - (i + 1) * 5 * s, 4 * s, 5 * s); }); // lighthouse
       g.strokeStyle = theme.road; g.lineWidth = Math.max(1, 2 * s); g.beginPath(); [[8, 10], [14, 8], [19, 11], [19, 16], [13, 17], [8, 15], [8, 10]].forEach(function (p, i) { var c = toScreen(p[0], p[1], 0); if (i) g.lineTo(c.x, c.y); else g.moveTo(c.x, c.y); }); g.stroke(); // Ring Road
+    }
+    function drawKumasi(g, s) {
+      // Kejetia's green roofs, the Manhyia palace with its gold stool, the Baba Yara bowl and the hills round the lake.
+      poly(g, [[10.6, 10.4], [14.2, 10.4], [14.4, 12.8], [10.4, 12.8]], theme.dark ? '#2f5a36' : '#4f9a5a', theme.dark ? '#7b7f86' : '#2f6a3a', Math.max(1, 1.2 * s)); // Kejetia market roofs
+      var mp = toScreen(14.6, 4.6, 0); g.fillStyle = theme.dark ? '#d9cdb4' : '#f4ead2'; g.fillRect(mp.x - 10 * s, mp.y - 8 * s, 20 * s, 8 * s); g.fillStyle = '#d4af37'; g.fillRect(mp.x - 3 * s, mp.y - 12 * s, 6 * s, 4 * s); // the palace and the gold
+      var by = toScreen(17.4, 18.0, 0); g.beginPath(); g.ellipse(by.x, by.y - 3 * s, 12 * s, 6 * s, 0, 0, Math.PI * 2); g.fillStyle = theme.dark ? '#5a6068' : '#d0d4d8'; g.fill(); g.beginPath(); g.ellipse(by.x, by.y - 3 * s, 8 * s, 3.6 * s, 0, 0, Math.PI * 2); g.fillStyle = '#3f8a3f'; g.fill(); // Baba Yara
+      poly(g, [[25.4, 20.6], [31.8, 20.6], [31.8, 26.8], [25.4, 26.8]], null, theme.dark ? '#4a6a44' : '#6f9a5a', Math.max(1, 2 * s)); // the crater rim
+      g.strokeStyle = theme.road; g.lineWidth = Math.max(1, 2 * s); g.beginPath(); [[8, 8], [16, 7], [18, 12], [16, 17], [9, 17], [7, 12], [8, 8]].forEach(function (p, i) { var c = toScreen(p[0], p[1], 0); if (i) g.lineTo(c.x, c.y); else g.moveTo(c.x, c.y); }); g.stroke(); // the ring road
     }
     function drawHydePark(g, s) {
       var B = D.HYDE_PARK.box, x0 = B[0], y0 = B[1], x1 = B[2], y1 = B[3];

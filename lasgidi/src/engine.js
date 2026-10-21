@@ -54,7 +54,9 @@
   // 24 is a polish and balance pass: a coach rest stop, smaller Club Cup purses, London trips that respect the visa end
   // (and no double fare leaving at midnight), the long-haul time on a jet to London, and late activities counting for the
   // day they started.
-  var RULES = 24;
+  // 25 opens Kumasi, the Garden City: Kejetia, Manhyia (Akwasidae), KNUST, Baba Yara, Lake Bosomtwe and Bonwire kente.
+  // Accra–Kumasi is a domestic coach (no border fees); prices show in cedi anywhere in Ghana.
+  var RULES = 25;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -1336,6 +1338,7 @@
   function districtOpen(s, d) { return cityOpen(s, districtCity(d)); }
   function districtCity(k) { return (D.DISTRICTS[k] && D.DISTRICTS[k].city) || 'lagos'; }
   function cityOf(s) { return districtCity(s.loc); }
+  function ghana(city) { return !!D.CITIES[city] && D.CITIES[city].country === 'Ghana'; }
   function intercityOptions(s, city) {
     var here = cityOf(s), C = D.CITIES[city];
     if (!C || !cityOpen(s, city)) return [];
@@ -1366,14 +1369,14 @@
       var r = rand(s);
       if (r < 0.15) { mins += 180; msg = 'A breakdown on the expressway added three hours.'; }
       else if (r < 0.25) { payPartial(s, price(s, 2000), 'Checkpoint "settlement"'); msg = 'Checkpoints all the way. You "settled" one of them.'; }
-      if (city === 'accra' || cityOf(s) === 'accra') { payPartial(s, price(s, 3000), 'Border stamping fees (Seme and Aflao)'); msg = (msg ? msg + ' ' : '') + 'Four border posts: Seme, Kraké, Hilla-Condji and Aflao. Passport stamped at each.'; }
+      // Rules 25: only a Nigeria–Ghana trip crosses the borders (Accra–Kumasi is domestic).
+      if (s.rules >= 25 ? ghana(city) !== ghana(cityOf(s)) : city === 'accra' || cityOf(s) === 'accra') { payPartial(s, price(s, 3000), 'Border stamping fees (Seme and Aflao)'); msg = (msg ? msg + ' ' : '') + 'Four border posts: Seme, Kraké, Hilla-Condji and Aflao. Passport stamped at each.'; }
       // Rules 24: halfway, the coach stops at a roadside canteen, so a long trip no longer starves you.
       if (s.rules >= 24) {
-        var half = Math.round(mins / 2 / 15) * 15;
-        advance(s, half);
-        payPartial(s, price(s, 800), 'Rest-stop rice on the road');
-        applyFx(s, { hunger: 35 });
-        advance(s, mins - half);
+        // Rules 25: rides over 12 hours (Lagos or Abuja to Kumasi) stop twice.
+        var stops = s.rules >= 25 && mins > 720 ? 2 : 1, leg = Math.round(mins / (stops + 1) / 15) * 15, gone = 0;
+        for (var st = 0; st < stops; st++) { advance(s, leg); gone += leg; payPartial(s, price(s, 800), 'Rest-stop rice on the road'); applyFx(s, s.rules >= 25 ? { hunger: 35, energy: 22, stress: -6 } : { hunger: 35 }); } // rules 25: and a doze between stops
+        advance(s, mins - gone);
         applyFx(s, { energy: -18, hygiene: -25, stress: 12 });
         msg = (msg ? msg + ' ' : '') + 'Halfway, the coach stopped at a roadside canteen for rice and a cold drink.';
       } else {
@@ -5001,7 +5004,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, golfOdds: golfOdds, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, ghana: ghana, golfOdds: golfOdds, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

@@ -1085,10 +1085,10 @@
   var LAYER_KEY = 'lasgidi.layers.v1';
   function mapLayers() { if (!ui.layers) { try { ui.layers = JSON.parse(localStorage.getItem(LAYER_KEY) || 'null'); } catch (e) {} ui.layers = ui.layers || { names: true, boards: true, players: true }; } return ui.layers; }
   // The map bar: a city picker (where you are, or ✈ Fly), Names, More (the other layers), and the letter-hunt badge.
-  var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊', accra: '🇬🇭', ldn: '🇬🇧' };
+  var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊', accra: '🇬🇭', kumasi: '👑', ldn: '🇬🇧' };
   // Cities this life can go to (Accra opens with rules 22).
   // In Accra prices read in cedi first, at the game's fixed rate (₵1 = ₦130). The ledger stays in naira.
-  var CEDI = 130, POUND = 2000; function money(n) { var c = S && L.cityOf(S); return c === 'accra' ? '₵' + Math.max(1, Math.round(n / CEDI)).toLocaleString('en') + ' (' + N(n) + ')' : c === 'ldn' ? '£' + Math.max(1, Math.round(n / POUND)).toLocaleString('en') + ' (' + N(n) + ')' : N(n); }
+  var CEDI = 130, POUND = 2000; function money(n) { var c = S && L.cityOf(S); return c === 'accra' || c === 'kumasi' ? '₵' + Math.max(1, Math.round(n / CEDI)).toLocaleString('en') + ' (' + N(n) + ')' : c === 'ldn' ? '£' + Math.max(1, Math.round(n / POUND)).toLocaleString('en') + ' (' + N(n) + ')' : N(n); }
   function openCities() { return Object.keys(D.CITIES).filter(function (c) { return !S || !L.cityOpen || L.cityOpen(S, c); }); }
   function layerChips() {
     var l = mapLayers(), here = L.cityOf(S), h = huntNow(), hs = huntState(), got = hs.found.length, tf = L.traffic ? L.traffic(S) : null;
@@ -2084,6 +2084,7 @@
     airport: [['Traveller', 'Boarding in forty minutes. Where is gate three?', 0], ['Ground crew', 'Chocks in, fuel truck next.', 1], ['Pilot', 'Clear skies over Abuja this evening.', 0], ['Cab driver', 'Island or mainland? Traffic is bad at Ikeja.', 0]],
     transport: [['Conductor', 'Last two seats! Enter with your change!', 0], ['Driver', 'We move when the bus full.', 0], ['Passenger', 'This queue no dey move at all.', 0], ['Hawker', 'Gala, Lacasera, pure water!', 0]],
     london: [['Busker', 'Any requests? I know some Wizkid.', 0], ['Tourist', 'Excuse me, which way to the Tube?', 0], ['Peckham aunty', 'You are welcome! Have you eaten?', 0], ['Guard', 'Mind the gap, please.', 0], ['Shopper', 'Everything is on sale but nothing is cheap.', 0]],
+    kumasi: [['Auntie', 'Akwaaba! Fufu is ready, come and sit.', 0], ['Tro-tro mate', 'Kejetia! Kejetia! Adum, Adum!', 0], ['Trader', 'Me nua, this kente is the real one.', 0], ['Fan', 'Kotoko will win today, no doubt.', 0], ['Weaver', 'Each pattern has a name and a story.', 0], ['Guide', 'You are welcome to the Garden City.', 0]],
     accra: [['Auntie', 'Akwaaba! Banku or fufu today?', 0], ['Trotro mate', 'Circle! Circle! One more seat!', 0], ['Market queen', 'Ei, my sister, come and buy.', 0], ['Customer', 'The shito here is hot paa.', 0], ['Drummer', 'Come and dance small, my friend.', 0], ['Guide', 'You are welcome to Accra. First time?', 0]],
     food: [['Mama Put', 'Rice, beans, dodo. Wetin you go chop?', 0], ['Customer', 'The stew here is sweet die.', 0], ['Waiter', 'Small chops are coming now.', 0]],
     nightlife: [['DJ', 'Next song go burst your head.', 0], ['Bouncer', 'No shorts tonight, boss.', 0], ['Raver', 'This party no get part two!', 0]],
@@ -2377,7 +2378,7 @@
   }
   /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
   var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
-  var AIR_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', ldn: 'LHR' };
+  var AIR_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR' };
   // A deterministic board for this game day, between Lagos, Port Harcourt and Abuja: an airliner about every
   // 30 minutes at gates 1–5, and a chopper shuttle about every 90 minutes from helipads H1–H4. Status follows the clock.
   function fids(kind) {
@@ -2518,7 +2519,7 @@
   }
   function airportGo(tab) { ui.airportOpen = false; ui.depTab = tab; clearPicks(); ui.place = ui.airportPlace || 'airport'; ui.tab = 'map'; render(); }
   /* ---------- airport departures: Air (cabins, insurance, boarding pass), My jet / charter, Chopper ---------- */
-  var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1, acc_kotoka: 1, ldn_lhr: 1 };
+  var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1, acc_kotoka: 1, kum_airport_pl: 1, ldn_lhr: 1 };
   function departuresView(pl) {
     var tab = ui.depTab || 'air', here = L.cityOf(S), cities = openCities().filter(function (c) { return c !== here; });
     var city = cities.indexOf(ui.depCity) >= 0 ? ui.depCity : cities[0], code = D.CITY_CODES;
@@ -2602,9 +2603,9 @@
   /* ---------- the ride view: a short journey scene with "Now passing" signs ---------- */
   // Mounted outside the app so live re-renders never restart it. Tap anywhere or Arrive to skip.
   // Towns on the road between the cities, for the coach (the real routes, in order).
-  var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'], 'lagos-accra': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'abuja-accra': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'ph-accra': ['Owerri', 'Benin City', 'Ore', 'Sagamu', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'] };
+  var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'], 'lagos-accra': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'abuja-accra': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'ph-accra': ['Owerri', 'Benin City', 'Ore', 'Sagamu', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'accra-kumasi': ['Achimota', 'Nsawam', 'Apedwa', 'Bunso', 'Nkawkaw', 'Konongo', 'Ejisu'], 'lagos-kumasi': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw', 'Ejisu'], 'abuja-kumasi': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'], 'ph-kumasi': ['Owerri', 'Benin City', 'Ore', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'] };
   // Abuja's and Port Harcourt's own words for the same rides (display only: the engine and its ledger keep the mode names).
-  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, ldn: { danfo: 'Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike' } };
+  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, kumasi: { danfo: 'Tro-tro', cab: 'Taxi' }, ldn: { danfo: 'Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike' } };
   function modeName(o) { var m = CITY_MODE_NAMES[L.cityOf(S)]; return (m && own(m, o.mode)) ? m[o.mode] : o.name; }
   var RIDE_NAMES = { coach: 'Savanna Line coach', danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
   function showRide(from, to, mode, t0) {
