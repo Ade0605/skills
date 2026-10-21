@@ -51,7 +51,7 @@
   // 22 opens Accra, Ghana: a fourth city to fly or coach to (over the Seme and Aflao borders), live, work and run a shop in.
   // 23 adds London as a visit-only trip: a UK visitor visa (fee, proof of funds, five days' wait, 28 days' stay), flights only,
   // no homes, jobs, shops or pay there; overstay and you are flown home.
-  var RULES = 23;
+  var RULES = 24;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -1361,8 +1361,19 @@
       if (r < 0.15) { mins += 180; msg = 'A breakdown on the expressway added three hours.'; }
       else if (r < 0.25) { payPartial(s, price(s, 2000), 'Checkpoint "settlement"'); msg = 'Checkpoints all the way. You "settled" one of them.'; }
       if (city === 'accra' || cityOf(s) === 'accra') { payPartial(s, price(s, 3000), 'Border stamping fees (Seme and Aflao)'); msg = (msg ? msg + ' ' : '') + 'Four border posts: Seme, Kraké, Hilla-Condji and Aflao. Passport stamped at each.'; }
-      advance(s, mins);
-      applyFx(s, { energy: -25, hygiene: -25, stress: 12, hunger: -20 });
+      // Rules 24: halfway, the coach stops at a roadside canteen, so a long trip no longer starves you.
+      if (s.rules >= 24) {
+        var half = Math.round(mins / 2 / 15) * 15;
+        advance(s, half);
+        payPartial(s, price(s, 800), 'Rest-stop rice on the road');
+        applyFx(s, { hunger: 35 });
+        advance(s, mins - half);
+        applyFx(s, { energy: -18, hygiene: -25, stress: 12 });
+        msg = (msg ? msg + ' ' : '') + 'Halfway, the coach stopped at a roadside canteen for rice and a cold drink.';
+      } else {
+        advance(s, mins);
+        applyFx(s, { energy: -25, hygiene: -25, stress: 12, hunger: -20 });
+      }
     } else {
       advance(s, mins);
       applyFx(s, { energy: -10, stress: 4 });
@@ -1716,7 +1727,7 @@
   // The Saturday Club Cup (rules 19): six holes, one choice each. Your fitness and lessons set the odds.
   var GOLF_PAR = [4, 3, 5, 4, 3, 4], GOLF_NAMES = ['The Lagoon', 'Short Iron', 'The Long One', 'Palm Dogleg', 'Over the Water', 'Clubhouse'];
   function golfSkill(s) { return skillLevel(s, 'fitness') * 0.6 + Math.min(12, s.golfLessons || 0) * 0.35; }
-  function golfOdds(s) { var k = golfSkill(s); return { drive: Math.min(0.6, 0.12 + k * 0.05), iron: Math.min(0.45, 0.08 + k * 0.035), wedge: Math.min(0.9, 0.45 + k * 0.04) }; }
+  function golfOdds(s) { var k = golfSkill(s), r24 = s.rules >= 24; return { drive: Math.min(r24 ? 0.5 : 0.6, 0.12 + k * 0.05), iron: Math.min(r24 ? 0.38 : 0.45, 0.08 + k * 0.035), wedge: Math.min(0.9, 0.45 + k * 0.04) }; }
   function queueGolfHole(s) {
     var g = s.golfCup, h = g.hole, o = golfOdds(s), par = GOLF_PAR[h];
     queue(s, { id: 'golfhole', title: 'Club Cup · hole ' + (h + 1) + ' of 6 · ' + GOLF_NAMES[h] + ' (par ' + par + ')', text: 'You are ' + (g.strokes ? (g.strokes - g.card.reduce(function (a, c) { return a + c.par; }, 0) >= 0 ? '+' : '') + (g.strokes - g.card.reduce(function (a, c) { return a + c.par; }, 0)) + ' after ' + h + ' holes.' : 'on the first tee. The members are watching.') + ' How do you play it?', odds: o,
@@ -1724,6 +1735,13 @@
       subs: [Math.round(o.drive * 100) + '% birdie · risk of a double bogey', Math.round(o.iron * 100) + '% birdie · usually par', Math.round(o.wedge * 100) + '% par · otherwise bogey'] });
   }
   function golfPrize(s, over) {
+    // Rules 24: smaller purses, so the Cup is a prize for the best players, not a weekly income.
+    if (s.rules >= 24) {
+      if (over <= -4) return { place: 1, cash: price(s, 2500000), gift: 'The Club Cup trophy and a gold-plated set of clubs' };
+      if (over <= -2) return { place: 2, cash: price(s, 800000), gift: 'A crystal decanter and a year of free green fees' };
+      if (over <= 0) return { place: 3, cash: price(s, 200000), gift: 'A Club Cup polo and a signed flag' };
+      return null;
+    }
     if (over <= -4) return { place: 1, cash: price(s, 4000000), gift: 'The Club Cup trophy and a gold-plated set of clubs' };
     if (over <= -2) return { place: 2, cash: price(s, 1000000), gift: 'A crystal decanter and a year of free green fees' };
     if (over <= 0) return { place: 3, cash: price(s, 300000), gift: 'A Club Cup polo and a signed flag' };
@@ -4974,7 +4992,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, golfOdds: golfOdds, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

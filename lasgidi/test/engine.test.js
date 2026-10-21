@@ -2894,3 +2894,40 @@ test('rules 23: London is visit-only with a UK visa: fee, proof of funds, a wait
   for (let d = 0; d < 32 && L.cityOf(r) === 'ldn'; d++) { L.wait(r, 24 * 60); while (r.pending.length) L.resolveChoice(r, 0); }
   assert.equal(L.cityOf(r), 'lagos'); assert.ok(r.ledger.some(e => /UK visa ran out/.test(e.memo)));
 });
+
+test('rules 24: the coach stops at a canteen (softer hunger and energy); rules 23 lives keep the old cost', () => {
+  const ride = rules => {
+    const s = L.newGame({ seed: 78, origin: 'mid', goal: 'freestyle', rules });
+    s.loc = 'oshodi'; s.t = Math.floor(s.t / 1440) * 1440 + 8 * 60; s.cash += 100000;
+    while (s.pending.length) L.resolveChoice(s, 1);
+    const h = s.needs.hunger, e = s.needs.energy, r = L.intercity(s, 'abuja', 'bus');
+    assert.ok(r.ok, r.msg);
+    return { s, r, dh: h - s.needs.hunger, de: e - s.needs.energy };
+  };
+  const old = ride(23), now = ride(24);
+  assert.equal(now.s.rules, 24);
+  assert.ok(now.dh < old.dh, 'less hungry after the rules-24 coach');
+  assert.ok(now.de <= old.de, 'no more tired after the rules-24 coach');
+  assert.match(now.r.msg, /canteen/);
+  assert.doesNotMatch(old.r.msg, /canteen/);
+  assert.ok(now.s.needs.hunger > 40, 'the canteen meal means you arrive fed');
+});
+
+test('rules 24: the Club Cup is not a weekly income, even for the best player', () => {
+  // Best play, hole by hole (a small dynamic programme over the six holes and the running score).
+  const ev = s => {
+    const o = L.golfOdds(s), opts = [[[o.drive, -1], [(1 - o.drive) * 0.55, 0], [(1 - o.drive) * 0.45, 2]], [[o.iron, -1], [(1 - o.iron) * 0.75, 0], [(1 - o.iron) * 0.25, 1]], [[o.wedge, 0], [1 - o.wedge, 1]]];
+    const memo = new Map(), V = (h, over) => {
+      if (h === 6) { const p = L.golfPrize(s, over); return p ? p.cash : 0; }
+      const k = h + ':' + over; if (memo.has(k)) return memo.get(k);
+      const v = Math.max(...opts.map(op => op.reduce((a, [p, d]) => a + p * V(h + 1, over + d), 0))); memo.set(k, v); return v;
+    };
+    return V(0, 0);
+  };
+  const maxed = rules => { const s = L.newGame({ seed: 5, goal: 'freestyle', rules }); s.skills.fitness = 1e9; s.golfLessons = 12; return s; };
+  const fee = s => L.price(s, 1000000);
+  const s24 = maxed(24), s23 = maxed(23);
+  assert.ok(ev(s24) < fee(s24), 'expected Cup winnings stay below the entry fee');
+  assert.ok(ev(s23) > ev(s24), 'rules 23 lives keep the bigger purses');
+  assert.equal(L.golfPrize(s23, -4).cash, L.price(s23, 4000000));
+});
