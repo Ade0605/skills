@@ -61,6 +61,12 @@
       "description": "Social SDK integration skill by OpenCore (vendored from github.com/opencoredev/social-sdk @ a76fb61): mock-first publishing, account connection flow, delivery outcome rendering, verified webhooks, integration tests.",
       "source": "./plugins/social-sdk",
       "strict": true
+    },
+    {
+      "name": "devils-advocate",
+      "description": "Adversarial self-critique by Brandon Simpson (vendored from github.com/brandonsimpson/devils-advocate @ a582d94, v3.4.0): binary pass/fail critique of code or plans with file:line evidence, session log, and non-blocking commit/plan-file reminder hooks.",
+      "source": "./plugins/devils-advocate",
+      "strict": true
     }
   ]
 }

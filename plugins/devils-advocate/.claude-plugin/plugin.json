@@ -1,0 +1,10 @@
+{
+  "name": "devils-advocate",
+  "description": "Claude's harshest critic. Evidence required. Perfection impossible.",
+  "version": "3.4.0",
+  "author": {
+    "name": "Brandon Simpson"
+  },
+  "license": "MIT",
+  "keywords": ["self-critique", "code-review", "binary-eval", "quality", "devils-advocate"]
+}
