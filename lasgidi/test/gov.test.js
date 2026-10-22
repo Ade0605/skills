@@ -70,5 +70,10 @@ test('gov: Senator and President races on the same ballot; one office a week; th
   assert.equal(pres.total, 3); assert.equal(pres.rows[0].cand.id, 'b'); assert.equal(pres.rows[0].votes, 2);
   assert.equal(pres.winner.cand.id, 'b'); assert.equal(pres.need, 2); assert.ok(pres.rows[0].meetsSpread);
   assert.equal(G.race('nope', runs, parties, votes, WK), null);
+  // A President ballot cast from Abuja keeps its own unit (presUnit): the Senator vote stays in Yaba.
+  const split = [doc('v9', { unit: 'yaba', sen: 'a', senAt: SAT, pres: 'b', presAt: SAT, presUnit: 'abj_wuse' })];
+  const L9 = { yaba: 1, ikeja: 1 };
+  assert.deepEqual(Object.keys(G.race('sen', runs, parties, split, WK, L9).units), ['yaba']);
+  assert.deepEqual(Object.keys(G.race('pres', runs, parties, split, WK, Object.assign({ abj_wuse: 1 }, L9)).units), ['abj_wuse']);
   assert.equal(G.race('sen', [doc('a', { office: 'sen', party: 'epp', motto: 1, at: TUE })], parties, [], WK).winner, null, 'no votes, no senator');
 });

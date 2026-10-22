@@ -2297,7 +2297,7 @@
       '<p class="pb-meta">' + esc(n.whenLabel) + ' · ticket ' + N(n.cost) + (n.seen ? ' · ✓ you saw it' : '') + '</p></div>' +
       '<div class="pb-col"><div class="pb-lab">COMING SOON</div><ul>' + B.next.map(function (x, i) { return row(x, i ? 'in 2 weeks' : 'next week'); }).join('') + '</ul></div>' +
       (B.past.length ? '<div class="pb-col"><div class="pb-lab">PAST SHOWS</div><ul>' + B.past.map(function (x) { return row(x, (x.weeksAgo === 1 ? 'last week' : x.weeksAgo + ' weeks ago') + (x.seen ? ' · ✓ seen' : '')); }).join('') + '</ul></div>' : '') +
-      '<button type="button" class="btn sm" id="th-inside" data-theatrein="1">' + (ui.theatreIn === pl.id ? '🚪 Go back outside' : '🎭 Go inside the hall') + '</button></div>';
+      (S.loc === pl.district ? '<button type="button" class="btn sm" id="th-inside" data-theatrein="1">' + (ui.theatreIn === pl.id ? '🚪 Go back outside' : '🎭 Go inside the hall') + '</button>' : '<p class="pb-meta" style="padding:0 14px 12px">Come to Surulere to go inside.</p>') + '</div>';
   }
   // A place's own desks and boards: departures, clubs, the cruise, rooms, the estate office, japa, HR desks, shares.
   function venueExtras(pl) {
@@ -2416,7 +2416,7 @@
     if (html !== venueKey) { var inp = document.getElementById('venue-in'), val = inp ? inp.value : '', foc = document.activeElement && document.activeElement.id === 'venue-in'; pn0.innerHTML = html; venueKey = html; var ni = document.getElementById('venue-in'); if (ni) { ni.value = val; if (foc) ni.focus(); } }
     ov.classList.toggle('folded', !!ui.venueFold);
     var sc = venueScene(pl); sc.villas = pl.id === 'white_sand_beach'; sc.mode = pl.id === 'lekki_hyde_park' ? 'estate' : /^harbour_/.test(pl.id) ? 'harbour' : NIGHT3D(pl) ? 'club' : venueSet(pl) === 'stadium' ? 'stadium' : D.insideKind(pl) === 'market' ? 'market' : D.insideKind(pl) === 'jetty' ? 'jetty' : D.insideKind(pl) === 'park' ? 'park' : /^(church|mosque|govt)$/.test(D.insideKind(pl)) || /^(theatre|abj_tower_pl)$/.test(pl.id) ? 'plaza' : pl.id === 'abj_crafts_pl' ? 'market' : D.insideKind(pl) === 'culture' ? 'gallery' : PLACE3D[D.insideKind(pl)] || 'beach'; sc.kind = D.insideKind(pl); if (pl.id === 'freedom') sc.mode = 'park'; if (sc.kind === 'campus') sc.mode = 'plaza'; sc.street = pl.id === 'pitch'; sc.day = L.day(S); sc.club = pl.id === 'harbour_club'; sc.placeId = pl.id; sc.shop = pl.shop || null; sc.month = L.monthIndex(S); sc.rooftop = /lounge/.test(pl.id); sc.hour = L.hour(S);
-    if (pl.id === 'theatre' && S.rules >= 31) { var TB = L.theatreBill(S); sc.th = { title: TB.now.title, kind: TB.now.kind, by: TB.now.by, color: TB.now.color, on: TB.now.on, when: TB.now.whenLabel, next: TB.next[0].title, last: TB.past[0] ? TB.past[0].title : '', inside: ui.theatreIn === pl.id }; sc.th.key = [sc.th.title, sc.th.on, sc.th.inside, sc.th.last].join('|'); if (sc.th.inside) { sc.mode = 'hall'; sc.kind = 'auditorium'; } }
+    if (pl.id === 'theatre' && S.rules >= 31) { var TB = L.theatreBill(S); sc.th = { title: TB.now.title, kind: TB.now.kind, by: TB.now.by, color: TB.now.color, on: TB.now.on, when: TB.now.whenLabel, next: TB.next[0].title, last: TB.past[0] ? TB.past[0].title : '', inside: ui.theatreIn === pl.id && S.loc === pl.district }; sc.th.key = [sc.th.title, sc.th.inside ? sc.th.on : '', sc.th.inside, sc.th.last].join('|'); if (sc.th.inside) { sc.mode = 'hall'; sc.kind = 'auditorium'; } }
     var gig = (D.PLACE_ACTIONS.island || []).filter(function (x) { return x.id === 'isl_harbour_concert'; })[0]; sc.show = !!gig && L.inWindow(S, gig.when);
     var FF = S.rules >= 32 && pl.id === 'harbour_live' ? L.dettyFest(S) : null; sc.fest = FF && FF.phase === 'on' ? { night: FF.night, head: FF.tonight.head, theme: FF.tonight.theme } : null; if (sc.fest && FF.on) sc.show = true; venueStage.update(sc); venueStage.start();
     ambience(prefs.sound && !document.hidden ? AMBIENCE_OF[sc.set] || 'street' : null);
@@ -3085,7 +3085,7 @@
   var mini = null; // { kind, game, ov, result, timer, onKey }
   function miniFocusables(ov) { return Array.prototype.filter.call(ov.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'), function (el) { return el.offsetParent !== null; }); }
   // Rules 33: where the stage game is played (the theatre open stage, or the fest's opening slot).
-  function stageAt() { var a = L.availableActions(S).filter(function (x) { return x.minigame === 'stage'; })[0]; return (S.mini && S.mini.at) || (a && a.stageAt) || 'theatre'; }
+  function stageAt() { var a = L.availableActions(S).filter(function (x) { return x.minigame === 'stage'; })[0]; return (S.mini && S.mini.kind === 'stage' && S.mini.at) || (a && a.stageAt) || 'theatre'; }
   function openMinigame(kind) {
     var g = MINIGAMES[kind];
     if (!g || !window[g.lib] || document.getElementById('danfo-overlay')) return;
@@ -3244,7 +3244,7 @@
   // December in Lagos: what is on, and what it costs.
   // Rules 32: Eko Detty Fest. A countdown from late November, then tonight's lineup, tomorrow's and the full programme.
   function festCard(where) {
-    if (!(S.rules >= 32)) return ''; var f = L.dettyFest(S); if (!f || f.phase === 'over') return '';
+    if (!(S.rules >= 32) || L.cityOf(S) !== 'lagos') return ''; var f = L.dettyFest(S); if (!f) return '';
     var t = f.tonight, nx = f.tomorrow, top = t || nx;
     var head = f.phase === 'soon' ? 'Starts in ' + f.daysTo + (f.daysTo === 1 ? ' day' : ' days') : 'Night ' + f.night + ' of ' + f.nights + (f.on ? ' <span class="pb-live">ON NOW</span>' : ' · tonight');
     return '<div class="fest-card"><div class="fc-lab">🎆 ' + esc(f.name.toUpperCase()) + ' · HARBOUR LIVE, LAGOS ISLAND</div><h3>' + head + '</h3>' +
@@ -3943,14 +3943,14 @@
     var mvRaw = (online.govvote || []).filter(function (r) { return r.id === online.me; })[0], mv = mvRaw && G.weekVal(mvRaw.raw, wk), myVote = mv && mv[office];
     var w = prev && prev.winner, html = '<div class="race-hold">' + '<span class="label">' + esc(O.name.toUpperCase()) + ' · THIS WEEK</span>' +
       (w ? '<div class="race-who">' + photoImg(w.cand.id, 'pphoto') + '<div><b>' + esc(nameOf(w.cand.id)) + (w.cand.id === online.me ? ' (you)' : '') + '</b><p>' + partyChip(w.cand.party) + ' “' + esc(G.MOTTOS[w.cand.motto]) + '” · ' + w.votes + ' vote' + (w.votes === 1 ? '' : 's') + '</p></div></div>' : '<p>The seat is empty: nobody won last week. Declare below and take it this weekend.</p>') + '</div>';
-    var q = (ui.raceQ || '').toLowerCase(), rows = cur ? cur.rows.filter(function (r) { return !q || nameOf(r.cand.id).toLowerCase().indexOf(q) >= 0; }) : [];
+    var searchable = !!(cur && cur.rows.length > 4), q = searchable ? (ui.raceQ || '').toLowerCase() : '', rows = cur ? cur.rows : [], hit = function (r) { return !q || nameOf(r.cand.id).toLowerCase().indexOf(q) >= 0; }, shown = rows.filter(hit).length;
     html += '<div class="section"><div class="inline" style="justify-content:space-between"><h3>This week\'s race</h3><span class="muted">' + esc(PHASE_LABEL[ph]) + '</span></div>' +
-      (cur && cur.rows.length > 4 ? '<input type="search" id="race-q" class="race-q" placeholder="Search ' + cur.rows.length + ' candidates by name" value="' + esc(ui.raceQ || '') + '" aria-label="Search candidates">' : '') +
+      (searchable ? '<input type="search" id="race-q" class="race-q" placeholder="Search ' + cur.rows.length + ' candidates by name" value="' + esc(ui.raceQ || '') + '" aria-label="Search candidates">' : '') +
       (rows.length ? '<div class="race-list">' + rows.map(function (r) {
         var pct = cur.total ? Math.round(r.votes / cur.total * 100) : 0, on = myVote === r.cand.id;
-        return '<div class="race-row' + (on ? ' mine' : '') + '">' + photoImg(r.cand.id, 'pphoto') + '<div class="race-main"><b>' + esc(nameOf(r.cand.id)) + (r.cand.id === online.me ? ' (you)' : '') + '</b> ' + partyChip(r.cand.party) + '<p>“' + esc(G.MOTTOS[r.cand.motto]) + '”</p><div class="race-bar"><i style="width:' + pct + '%"></i></div></div>' +
+        return '<div class="race-row' + (on ? ' mine' : '') + '" data-name="' + esc(nameOf(r.cand.id).toLowerCase()) + '"' + (hit(r) ? '' : ' hidden') + '>' + photoImg(r.cand.id, 'pphoto') + '<div class="race-main"><b>' + esc(nameOf(r.cand.id)) + (r.cand.id === online.me ? ' (you)' : '') + '</b> ' + partyChip(r.cand.party) + '<p>“' + esc(G.MOTTOS[r.cand.motto]) + '”</p><div class="race-bar"><i style="width:' + pct + '%"></i></div></div>' +
           '<div class="race-n"><b class="num">' + r.votes + '</b><small>' + pct + '%</small>' + (ph === 'election' ? '<button class="btn sm' + (on ? ' ghost' : ' go') + '" id="rv-' + office + '-' + esc(r.cand.id) + '" data-racevote="' + office + ':' + esc(r.cand.id) + '"' + (can ? '' : ' disabled') + '>' + (on ? '✓ Voted' : 'Vote') + '</button>' : '') + '</div></div>';
-      }).join('') + '</div>' : '<p class="note">' + (q ? 'No candidate matches that name.' : 'No candidates yet.') + '</p>') +
+      }).join('') + '</div><p class="note" id="race-nomatch"' + (shown ? ' hidden' : '') + '>No candidate matches that name.</p>' : '<p class="note">No candidates yet.</p>') +
       (ph !== 'election' ? '<p class="note">Voting opens on Saturday at your polling unit (' + esc(office === 'pres' ? D.DISTRICTS[anyUnit()] ? D.DISTRICTS[anyUnit()].name : 'your district' : unitName(myUnit())) + '). One vote per race.</p>' : myVote ? '<p class="note">Your vote for ' + esc(O.short) + ' is in. You can change it until Sunday ends.</p>' : '') +
       (O.spread ? '<p class="note">To win outright, the President needs the most votes and at least 25% in two-thirds of the districts that voted, across every city. Otherwise the tribunal returns the candidate with the most votes.</p>' : '<p class="note">The Senator is the candidate with the most votes from Lagos polling units.</p>') + '</div>';
     var running = (online.govrun || []).filter(function (r) { return r.id === online.me; })[0], rv = running && G.weekVal(running.raw, wk), mineHere = rv && rv.office === office;
@@ -4760,13 +4760,13 @@
     if (ds.layer) { var ly = mapLayers(); ly[ds.layer] = !ly[ds.layer]; try { localStorage.setItem(LAYER_KEY, JSON.stringify(ly)); } catch (e) {} render(); return; }
     if (ds.roomenter) { var re0 = ds.roomenter; run(function () { var r = L.roomEnter(S, re0); if (r.ok) { ui.roomOpen = re0; ui.cruiseOpen = false; ui.airportOpen = false; } return r; }); syncPresence(); return; }
     if (ds.pshop != null && ds.pshop !== '') { var ps = PSHOPS[+ds.pshop]; if (ps) { ui.pshop = ps; ui.venueOpen = 'pshop'; ui.venueSlot = null; ui.venueTab = null; ui.cruiseOpen = false; ui.airportOpen = false; render(); } return; }
-    if (ds.venue) { ui.venueOpen = ds.venue; ui.venueSlot = null; ui.venueTab = null; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
+    if (ds.venue) { ui.venueOpen = ds.venue; ui.theatreIn = null; ui.venueSlot = null; ui.venueTab = null; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.venuesend) { var vi = document.getElementById('venue-in'); sendVenue(vi ? vi.value : ''); return; }
     if (ds.venuefold) { ui.venueFold = !ui.venueFold; mountVenue(); return; }
     if (ds.venuetab) { ui.venueTab = ds.venuetab; mountVenue(); return; }
     if (ds.festprog) { ui.festProg = !ui.festProg; if (ui.venueOpen) mountVenue(); render(); return; }
     if (ds.theatrein) { ui.theatreIn = ui.theatreIn === ui.venueOpen ? null : ui.venueOpen; mountVenue(); return; }
-    if (ds.venueclose) { ui.venueOpen = null; render(); return; }
+    if (ds.venueclose) { ui.venueOpen = null; ui.theatreIn = null; render(); return; }
     if (ds.roomopen) { ui.roomOpen = ds.roomopen; ui.cruiseOpen = false; ui.airportOpen = false; render(); return; }
     if (ds.roomspot) { var rsp = ds.roomspot; if (S.room && S.room.spot === rsp) return; run(function () { return L.roomSpot(S, S.room.id, rsp); }); syncPresence(); return; }
     if (ds.mappop) { ui.mapPop = ui.mapPop === 'do' ? null : 'do'; if (ui.mapPop) { ui.place = null; ui.board = null; ui.homeSel = null; } render(); return; }
@@ -4818,7 +4818,7 @@
     if (ds.flyjet) { var fj = ds.flyjet.split(':'); var f1 = S.loc, t1 = S.t; run(function () { var r = L.flyJet(S, fj[0], fj[1] === '1'); if (r.ok) { ui.sel = null; ui.place = null; showRide(f1, S.loc, 'jet', t1); } return r; }, 'travel'); return; }
     if (ds.chopper) { var cp = ds.chopper; var f2 = S.loc, t2 = S.t; run(function () { var r = L.chopperTo(S, cp); if (r.ok) { ui.sel = null; ui.place = cp; showRide(f2, S.loc, 'heli', t2); } return r; }, 'travel'); return; }
     if (ds.shareplace) { var spl = D.PLACES.filter(function (p) { return p.id === ds.shareplace; })[0], stx = 'Meet me at ' + spl.name + ', ' + D.DISTRICTS[spl.district].name + ' in Lasgidi.'; try { navigator.clipboard.writeText(stx).then(function () { t.textContent = '✅ Copied'; }, function () { t.textContent = stx; }); } catch (e) { t.textContent = stx; } return; }
-    if (ds.govtab) { ui.govTab = ds.govtab; online.govStatus = ''; render(); return; }
+    if (ds.govtab) { ui.govTab = ds.govtab; online.govStatus = ''; ui.raceQ = ''; render(); return; }
     if (ds.govmotto != null) { ui.govMotto = +ds.govmotto; render(); return; }
     if (ds.govplank) { var pl0 = (ui.govPlanks || (govState(townWeek()).n.candidates.filter(function (c) { return c.id === online.me; })[0] || { planks: [] }).planks).slice(), pi0 = pl0.indexOf(ds.govplank); if (pi0 >= 0) pl0.splice(pi0, 1); else if (pl0.length < 3) pl0.push(ds.govplank); ui.govPlanks = pl0; render(); return; }
     if (ds.govjoin) { govWrite('govparty', { party: ds.govjoin, mate: null, at: Date.now() }, 'You joined ' + G.PARTIES[ds.govjoin].name + '.'); return; }
@@ -4846,9 +4846,9 @@
       if (!O1) return; if (!mp1) { online.govStatus = 'Join a party first.'; render(); return; }
       if (L.statusPoints(S) < O1.minStatus) { online.govStatus = 'You need ' + O1.minStatus + ' status points to run for ' + O1.short + '.'; render(); return; }
       var r1 = (online.govrun || []).filter(function (r) { return r.id === online.me; })[0], v1 = r1 && G.weekVal(r1.raw, townWeek()), same = v1 && v1.office === off;
-      govWrite('govrun', { office: off, party: mp1, motto: ui.govMotto != null ? ui.govMotto : same ? v1.motto : 0, planks: same ? v1.planks || [] : [], deputy: null, camp: {}, at: same ? v1.at : Date.now() }, same ? 'Saved.' : 'You declared for ' + O1.name + '!'); return;
+      govWrite('govrun', { office: off, party: mp1, motto: ui.govMotto != null ? ui.govMotto : same ? v1.motto : 0, planks: same ? v1.planks || [] : [], deputy: null, camp: {}, at: same ? v1.at : Date.now() }, same ? 'Saved.' : 'You declared for ' + O1.name + '!'); ui.govMotto = null; return;
     }
-    if (ds.racevote) { var rvp = ds.racevote.split(':'), patch = { unit: rvp[0] === 'pres' ? anyUnit() : myUnit() }; patch[rvp[0]] = rvp[1]; patch[rvp[0] + 'At'] = Date.now(); govWrite('govvote', patch, 'Your vote for ' + G.OFFICES[rvp[0]].short + ' is in.'); return; }
+    if (ds.racevote) { var rvp = ds.racevote.split(':'), patch = rvp[0] === 'pres' ? { presUnit: anyUnit() } : { unit: myUnit() }; patch[rvp[0]] = rvp[1]; patch[rvp[0] + 'At'] = Date.now(); govWrite('govvote', patch, 'Your vote for ' + G.OFFICES[rvp[0]].short + ' is in.'); return; }
     if (ds.govvote) { govWrite('govvote', { cand: ds.govvote, unit: myUnit(), at: Date.now() }, 'Your vote is in.'); return; }
     if (ds.govconfirm) { var cf = ds.govconfirm.split(':'), oldc = (online.govconfirm || []).filter(function (r) { return r.id === online.me; })[0], ov = oldc && G.weekVal(oldc.raw, townWeek()); var votes0 = JSON.parse(JSON.stringify((ov && ov.week === townWeek() && ov.votes) || {})); votes0[cf[0]] = +cf[1]; govWrite('govconfirm', { votes: votes0 }, 'Assembly vote recorded.'); return; }
     if (ds.vote != null && t.hasAttribute('data-vote')) {
@@ -4881,7 +4881,7 @@
       if (!ui.confirmSignout) {
         ui.confirmSignout = true; var codeSO = L.serialize(S);
         try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(codeSO).catch(function () {}); } catch (e) {}
-        ui.flash = 'Your save code is copied (it is also in the box above). Keep it safe, for example in your notes. Tap again to remove this life from this device; paste the code on the start screen to carry on.';
+        ui.flash = 'Your save code is copied' + (ui.welcome ? '' : ' (it is also in the box above)') + '. Keep it safe, for example in your notes. Tap again to remove this life from this device; paste the code on the start screen to carry on.';
         render(); return;
       }
       try { Object.keys(localStorage).filter(function (k) { return /^lasgidi\./.test(k); }).forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
@@ -4912,7 +4912,10 @@
   });
 
   document.addEventListener('input', function (e) {
-    if (e.target && e.target.id === 'race-q') { ui.raceQ = e.target.value; render(); var rq = document.getElementById('race-q'); if (rq) { rq.focus(); try { rq.setSelectionRange(rq.value.length, rq.value.length); } catch (x) {} } return; }
+    if (e.target && e.target.id === 'race-q') { // filter in place: no re-render, so phone keyboards keep their text
+      ui.raceQ = e.target.value; var qq = ui.raceQ.toLowerCase(), any = 0;
+      document.querySelectorAll('.race-list .race-row').forEach(function (row) { var ok = !qq || (row.getAttribute('data-name') || '').indexOf(qq) >= 0; row.hidden = !ok; if (ok) any++; });
+      var nm = document.getElementById('race-nomatch'); if (nm) nm.hidden = !!any; return; }
     if (e.target && e.target.id === 'radio-title') { ui.radioTitle = e.target.value; return; }
     if (e.target && e.target.id === 'sea-cap') { ui.seaCap = e.target.value; return; }
     if (e.target && e.target.id === 'sea-link') { ui.seaLink = e.target.value; return; }
@@ -4962,6 +4965,8 @@
     if (e.target && e.target.id === 'look-hair' && S) { var hv = +e.target.value; run(function () { return L.setLook(S, S.look.skin, hv, S.look.shape); }); }
   });
 
+  // Escape closes the welcome card and the letter-found screen.
+  document.addEventListener('keydown', function (e) { if (e.key !== 'Escape' || mini) return; if (ui.huntFound) { ui.huntFound = null; render(); } else if (ui.welcome) { ui.welcome = false; ui.confirmSignout = false; ui.flash = ''; render(); } });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.target && e.target.id === 'venue-in') { e.preventDefault(); sendVenue(e.target.value); return; }
     if (e.key === 'Enter' && e.target && e.target.id === 'room-in') { e.preventDefault(); sendRoom(e.target.value); return; }
