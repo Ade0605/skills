@@ -3060,3 +3060,23 @@ test('rules 28: Cape Coast is coach-only (no flights or jets); closed in rules 2
   assert.equal(L.cityOf(s), 'accra'); assert.equal(s.ledger.filter(e => /Border stamping/.test(e.memo)).length, 1, 'Cape Coast to Accra is domestic');
   assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
 });
+
+test('rules 29: passport stamps the first time you are in each city; travel achievements; none in rules 28 lives', () => {
+  const s = L.newGame({ seed: 2900, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.ok(s.rules >= 29); L.wait(s, 60);
+  assert.ok(s.stamps.lagos != null, 'home city stamped');
+  const pp = L.passport(s); assert.equal(pp.length, Object.keys(D.CITIES).filter(k => L.cityOpen(s, k)).length);
+  // Stamps follow where you are (state set by hand here: no replay check on this life).
+  for (const c of ['accra', 'kumasi', 'capecoast']) { s.loc = D.CITIES[c].park; L.wait(s, 15); }
+  assert.ok(s.ach.ghana_tour); assert.ok(!s.ach.globetrotter);
+  for (const c of ['ldn', 'dxb']) { s.loc = D.CITIES[c].airport; L.wait(s, 15); }
+  assert.ok(s.ach.globetrotter); assert.ok(!s.ach.every_city);
+  for (const c of ['abuja', 'ph']) { s.loc = D.CITIES[c].park; L.wait(s, 15); }
+  assert.ok(s.ach.every_city); const day0 = s.stamps.accra; s.loc = D.CITIES.accra.park; s.t += 1440; L.wait(s, 15); assert.equal(s.stamps.accra, day0, 'a stamp is kept from the first visit');
+  const old = L.newGame({ seed: 2900, origin: 'nepo', goal: 'freestyle', rules: 28 }); while (old.pending.length) L.resolveChoice(old, 0); L.wait(old, 60);
+  assert.equal(old.stamps, undefined); assert.equal(L.passport(old), null);
+  const cc = L.newGame({ seed: 2902, origin: 'nepo', goal: 'freestyle' }); cc.bank = 4e6; cc.cash = 3e6; assert.ok(L.applyVisa(cc, 'dxb').ok); cc.t += 4 * 1440; cc.loc = 'cc_town'; while (cc.pending.length) L.resolveChoice(cc, 0);
+  assert.equal(L.intercityOptions(cc, 'dxb').length, 0, 'no long-haul flight from Cape Coast'); cc.loc = 'dxb_airport'; assert.ok(L.intercityOptions(cc, 'capecoast').every(o => o.mode !== 'flight'));
+  const r = L.newGame({ seed: 2901, origin: 'nepo', goal: 'freestyle' }); for (let i = 0; i < 20; i++) { while (r.pending.length) L.resolveChoice(r, 0); L.wait(r, 60); }
+  assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});
