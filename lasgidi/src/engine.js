@@ -64,7 +64,10 @@
   // canopy walk, the University of Cape Coast, Kotokuraba Market, the Elmina harbour and the Fetu Afahye festival.
   // 29 adds passport stamps (the first time you are in each city) and three travel achievements, and closes a review
   // find: long-haul flights (London, Dubai) no longer leave from or land in Cape Coast, which has no airport.
-  var RULES = 29;
+  // 30 adds gameplay depth: children grow up on a compressed clock (two game weeks a year) and choose university, a
+  // trade or work at 18, then move out and send a little home and later marry; weekly business decisions (a big order,
+  // staff skimming, a rival, an inspection); and a chief's duties, which cost your title its status if refused.
+  var RULES = 30;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -131,7 +134,9 @@
     banana:      'Banana Island: bought a waterfront mansion',
     ghana_tour:  'Akwaaba: stamped in Accra, Kumasi and Cape Coast',
     globetrotter: 'Globetrotter: stamped in London and Dubai',
-    every_city:  'Full passport: a stamp from every city'
+    every_city:  'Full passport: a stamp from every city',
+    graduate_kid: 'Proud day: a child graduated from university',
+    in_law:      'In-laws: a child got married'
   };
 
   /* ---------- small helpers ---------- */
@@ -565,6 +570,7 @@
     weeklyProperty(s);
     payDividends(s, w);
     if (s.rules >= 6) weeklyFamily(s);
+    if (s.rules >= 30) { weeklyBusinessDecisions(s); weeklyTitle(s); }
     if (s.rules >= 14) weeklyDetty(s);
     resolvePonzi(s);
 
@@ -1964,13 +1970,69 @@
         break;
       case 'baby':
         if (idx === 0) {
-          s.kids.push({ born: day(s), school: null, nextFees: day(s) + 84 });
+          s.kids.push(s.rules >= 30 ? { born: day(s), school: null, nextFees: day(s) + 84, v: 30 } : { born: day(s), school: null, nextFees: day(s) + 84 });
           s.babyPause = week(s) + 10;
           unlock(s, 'parent');
           applyFx(s, { social: 20, fun: 15, stress: 10 });
           msg = 'Congratulations! A baby has joined the family. Babies cost ' + naira(price(s, 4000)) + ' a week; school fees start in 12 weeks.';
           log(s, msg, 'good');
         } else { s.babyPause = week(s) + 8; msg = 'You agree to wait.'; }
+        break;
+      case 'kidfuture':
+        var kf = s.kids[ev.kid], kn = kidName(s, ev.kid);
+        if (kf) {
+          kf.path = ['uni', 'trade', 'work'][idx];
+          if (idx === 0) { kf.nextFees = day(s); msg = kn + ' is off to university. Fees are charged each term.'; }
+          else if (idx === 1) { var tf = price(s, D.KID_FUTURES.trade.fee); if (!pay(s, tf, 'Apprenticeship for ' + kn)) addDebt(s, tf, 'Apprenticeship'); msg = kn + ' starts an apprenticeship with a master tailor.'; }
+          else { kf.out = true; msg = kn + ' found work and moved into a room with friends. They promise to send something home.'; }
+          applyFx(s, { social: 6 }); log(s, msg, 'info');
+        }
+        break;
+      case 'kidwedding':
+        var kw = s.kids[ev.kid], wn = kidName(s, ev.kid);
+        if (kw) {
+          kw.wed = true; unlock(s, 'in_law');
+          if (idx === 0) { payPartial(s, price(s, 250000), 'Wedding gift for ' + wn); kw.bond = Math.min(100, (kw.bond || 0) + 20); applyFx(s, { social: 30, fun: 25 }); msg = 'You sprayed the couple and danced all night. ' + wn + ' will never forget it.'; }
+          else if (idx === 1) { payPartial(s, price(s, 40000), 'Wedding gift for ' + wn); kw.bond = Math.min(100, (kw.bond || 0) + 8); applyFx(s, { social: 18, fun: 15 }); msg = 'A modest gift and a long speech. Everyone cried a little.'; }
+          else { applyFx(s, { social: 8, stress: 6 }); msg = 'You gave your blessing. The in-laws noticed the empty envelope.'; }
+          log(s, '💍 ' + msg, 'good');
+        }
+        break;
+      case 'bizevent':
+        var bb = s.businesses[ev.b], bdef = bb && D.BUSINESSES[bb.id];
+        if (!bb) { msg = 'That business is no longer yours.'; break; }
+        var bnm = businessName(bb), mod = function (x, days) { (bb.mods = bb.mods || []).push({ x: x, until: day(s) + days }); };
+        if (ev.kind === 'contract') {
+          if (idx === 0) { if (!pay(s, ev.stake, 'Stock for a big order (' + bnm + ')')) { msg = 'You could not raise the money for the stock.'; break; }
+            if (rand(s) < 0.6) { earn(s, roundTo(ev.stake * 1.5, 50), 'Big order paid (' + bnm + ')'); msg = 'The order went out on time and the client paid in full.'; }
+            else msg = 'The client went quiet after delivery. The money is gone.'; }
+          else msg = 'You let the order go. No risk, no reward.';
+        } else if (ev.kind === 'theft') {
+          if (idx === 0) { bb.manager = false; msg = 'You sacked the manager on the spot. You will have to visit more often now.'; }
+          else { mod(0.8, 7); if (rand(s) < 0.3) mod(0.8, 14); msg = 'A warning, and a promise. Takings are down while trust rebuilds.'; }
+        } else if (ev.kind === 'rival') {
+          if (idx === 0) { mod(0.85, 14); msg = 'You cut prices for two weeks and kept your customers.'; }
+          else if (rand(s) < 0.4) { mod(0.6, 21); msg = 'Your customers tried the new place. Takings are down for three weeks.'; }
+          else msg = 'Their prices did not last. Your customers stayed.';
+        } else {
+          if (idx === 0) { if (!pay(s, ev.stake, 'Repairs for the inspection (' + bnm + ')')) addDebt(s, ev.stake, 'Inspection repairs'); msg = 'You fixed the wiring and the fire exit. The inspector signed.'; }
+          else { pay(s, roundTo(ev.stake * 0.3, 50), 'Inspection "settlement" (' + bnm + ')') || addDebt(s, roundTo(ev.stake * 0.3, 50), 'Inspection "settlement"'); if (rand(s) < 0.3) { mod(0, 3); msg = 'A senior inspector came back and sealed the shop for three days.'; } else msg = 'The inspector pocketed it and left.'; }
+        }
+        log(s, '🏪 ' + bnm + ': ' + msg, 'info');
+        break;
+      case 'chiefduty':
+        var CD = D.CHIEF_DUTIES[ev.kind];
+        if (idx === 0) {
+          s.titleRefusals = 0; if (s.titleShamed) { s.titleShamed = false; log(s, 'The elders are pleased with you again. Your title carries its weight once more.', 'good'); }
+          if (CD.cost) payPartial(s, price(s, CD.cost), CD.name);
+          advance(s, CD.mins); applyFx(s, CD.fx);
+          msg = CD.done;
+          if (ev.kind === 'donate' && rand(s) < 0.1) msg += ' The community is naming a street after you.';
+        } else {
+          s.titleRefusals = (s.titleRefusals || 0) + 1;
+          if (s.titleRefusals >= 3 && !s.titleShamed) { s.titleShamed = true; msg = 'The elders say a chief who is never there is no chief. Your title has lost its status until you serve again.'; log(s, msg, 'bad'); }
+          else msg = 'You sent your apologies. The elders were not impressed.';
+        }
         break;
       case 'school':
         var kid = s.kids[ev.kid], tier = ['public', 'private', 'intl'][idx];
@@ -2217,6 +2279,7 @@
   function buyBusiness(s, id, site) {
     var b = D.BUSINESSES[id];
     if (!b) return fail('Unknown business.');
+    if (s.rules >= 30 && s.pending.length) return fail('Decide on the open event first.'); // a business decision may be waiting
     if (site != null && (!D.BUSINESS_SITES[site] || !districtOpen(s, site) || visitOnly(site))) return fail('Pick a district for your business.');
     if (s.rules >= 20 && site == null) return fail('Pick a district for your business.');
     if ((site != null || s.rules >= 20) && s.businesses.length >= 12) return fail('You run 12 businesses already.');
@@ -2233,6 +2296,7 @@
   function sellBusiness(s, i) {
     var b = s.businesses[i];
     if (!b) return fail('No such business.');
+    if (s.rules >= 30 && s.pending.length) return fail('Decide on the open event first.');
     var v = roundTo(b.paid * 0.6, 50);
     s.alerts = [];
     s.businesses.splice(i, 1);
@@ -2319,6 +2383,7 @@
       if (def.december && isDecember(s)) v *= def.december;
       if (monthIndex(s) === 0) v *= 0.75;
       if (!b.manager && day(s) - b.visit > 7) { v *= 0.45; notes.push(businessName(b) + ' staff are stealing'); }
+      if (s.rules >= 30 && b.mods && b.mods.length) { b.mods = b.mods.filter(function (m) { return m.until > day(s); }); b.mods.forEach(function (m) { v *= m.x; }); } // rules 30: decisions
       if (def.power && !s.power) v -= def.daily * 0.12 * s.econ.fuel * s.econ.infl * (b.level > 1 ? D.BUSINESS_LEVEL.mult[b.level - 1] : 1);
       if (def.risky && rand(s) < 0.05) { v -= def.daily * 1.5; notes.push('union and LASTMA "dues" on the bus'); }
       total += v;
@@ -2545,8 +2610,29 @@
     }
   }
 
+  // Rules 30: a child's age on the game's compressed clock (two weeks a year), for children born in rules 30 lives.
+  var KID_YEAR = 14;
+  function kidAge(s, k) { return k && k.v === 30 ? Math.floor((day(s) - k.born) / KID_YEAR) : null; }
+  function kidStage(s, k) {
+    var a = kidAge(s, k); if (a == null) return null;
+    if (k.out) return k.wed ? 'married' : k.path === 'uni' ? 'graduate, working' : 'working';
+    if (a >= 18) return k.path === 'uni' ? 'at university' : k.path === 'trade' ? 'learning a trade' : 'deciding what next';
+    return a >= 3 ? 'at school' : 'at home';
+  }
+  function grownKids(s, k, i) {
+    var a = kidAge(s, k), name = kidName(s, i);
+    if (k.out) {
+      var gift = price(s, k.path === 'uni' ? 2800 : 2200); earn(s, gift, 'A little something from ' + name);
+      if (!k.wed && a >= (k.path === 'uni' ? 24 : 20) && !s.pending.some(function (e) { return e.id === 'kidwedding'; }) && rand(s) < 0.2) queue(s, { id: 'kidwedding', kid: i, title: name + ' is getting married', text: name + ' wants your blessing, and the families are planning the day. What will you give?', options: ['A generous gift (' + naira(price(s, 250000)) + ')', 'Something small (' + naira(price(s, 40000)) + ')', 'Just your blessing'] });
+      return;
+    }
+    if (!k.path && !s.pending.some(function (e) { return e.id === 'kidfuture' && e.kid === i; })) { queue(s, { id: 'kidfuture', kid: i, title: name + ' is 18', text: 'School is finished. What next for ' + name + '?', options: ['University (' + naira(price(s, D.KID_FUTURES.uni.fee)) + ' a year for 4 years)', 'Learn a trade (' + naira(price(s, D.KID_FUTURES.trade.fee)) + ' once)', 'Start work now'], subs: ['A degree, then a better job and more sent home', 'Two years as an apprentice, then work', 'Moves out now and starts sending a little home'] }); return; }
+    if (k.path === 'uni') { if (a >= 22) { k.out = true; unlock(s, 'graduate_kid'); applyFx(s, { fun: 20, social: 10 }); log(s, '🎓 ' + name + ' graduated! A job offer came the same month, and they are moving out.', 'good'); } else if (day(s) >= k.nextFees) { var uf = price(s, D.KID_FUTURES.uni.fee); if (!pay(s, uf, 'University fees for ' + name)) { addDebt(s, uf, 'University fees'); applyFx(s, { stress: 15 }); } k.nextFees = day(s) + KID_YEAR; } } // a year's fees each kid-year: four in all
+    else if (k.path === 'trade' && a >= 20) { k.out = true; log(s, '🧰 ' + name + ' finished the apprenticeship and opened a small workshop. They are moving out.', 'good'); }
+  }
   function weeklyFamily(s) {
     s.kids.forEach(function (k, i) {
+      if (k.v === 30 && s.rules >= 30 && (k.out || kidAge(s, k) >= 18)) { grownKids(s, k, i); return; } // rules 30: grown up
       var cost = price(s, 4000);
       if (!pay(s, cost, 'Childcare and food')) addDebt(s, cost, 'Childcare');
       if (day(s) >= k.nextFees) {
@@ -2560,6 +2646,22 @@
     }
   }
 
+  // Rules 30: one business decision some weeks, about one of your businesses. Odds are shown; no gamble pays on average.
+  function weeklyBusinessDecisions(s) {
+    if (!s.businesses.length || s.over || rand(s) >= 0.25) return;
+    var i = Math.floor(rand(s) * s.businesses.length), b = s.businesses[i], def = D.BUSINESSES[b.id], r = rand(s), nm = businessName(b);
+    var stake = price(s, roundTo(def.daily * 3, 1000));
+    if (r < 0.3) queue(s, { id: 'bizevent', kind: 'contract', b: i, stake: stake, title: 'A big order for ' + nm, text: 'A company wants a large order this week. You pay for the stock up front (' + naira(stake) + ').', options: ['Take the order', 'Let it go'], subs: ['60% chance of being paid ' + naira(roundTo(stake * 1.5, 50)) + '; otherwise the stock is lost', 'Nothing happens'] });
+    else if (r < 0.5 && b.manager) queue(s, { id: 'bizevent', kind: 'theft', b: i, title: 'Money missing at ' + nm, text: 'The books do not add up. Your manager has been skimming.', options: ['Sack the manager', 'Give a warning'], subs: ['No manager: visit at least weekly', 'Takings down 20% for a week, maybe longer'] });
+    else if (r < 0.75) queue(s, { id: 'bizevent', kind: 'rival', b: i, title: 'A rival opens near ' + nm, text: 'A new place opened down the road with cheaper prices.', options: ['Cut your prices', 'Ignore them'], subs: ['Takings down 15% for two weeks, customers stay', '40% chance takings fall 40% for three weeks'] });
+    else queue(s, { id: 'bizevent', kind: 'inspect', b: i, stake: roundTo(stake / 3, 50), title: 'An inspection at ' + nm, text: 'Fire and safety officers found problems with the wiring and the exit.', options: ['Fix it properly (' + naira(roundTo(stake / 3, 50)) + ')', '"Settle" the inspector (' + naira(roundTo(stake * 0.1, 50)) + ')'], subs: ['Done and signed', '30% chance a senior officer seals the shop for three days'] });
+  }
+  // Rules 30: a chief has duties. Every third week the palace calls on you.
+  function weeklyTitle(s) {
+    if (!s.title || s.over || week(s) % 3 !== 0 || rand(s) >= 0.7) return;
+    var keys = Object.keys(D.CHIEF_DUTIES), k = keys[Math.floor(rand(s) * keys.length)], CD = D.CHIEF_DUTIES[k];
+    queue(s, { id: 'chiefduty', kind: k, title: titledName(s) + ', the palace calls', text: CD.text, options: [CD.yes + (CD.cost ? ' (' + naira(price(s, CD.cost)) + ')' : ''), 'Send your apologies'], subs: [CD.sub, (s.titleRefusals || 0) >= 2 ? 'The elders will take away your title\'s status' : 'The elders will remember'] });
+  }
   function chargeFees(s, k) {
     // Report cards only come for children whose homework you have helped with (a newer system).
     if (k.hw !== undefined) reportCard(s, k);
@@ -2581,6 +2683,7 @@
     var k = s.kids[i];
     if (!k) return 'No such child';
     if (!k.school) return kidName(s, i) + ' has not started school yet';
+    if (kidAge(s, k) >= 18) return kidName(s, i) + ' has finished school';
     if (homeDistrict(s) !== s.loc) return 'Homework is done at home';
     if (dow(s) > 4) return 'Homework is for school nights (Monday to Friday)';
     var h = hour(s); if (h < 17 || h >= 21) return 'Homework time is 17:00 to 21:00';
@@ -2599,6 +2702,7 @@
   function outingBlock(s, i) {
     var k = s.kids[i];
     if (!k) return 'No such child';
+    if (k.out) return kidName(s, i) + ' has moved out';
     if (cityOf(s) !== districtCity(homeDistrict(s))) return 'Outings are in your home city';
     if (dow(s) < 5) return 'Outings are at the weekend';
     var h = hour(s); if (h < 10 || h >= 18) return 'Outings are from 10:00 to 18:00';
@@ -2630,7 +2734,7 @@
   }
   function kidsInfo(s) {
     return (s.kids || []).map(function (k, i) {
-      return { name: kidName(s, i), label: kidLabel(s, i), school: k.school, feesIn: Math.max(0, k.nextFees - day(s)), bond: k.bond || 0, hw: k.hw || 0, last: k.reports && k.reports.length ? k.reports[k.reports.length - 1].grade : null, hwWhy: homeworkBlock(s, i), outWhy: outingBlock(s, i) };
+      return { name: kidName(s, i), label: kidLabel(s, i), age: kidAge(s, k), stage: kidStage(s, k), school: k.school, feesIn: Math.max(0, k.nextFees - day(s)), bond: k.bond || 0, hw: k.hw || 0, last: k.reports && k.reports.length ? k.reports[k.reports.length - 1].grade : null, hwWhy: homeworkBlock(s, i), outWhy: outingBlock(s, i) };
     });
   }
 
@@ -3045,7 +3149,7 @@
     (s.vehicles || []).forEach(function (v) { t += D.VEHICLES[v.id].status || 0; });
     if (s.phone) t += D.PHONES[s.phone].status;
     (s.properties || []).forEach(function (p) { t += (D.PROPERTIES[p.id] && D.PROPERTIES[p.id].status) || 0; });
-    var ti = titleDef(s); if (ti) t += ti.status;
+    var ti = titleDef(s); if (ti && !(s.rules >= 30 && s.titleShamed)) t += ti.status;
     return t;
   }
 
@@ -5053,7 +5157,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, passport: passport, ghana: ghana, golfOdds: golfOdds, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

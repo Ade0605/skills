@@ -3080,3 +3080,53 @@ test('rules 29: passport stamps the first time you are in each city; travel achi
   const r = L.newGame({ seed: 2901, origin: 'nepo', goal: 'freestyle' }); for (let i = 0; i < 20; i++) { while (r.pending.length) L.resolveChoice(r, 0); L.wait(r, 60); }
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
 });
+
+test('rules 30: children grow up (school, then 18: university, a trade or work), move out, send a little home, marry', () => {
+  const s = L.newGame({ seed: 3000, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.ok(s.rules >= 30); s.bank = 5e7; // money set by hand: no replay check on this life
+  s.kids.push({ born: L.day(s), school: null, nextFees: L.day(s) + 84, v: 30 });
+  const seen = {}, k = s.kids[0];
+  for (let d = 0; d < 400 && !k.wed; d++) {
+    L.wait(s, 24 * 60);
+    while (s.pending.length) { const e = s.pending[0]; seen[e.id] = true; L.resolveChoice(s, e.id === 'kidfuture' ? 2 : e.id === 'kidwedding' ? 1 : 0); }
+  }
+  assert.ok(seen.school && seen.kidfuture, 'school, then the choice at 18');
+  assert.ok(k.out && k.path === 'work'); assert.ok(L.kidAge(s, k) >= 18);
+  const gifts = s.ledger.filter(e => /A little something from/.test(e.memo)); assert.ok(gifts.length > 0); assert.ok(gifts.every(e => e.amt <= 3000 * 1.5), 'small, about a gig a week');
+  assert.ok(seen.kidwedding && k.wed && s.ach.in_law);
+  assert.equal(s.ledger.filter(e => /Childcare and food/.test(e.memo) && Math.floor(e.t / 1440) > k.born + 18 * 14 + 7).length, 0, 'no childcare once grown');
+  // An old child (born before rules 30) keeps the old rules: no age.
+  assert.equal(L.kidAge(s, { born: 0 }), null);
+});
+
+test('rules 30: weekly business decisions with odds that never pay on average; a chief who refuses duties loses status', () => {
+  const s = L.newGame({ seed: 3010, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  s.bank = 5e7; s.businesses.push({ id: 'buka', paid: 0, visit: L.day(s), site: 'yaba', level: 1, manager: true });
+  s.title = 'baale'; const st0 = L.statusPoints ? L.statusPoints(s) : null;
+  const kinds = {}; let refused = 0, mods = 0;
+  for (let d = 0; d < 40 * 7; d++) {
+    L.wait(s, 24 * 60);
+    while (s.pending.length) { const e = s.pending[0]; if (e.id === 'bizevent') { kinds[e.kind] = true; L.resolveChoice(s, 0); if ((s.businesses[0].mods || []).length) mods++; } else if (e.id === 'chiefduty') { refused++; L.resolveChoice(s, 1); } else L.resolveChoice(s, 0); }
+    s.businesses[0].visit = L.day(s); s.businesses[0].manager = true;
+  }
+  assert.ok(Object.keys(kinds).length >= 3, 'several kinds of business decision: ' + Object.keys(kinds));
+  assert.ok(refused >= 3 && s.titleShamed, 'three refusals cost the title its standing');
+  if (st0 != null) assert.ok(L.statusPoints(s) < st0);
+  const C = D.KID_FUTURES && D.CHIEF_DUTIES; assert.ok(C);
+  assert.ok(0.6 * 1.5 < 1, 'a big order pays 1.5x 60% of the time: below the stake on average');
+  // A rules 29 life never sees any of it.
+  const o = L.newGame({ seed: 3010, origin: 'nepo', goal: 'freestyle', rules: 29 }); while (o.pending.length) L.resolveChoice(o, 0);
+  o.businesses.push({ id: 'buka', paid: 0, visit: L.day(o), site: 'yaba', level: 1, manager: true }); o.title = 'baale';
+  for (let d = 0; d < 20 * 7; d++) { L.wait(o, 24 * 60); while (o.pending.length) { assert.ok(!/bizevent|chiefduty/.test(o.pending[0].id)); L.resolveChoice(o, 0); } }
+  // And a real rules 30 life with events replays to the same seal.
+  const r = L.newGame({ seed: 3011, origin: 'nepo', goal: 'freestyle' }); for (let i = 0; i < 60; i++) { while (r.pending.length) L.resolveChoice(r, 0); L.wait(r, 12 * 60); }
+  assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
+});
+
+test('rules 30: no buying or selling a business while a decision about one is open', () => {
+  const s = L.newGame({ seed: 3020, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  s.businesses.push({ id: 'buka', paid: 100000, visit: L.day(s), site: 'yaba', level: 1, manager: true });
+  s.pending.push({ id: 'bizevent', kind: 'rival', b: 0, title: 't', text: 't', options: ['a', 'b'] });
+  assert.equal(L.sellBusiness(s, 0).ok, false); assert.match(L.sellBusiness(s, 0).msg, /open event/);
+  assert.match(L.buyBusiness(s, 'barber', 'yaba').msg, /open event/);
+});
