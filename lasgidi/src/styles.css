@@ -1242,3 +1242,12 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .fc-ok { flex: none; font-weight: 800; }
 .race-row[hidden], .race-list + .note[hidden] { display: none; }
 .fest-card.yf { background: linear-gradient(135deg, #17121f, var(--fc, #7b1fa2) 75%); }
+/* Rules 38: stage career card */
+.career-card { margin: 10px 0; padding: 12px 14px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, #1a1024, #3a1a5a 60%, #c9a227); }
+.career-card h3 { margin: 4px 0; color: #fff; font-size: 19px; }
+.cc-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.18); overflow: hidden; margin: 6px 0; }
+.cc-bar i { display: block; height: 100%; background: #ffd23f; border-radius: 99px; }
+.cc-chart { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 3px; }
+.cc-chart li { display: flex; gap: 8px; align-items: center; padding: 4px 8px; border-radius: 9px; background: rgba(0,0,0,.2); font-size: 13px; }
+.cc-chart li b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-chart li.you { background: #ffd23f; color: #17181a; }

@@ -41,7 +41,7 @@
     function hit(lane) {
       if (!st || st.over) return;
       st.flash[lane] = 0.15;
-      var best = null, bd = 0.2;
+      var best = null, bd = 0.2 * (1 + Math.min(10, Math.max(0, (opts && opts.ease) || 0)) * 0.03); // rehearsal widens the window a little
       st.notes.forEach(function (n) { if (n.lane === lane && !n.hit && !n.gone) { var d = Math.abs(n.t - st.t); if (d < bd) { bd = d; best = n; } } });
       if (!best) { st.combo = 0; fx('miss'); return; }
       best.hit = true; fx('hit', lane); st.hits++; st.combo++; if (st.combo > st.best) st.best = st.combo;
