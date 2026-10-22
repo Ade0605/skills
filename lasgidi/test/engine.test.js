@@ -3039,3 +3039,24 @@ test('rules 27: a ride past midnight on the visa\'s last day ends at home, with 
   assert.equal(L.cityOf(now.s), 'lagos'); assert.equal(now.flights, 1, 'one flight home');
   assert.equal(old.flights, 2, 'rules 26 lives keep the old behaviour');
 });
+
+test('rules 28: Cape Coast is coach-only (no flights or jets); closed in rules 27; a real coach trip replays', () => {
+  const old = L.newGame({ seed: 2800, origin: 'nepo', goal: 'freestyle', rules: 27 });
+  assert.equal(L.cityOpen(old, 'capecoast'), false); assert.equal(L.intercityOptions(old, 'capecoast').length, 0);
+  const s = L.newGame({ seed: 2801, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.ok(s.rules >= 28);
+  const opts = L.intercityOptions(s, 'capecoast'); assert.deepEqual(opts.map(o => o.mode), ['bus'], 'coach only');
+  assert.match(L.flightQuote(s, 'capecoast', 'economy').disabled || '', /No airport/);
+  assert.match(L.jetQuote(s, 'capecoast', true).disabled || '', /No airport/);
+  for (const p of D.PLACES.filter(p => L.districtCity(p.district) === 'capecoast')) { assert.ok(p.nogem, p.id); assert.ok(D.insideKind(p), p.id); }
+  const go = d => { if (s.loc === d) return true; const o = L.travelOptions(s, d).filter(o => !o.disabled).sort((a, b) => a.mins - b.mins)[0]; return !!o && L.travel(s, d, o.mode).ok; };
+  const ride = c => { const o = L.intercityOptions(s, c).find(o => o.mode === 'bus'); if (!o) return false; if (s.loc !== o.from) return go(o.from); return !o.disabled && L.intercity(s, c, 'bus'); };
+  for (let g = 0; g < 300 && L.cityOf(s) !== 'capecoast'; g++) { while (s.pending.length) L.resolveChoice(s, 0); if (!ride('capecoast')) L.wait(s, 60); }
+  assert.equal(L.cityOf(s), 'capecoast');
+  assert.equal(s.ledger.filter(e => /Border stamping/.test(e.memo)).length, 1, 'Lagos to Cape Coast crosses the borders');
+  assert.deepEqual(L.intercityOptions(s, 'lagos').map(o => o.mode), ['bus'], 'and no flight out either');
+  for (let i = 0; i < 10; i++) { while (s.pending.length) L.resolveChoice(s, 0); const a = L.availableActions(s).find(a => !a.disabled && !a.atHome && !(a.cost > 8000)); if (a) L.doAction(s, a.id); else L.wait(s, 60); }
+  for (let g = 0; g < 300 && L.cityOf(s) !== 'accra'; g++) { while (s.pending.length) L.resolveChoice(s, 0); if (!ride('accra')) L.wait(s, 60); }
+  assert.equal(L.cityOf(s), 'accra'); assert.equal(s.ledger.filter(e => /Border stamping/.test(e.memo)).length, 1, 'Cape Coast to Accra is domestic');
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+});

@@ -39,6 +39,8 @@
       water: [[[2.4, 18.8], [5.0, 18.7], [5.6, 19.8], [4.4, 21.0], [2.8, 20.6]]], label: [['Gulf of Guinea', 16, 25.4], ['Korle Lagoon', 3.4, 20.2]] },
     kumasi: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 27], [-2, 27]]],
       water: [[[30.7, 24.2], [30.6, 25.1], [29.6, 25.7], [28.6, 25.9], [27.5, 25.7], [26.7, 25.1], [26.6, 24.2], [26.9, 23.4], [27.5, 22.7], [28.6, 22.5], [29.6, 22.7], [30.4, 23.3]], [[9.2, -2], [9.8, -2], [10.6, 6], [10.4, 12], [11.0, 17], [12.4, 22], [13.0, 27], [12.4, 27], [11.8, 22], [10.4, 17], [9.8, 12], [10.0, 6]]], label: [['Lake Bosomtwe', 28.6, 24.4], ['Subin River', 10.2, 8.4]] },
+    capecoast: { box: [-2, 32, -2, 25], land: [[[-2, -2], [32, -2], [32, 18], [26, 19.2], [20, 20.2], [17, 20.0], [14, 19.6], [10, 20.4], [6, 20.2], [3, 19.4], [-2, 19.6]]],
+      water: [[[2.8, 17.0], [4.0, 16.6], [4.2, 17.6], [3.2, 18.4], [2.6, 18.0]]], label: [['Gulf of Guinea', 14, 22.4], ['Benya Lagoon', 3.4, 17.6]] },
     dxb: { box: [-2, 32, -2, 27], land: [[[-2, 21], [4, 16.6], [10, 12.2], [16, 7.8], [22, 3.4], [22.6, 2.96], [23.0, 5.0], [23.6, 7.6], [23.8, 10.0], [24.6, 10.2], [25.0, 8.0], [24.4, 5.0], [24.0, 1.93], [28, -1], [32, -2], [32, 27], [-2, 27]],
         [[4.6, 15.8], [6.4, 15.4], [6.6, 13.2], [7.8, 12.0], [7.4, 10.2], [5.6, 9.4], [3.6, 10.0], [3.0, 11.8], [4.4, 13.0]]],
       water: [], label: [['Arabian Gulf', 6, 4], ['Dubai Creek', 24.2, 7.4]] }, // the Creek is a notch in the coastline, so the 3D map cuts it too
@@ -87,6 +89,10 @@
     acc_central:  { h: [5, 16], dens: 0.8, r: 2.8, foot: [0.6, 0.85], roof: '#a87850', wall: '#d6c4a8' },
     acc_jamestown:{ h: [3, 7], dens: 0.85, r: 2.4, foot: [0.6, 0.9], roof: '#b06a40', wall: '#c8a888' },
     acc_korlebu:  { h: [4, 10], dens: 0.6, r: 2.4, foot: [0.6, 0.85], roof: '#c0b8a8', wall: '#e8e4dc', trees: 0.2 },
+    cc_kakum:     { h: [2, 5], dens: 0.12, r: 2.4, foot: [0.5, 0.7], roof: '#8a6a4a', wall: '#d8c8a8', trees: 0.9 },
+    cc_ucc:       { h: [3, 10], dens: 0.4, r: 3.0, foot: [0.5, 0.75], roof: '#b8945a', wall: '#ece2c8', trees: 0.45 },
+    cc_town:      { h: [3, 9], dens: 0.75, r: 2.6, foot: [0.6, 0.85], roof: '#a86a3e', wall: '#e6dac4', trees: 0.15 },
+    cc_elmina:    { h: [2, 7], dens: 0.7, r: 2.4, foot: [0.6, 0.85], roof: '#9a5a3a', wall: '#d8c4a4', trees: 0.15 },
     dxb_marina:   { h: [20, 60], dens: 0.7, r: 3.0, foot: [0.5, 0.75], roof: '#9fb8c8', wall: '#7f9aae' },
     dxb_palm:     { h: [3, 8], dens: 0.35, r: 2.8, foot: [0.55, 0.8], roof: '#d9c8a4', wall: '#f1e8d4', trees: 0.5 },
     dxb_jumeirah: { h: [3, 9], dens: 0.45, r: 3.0, foot: [0.55, 0.8], roof: '#d8c4a0', wall: '#f2eadc', trees: 0.3 },
@@ -118,6 +124,7 @@
     abj_kubwa: 0.5, abj_maitama: 0.92, abj_wuse: 0.75, abj_jabi: 0.75, abj_asokoro: 0.95, abj_garki: 0.85, abj_nyanya: 0.45, abj_airport: 0.8,
     ph_airport: 0.7, ph_choba: 0.45, ph_rumuokoro: 0.45, ph_gra: 0.75, ph_transamadi: 0.65, ph_dline: 0.4, ph_oldgra: 0.55, ph_borokiri: 0.45,
     acc_airport: 0.7, acc_legon: 0.5, acc_eastlegon: 0.65, acc_circle: 0.45, acc_osu: 0.5, acc_labadi: 0.5, acc_central: 0.45, acc_jamestown: 0.35, acc_korlebu: 0.5,
+    cc_kakum: 0.3, cc_ucc: 0.6, cc_town: 0.5, cc_elmina: 0.4,
     dxb_marina: 1, dxb_palm: 1, dxb_jumeirah: 1, dxb_downtown: 1, dxb_creek: 0.98, dxb_deira: 0.97, dxb_airport: 1, dxb_desert: 0.9,
     kum_airport: 0.65, kum_manhyia: 0.7, kum_bantama: 0.45, kum_kejetia: 0.45, kum_adum: 0.55, kum_knust: 0.6, kum_asokwa: 0.4, kum_ahodwo: 0.65, kum_bosomtwe: 0.25,
     ldn_heathrow: 0.7, ldn_wembley: 0.55, ldn_notting: 0.5, ldn_oxford: 0.4, ldn_westminster: 0.5, ldn_southbank: 0.5, ldn_tower: 0.55, ldn_peckham: 0.45 };
@@ -597,6 +604,7 @@
       if (CITY === 'accra') drawAccra(g, s);
       if (CITY === 'kumasi') drawKumasi(g, s);
       if (CITY === 'dxb') drawDubai(g, s);
+      if (CITY === 'capecoast') drawCapeCoast(g, s);
       if (CITY === 'ldn') drawLondon(g, s);
       if (CITY === 'ph') drawPH(g, s);
 
@@ -831,6 +839,12 @@
       poly(g, [[22.4, 21.6], [27.6, 21.6], [27.8, 22.4], [22.2, 22.6]], theme.sand || '#e8d6a8'); // La beach
       var lh = toScreen(6.4, 22.8, 0); [0, 1, 2, 3].forEach(function (i) { g.fillStyle = i % 2 ? '#ffffff' : '#c0392b'; g.fillRect(lh.x - 2 * s, lh.y - (i + 1) * 5 * s, 4 * s, 5 * s); }); // lighthouse
       g.strokeStyle = theme.road; g.lineWidth = Math.max(1, 2 * s); g.beginPath(); [[8, 10], [14, 8], [19, 11], [19, 16], [13, 17], [8, 15], [8, 10]].forEach(function (p, i) { var c = toScreen(p[0], p[1], 0); if (i) g.lineTo(c.x, c.y); else g.moveTo(c.x, c.y); }); g.stroke(); // Ring Road
+    }
+    function drawCapeCoast(g, s) {
+      // The two white castles on the shore, the Kakum forest to the north and the coast road to Elmina.
+      [[15.6, 18.6], [6.2, 18.8]].forEach(function (c) { var q = toScreen(c[0], c[1], 0); g.fillStyle = theme.dark ? '#d8d4c8' : '#fbfaf5'; g.fillRect(q.x - 10 * s, q.y - 8 * s, 20 * s, 8 * s); g.fillRect(q.x - 12 * s, q.y - 11 * s, 5 * s, 11 * s); g.fillRect(q.x + 7 * s, q.y - 11 * s, 5 * s, 11 * s); g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = Math.max(0.5, 0.6 * s); g.strokeRect(q.x - 10 * s, q.y - 8 * s, 20 * s, 8 * s); });
+      poly(g, [[10, -2], [24, -2], [23, 6], [11, 6]], theme.dark ? '#24402a' : '#5f9a52'); // Kakum forest
+      g.strokeStyle = theme.road; g.lineWidth = Math.max(1.5, 2.4 * s); g.beginPath(); [[4, 17.4], [9, 17.6], [14, 16.4], [20, 14.6], [26, 12]].forEach(function (p, i) { var c = toScreen(p[0], p[1], 0); if (i) g.lineTo(c.x, c.y); else g.moveTo(c.x, c.y); }); g.stroke(); // the coast road
     }
     function drawDubai(g, s) {
       // The Burj Khalifa's needle, the fronds of the Palm, a sweep of desert sand and Sheikh Zayed Road.
