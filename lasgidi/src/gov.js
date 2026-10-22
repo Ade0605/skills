@@ -50,6 +50,12 @@
     sa_tech: { name: 'Special Adviser, Innovation and Technology', icon: '💡', sa: true }
   };
   var MIN_STATUS = 20;          // status points needed to run for governor
+  // Two more races on the same weekly cycle: one candidate per party member (no primary, no running mate), declared any
+  // time before the election, one vote each on the same ballot paper. A player runs for one office a week.
+  var OFFICES = {
+    sen: { name: 'Senator for Lagos', short: 'Senator', icon: '🏛️', minStatus: 30, spread: false },
+    pres: { name: 'President of Nigeria', short: 'President', icon: '🇳🇬', minStatus: 50, spread: true }
+  };
   var SPREAD_SHARE = 0.25;      // a winner needs 25% of the vote...
   var SPREAD_UNITS = 2 / 3;     // ...in two-thirds of the districts that voted
 
@@ -83,6 +89,7 @@
     (runs || []).forEach(function (r) {
       var v = weekVal(r.raw, wk);
       if (!v || typeof r.id !== 'string' || !own(PARTIES, v.party) || mem[r.id] !== v.party || !inPhase(v.at, wk, 'primaries')) return;
+      if (v.office && v.office !== 'gov') return; // running for Senator or President instead
       if (typeof v.motto !== 'number' || !MOTTOS[v.motto]) return;
       var planks = Array.isArray(v.planks) ? v.planks.filter(function (p, i, a) { return own(PLANKS, p) && a.indexOf(p) === i; }).slice(0, 3) : [];
       var camp = {};
@@ -130,6 +137,37 @@
     return { rows: rows, units: unitTotals, need: need, winner: winner, simpleMajority: simple, voters: voters, total: unitIds.reduce(function (a, u) { return a + unitTotals[u]; }, 0) };
   }
 
+  // The Senator and President races: candidates (party members who declared before the election, with the status to run
+  // checked by the page), and the count from the same ballot docs ({ sen: id, senAt, pres: id, presAt, unit }).
+  function race(office, runs, parties, votes, wk, units) {
+    var O = own(OFFICES, office) ? OFFICES[office] : null; if (!O) return null;
+    var mem = members(parties, wk), cands = dict();
+    (runs || []).forEach(function (r) {
+      var v = weekVal(r.raw, wk);
+      if (!v || typeof r.id !== 'string' || v.office !== office || !own(PARTIES, v.party) || mem[r.id] !== v.party) return;
+      if (!(inPhase(v.at, wk, 'primaries') || inPhase(v.at, wk, 'campaign'))) return;
+      if (typeof v.motto !== 'number' || !MOTTOS[v.motto]) return;
+      var planks = Array.isArray(v.planks) ? v.planks.filter(function (p, i, a) { return own(PLANKS, p) && a.indexOf(p) === i; }).slice(0, 3) : [];
+      cands[r.id] = { id: r.id, party: v.party, motto: v.motto, planks: planks, at: v.at, votes: 0, units: dict() };
+    });
+    var unitTotals = dict(), voters = dict();
+    (votes || []).forEach(function (r) {
+      var v = weekVal(r.raw, wk), c = v && typeof v[office] === 'string' && typeof r.id === 'string' && own(cands, v[office]) ? cands[v[office]] : null;
+      if (!c || !inPhase(v[office + 'At'], wk, 'election')) return;
+      voters[r.id] = c.id;
+      var u = typeof v.unit === 'string' && v.unit.length <= 40 && (!units || own(units, v.unit)) ? v.unit : 'other';
+      c.votes++; c.units[u] = (c.units[u] || 0) + 1; unitTotals[u] = (unitTotals[u] || 0) + 1;
+    });
+    var unitIds = Object.keys(unitTotals), need = Math.ceil(unitIds.length * SPREAD_UNITS), total = unitIds.reduce(function (a, u) { return a + unitTotals[u]; }, 0);
+    var rows = Object.keys(cands).map(function (k) {
+      var c = cands[k], spread = unitIds.filter(function (u) { return (c.units[u] || 0) / unitTotals[u] >= SPREAD_SHARE; }).length;
+      return { cand: c, votes: c.votes, units: c.units, spread: spread, meetsSpread: c.votes > 0 && spread >= need };
+    }).sort(function (a, b) { return b.votes - a.votes || a.cand.at - b.cand.at; });
+    var winner = O.spread ? rows.filter(function (x) { return x.meetsSpread; })[0] || null : (rows[0] && rows[0].votes > 0 ? rows[0] : null), simple = false;
+    if (!winner && rows[0] && rows[0].votes > 0) { winner = rows[0]; simple = true; }
+    return { office: office, rows: rows, winner: winner, simpleMajority: O.spread && simple, total: total, need: need, units: unitTotals, voters: voters };
+  }
+
   // The Executive Council for the governing week: only the governor's own doc counts.
   // The Assembly is everyone who voted in the election that put them there.
   function council(govId, cabDocs, confirmDocs, assembly, wk) {
@@ -147,7 +185,7 @@
     });
   }
 
-  var API = { PARTIES: PARTIES, MOTTOS: MOTTOS, PLANKS: PLANKS, CAMPAIGN: CAMPAIGN, PORTFOLIOS: PORTFOLIOS, MIN_STATUS: MIN_STATUS, SPREAD_SHARE: SPREAD_SHARE,
+  var API = { OFFICES: OFFICES, race: race, PARTIES: PARTIES, MOTTOS: MOTTOS, PLANKS: PLANKS, CAMPAIGN: CAMPAIGN, PORTFOLIOS: PORTFOLIOS, MIN_STATUS: MIN_STATUS, SPREAD_SHARE: SPREAD_SHARE,
     weekId: weekId, phase: phase, inPhase: inPhase, weekVal: weekVal, members: members, nominees: nominees, election: election, council: council };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.LasgidiGov = API;
