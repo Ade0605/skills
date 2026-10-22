@@ -3075,6 +3075,8 @@ test('rules 29: passport stamps the first time you are in each city; travel achi
   assert.ok(s.ach.every_city); const day0 = s.stamps.accra; s.loc = D.CITIES.accra.park; s.t += 1440; L.wait(s, 15); assert.equal(s.stamps.accra, day0, 'a stamp is kept from the first visit');
   const old = L.newGame({ seed: 2900, origin: 'nepo', goal: 'freestyle', rules: 28 }); while (old.pending.length) L.resolveChoice(old, 0); L.wait(old, 60);
   assert.equal(old.stamps, undefined); assert.equal(L.passport(old), null);
+  const cc = L.newGame({ seed: 2902, origin: 'nepo', goal: 'freestyle' }); cc.bank = 4e6; cc.cash = 3e6; assert.ok(L.applyVisa(cc, 'dxb').ok); cc.t += 4 * 1440; cc.loc = 'cc_town'; while (cc.pending.length) L.resolveChoice(cc, 0);
+  assert.equal(L.intercityOptions(cc, 'dxb').length, 0, 'no long-haul flight from Cape Coast'); cc.loc = 'dxb_airport'; assert.ok(L.intercityOptions(cc, 'capecoast').every(o => o.mode !== 'flight'));
   const r = L.newGame({ seed: 2901, origin: 'nepo', goal: 'freestyle' }); for (let i = 0; i < 20; i++) { while (r.pending.length) L.resolveChoice(r, 0); L.wait(r, 60); }
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
 });

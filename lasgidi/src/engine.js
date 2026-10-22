@@ -62,7 +62,8 @@
   // after the flight home (which made you pay for a second flight the next night).
   // 28 opens Cape Coast: a coach-only city (no airport) on Ghana's coast, with Cape Coast and Elmina castles, Kakum's
   // canopy walk, the University of Cape Coast, Kotokuraba Market, the Elmina harbour and the Fetu Afahye festival.
-  // 29 adds passport stamps (the first time you are in each city) and three travel achievements.
+  // 29 adds passport stamps (the first time you are in each city) and three travel achievements, and closes a review
+  // find: long-haul flights (London, Dubai) no longer leave from or land in Cape Coast, which has no airport.
   var RULES = 29;
 
   var LOANS = {
@@ -1374,6 +1375,7 @@
     var far = city === 'ldn' || here === 'ldn' || (s.rules >= 26 && (!!C.visit || !!D.CITIES[here].visit)), UV = visaOf(C.visit ? city : here);
     var fl = { mode: 'flight', name: jet ? 'Your private jet' : F.name, mins: jet ? (far ? 480 : 120) : far ? UV.mins : F.mins, cost: jet ? 0 : price(s, far ? UV.fare : F.fare), from: from.airport, to: C.airport };
     var bus = { mode: 'bus', name: B.name, mins: B.mins[here + '-' + city], cost: price(s, B.fare), from: from.park, to: C.park };
+    if (far && s.rules >= 29 && (C.noAir || from.noAir)) return []; // rules 29: no long-haul flights from a city with no airport (Cape Coast)
     if (far) { if (city === 'ldn' && visaState(s).status !== 'valid') fl.disabled = 'You need a valid UK visa (Phone → Travel)'; else if (city === 'ldn' && !visaLasts(s, fl.mins)) fl.disabled = 'Your UK visa runs out before you land';
       else if (city !== 'ldn' && C.visit && visaState(s, city).status !== 'valid') fl.disabled = 'You need a valid ' + UV.name + ' (Phone → Travel)'; else if (city !== 'ldn' && C.visit && !visaLasts(s, fl.mins, city)) fl.disabled = 'Your ' + UV.name + ' runs out before you land'; return [fl].map(function (o) { if (!o.disabled) { if (s.loc !== o.from) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name; else if (s.pending.length) o.disabled = 'Decide on the open event first'; else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost); } return o; }); }
     var legs = C.noAir || from.noAir ? [bus] : [fl, bus]; // rules 28: Cape Coast has no airport, coaches only
