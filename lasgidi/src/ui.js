@@ -1300,7 +1300,7 @@
   function gemClue(pl) {
     var txt = String(pl.text || pl.name), words = pl.name.replace(/\(.*?\)/g, '').split(/[\s,–-]+/).filter(function (w) { return w.length > 3; });
     words.forEach(function (w) { txt = txt.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '…'); });
-    return txt.split(/(?<=[.!?])\s/)[0].slice(0, 140);
+    return (txt.match(/^[\s\S]*?[.!?](?=\s|$)/) || [txt])[0].slice(0, 140); // the first sentence (no lookbehind: older iPhones)
   }
   var GEM_SEEN = 'lasgidi.gemseen.v1', GEM_HINT = 5 * 60 * 1000;
   function gemCard() {
@@ -2331,12 +2331,28 @@
     return bar + '<p class="note">Tap a sign in the yard, or a person to hear them. Workers and visitors come in by ' + esc({ refinery: 'staff bus', airport: 'cab' }[venueSet(pl)] || 'danfo, keke and okada') + ' all day.</p>' +
       (acts.length ? '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; }).join('') + '</div>' : '<p class="note">Nothing to do here yet. Try the other tabs.</p>');
   }
+  // A walk-in always opens: "Opening…" shows at once while three.js loads, and if the 3D scene fails on this phone
+  // (an old GPU, memory, a slow or stalled download) the drawn 2D yard opens instead.
+  var venue3dBroken = false;
   function mountVenue() {
+    try { mountVenueIn(false); }
+    catch (e) {
+      if (window.console) console.error('Walk-in 3D failed, using the 2D yard:', e);
+      venue3dBroken = true; var ov0 = document.getElementById('venue-view'); if (ov0) ov0.remove();
+      if (beachStage) { try { beachStage.stop(); } catch (x) {} beachStage = null; } venueStage = null;
+      try { mountVenueIn(true); } catch (e2) { if (window.console) console.error('Walk-in failed:', e2); }
+    }
+  }
+  function mountVenueIn(flat) {
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? placeById(ui.venueOpen) : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
     var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling|shop|blackstar|bigben|towerbridge|londoneye|burj|desert|castle)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
-    if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
+    if (flat || venue3dBroken) want3d = false;
+    if (want3d && threeState !== 'ready' && threeState !== 'failed') {
+      if (!ov) { ov = document.createElement('div'); ov.id = 'venue-view'; ov.className = 'cruise-view venue-view venue-loading'; ov.setAttribute('data-kind', 'loading'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', pl.name); ov.innerHTML = '<div class="vl-box"><div class="vl-spin" aria-hidden="true"></div><p>Opening ' + esc(pl.name) + '…</p><button type="button" class="btn sm ghost" id="venue-close-loading" data-venueclose="1">Close</button></div>'; document.body.appendChild(ov); }
+      loadThree(mountVenue); return;
+    }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
     window.__venue = kind === '3d' ? beachStage : flatStage; // handle for tests
@@ -2485,7 +2501,8 @@
     if (threeState === 'ready' || threeState === 'failed') { cb(); return; }
     if (threeState === 'loading') { (loadThree.q = loadThree.q || []).push(cb); return; }
     threeState = 'loading'; loadThree.q = [cb];
-    var done = function (ok) { threeState = ok && window.THREE ? 'ready' : 'failed'; var q = loadThree.q; loadThree.q = []; q.forEach(function (f) { try { f(); } catch (e) {} }); if (threeState === 'ready') { faceCache = {}; try { drawHudAvatar(); } catch (e) {} } }; // avatars redraw in 3D once three.js is in
+    var timer = setTimeout(function () { done(!!window.THREE); }, 20000); // a stalled download: carry on in 2D
+    var done = function (ok) { if (threeState !== 'loading') return; clearTimeout(timer); threeState = ok && window.THREE ? 'ready' : 'failed'; var q = loadThree.q; loadThree.q = []; q.forEach(function (f) { try { f(); } catch (e) {} }); if (threeState === 'ready') { faceCache = {}; try { drawHudAvatar(); } catch (e) {} } }; // avatars redraw in 3D once three.js is in
     try {
       var inl = document.getElementById('lsg-three'), sc = document.createElement('script');
       if (inl) { sc.textContent = inl.textContent; document.head.appendChild(sc); done(true); return; }
@@ -3462,6 +3479,7 @@
     T.settings += settingsView();
     T.settings += '<div class="section"><h3>Save</h3><p class="note">The game saves in this browser. Copy the save code to move to another device.</p>' +
       '<div class="inline"><button class="btn sm" id="copy-save" data-copy="1">Copy save code</button><button class="btn sm ghost" id="new-game" data-new="1">New life</button></div>' +
+      '<div class="signout-row"><span>Signed in as <b>' + esc(S.name || 'you') + '</b> on this device</span><button type="button" class="link-btn signout" id="sign-out" data-signout="1">' + (ui.confirmSignout ? 'Tap again to sign out' : 'Sign out') + '</button></div>' +
       '<textarea id="save-code" readonly rows="3" style="width:100%" aria-label="Save code">' + esc(L.serialize(S)) + '</textarea>' +
       (ui.flash ? '<p class="note">' + esc(ui.flash) + '</p>' : '') + '</div>' +
       '<div class="section"><h3>Keyboard</h3><p class="note">Number keys switch tabs in the order shown (1 is Do). A runs the top suggestion. Tab and Enter work everywhere, including the map.</p></div>';    // The dream card, your start and what you owe, and today's hustle lead the Goals tab.
@@ -4284,7 +4302,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
+    var t = e.target.closest('[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -4738,6 +4756,19 @@
         navigator.clipboard.writeText(txt).then(function () { t.textContent = 'Copied'; }, function () { selectText('share-text'); });
       } catch (err) { selectText('share-text'); }
       return;
+    }
+    // Sign out: there is no password account, so signing out copies your save code and then clears this device
+    // (the life, settings and the anonymous online id). Paste the code on the start screen to carry on anywhere.
+    if (ds.signout) {
+      if (!ui.confirmSignout) {
+        ui.confirmSignout = true; var codeSO = L.serialize(S);
+        try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(codeSO).catch(function () {}); } catch (e) {}
+        ui.flash = 'Your save code is copied (it is also in the box above). Keep it safe, for example in your notes. Tap "Tap again to sign out" to remove this life from this device; paste the code on the start screen to carry on.';
+        render(); return;
+      }
+      try { Object.keys(localStorage).filter(function (k) { return /^lasgidi\./.test(k); }).forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
+      try { sessionStorage.clear(); } catch (e) {}
+      location.reload(); return;
     }
     if (ds.copy) {
       var code = L.serialize(S), box = document.getElementById('save-code');

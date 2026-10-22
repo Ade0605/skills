@@ -1157,3 +1157,14 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 #radio-title { width: 100%; box-sizing: border-box; margin: 2px 0 8px; padding: 8px; border-radius: 10px; border: 1px solid var(--line, #ddd); font: inherit; }
 .radio .ph-promo { flex-direction: column; align-items: flex-start; gap: 4px; }
 .rv-cams { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+/* The walk-in while three.js loads */
+.venue-loading { display: flex; align-items: center; justify-content: center; background: rgba(12, 16, 24, .82); }
+.venue-loading .vl-box { background: var(--card, #fff); color: var(--ink, #17181a); border-radius: 18px; padding: 22px 26px; text-align: center; max-width: 80vw; }
+.venue-loading .vl-spin { width: 34px; height: 34px; margin: 0 auto 10px; border-radius: 50%; border: 4px solid rgba(0,0,0,.12); border-top-color: #f2b600; animation: vlspin .8s linear infinite; }
+@keyframes vlspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .venue-loading .vl-spin { animation: none; } }
+
+/* Sign out (Me → Save) */
+.signout-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0 6px; font-size: 13px; color: var(--muted); }
+.signout-row .signout { color: #c0392b; font-weight: 700; }
