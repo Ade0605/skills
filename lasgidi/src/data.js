@@ -2444,6 +2444,51 @@
     { k: 'newplace', n: 1, icon: '📍', label: 'Do an activity at one of the new places' },
     { k: 'shop', n: 1, icon: '🏪', label: 'Check in on your shops' }
   ], GOAL_REWARD = 5000;
+  // Rules 35: festivals through the year, each with a countdown, a programme day by day, tickets and a volunteer gig.
+  // month: 0 = January; start: the day of that month (a month is 4 weeks); days: how many days it runs.
+  // All names, troupes and acts are made up for the game.
+  var YEAR_FESTS = [
+    { id: 'carnival', name: 'Eko Carnival', icon: '🎭', place: 'tbs', district: 'island', month: 3, start: 7, days: 4, countdown: 10, from: 10, to: 18, color: '#e84393',
+      blurb: 'Easter on the Island: costume troupes, brass bands and dancers parade round Tafawa Balewa Square.',
+      programme: [
+        { theme: 'Opening parade', head: 'The Marina Masquerade Troupe', support: ['Ebute Brass Band'] },
+        { theme: 'Heritage day', head: 'The Old Lagos Costume Guild', support: ['Isale Eko drummers', 'Brazilian Quarter dancers'] },
+        { theme: 'Carnival of colours', head: 'Feathers of Eko', support: ['Lagoon Samba Collective'] },
+        { theme: 'Grand finale: the troupes compete', head: 'All twelve troupes', support: ['the judges pick the champion troupe'] }
+      ],
+      tickets: [
+        { key: 'seat', label: 'Grandstand seat', cost: 4000, fx: { fun: 40, social: 20, stress: -8 } },
+        { key: 'troupe', label: 'March with a troupe in costume', cost: 12000, fx: { fun: 55, social: 30, energy: -20 }, xp: { fitness: 1, charisma: 1 } }
+      ],
+      gig: { label: 'Volunteer as a carnival marshal', earn: 2500, mins: 240, fx: { energy: -16, social: 6 }, xp: { charisma: 1 } } },
+    { id: 'foodfest', name: 'Chop Life Food Festival', icon: '🍲', place: 'freedom', district: 'island', month: 6, start: 14, days: 7, countdown: 10, from: 12, to: 21, color: '#e67e22',
+      blurb: 'A week of Nigerian food at Freedom Park: a different dish every day, cooks from every state, and long tables in the courtyard.',
+      programme: [
+        { theme: 'Jollof wars', head: 'Twelve pots, one winner', support: ['Mama Titi\'s party jollof', 'Chef Kunle\'s smoky pot'] },
+        { theme: 'Suya night', head: 'Mallam Garba\'s grill', support: ['kilishi and yaji tasting'] },
+        { theme: 'Soups of the nation', head: 'Egusi, banga, afang and edikang ikong', support: ['Aunty Ekaette\'s kitchen'] },
+        { theme: 'Amala and ewedu day', head: 'The Abule Egba amala queens', support: ['gbegiri on the side'] },
+        { theme: 'Seafood by the lagoon', head: 'Fisherman\'s pepper soup', support: ['grilled croaker and prawns'] },
+        { theme: 'Small chops and desserts', head: 'Puff-puff, chin chin and zobo', support: ['the cake ladies of Surulere'] },
+        { theme: 'Final day: cook-off champions', head: 'The best cooks of the week', support: ['the people\'s vote'] }
+      ],
+      tickets: [
+        { key: 'pass', label: 'Day pass with tasting plates', cost: 6000, mins: 120, fx: { hunger: 70, fun: 30, social: 18 } }
+      ],
+      gig: { label: 'Help in the festival kitchens', earn: 2500, mins: 240, fx: { energy: -16, hygiene: -6, social: 4 }, xp: { craft: 1 } } },
+    { id: 'indep', name: 'Eko Independence Jam', icon: '🇳🇬', place: 'tbs', district: 'island', month: 9, start: 4, days: 3, countdown: 10, from: 18, to: 24, color: '#008751',
+      blurb: 'Independence weekend at Tafawa Balewa Square: three nights of music under the flags, ending with fireworks.',
+      programme: [
+        { theme: 'Highlife and juju night', head: 'The Independence Highlife Orchestra', support: ['Chief Bayo and his Juju Band'] },
+        { theme: 'Afrobeats night', head: 'Tobi Lagos', support: ['Lola Eko', 'DJ Tunde Wave'] },
+        { theme: 'Unity night: every region on one stage', head: 'Kofi Highlife, Zara Ife and Saheed Fuji Fire', support: ['fireworks over the square at 23:00'] }
+      ],
+      tickets: [
+        { key: 'reg', label: 'Concert ticket', cost: 15000, fx: { fun: 65, social: 40, energy: -30, hygiene: -10 } },
+        { key: 'vip', label: 'VIP stand', cost: 60000, fx: { fun: 80, social: 50, energy: -30 }, xp: { charisma: 1 } }
+      ],
+      gig: { label: 'Usher at the Independence Jam gates', earn: 2500, mins: 240, fx: { energy: -16, social: 6 }, xp: { charisma: 1 }, from: 12, to: 18 } }
+  ];
   // Rules 32: Eko Detty Fest, 21 nights at Harbour Live in December, with a countdown and daily news.
   // The festival, its acts and its prices are made up for the game.
   var DETTY_FEST = { name: 'Eko Detty Fest', place: 'harbour_live', district: 'island', start: 7, nights: 21, gates: 18,
@@ -2708,7 +2753,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, THEATRE_SHOWS: THEATRE_SHOWS, TH_KIND: TH_KIND, THEATRE_CREW: THEATRE_CREW, DETTY_FEST: DETTY_FEST, FEST_NIGHTS: FEST_NIGHTS, FEST_ACTS: FEST_ACTS, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, THEATRE_SHOWS: THEATRE_SHOWS, TH_KIND: TH_KIND, THEATRE_CREW: THEATRE_CREW, YEAR_FESTS: YEAR_FESTS, DETTY_FEST: DETTY_FEST, FEST_NIGHTS: FEST_NIGHTS, FEST_ACTS: FEST_ACTS, insideKind: insideKind
   };
 
   // Keyed tables have no prototype, so an id like 'constructor' or '__proto__' from a save, a replay or another player's

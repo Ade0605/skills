@@ -76,7 +76,9 @@
   // 34 is a review pass: the food village at the fest is once a day; the New Year's Eve ticket counts as a December
   // event (by the month it started); once-a-day marks use the day the act started; a stage performance needs a full
   // chart (40+ notes), is collected the day it was played, and stage followers are capped at 3,000 a year.
-  var RULES = 34;
+  // 35 adds festivals through the year: Eko Carnival at Easter, the Chop Life Food Festival in July and the Eko
+  // Independence Jam in October, each with a countdown, a daily news line, a programme, tickets and a volunteer gig.
+  var RULES = 35;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -144,6 +146,7 @@
     explorer:    'Lagos explorer: visited 8 tourist sights',
     theatregoer: 'Theatregoer: saw 5 different shows at the National Theatre',
     fest_regular: 'Fest regular: 5 nights at Eko Detty Fest',
+    festival_hopper: 'Festival hopper: Eko Carnival, the Chop Life Food Festival and the Eko Independence Jam',
     banana:      'Banana Island: bought a waterfront mansion',
     ghana_tour:  'Akwaaba: stamped in Accra, Kumasi and Cape Coast',
     globetrotter: 'Globetrotter: stamped in London and Dubai',
@@ -544,6 +547,7 @@
     }
     if (dow(s) === 0) onNewWeek(s);
     if (s.rules >= 32) festNews(s);
+    if (s.rules >= 35) yearFestNews(s);
     if (s.rules >= 6) dailyLove(s);
     dailyEvent(s);
   }
@@ -555,6 +559,14 @@
     if (f.phase === 'soon') log(s, '🎆 ' + f.name + ' starts in ' + f.daysTo + (f.daysTo === 1 ? ' day' : ' days') + ' at Harbour Live, Lagos Island. Night 1: ' + f.tomorrow.head + '.', 'story');
     else if (f.phase === 'on') log(s, '🎆 ' + f.name + ', night ' + f.night + ' of ' + f.nights + ' tonight: ' + f.tonight.head + (f.tonight.support.length ? ' with ' + f.tonight.support.join(', ') : '') + '. ' + f.tonight.theme + '. Gates ' + f.gates + ':00.', 'story');
   }
+  // Rules 35: a news line a day for each festival in its countdown or on. No dice, ledger untouched.
+  function yearFestNews(s) {
+    yearFests(s).forEach(function (f) {
+      if (f.phase === 'soon') log(s, f.icon + ' ' + f.name + ' starts in ' + f.daysTo + (f.daysTo === 1 ? ' day' : ' days') + ' at ' + placeName(f.place) + '. Day 1: ' + f.tomorrow.head + '.', 'story');
+      else log(s, f.icon + ' ' + f.name + ', day ' + f.day + ' of ' + f.days + ': ' + f.today.theme + ' with ' + f.today.head + (f.today.support.length ? ' and ' + f.today.support.join(', ') : '') + '. ' + String(f.from).padStart(2, '0') + ':00–' + String(f.to).padStart(2, '0') + ':00.', 'story');
+    });
+  }
+  function placeName(id) { var p = D.PLACES.filter(function (x) { return x.id === id; })[0]; return p ? p.name : id; }
   function onNewWeek(s) {
     var w = week(s);
     var prevMonth = (START_MONTH + Math.floor((w - 1) / 4)) % 12;
@@ -878,6 +890,28 @@
   };
   var STAGE_CAP = 3000;
   function stageReady(s) { return (s.stats.stageBest || 0) >= 70 || !!(s.creator && s.creator.followers >= 5000); }
+  // Rules 35: festivals through the year. Life month A (from the start) is calendar month (START_MONTH + A) % 12, and a
+  // month is 28 days, so a festival's n-th edition starts on day (k + 12n) * 28 + start, k its first month in this life.
+  function yearFest(s, F) {
+    var k = ((F.month - START_MONTH) % 12 + 12) % 12, d = day(s), n = Math.max(0, Math.ceil((d - (k * 28 + F.start + F.days) + 1) / 336));
+    var first = (k + 12 * n) * 28 + F.start, phase = d >= first ? 'on' : first - d <= F.countdown ? 'soon' : null;
+    if (!phase) return null;
+    var seen = (s.evSeen && s.evSeen[F.id]) || {}, dayNo = phase === 'on' ? d - first + 1 : null;
+    var row = function (i) { var r = F.programme[i - 1]; return r ? Object.assign({ n: i, seen: !!seen[n + '-' + i] }, r) : null; };
+    return { id: F.id, name: F.name, icon: F.icon, place: F.place, district: F.district, color: F.color, blurb: F.blurb, phase: phase, daysTo: phase === 'soon' ? first - d : null, day: dayNo, days: F.days, edition: n,
+      from: F.from, to: F.to, on: phase === 'on' && hour(s) >= F.from && hour(s) < F.to, today: dayNo ? row(dayNo) : null, tomorrow: phase === 'on' ? row(dayNo + 1) : row(1),
+      price: price(s, Math.min.apply(null, F.tickets.map(function (t) { return t.cost; }))), programme: F.programme.map(function (r, i) { return row(i + 1); }) };
+  }
+  function yearFests(s) { if (!(s.rules >= 35)) return []; return D.YEAR_FESTS.map(function (F) { return yearFest(s, F); }).filter(Boolean); }
+  function yearFestActions(s) {
+    var out = [];
+    D.YEAR_FESTS.forEach(function (F) {
+      if (s.loc !== F.district) return; var f = yearFest(s, F); if (!f || f.phase !== 'on') return;
+      F.tickets.forEach(function (T) { out.push({ id: 'yf_' + F.id + '_' + T.key, label: F.name + ', day ' + f.day + ' (' + f.today.theme.toLowerCase() + ') · ' + T.label, mins: T.mins || (F.from >= 17 ? 300 : 180), cost: T.cost, fx: T.fx, xp: T.xp, special: 'yearfest', event: true, fid: F.id, n: f.day, ed: f.edition, minRules: 35, when: { from: F.from, to: F.to } }); });
+      var G = F.gig; out.push({ id: 'yf_' + F.id + '_gig', label: G.label, mins: G.mins, earn: G.earn, fx: G.fx, xp: G.xp, gig: true, once: true, minRules: 35, when: { from: G.from != null ? G.from : F.from, to: G.to != null ? G.to : Math.min(F.to, F.from + 6) } });
+    });
+    return out;
+  }
   // retired actions are hidden from players but still run, so lives that used them replay.
   function availableActions(s, withRetired) {
     var list = [];
@@ -895,6 +929,7 @@
     if (s.rules >= 21) list = list.concat(eventActions(s));
     if (s.rules >= 31) list = list.concat(theatreActions(s));
     if (s.rules >= 32) list = list.concat(festActions(s));
+    if (s.rules >= 35) list = list.concat(yearFestActions(s));
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
@@ -992,6 +1027,7 @@
     if (s.rules >= 16 && a.compete && dayCount(s, 'c:' + a.id)) return 'One entry a day: come back tomorrow';
     if (s.rules >= 18 && a.fest && dayCount(s, 'f:' + a.id)) return 'Once a day: come back tomorrow';
     if (s.rules >= (a.onceRules || 31) && a.once && dayCount(s, 'o:' + a.id)) return 'Once a day: come back tomorrow';
+    if (s.rules >= 35 && a.special === 'yearfest' && s.evSeen && s.evSeen[a.fid] && s.evSeen[a.fid][a.ed + '-' + a.n]) return 'You went today already';
     if (s.rules >= 32 && a.special === 'dettyfest' && s.festNights && s.festNights[a.fy + '-' + a.night]) return 'You are in for tonight already';
     if (s.rules >= 31 && a.special === 'theshow' && s.seenShows && s.seenShows[week(s)] === a.show) return 'You saw this show already this week';
     if (s.rules >= 18 && a.special === 'casting' && s.castingWeek === week(s)) return 'One casting a week';
@@ -1073,6 +1109,12 @@
   }
 
   var specials = {
+    yearfest: function (s, a) {
+      var ev = s.evSeen = s.evSeen || {}, mine = ev[a.fid] = ev[a.fid] || {}; mine[a.ed + '-' + a.n] = 1; // the day it started
+      if (['carnival', 'foodfest', 'indep'].every(function (k) { return ev[k] && Object.keys(ev[k]).length; })) unlock(s, 'festival_hopper');
+      var F = D.YEAR_FESTS.filter(function (x) { return x.id === a.fid; })[0], r = F.programme[a.n - 1];
+      return r.head + ': ' + r.theme.charAt(0).toLowerCase() + r.theme.slice(1) + ' at ' + F.name + '. ' + (F.id === 'foodfest' ? 'You ate until you could not move.' : F.id === 'carnival' ? 'Feathers, brass and drums all afternoon.' : 'The whole square sang along.');
+    },
     dettyfest: function (s, a) {
       var seen = s.festNights = s.festNights || {}; seen[a.fy + '-' + a.night] = 1; // the night it started, even past midnight
       if (Object.keys(seen).length >= 5) unlock(s, 'fest_regular');
@@ -5267,7 +5309,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, theatreBill: theatreBill, dettyFest: dettyFest, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

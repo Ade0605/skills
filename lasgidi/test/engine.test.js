@@ -3260,7 +3260,7 @@ test('rules 33: perform at the open stage, then earn an Eko Detty Fest opening s
 
 test('rules 34: review fixes: a full stage chart, collected the same night; capped stage followers; fest food once a day; NYE counts as December', () => {
   const s = L.newGame({ seed: 3410, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 34);
+  assert.ok(s.rules >= 34);
   const step = () => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); };
   s.loc = 'surulere';
   for (let i = 0; i < 4000 && !(L.dow(s) === 2 && L.hour(s) === 18); i++) { step(); s.loc = 'surulere'; }
@@ -3289,4 +3289,39 @@ test('rules 34: review fixes: a full stage chart, collected the same night; capp
   s.needs.energy = 100; s.needs.hunger = 80; const d0 = s.stats.decEvents || 0;
   const r = L.doAction(s, 'df_regular'); assert.ok(r.ok, r.msg); assert.equal(L.monthIndex(s), 0, 'ends in January');
   assert.equal(s.stats.decEvents, d0 + 1);
+});
+
+test('rules 35: festivals through the year: countdown, programme day by day, tickets once a day, a volunteer gig, news, and replay', () => {
+  const s = L.newGame({ seed: 3510, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 35); s.bank = 5e7;
+  const step = () => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); s.loc = 'island'; };
+  const f0 = L.yearFests(s).find(f => f.id === 'indep'); assert.equal(f0.phase, 'soon'); assert.equal(f0.daysTo, 4);
+  // Independence Jam: day 1 from 18:00.
+  for (let i = 0; i < 4000 && !(L.yearFests(s).some(f => f.id === 'indep' && f.day === 1) && L.hour(s) === 17); i++) step();
+  assert.match(L.availableActions(s).find(a => a.id === 'yf_indep_reg').disabled || '', /Only/);
+  for (let i = 0; i < 8 && L.hour(s) < 18; i++) step();
+  s.needs.energy = 100; s.needs.hunger = 80;
+  const r = L.doAction(s, 'yf_indep_reg'); assert.ok(r.ok, r.msg);
+  assert.match(L.availableActions(s).find(a => a.id === 'yf_indep_vip').disabled || '', /already|Only/);
+  assert.ok(L.yearFests(s).find(f => f.id === 'indep').programme[0].seen);
+  assert.ok(s.log.some(l => /Eko Independence Jam, day 1 of 3/.test(l.text)), 'news line');
+  // Carnival at Easter (April) and the food festival in July, with a once-a-day gig.
+  for (let i = 0; i < 40000 && !(L.yearFests(s).some(f => f.id === 'carnival' && f.day === 2) && L.hour(s) === 11); i++) step();
+  assert.equal(L.monthIndex(s), 3); s.needs.energy = 100; s.needs.hunger = 80; s.cash = 1e6;
+  assert.ok(L.doAction(s, 'yf_carnival_seat').ok);
+  for (let i = 0; i < 40000 && !(L.yearFests(s).some(f => f.id === 'foodfest' && f.day === 3) && L.hour(s) === 12); i++) step();
+  assert.equal(L.monthIndex(s), 6); s.needs.energy = 100; s.needs.hunger = 10; s.cash = 1e6;
+  const fr = L.doAction(s, 'yf_foodfest_pass'); assert.ok(fr.ok, fr.msg);
+  assert.ok(s.ach.festival_hopper);
+  s.needs.energy = 100; s.needs.hunger = 40; const c0 = s.cash + s.bank; assert.ok(L.doAction(s, 'yf_foodfest_gig').ok);
+  assert.ok(s.cash + s.bank - c0 <= 3000 * 1.2); assert.equal(s.dayMarks['o:yf_foodfest_gig'].n, 1, 'marked once for the day');
+  for (const F of D.YEAR_FESTS) { assert.equal(F.programme.length, F.days); for (const T of F.tickets) assert.equal((T.mins || 180) % 15, 0); assert.equal(F.gig.mins % 15, 0); }
+  // A rules 34 life has none of it; a real rules 35 life that goes replays to the same seal.
+  const o = L.newGame({ seed: 3510, origin: 'nepo', goal: 'freestyle', rules: 34 }); while (o.pending.length) L.resolveChoice(o, 0);
+  assert.equal(L.yearFests(o).length, 0); o.loc = 'island'; assert.ok(!L.availableActions(o).some(a => /^yf_/.test(a.id)));
+  const v = L.newGame({ seed: 3511, origin: 'nepo', goal: 'freestyle' }); while (v.pending.length) L.resolveChoice(v, 0);
+  const fast = L.travelOptions(v, 'island').filter(x => !x.disabled).sort((x, y) => x.mins - y.mins)[0]; assert.ok(L.travel(v, 'island', fast.mode).ok);
+  for (let i = 0; i < 1000; i++) { while (v.pending.length) L.resolveChoice(v, 0); const t = L.availableActions(v).find(a => a.id === 'yf_indep_reg'); if (t && !t.disabled) { assert.ok(L.doAction(v, 'yf_indep_reg').ok); break; } L.wait(v, 30); }
+  assert.ok(v.evSeen && v.evSeen.indep);
+  assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
 });
