@@ -58,7 +58,9 @@
   // Accra–Kumasi is a domestic coach (no border fees); prices show in cedi anywhere in Ghana.
   // 26 adds Dubai as a visit-only trip with a UAE tourist visa, more of London (Camden, Brixton, the British Museum,
   // Hyde Park, Canary Wharf), two small paid engagements a visitor may do in London, and the Tube.
-  var RULES = 26;
+  // 27 fixes a review find: a ride across town past midnight on your visa's last day no longer lands you back abroad
+  // after the flight home (which made you pay for a second flight the next night).
+  var RULES = 27;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -1697,8 +1699,10 @@
     if (!o) return fail('You are already here.');
     if (o.disabled) return fail(o.disabled);
     if (o.cost && !pay(s, o.cost, D.MODES[mode].name + ' to ' + D.DISTRICTS[dest].name)) return fail('Not enough for the fare.');
-    var night = hour(s) >= 21 || hour(s) < 5;
+    var night = hour(s) >= 21 || hour(s) < 5, c0 = cityOf(s);
     advance(s, o.mins, o.tired ? { floor: 5 } : null);
+    // Rules 27: if your visa ran out on the way and you were flown home, the ride is over: don't put you back.
+    if (s.rules >= 27 && cityOf(s) !== c0) return finish(s, ok('Your visa ran out on the way, so you were flown home.'));
     if (o.energy) applyFx(s, { energy: -o.energy, hygiene: -o.km * 2 });
     if (o.tired) applyFx(s, { stress: 8 });
     var m = D.MODES[mode];

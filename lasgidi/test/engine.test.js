@@ -3024,3 +3024,18 @@ test('rules 26: two small paid engagements in London and the Tube, neither in ru
   const late = at(26, 'ldn_notting', 2, 23); late.t += 50; assert.match(L.travelOptions(late, 'ldn_tower').find(o => o.mode === 'rail').disabled || '', /Tube runs/);
   assert.ok(L.travel(t26, 'ldn_tower', 'rail').ok); assert.equal(t26.loc, 'ldn_tower');
 });
+
+test('rules 27: a ride past midnight on the visa\'s last day ends at home, with one flight; rules 26 keeps the old path', () => {
+  const run = rules => {
+    const s = L.newGame({ seed: 2700, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0);
+    s.bank = 4e6; s.cash = 3e6; assert.ok(L.applyVisa(s, 'dxb').ok);
+    const until = s.visa.dxb.until; s.loc = 'dxb_downtown'; s.t = until * 1440 + 23 * 60 + 15; while (s.pending.length) L.resolveChoice(s, 0);
+    const o = L.travelOptions(s, 'dxb_marina').find(x => !x.disabled && s.t % 1440 + x.mins >= 1440); assert.ok(o, 'a ride that crosses midnight');
+    L.travel(s, 'dxb_marina', o.mode);
+    L.wait(s, 24 * 60); while (s.pending.length) L.resolveChoice(s, 0);
+    return { s, flights: s.ledger.filter(e => /UAE tourist visa ran out/.test(e.memo)).length };
+  };
+  const now = run(27), old = run(26);
+  assert.equal(L.cityOf(now.s), 'lagos'); assert.equal(now.flights, 1, 'one flight home');
+  assert.equal(old.flights, 2, 'rules 26 lives keep the old behaviour');
+});
