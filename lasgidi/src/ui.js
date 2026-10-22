@@ -3252,9 +3252,19 @@
     var head = f.phase === 'soon' ? 'Starts in ' + f.daysTo + (f.daysTo === 1 ? ' day' : ' days') : 'Night ' + f.night + ' of ' + f.nights + (f.on ? ' <span class="pb-live">ON NOW</span>' : ' · tonight');
     return '<div class="fest-card"><div class="fc-lab">🎆 ' + esc(f.name.toUpperCase()) + ' · HARBOUR LIVE, LAGOS ISLAND</div><h3>' + head + '</h3>' +
       (top ? '<p class="fc-head">' + (t ? 'Tonight' : 'Night 1') + ': <b>' + esc(top.head) + '</b>' + (top.support.length ? ' with ' + esc(top.support.join(', ')) : '') + '</p><p class="fc-meta">' + esc(top.theme) + ' · gates ' + f.gates + ':00 · tickets from ' + N(f.from) + '</p>' : '') +
-      (t && nx ? '<p class="fc-meta">Tomorrow: ' + esc(nx.head) + ' (' + esc(nx.theme) + ')</p>' : '') + (f.count ? '<p class="fc-meta">You have been to ' + f.count + (f.count === 1 ? ' night' : ' nights') + '.</p>' : '') +
+      (t && nx ? '<p class="fc-meta">Tomorrow: ' + esc(nx.head) + ' (' + esc(nx.theme) + ')</p>' : '') + (f.count ? '<p class="fc-meta">You have been to ' + f.count + (f.count === 1 ? ' night' : ' nights') + '.</p>' : '') + stallLine('detty', where) +
       '<div class="inline">' + (where !== 'venue' ? '<button class="btn sm" id="fest-go-' + where + '" data-venue="' + f.place + '">🎟️ Take me there</button>' : '') + '<button class="btn sm ghost" id="fest-prog-' + where + '" data-festprog="1" aria-expanded="' + !!ui.festProg + '">' + (ui.festProg ? 'Hide' : 'See') + ' the programme</button></div>' +
       (ui.festProg ? '<ol class="fc-prog">' + f.programme.map(function (r) { return '<li class="' + (f.night === r.n ? 'now' : f.night && r.n < f.night ? 'past' : '') + '"><span class="fc-n">' + r.n + '</span><span class="fc-t"><b>' + esc(r.head) + '</b><em>' + esc(r.theme) + '</em></span>' + (r.seen ? '<span class="fc-ok">✓</span>' : '') + '</li>'; }).join('') + '</ol>' : '') + '</div>';
+  }
+  // Rules 36: a stall line on a festival card: book it (on the island), or how to get one.
+  function stallLine(key, where) {
+    if (!(S.rules >= 36)) return '';
+    var booked = S.stalls && Object.keys(S.stalls).some(function (k) { return k.indexOf(key + '-') === 0; });
+    if (booked) return '<p class="fc-meta">🛒 Your food stall is booked for this festival.</p>';
+    var a = L.availableActions(S).filter(function (x) { return x.id === 'stall_' + key; })[0];
+    if (a) return '<div class="inline"><button class="btn sm" id="stall-' + key + '-' + where + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled title="' + esc(a.disabled) + '"' : '') + '>🛒 Rent a food stall · ' + N(a.price) + '</button></div>';
+    var food = (S.businesses || []).some(function (b) { return /^(buka|catering|smallchops)$/.test(b.id); });
+    return '<p class="fc-meta">🛒 ' + (food ? 'Come to Lagos Island to rent a stall for your food business.' : 'Own a buka, a small chops stand or a catering business to rent a stall here.') + '</p>';
   }
   // Rules 35: festivals through the year, one card each while counting down or on (only at the festival's place in a walk-in).
   function yearFestCards(where, placeId) {
@@ -3265,7 +3275,7 @@
       return '<div class="fest-card yf" style="--fc:' + esc(f.color) + '"><div class="fc-lab">' + f.icon + ' ' + esc(f.name.toUpperCase()) + ' · ' + esc((pl ? pl.name : '').toUpperCase()) + '</div><h3>' + head + '</h3>' +
         (f.phase === 'soon' ? '<p class="fc-meta">' + esc(f.blurb) + '</p>' : '') +
         (top ? '<p class="fc-head">' + (t ? 'Today' : 'Day 1') + ': <b>' + esc(top.theme) + '</b> with ' + esc(top.head) + (top.support.length ? ', ' + esc(top.support.join(', ')) : '') + '</p><p class="fc-meta">' + String(f.from).padStart(2, '0') + ':00–' + String(f.to).padStart(2, '0') + ':00 · tickets from ' + N(f.price) + '</p>' : '') +
-        (t && nx ? '<p class="fc-meta">Tomorrow: ' + esc(nx.theme) + '</p>' : '') +
+        (t && nx ? '<p class="fc-meta">Tomorrow: ' + esc(nx.theme) + '</p>' : '') + stallLine(f.id, where) +
         '<div class="inline">' + (where !== 'venue' ? '<button class="btn sm" id="yf-go-' + f.id + '-' + where + '" data-venue="' + esc(f.place) + '">🎟️ Take me there</button>' : '') + '<button class="btn sm ghost" id="yf-prog-' + f.id + '-' + where + '" data-yfprog="' + f.id + '" aria-expanded="' + open + '">' + (open ? 'Hide' : 'See') + ' the programme</button></div>' +
         (open ? '<ol class="fc-prog">' + f.programme.map(function (r) { return '<li class="' + (f.day === r.n ? 'now' : f.day && r.n < f.day ? 'past' : '') + '"><span class="fc-n">' + r.n + '</span><span class="fc-t"><b>' + esc(r.theme) + '</b><em>' + esc(r.head) + '</em></span>' + (r.seen ? '<span class="fc-ok">✓</span>' : '') + '</li>'; }).join('') + '</ol>' : '') + '</div>';
     }).join('');

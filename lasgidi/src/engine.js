@@ -78,7 +78,9 @@
   // chart (40+ notes), is collected the day it was played, and stage followers are capped at 3,000 a year.
   // 35 adds festivals through the year: Eko Carnival at Easter, the Chop Life Food Festival in July and the Eko
   // Independence Jam in October, each with a countdown, a daily news line, a programme, tickets and a volunteer gig.
-  var RULES = 35;
+  // 36 lets a food business owner rent a stall at a festival (Detty Fest and the three from rules 35): a fee up front,
+  // then that business takes double on each festival day, unless a rival stall undercuts it (1 in 4 days: x1.25).
+  var RULES = 36;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -912,6 +914,27 @@
     });
     return out;
   }
+  // Rules 36: festival stalls for food businesses. Each festival edition has a key and absolute first/last days.
+  var STALL_FOOD = ['buka', 'catering', 'smallchops'];
+  function stallFests(s) {
+    var d = day(s), out = [], df = dettyFest(s), F = D.DETTY_FEST;
+    if (df && df.phase) { var first = df.phase === 'on' ? d - (df.night - 1) : d + df.daysTo; out.push({ key: 'detty', ed: festYear(s), name: F.name, place: F.place, district: F.district, first: first, last: first + F.nights - 1 }); }
+    D.YEAR_FESTS.forEach(function (Y) { var f = yearFest(s, Y); if (!f) return; var first = f.phase === 'on' ? d - (f.day - 1) : d + f.daysTo; out.push({ key: Y.id, ed: f.edition, name: Y.name, place: Y.place, district: Y.district, first: first, last: first + Y.days - 1 }); });
+    return out;
+  }
+  function stallBiz(s) {
+    var best = null;
+    (s.businesses || []).forEach(function (b) { if (STALL_FOOD.indexOf(b.id) < 0) return; var v = D.BUSINESSES[b.id].daily * (b.level > 1 ? D.BUSINESS_LEVEL.mult[b.level - 1] : 1); if (!best || v > best.v) best = { b: b, v: v }; });
+    return best;
+  }
+  function stallActions(s) {
+    var B = stallBiz(s); if (!B) return [];
+    return stallFests(s).filter(function (f) { return f.district === s.loc && !(s.stalls && s.stalls[f.key + '-' + f.ed]); }).map(function (f) {
+      var days = f.last - Math.max(day(s), f.first) + 1, nm = businessName(B.b);
+      return { id: 'stall_' + f.key, label: 'Rent a stall at ' + f.name + ' for your ' + nm + ' (' + days + (days === 1 ? ' day' : ' days') + ')', mins: 30, cost: roundTo(B.v * 0.6 * days, 1000), fx: { stress: 3 }, special: 'stallbook', fest: f.key, ed: f.ed, first: Math.max(day(s), f.first), last: f.last, bid: B.b.id, minRules: 36,
+        note: 'On each festival day your ' + nm + ' takes double, unless a rival stall undercuts it (1 day in 4: only x1.25).' };
+    });
+  }
   // retired actions are hidden from players but still run, so lives that used them replay.
   function availableActions(s, withRetired) {
     var list = [];
@@ -930,6 +953,7 @@
     if (s.rules >= 31) list = list.concat(theatreActions(s));
     if (s.rules >= 32) list = list.concat(festActions(s));
     if (s.rules >= 35) list = list.concat(yearFestActions(s));
+    if (s.rules >= 36) list = list.concat(stallActions(s));
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
@@ -1109,6 +1133,10 @@
   }
 
   var specials = {
+    stallbook: function (s, a) {
+      var st = s.stalls = s.stalls || {}; st[a.fest + '-' + a.ed] = { bid: a.bid, first: a.first, last: a.last };
+      return 'Your stall is booked, ' + (a.first > day(s) ? 'from day ' + (a.first - day(s)) + ' from now' : 'from today') + '. Keep the stock coming.';
+    },
     yearfest: function (s, a) {
       var ev = s.evSeen = s.evSeen || {}, mine = ev[a.fid] = ev[a.fid] || {}; mine[a.ed + '-' + a.n] = 1; // the day it started
       if (['carnival', 'foodfest', 'indep'].every(function (k) { return ev[k] && Object.keys(ev[k]).length; })) unlock(s, 'festival_hopper');
@@ -2493,6 +2521,7 @@
   }
 
   function businessPayout(s) {
+    if (s.rules >= 36 && s.stalls) Object.keys(s.stalls).forEach(function (k) { if (s.stalls[k].last < day(s)) delete s.stalls[k]; }); // past festivals
     if (!s.businesses.length) return;
     var d = dow(s), total = 0, notes = [];
     s.businesses.forEach(function (b) {
@@ -2510,6 +2539,8 @@
       if (s.rules >= 30 && b.mods && b.mods.length) { b.mods = b.mods.filter(function (m) { return m.until > day(s); }); b.mods.forEach(function (m) { v *= m.x; }); } // rules 30: decisions
       if (def.power && !s.power) v -= def.daily * 0.12 * s.econ.fuel * s.econ.infl * (b.level > 1 ? D.BUSINESS_LEVEL.mult[b.level - 1] : 1);
       if (def.risky && rand(s) < 0.05) { v -= def.daily * 1.5; notes.push('union and LASTMA "dues" on the bus'); }
+      if (s.rules >= 36 && s.stalls && v > 0) { var dd0 = day(s), stl = Object.keys(s.stalls).filter(function (k) { var x = s.stalls[k]; return x.bid === b.id && x.first <= dd0 && x.last >= dd0 && !x['d' + dd0]; })[0];
+        if (stl) { var X = s.stalls[stl]; X['d' + dd0] = 1; if (rand(s) < 0.25) { v *= 1.25; notes.push('a rival stall undercut your festival stall'); } else v *= 2; } } // one stall boost per business per day
       total += v;
     });
     total = roundTo(total, 50);
