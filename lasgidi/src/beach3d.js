@@ -1743,6 +1743,46 @@
           var glow = new T.PointLight(L0.color, 30, 12, 1.6); glow.position.y = 0.5; letter.add(glow); letter.traverse(function (o) { o.userData.letter = true; }); world.add(letter); }
       }
     }
+    // Rules 35+: festival dressing over any walk-in while a festival is on at this place: an arch with its name,
+    // bunting, and props for the kind of festival (troupes, food tents, drummers, easels, kente, canoes, flags).
+    var festG = null, festKey = '';
+    function syncFest() {
+      var F0 = sc.fdress, k = F0 ? F0.id + ':' + (sc.mode || '') : '';
+      if (k === festKey) return; festKey = k;
+      if (festG) { world.remove(festG); wipe(festG); festG = null; }
+      if (!F0) return;
+      festG = new T.Group(); festG.userData.dancers = []; world.add(festG);
+      // Laid out around where the camera looks, so it is in view in every kind of walk-in.
+      var R0 = [[-12, -2], [-6, -4], [0, -5], [6, -4], [12, -2], [-9, 4], [0, 5], [9, 4]], cx = orbit.tx || 0, cz = orbit.tz || 0, col = new T.Color(F0.color || '#e84393'), at = function (i) { var q = R0[i % R0.length], x = cx + q[0], z = cz + q[1]; return { x: x, z: z, y: groundY(x, z) }; };
+      // The arch over the middle spot, readable from the camera side.
+      var a0 = at(2), post = mat('fdPost', { color: 0x3a3f46, metalness: 0.5, roughness: 0.4 });
+      [-6, 6].forEach(function (dx) { festG.add(mesh(new T.CylinderGeometry(0.25, 0.3, 7, 10), post, a0.x + dx, a0.y + 3.5, a0.z + 3)); });
+      var bt = canvasTex(1024, 160, function (g, w, h) { g.fillStyle = F0.color || '#e84393'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(255,255,255,.2)'; for (var i = 0; i < w; i += 40) g.fillRect(i, 0, 20, 10); g.fillStyle = '#fff'; g.font = '900 78px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(F0.name).toUpperCase(), w / 2, h / 2 + 4, w - 40); });
+      [0, Math.PI].forEach(function (ry) { var bm = new T.Mesh(new T.PlaneGeometry(12.4, 1.95), new T.MeshStandardMaterial({ map: bt, emissive: 0xffffff, emissiveMap: bt, emissiveIntensity: 0.35, roughness: 0.6 })); bm.position.set(a0.x, a0.y + 6.6, a0.z + 3 + (ry ? 0.05 : -0.05)); bm.rotation.y = ry; festG.add(bm); });
+      // Bunting: little flags strung between the spots, one merged mesh with vertex colours.
+      var pos = [], cols = [], cset = [col, new T.Color(0xffd23f), new T.Color(0xffffff), new T.Color(0x16a35a), new T.Color(0x2f6fd0)];
+      for (var r = 0; r < 4; r++) { var p1 = at(r), p2 = at(r + 1); for (var f = 0; f < 12; f++) { var u = f / 12, x = p1.x + (p2.x - p1.x) * u, z = p1.z + (p2.z - p1.z) * u, y = Math.max(p1.y, p2.y) + 5 - Math.sin(u * Math.PI) * 0.9, c = cset[(f + r) % cset.length];
+        pos.push(x - 0.35, y, z, x + 0.35, y, z, x, y - 0.7, z); for (var v = 0; v < 3; v++) cols.push(c.r, c.g, c.b); } }
+      var bg = new T.BufferGeometry(); bg.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); bg.setAttribute('color', new T.Float32BufferAttribute(cols, 3)); bg.computeVertexNormals();
+      festG.add(new T.Mesh(bg, new T.MeshBasicMaterial({ vertexColors: true, side: T.DoubleSide })));
+      // Props by festival.
+      var kind = F0.id, spots = [5, 6, 7];
+      spots.forEach(function (si, j) {
+        var q = at(si), g = new T.Group(); g.position.set(q.x + (j - 1) * 1.5, q.y, q.z + 2); festG.add(g);
+        if (kind === 'foodfest') { g.add(mesh(new T.BoxGeometry(4, 1, 2), mat('fdTable', { color: 0x8a5a34 }), 0, 0.5, 0)); g.add(mesh(new T.ConeGeometry(3.2, 1.6, 4), mat('fdTent' + j, { color: [0xe67e22, 0xffffff, 0xc0392b][j], roughness: 0.8 }), 0, 3.4, 0)); [-2, 2].forEach(function (px) { g.add(mesh(new T.CylinderGeometry(0.08, 0.08, 2.6, 6), post, px, 1.3, 0)); }); [-1, 0.2, 1.3].forEach(function (px) { g.add(mesh(new T.CylinderGeometry(0.4, 0.35, 0.5, 12), mat('fdPot', { color: 0x1c1c1f, metalness: 0.4 }), px, 1.25, 0)); }); }
+        else if (kind === 'accart') { [-1.2, 1.2].forEach(function (px, e) { var ct = canvasTex(256, 192, function (c2, w, h) { c2.fillStyle = '#fff'; c2.fillRect(0, 0, w, h); for (var b = 0; b < 9; b++) { c2.fillStyle = 'hsl(' + ((b * 47 + j * 90 + e * 30) % 360) + ',80%,55%)'; c2.beginPath(); c2.arc((b * 61 + e * 30) % w, (b * 43) % h, 18 + b * 3, 0, Math.PI * 2); c2.fill(); } }); g.add(mesh(new T.BoxGeometry(0.1, 2.4, 0.1), post, px, 1.2, 0.3)); var cv = new T.Mesh(new T.PlaneGeometry(1.8, 1.35), new T.MeshBasicMaterial({ map: ct, side: T.DoubleSide })); cv.position.set(px, 1.8, 0.2); g.add(cv); }); }
+        else if (kind === 'kumkente') { var kt = canvasTex(256, 256, function (c2, w, h) { var K = ['#f2b600', '#16a35a', '#c0392b', '#17181a']; for (var y = 0; y < h; y += 16) for (var x = 0; x < w; x += 32) { c2.fillStyle = K[((x / 32) + (y / 16)) % 4 | 0]; c2.fillRect(x, y, 32, 16); } }); [-1.6, 1.6].forEach(function (px) { g.add(mesh(new T.BoxGeometry(0.12, 3, 0.12), post, px, 1.5, 0)); }); g.add(mesh(new T.BoxGeometry(3.4, 0.12, 0.12), post, 0, 3, 0)); var cl = new T.Mesh(new T.PlaneGeometry(3, 2.5), new T.MeshStandardMaterial({ map: kt, side: T.DoubleSide, roughness: 0.9 })); cl.position.set(0, 1.7, 0); g.add(cl); }
+        else if (kind === 'phregatta') { var hull = mat('fdCanoe' + j, { color: [0x8e2b2b, 0x1f5fa0, 0xf2b600][j], roughness: 0.6 }); g.add(mesh(new T.BoxGeometry(7, 0.7, 1.2), hull, 0, 0.4, 0)); [-3.6, 3.6].forEach(function (px) { var tip = mesh(new T.ConeGeometry(0.6, 1.4, 4), hull, px, 0.5, 0); tip.rotation.z = px > 0 ? -Math.PI / 2 : Math.PI / 2; g.add(tip); }); for (var pd = 0; pd < 4; pd++) g.add(mesh(new T.BoxGeometry(0.1, 1.6, 0.25), mat('fdPaddle', { color: 0xd8c3a5 }), -2.4 + pd * 1.6, 1.1, 0.7)); }
+        else if (kind === 'indep') { [-1.5, 0, 1.5].forEach(function (px) { g.add(mesh(new T.CylinderGeometry(0.06, 0.06, 4, 6), post, px, 2, 0)); var fl = canvasTex(96, 64, function (c2, w, h) { c2.fillStyle = '#008751'; c2.fillRect(0, 0, w, h); c2.fillStyle = '#fff'; c2.fillRect(w / 3, 0, w / 3, h); }); var fm = new T.Mesh(new T.PlaneGeometry(1.5, 1), new T.MeshBasicMaterial({ map: fl, side: T.DoubleSide })); fm.position.set(px + 0.75, 3.4, 0); g.add(fm); }); }
+        // People: carnival troupes with feather headdresses, drummers for culture week, a dancer or two everywhere else.
+        var n = kind === 'carnival' ? 3 : kind === 'abjculture' ? 2 : 1;
+        for (var d = 0; d < n; d++) { var pp = person(300 + j * 5 + d, (d + j) % 2 === 0); pp.position.set((d - (n - 1) / 2) * 1.4, 0, 1.5); pp.rotation.y = -Math.PI / 2; g.add(pp);
+          if (kind === 'carnival') { var hd = mesh(new T.ConeGeometry(0.55, 1.6, 8, 1, true), mat('fdFeather' + ((d + j) % 3), { color: [0xe84393, 0xf2b600, 0x2fa36b][(d + j) % 3], side: T.DoubleSide, roughness: 0.7 }), 0, 2.6, 0); hd.rotation.x = Math.PI; pp.add(hd); }
+          if (kind === 'abjculture') g.add(mesh(new T.CylinderGeometry(0.35, 0.3, 0.9, 12), mat('fdDrum', { color: 0x8a5a34 }), (d - 0.5) * 1.4 + 0.5, 0.45, 1.9));
+          festG.userData.dancers.push({ p: pp, ph: j * 1.3 + d }); }
+      });
+    }
+    function festFrame(t) { if (!festG) return; festG.userData.dancers.forEach(function (D0) { D0.p.position.y = Math.abs(Math.sin(t * 4 + D0.ph)) * 0.3; D0.p.rotation.y = -Math.PI / 2 + Math.sin(t * 1.3 + D0.ph) * 0.6; }); }
     function syncPeople() {
       var list = sc.people || [];
       while (crowd.length < list.length) { var p = avatarFor(list[crowd.length], crowd.length); world.add(p); crowd.push(p); }
@@ -1958,6 +1998,7 @@
       var wdt = Math.min(0.25, Math.max(0, (now - (WK.last || now)) / 1000)); WK.last = now;
       if (me && sc.me && WK.on) { walkFrame(wdt, t); label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(WK.x, me.position.y + 2.7, WK.z); }
       else if (me && sc.me) { var q = SP()[(sc.meSlot || 5) % SP().length], mx = q[0] + 1.6, mz = q[1] + 2.5; me.position.set(mx, groundY(mx, mz), mz); if (me.userData.axis) me.rotation.y = Math.PI / 2; label(meTag, sc.me.say ? sc.me.say.slice(0, 40) : 'You', '#2f6fd0', '#fff'); meTag.scale.set(sc.me.say ? 9 : 2.4, (sc.me.say ? 9 : 2.4) * 96 / 512, 1); meTag.position.set(mx, me.position.y + 2.7, mz); }
+      festFrame(reduce ? 30 : t);
       if (letter && sc.letter) { var lq = SP()[sc.letter.slot % SP().length], lx = lq[0] + 2.8, lz = lq[1] + 1.5; letter.position.set(lx, groundY(lx, lz) + 3.4 + (reduce ? 0 : Math.sin(t * 2) * 0.3), lz); if (beacon) { beacon.position.set(lx, groundY(lx, lz) + 0.06, lz); var rs = reduce ? 1 : 1 + 0.22 * Math.sin(t * 3.2); beacon.userData.ring.scale.set(rs, 1, rs); } letter.scale.setScalar(1.7); letter.rotation.y = reduce ? 0.4 : t * 0.9; if (WK.on && me && Math.hypot(WK.x - lx, WK.z - lz) < 2.4 && !letter.userData.caught) { letter.userData.caught = true; if (opts.onLetter) opts.onLetter(); } }
       if (gem && sc.gem) { var gq = SP()[sc.gem.slot % SP().length]; gem.position.set(gq[0] - 2.5, groundY(gq[0] - 2.5, gq[1] + 2) + 1.2 + Math.sin(t * 2) * 0.25, gq[1] + 2); gem.rotation.y = t * 1.5; }
       strollers.forEach(function (p, i) { p.visible = !CLUB || i < (sc.night || ROOF ? 5 : 1); var x = CLUB ? -20 + ((i * 9 + (reduce ? 0 : t * (i % 2 ? 0.7 : -0.6))) % 40 + 40) % 40 : -50 + ((i * 13 + (reduce ? 0 : t * (i % 2 ? 0.9 : -0.8))) % 100 + 100) % 100, z = STR ? -2 + (i % 3) * 0.5 : GAL ? -16 + (i % 3) * 1.2 : PLZ ? -34 + (i % 3) * 1.2 : PRK ? -24 + (i % 3) * 1.2 : JTY ? -26 + (i % 3) * 1.2 : MKT ? -36 + (i % 3) * 1.2 : STAD ? (sc.street ? -21 : -44) + (i % 3) * 1.2 : CLUB ? -22 + (i % 3) * 2 : HARBOUR ? -50 + (i % 3) * 3 : SEA0 - 4 + (i % 3) * 1.2; p.position.set(x, groundY(x, z), z); p.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; var a = reduce ? 0 : Math.sin(t * 6 + i) * 0.45; p.userData.legs[0].rotation[p.userData.axis || 'z'] = a; p.userData.legs[1].rotation[p.userData.axis || 'z'] = -a; });
@@ -1971,7 +2012,7 @@
     }
     return {
       el: el, canvas: cv, is3d: true,
-      update: function (next) { sc = next || sc; build(); seasonal(); syncSigns(); syncPeople(); syncLetter(); if (WK.reset && me) { WK.reset = false; walkStart(); WK.near = -2; } cv.setAttribute('aria-label', (sc.name || 'The beach') + ' in 3D. Drag to look around, tap a sign to do it.'); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
+      update: function (next) { sc = next || sc; build(); seasonal(); syncSigns(); syncPeople(); syncLetter(); syncFest(); if (WK.reset && me) { WK.reset = false; walkStart(); WK.near = -2; } cv.setAttribute('aria-label', (sc.name || 'The beach') + ' in 3D. Drag to look around, tap a sign to do it.'); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
       start: function () { if (!raf) raf = root.requestAnimationFrame(frame); },
       stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; },
       walk: function () { return { on: WK.on, x: WK.x, z: WK.z, near: WK.near, greeted: WK.greeted || 0 }; },
