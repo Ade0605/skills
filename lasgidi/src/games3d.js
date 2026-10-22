@@ -249,12 +249,13 @@
     K.box(stage, 9, 0.5, 4, K.M(0xe8dcc8, 0.6), 0, 0.25, 0);
     var back = K.tex(512, 256, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#5a1f6b'); gr.addColorStop(1, '#c0392b'); g.fillStyle = gr; g.fillRect(0, 0, w, h); for (var i = 0; i < 160; i++) { g.fillStyle = ['#f2b600', '#ffffff', '#ff7ab8'][i % 3]; g.beginPath(); g.arc((i * 61) % w, (i * 37) % h, 3 + i % 4, 0, Math.PI * 2); g.fill(); } g.fillStyle = '#fff'; g.font = '900 54px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('OWAMBE', w / 2, h / 2 + 18);
       if (o.stage === 'theatre') { g.fillStyle = '#7a1018'; g.fillRect(0, 0, w, h); for (var f = 0; f < w; f += 24) { g.fillStyle = f % 48 ? '#8e1a1f' : '#6b0e14'; g.fillRect(f, 0, 12, h); } g.fillStyle = '#c9a227'; g.fillRect(0, 0, w, 46); g.fillStyle = '#1a0d0d'; g.font = '900 30px system-ui, sans-serif'; g.fillText('NATIONAL THEATRE · OPEN STAGE', w / 2, 33, w - 20); }
+      if (o.stage === 'headline') { var gh = g.createLinearGradient(0, 0, 0, h); gh.addColorStop(0, '#0b0b12'); gh.addColorStop(1, '#3a2a08'); g.fillStyle = gh; g.fillRect(0, 0, w, h); for (var sp = 0; sp < 12; sp++) { g.fillStyle = 'rgba(255,210,63,' + (0.12 + (sp % 3) * 0.06) + ')'; g.beginPath(); g.moveTo(sp * 44, 0); g.lineTo(sp * 44 + 30, 0); g.lineTo(w / 2 + (sp - 6) * 10, h); g.fill(); } g.fillStyle = '#ffd23f'; g.font = '900 40px system-ui, sans-serif'; g.fillText('EKO CONVENTION CENTRE', w / 2, h / 2 - 6, w - 20); g.fillStyle = '#fff'; g.font = '800 24px system-ui, sans-serif'; g.fillText('HEADLINE SHOW', w / 2, h / 2 + 34, w - 20); }
       if (o.stage === 'fest') { var gf = g.createLinearGradient(0, 0, w, h); gf.addColorStop(0, '#2a0b3d'); gf.addColorStop(0.55, '#7b1fa2'); gf.addColorStop(1, '#ff6f00'); g.fillStyle = gf; g.fillRect(0, 0, w, h); for (var b = 0; b < 32; b++) { g.fillStyle = 'rgba(255,255,255,.18)'; var bh = 30 + (b * 37 % 110); g.fillRect(b * 16 + 2, h - bh, 12, bh); } g.fillStyle = '#ffd23f'; g.font = '900 52px system-ui, sans-serif'; g.fillText('EKO DETTY FEST', w / 2, h / 2, w - 20); g.fillStyle = '#fff'; g.font = '800 22px system-ui, sans-serif'; g.fillText('OPENING ACT · HARBOUR LIVE', w / 2, h / 2 + 40, w - 20); } });
     var bk = new T.Mesh(new T.PlaneGeometry(10, 5), new T.MeshStandardMaterial({ map: back, emissive: 0xffffff, emissiveMap: back, emissiveIntensity: 0.35 })); bk.position.set(0, 2.9, -2); stage.add(bk);
     [-4, 4].forEach(function (x) { K.box(stage, 0.9, 1.8, 0.8, K.M(0x111111, 0.6), x, 1.4, -0.8); K.cyl(stage, 0.28, 0.28, 0.05, K.M(0x333333, 0.3, 0.6), x, 1.6, -0.38).rotation.x = Math.PI / 2; });
     K.box(stage, 1.8, 0.9, 0.8, K.M(0x222a36, 0.4, 0.4), 2.4, 0.95, -1.2); var dj = K.person(null, 'dj', 2); dj.position.set(2.4, 0.5, -1.8); stage.add(dj); var djl = K.label(o.stage ? 'THE BAND' : 'DJ TIDEWAVE', '#17181a', '#f2b600', 0.32); djl.position.set(2.4, 2.7, -1.6); stage.add(djl);
     var me = K.person(o.look ? { look: o.look, outfit: o.outfit || {} } : null, 'me', 0); me.position.set(0, 0.5, 0.6); stage.add(me);
-    var crowd = [], NC = o.stage === 'fest' ? (o.lite ? 16 : 26) : o.stage ? 14 : 10;
+    var crowd = [], NC = o.stage === 'headline' ? (o.lite ? 18 : 30) : o.stage === 'fest' ? (o.lite ? 16 : 26) : o.stage ? 14 : 10;
     if (o.stage) { K.cyl(stage, 0.03, 0.03, 1.5, K.M(0xc7ccd1, 0.3, 0.8), 0.45, 1.25, 1.1); K.cyl(stage, 0.09, 0.09, 0.14, K.M(0x17181a, 0.4), 0.45, 2.0, 1.1); } // a mic stand by you
     for (var c = 0; c < NC; c++) { var side = c % 2 ? 1 : -1, p = K.person(null, 'owambe', c); if (o.stage) p.position.set(side * (3.0 + Math.floor((c >> 1) / 6) * 1.1 + (c >> 1) % 2 * 0.4), 0, -LEN + 2.2 + ((c >> 1) % 6) * 1.7); else p.position.set(side * (3.2 + (c >> 1) % 3 * 0.9), 0, -LEN + 2.2 + (c >> 1) * 1.6); p.rotation.y = -side * 0.8; scene.add(p); crowd.push(p); }
     var lights = [0xf2b600, 0xd0453a, 0x2fa36b, 0x8a5cff].map(function (col, i) { var pl = new T.PointLight(col, 18, 14, 1.6); pl.position.set((i - 1.5) * 3, 4, -LEN + 1); scene.add(pl); return pl; });
@@ -283,7 +284,7 @@
   };
 
   // Rules 33: on stage. The dance-off stage, dressed as the National Theatre's open stage or the Eko Detty Fest stage.
-  BUILD.stage = function (T, scene, cam, K, o) { o.stage = o.at === 'fest' ? 'fest' : 'theatre'; return BUILD.dance(T, scene, cam, K, o); };
+  BUILD.stage = function (T, scene, cam, K, o) { o.stage = o.at === 'fest' || o.at === 'headline' ? o.at : 'theatre'; return BUILD.dance(T, scene, cam, K, o); };
 
   /* ---------- Go-slow hawker ---------- */
   BUILD.hawk = function (T, scene, cam, K, o) {

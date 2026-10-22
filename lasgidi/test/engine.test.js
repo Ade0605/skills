@@ -3349,7 +3349,7 @@ test('rules 36: a food business can rent a festival stall: a fee up front, doubl
 
 test('rules 37: a festival in each other city, in its own month and district; news follows your city; stalls work there too', () => {
   const s = L.newGame({ seed: 3710, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 37); s.bank = 5e7; s.cash = 5e6;
+  assert.ok(s.rules >= 37); s.bank = 5e7; s.cash = 5e6;
   const want = { abjculture: [10, 'abj_maitama'], phregatta: [1, 'ph_borokiri'], accart: [7, 'acc_jamestown'], kumkente: [4, 'kum_adum'] };
   const seen = {};
   for (let i = 0; i < 400 && Object.keys(seen).length < 4; i++) {
@@ -3374,4 +3374,42 @@ test('rules 37: a festival in each other city, in its own month and district; ne
   // Older lives keep only the Lagos festivals.
   const o = L.newGame({ seed: 3710, origin: 'nepo', goal: 'freestyle', rules: 36 }); while (o.pending.length) L.resolveChoice(o, 0);
   for (let i = 0; i < 400; i++) { assert.ok(L.yearFests(o).every(f => !want[f.id])); L.wait(o, 1440 * 7); if (L.day(o) > 400) break; }
+});
+
+test('rules 38: stage career: rehearse, rep and levels, a manager at 30, a weekly capped headline at 60, and a weekly chart', () => {
+  const s = L.newGame({ seed: 3810, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 38); s.cash = 5e6;
+  const step = (loc) => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); s.loc = loc; };
+  const fresh = () => { s.needs.energy = 100; s.needs.hunger = 70; };
+  // Rehearse: once a day, practice +2.
+  s.loc = 'surulere';
+  for (let i = 0; i < 4000 && !(L.dow(s) <= 5 && L.hour(s) === 10); i++) step('surulere');
+  fresh(); assert.ok(L.doAction(s, 'stage_rehearse').ok); assert.equal(L.stageCareer(s).practice, 2);
+  assert.match(L.availableActions(s).find(a => a.id === 'stage_rehearse').disabled || '', /Once a day|Only/);
+  // A manager needs 30 rep.
+  s.loc = 'vi'; assert.match(L.availableActions(s).find(a => a.id === 'stage_manager').disabled || '', /30/);
+  // Perform at the open stage: rep goes up; practice is used up.
+  for (let i = 0; i < 4000 && !(L.dow(s) === 2 && L.hour(s) === 18); i++) step('surulere');
+  fresh(); assert.ok(L.startMinigame(s, 'stage').ok); assert.ok(L.stageShow(s, 60, 64, 40).ok);
+  assert.equal(L.stageCareer(s).rep, 9); assert.equal(L.stageCareer(s).practice, 0);
+  // A bad show costs rep.
+  s.stage.rep = 31; for (let i = 0; i < 4000 && !(L.dow(s) === 2 && L.hour(s) === 18); i++) step('surulere');
+  fresh(); assert.ok(L.startMinigame(s, 'stage').ok); assert.ok(L.stageShow(s, 10, 64, 3).ok); assert.equal(L.stageCareer(s).rep, 29);
+  // Sign at 30; headline at 60 with a manager, once a week, fee capped and cut 20%.
+  s.stage.rep = 61; s.loc = 'vi'; fresh(); assert.ok(L.doAction(s, 'stage_manager').ok); assert.ok(L.stageCareer(s).manager);
+  for (let i = 0; i < 4000 && !(L.dow(s) === 5 && L.hour(s) === 20); i++) step('vi');
+  fresh(); const c0 = s.cash + s.bank; assert.ok(L.startMinigame(s, 'stage').ok); const r = L.stageShow(s, 64, 64, 64); assert.ok(r.ok, r.msg);
+  const fee = s.cash + s.bank - c0; assert.ok(fee > 0 && fee <= L.price(s, 10000) * 0.8 + 50, 'capped, after the cut: ' + fee);
+  assert.ok(s.ach.headliner); assert.equal(s.stage.headWeek, L.week(s), 'marked for the week');
+  // The chart: 10 rows, the same for every life in a week.
+  const ch = L.stageChart(s); assert.equal(ch.rows.length, 10); assert.ok(ch.you >= 1);
+  const t = L.newGame({ seed: 77, origin: 'mid', goal: 'japa' }); t.t = s.t; assert.deepEqual(L.stageChart(t).rows.filter(x => !x.you).slice(0, 3).map(x => x.name), ch.rows.filter(x => !x.you).slice(0, 3).map(x => x.name));
+  // Older lives: no career.
+  const o = L.newGame({ seed: 3810, origin: 'nepo', goal: 'freestyle', rules: 37 }); assert.equal(L.stageCareer(o), null); o.loc = 'vi'; assert.ok(!L.availableActions(o).some(a => /^stage_(manager|headline)/.test(a.id)));
+  // A real life that rehearses replays to the same seal.
+  const v = L.newGame({ seed: 3812, origin: 'nepo', goal: 'freestyle' }); while (v.pending.length) L.resolveChoice(v, 0);
+  const fast = L.travelOptions(v, 'surulere').filter(x => !x.disabled).sort((x, y) => x.mins - y.mins)[0]; assert.ok(L.travel(v, 'surulere', fast.mode).ok);
+  for (let i = 0; i < 400; i++) { while (v.pending.length) L.resolveChoice(v, 0); const a = L.availableActions(v).find(x => x.id === 'stage_rehearse'); if (a && !a.disabled) { assert.ok(L.doAction(v, 'stage_rehearse').ok); break; } L.wait(v, 30); }
+  assert.equal(L.stageCareer(v).practice, 2);
+  assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
 });

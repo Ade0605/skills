@@ -83,7 +83,10 @@
   // 37 adds a festival in each other city: Capital Culture Week (Abuja, November), the Garden City Boat Regatta (Port
   // Harcourt, February), Jamestown Wall Art Week (Accra, August) and the Kente and Craft Fair (Kumasi, May). Festival news
   // now follows the city you are in, and a Festival passport achievement is for festivals in five cities.
-  var RULES = 37;
+  // 38 adds a stage career: rehearse at the National Theatre (practice widens the beat and adds up to 10% on fees), a
+  // stage reputation with levels, a manager (Eko Talent Management, 20% of fees) and a weekly headline slot at Eko
+  // Convention Centre (capped fee), plus a weekly Lasgidi Live Top 10 chart.
+  var RULES = 38;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -139,6 +142,7 @@
     dancer:      'Dance-off champion: 90% on the beat',
     on_stage:    'On stage: performed at the National Theatre and at Eko Detty Fest',
     show_stopper: 'Show-stopper: 90% on the beat as an opening act at Eko Detty Fest',
+    headliner:   'Headliner: topped the bill at Eko Convention Centre',
     quiz:        'Quiz champion: 10 out of 10',
     vendor:      'Online vendor: sold 100 items',
     corper:      'Corper wee! Finished your NYSC service year',
@@ -867,6 +871,7 @@
     if (s.loc !== 'surulere') return [];
     var sh = theatreShow(s, 0), K = D.TH_KIND[sh.kind];
     var out = s.rules >= 33 ? [STAGE_ACTS.theatre] : [];
+    if (s.rules >= 38) out.push(STAGE_ACTS.rehearse);
     return out.concat([{ id: 'th_show', label: 'Watch ' + sh.title + ' (' + K.name.toLowerCase() + ')', mins: K.mins, cost: K.cost, fx: K.fx, xp: K.xp, when: sh.when, special: 'theshow', event: true, th: true, show: sh.id, wk: sh.week, minRules: 31 }, D.THEATRE_CREW]);
   }
   // Rules 32: Eko Detty Fest. December is weeks 8–11 of each game year; night n (1–21) is December day F.start + n - 1.
@@ -895,7 +900,25 @@
     theatre: { id: 'stage_open', label: 'Perform at the open stage night (mini-game)', mins: 60, fx: { fun: 20, social: 15, stress: 4, energy: -12 }, xp: { charisma: 1, music: 1 }, minigame: 'stage', stageAt: 'theatre', minRules: 33, when: { days: [2], from: 18, to: 22 } },
     fest: { id: 'stage_fest', label: 'Opening act at Eko Detty Fest (mini-game)', mins: 60, fx: { fun: 30, social: 25, stress: 6, energy: -15 }, xp: { charisma: 2, music: 1 }, minigame: 'stage', stageAt: 'fest', minRules: 33, when: { from: 16, to: 18 } }
   };
-  var STAGE_CAP = 3000;
+  // Rules 38: the stage career acts.
+  STAGE_ACTS.rehearse = { id: 'stage_rehearse', label: 'Rehearse in the theatre\'s rehearsal rooms', mins: 120, cost: 2000, fx: { energy: -10, stress: -4 }, xp: { music: 1 }, special: 'rehearse', once: true, minRules: 38, when: { days: [0, 1, 2, 3, 4, 5], from: 10, to: 17 } };
+  STAGE_ACTS.manager = { id: 'stage_manager', label: 'Sign with Eko Talent Management (they keep 20% of your stage fees)', mins: 60, fx: { stress: 4 }, special: 'signmanager', minRules: 38 };
+  STAGE_ACTS.headline = { id: 'stage_headline', label: 'Headline at Eko Convention Centre (mini-game)', mins: 60, fx: { fun: 35, social: 30, stress: 8, energy: -18 }, xp: { charisma: 2, music: 2 }, minigame: 'stage', stageAt: 'headline', minRules: 38, when: { days: [5], from: 20, to: 23 } };
+  var STAGE_CAP = 3000, HEADLINE_CAP = 10000, STAGE_LEVELS = [[0, 'Newcomer'], [30, 'Rising'], [60, 'Known'], [100, 'Star']];
+  function stageState(s) { return s.stage || (s.stage = { rep: 0, practice: 0, manager: false, headWeek: null, week: null, weekBest: 0 }); }
+  function stageCareer(s) {
+    if (!(s.rules >= 38)) return null; var g = s.stage || { rep: 0, practice: 0, manager: false }, lv = STAGE_LEVELS.filter(function (L0) { return g.rep >= L0[0]; }).pop(), nx = STAGE_LEVELS.filter(function (L0) { return g.rep < L0[0]; })[0];
+    return { rep: g.rep, level: lv[1], next: nx ? { at: nx[0], name: nx[1] } : null, practice: g.practice || 0, manager: !!g.manager, canSign: g.rep >= 30 && !g.manager, canHeadline: !!g.manager && g.rep >= 60, weekBest: g.week === week(s) ? g.weekBest || 0 : 0 };
+  }
+  var CHART_ACTS = ['Lola Eko', 'Kwesi Bright', 'Tobi Lagos', 'Zara Ife', 'Yaba Moon', 'Dayo Smooth', 'Agege Pete', 'Sade Ray', 'Nkem Gold', 'Rae Rae', 'Kele Cee', 'Larry Street'];
+  function stageChart(s) {
+    if (!(s.rules >= 38)) return null; var w = week(s), C = stageCareer(s), rows = [];
+    for (var i = 0; i < CHART_ACTS.length; i++) { var h = 2166136261, str = 'chart:' + w + ':' + i; for (var k = 0; k < str.length; k++) h = Math.imul(h ^ str.charCodeAt(k), 16777619); rows.push({ name: CHART_ACTS[i], score: 60 + ((h >>> 0) % 110), you: false }); }
+    rows.push({ name: 'You', score: C.rep + C.weekBest, you: true });
+    rows.sort(function (a, b) { return b.score - a.score || (a.you ? -1 : 1); });
+    var top = rows.slice(0, 10), mine = rows.map(function (r) { return r.you; }).indexOf(true) + 1;
+    return { week: w, rows: top.map(function (r, i) { return Object.assign({ pos: i + 1 }, r); }), you: mine };
+  }
   function stageReady(s) { return (s.stats.stageBest || 0) >= 70 || !!(s.creator && s.creator.followers >= 5000); }
   // Rules 35: festivals through the year. Life month A (from the start) is calendar month (START_MONTH + A) % 12, and a
   // month is 28 days, so a festival's n-th edition starts on day (k + 12n) * 28 + start, k its first month in this life.
@@ -960,6 +983,7 @@
     if (s.rules >= 32) list = list.concat(festActions(s));
     if (s.rules >= 35) list = list.concat(yearFestActions(s));
     if (s.rules >= 36) list = list.concat(stallActions(s));
+    if (s.rules >= 38 && s.loc === 'vi') list.push(STAGE_ACTS.manager, STAGE_ACTS.headline); // Eko Convention Centre
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
@@ -1067,6 +1091,8 @@
     if (a.special === 'highroller' && netWorth(s) < price(s, 50000000)) return 'High rollers only: net worth of ' + naira(price(s, 50000000));
     if (a.special === 'shutdown' && s.shutdownWeek === week(s)) return 'Once a week: the club needs to restock';
     if (s.rules >= 33 && a.minigame === 'stage' && dayCount(s, 'm:stage')) return 'One performance a day';
+    if (s.rules >= 38 && a.special === 'signmanager') { var g0 = s.stage || {}; if (g0.manager) return 'You already have a manager'; if ((g0.rep || 0) < 30) return 'Managers sign Rising acts: reach 30 stage rep'; }
+    if (s.rules >= 38 && a.stageAt === 'headline') { var g1 = s.stage || {}; if (!g1.manager) return 'Headline slots are booked through a manager'; if ((g1.rep || 0) < 60) return 'Headliners are Known acts: reach 60 stage rep'; if (g1.headWeek === week(s)) return 'One headline show a week'; }
     if (s.rules >= 33 && a.stageAt === 'fest' && !stageReady(s)) return 'Score 70% at the National Theatre open stage first (or have 5,000 followers)';
     if (s.rules >= 16 && (a.minigame === 'bole' || a.minigame === 'hawk' || a.minigame === 'danfo') && dayCount(s, 'm:' + a.minigame) >= 2) return 'Two runs a day: rest and come back tomorrow';
     switch (a.special) {
@@ -1139,6 +1165,8 @@
   }
 
   var specials = {
+    rehearse: function (s) { var g = stageState(s); g.practice = Math.min(10, (g.practice || 0) + 2); return 'Two hours of scales, runs and stage moves. Practice ' + g.practice + '/10.'; },
+    signmanager: function (s) { stageState(s).manager = true; log(s, 'You signed with Eko Talent Management. They book the bigger rooms and keep 20% of your stage fees.', 'good'); return 'Signed. Your manager says: "Headline slots open when you are Known (60 rep)."'; },
     stallbook: function (s, a) {
       var st = s.stalls = s.stalls || {}; st[a.fest + '-' + a.ed] = { bid: a.bid, first: a.first, last: a.last };
       return 'Your stall is booked, ' + (a.first > day(s) ? 'from day ' + (a.first - day(s)) + ' from now' : 'from today') + '. Keep the stock coming.';
@@ -4885,6 +4913,7 @@
     if (s.rules >= 16) dayBump(s, 'm:' + kind);
     s.mini = { kind: kind, t: s.t, cost: cost };
     if (kind === 'stage') s.mini.at = a.stageAt;
+    if (kind === 'stage' && a.stageAt === 'headline' && s.rules >= 38) stageState(s).headWeek = week(s);
     var spent = (cost.entry || 0) + (cost.stock || 0) + (cost.owner || 0) + (cost.fuel || 0);
     return finish(s, ok('▶ ' + a.label.replace(/ \(mini-game\)$/, '') + (spent ? ': ' + naira(spent) + ' paid up front' : '') + '. Quitting forfeits the run.'));
   }
@@ -4925,19 +4954,29 @@
     if (s.rules >= 34 && !(total >= 40)) return fail('That performance does not add up.');
     if (!(total > 0 && total <= 200 && hits >= 0 && hits <= total && best >= 0 && best <= hits)) return fail('That performance does not add up.');
     s.alerts = []; s.mini = null;
-    var fest = m.at === 'fest', acc = hits / total, pct = Math.round(acc * 100);
-    var tips = acc < 0.4 ? 0 : Math.min(price(s, STAGE_CAP), gigPay(s, (fest ? 3200 : 2400) * Math.pow(acc, 2) + best * 10, 1));
-    if (tips > 0) earn(s, tips, fest ? 'Opening act fee: Eko Detty Fest' : 'Open stage tips: National Theatre');
+    var fest = m.at === 'fest', head = m.at === 'headline', acc = hits / total, pct = Math.round(acc * 100);
+    var tips = acc < 0.4 ? 0 : Math.min(price(s, STAGE_CAP), gigPay(s, (fest ? 3200 : 2400) * Math.pow(acc, 2) + best * 10, 1)), cut = 0, car = '';
+    if (s.rules >= 38) { // the stage career: practice, the headline fee, the manager's cut, reputation
+      var g = stageState(s);
+      if (head) tips = acc < 0.4 ? 0 : Math.min(price(s, HEADLINE_CAP), gigPay(s, 11000 * Math.pow(acc, 2) + best * 20, 1));
+      tips = Math.min(price(s, head ? HEADLINE_CAP : STAGE_CAP), roundTo(tips * (1 + Math.min(10, g.practice || 0) * 0.01), 50)); g.practice = Math.max(0, (g.practice || 0) - 3);
+      if (g.manager && tips) { cut = roundTo(tips * 0.2, 50); tips -= cut; }
+      var dRep = acc < 0.4 ? -2 : Math.round(pct / (head ? 4 : fest ? 6 : 10)), lv0 = stageCareer(s).level; g.rep = Math.max(0, g.rep + dRep);
+      if (g.week !== week(s)) { g.week = week(s); g.weekBest = 0; } if (pct > g.weekBest) g.weekBest = pct;
+      var lv1 = stageCareer(s).level; car = ' Stage rep ' + (dRep >= 0 ? '+' : '') + dRep + ' (' + g.rep + ')' + (lv1 !== lv0 ? '. You are now a ' + lv1 + ' act!' : '') + '.';
+      if (head) unlock(s, 'headliner');
+    }
+    if (tips > 0) earn(s, tips, head ? 'Headline fee: Eko Convention Centre' + (cut ? ' (after the manager\'s 20%)' : '') : fest ? 'Opening act fee: Eko Detty Fest' : 'Open stage tips: National Theatre');
     var st = s.stats; if (pct > (st.stageBest || 0)) st.stageBest = pct;
-    var where = st.stageAt = st.stageAt || {}; where[fest ? 'fest' : 'theatre'] = 1;
+    var where = st.stageAt = st.stageAt || {}; where[head ? 'headline' : fest ? 'fest' : 'theatre'] = 1;
     if (where.fest && where.theatre) unlock(s, 'on_stage');
     if (fest && acc >= 0.9) unlock(s, 'show_stopper');
-    var fans = 0; if (s.creator && acc >= 0.5) { fans = Math.round((fest ? 900 : 150) * acc * acc);
+    var fans = 0; if (s.creator && acc >= 0.5) { fans = Math.round((fest || head ? 900 : 150) * acc * acc);
       if (s.rules >= 34) { var fy = Math.floor((START_MONTH + Math.floor(week(s) / 4)) / 12), sf = st.stageFans = st.stageFans || {}; fans = Math.max(0, Math.min(fans, 3000 - (sf[fy] || 0))); sf[fy] = (sf[fy] || 0) + fans; } // rules 34: 3,000 a year from the stage
       s.creator.followers += fans; }
     applyFx(s, { fun: Math.round(acc * 15), stress: acc >= 0.6 ? -8 : 4 });
     var crowd = acc >= 0.9 ? 'A standing ovation!' : acc >= 0.7 ? 'The crowd sang along.' : acc >= 0.4 ? 'Polite applause.' : 'Somebody shouted "Next!".';
-    return finish(s, ok('🎤 ' + pct + '% on the beat, best streak ' + best + '. ' + crowd + (tips ? ' ' + (fest ? 'Your fee: ' : 'Tips: ') + naira(tips) + '.' : '') + (fans ? ' +' + fans + ' followers.' : '') + (!fest && pct >= 70 && !(where.fest) ? ' Eko Detty Fest books acts who score 70% here.' : '')));
+    return finish(s, ok('🎤 ' + pct + '% on the beat, best streak ' + best + '. ' + crowd + (tips ? ' ' + (fest ? 'Your fee: ' : 'Tips: ') + naira(tips) + '.' : '') + (fans ? ' +' + fans + ' followers.' : '') + car + (!fest && !head && pct >= 70 && !(where.fest) ? ' Eko Detty Fest books acts who score 70% here.' : '')));
   }
 
   /* ---------- go-slow hawker: a capped shift from the mini-game ---------- */
@@ -5347,7 +5386,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

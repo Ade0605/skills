@@ -612,6 +612,12 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **London (rules 23): a visit, with a UK visa.** Apply from Travel: a ₦250k fee, ₦3m proof of funds, five days to wait, then 28 days to stay. Flights only (about 6h30, long-haul fare). Eight districts with the Thames across the middle.
     - **Places with insides:** Heathrow, Wembley Stadium (match day and the tour), Notting Hill Carnival (in August), Portobello Road, Oxford Street and a West End show, Big Ben and Westminster, Buckingham Palace from the railings, the turning London Eye, Tower Bridge and the Crown Jewels, Rye Lane in Peckham (jollof, braids, your cousin) and a Naija church. New 3D landmarks: Big Ben, Tower Bridge and the London Eye; Union Jacks; grey skies and rain most days.
     - **A visit, not a move:** no homes, jobs, shops or pay in London, only a hotel or an aunty's room in Peckham. Prices show in pounds first at a fixed £1 = ₦2,000. Overstay your visa and you are flown home. The Japa ending to London is separate and still ends the life.
+  - **Stage career (rules 38):** performing becomes a path.
+    - **Rehearse** at the National Theatre rehearsal rooms (Monday to Saturday, 10:00–17:00, ₦2,000, once a day): practice widens the beat a little in the stage game and adds up to 10% to the next fee, then wears off.
+    - **Stage rep** rises with good shows and drops after bad ones: Newcomer, Rising (30), Known (60), Star (100).
+    - **A manager** (Eko Talent Management, made up) signs Rising acts at Eko Convention Centre and keeps 20% of your stage fees.
+    - **Headline** Eko Convention Centre on Saturday nights (Known acts with a manager, once a week): a bigger stage and crowd, a fee capped at ₦10,000 before the manager's cut, and the Headliner achievement.
+    - **Lasgidi Live Top 10:** a weekly chart of made-up acts and you (rep plus your best show this week), on the career card in the theatre, at Eko Convention Centre and in Phone → Mini-games. It is worked out on your device, not shared online.
   - **Festivals in other cities (rules 37):** one made-up festival in each other city, working like the Lagos ones (countdown, news, card with the programme, tickets once a day, a volunteer gig, and a stall for food businesses):
     - **Capital Culture Week**, Abuja, November, Millennium Park, 5 evenings: dance troupes from every zone, a craft and fashion evening, a closing concert.
     - **Garden City Boat Regatta**, Port Harcourt, February, the waterfront, 3 days: decorated war canoes, paddle races, masquerades on boats.
