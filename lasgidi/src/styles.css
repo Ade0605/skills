@@ -1241,3 +1241,4 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .fc-t em { font-style: normal; font-size: 11.5px; opacity: .8; }
 .fc-ok { flex: none; font-weight: 800; }
 .race-row[hidden], .race-list + .note[hidden] { display: none; }
+.fest-card.yf { background: linear-gradient(135deg, #17121f, var(--fc, #7b1fa2) 75%); }
