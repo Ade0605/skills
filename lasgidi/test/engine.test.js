@@ -3122,3 +3122,11 @@ test('rules 30: weekly business decisions with odds that never pay on average; a
   const r = L.newGame({ seed: 3011, origin: 'nepo', goal: 'freestyle' }); for (let i = 0; i < 60; i++) { while (r.pending.length) L.resolveChoice(r, 0); L.wait(r, 12 * 60); }
   assert.equal(L.replayLife(r.replay).ledgerHash, r.ledgerHash);
 });
+
+test('rules 30: no buying or selling a business while a decision about one is open', () => {
+  const s = L.newGame({ seed: 3020, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  s.businesses.push({ id: 'buka', paid: 100000, visit: L.day(s), site: 'yaba', level: 1, manager: true });
+  s.pending.push({ id: 'bizevent', kind: 'rival', b: 0, title: 't', text: 't', options: ['a', 'b'] });
+  assert.equal(L.sellBusiness(s, 0).ok, false); assert.match(L.sellBusiness(s, 0).msg, /open event/);
+  assert.match(L.buyBusiness(s, 'barber', 'yaba').msg, /open event/);
+});

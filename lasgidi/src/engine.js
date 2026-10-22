@@ -2279,6 +2279,7 @@
   function buyBusiness(s, id, site) {
     var b = D.BUSINESSES[id];
     if (!b) return fail('Unknown business.');
+    if (s.rules >= 30 && s.pending.length) return fail('Decide on the open event first.'); // a business decision may be waiting
     if (site != null && (!D.BUSINESS_SITES[site] || !districtOpen(s, site) || visitOnly(site))) return fail('Pick a district for your business.');
     if (s.rules >= 20 && site == null) return fail('Pick a district for your business.');
     if ((site != null || s.rules >= 20) && s.businesses.length >= 12) return fail('You run 12 businesses already.');
@@ -2295,6 +2296,7 @@
   function sellBusiness(s, i) {
     var b = s.businesses[i];
     if (!b) return fail('No such business.');
+    if (s.rules >= 30 && s.pending.length) return fail('Decide on the open event first.');
     var v = roundTo(b.paid * 0.6, 50);
     s.alerts = [];
     s.businesses.splice(i, 1);
@@ -2624,8 +2626,8 @@
       if (!k.wed && a >= (k.path === 'uni' ? 24 : 20) && !s.pending.some(function (e) { return e.id === 'kidwedding'; }) && rand(s) < 0.2) queue(s, { id: 'kidwedding', kid: i, title: name + ' is getting married', text: name + ' wants your blessing, and the families are planning the day. What will you give?', options: ['A generous gift (' + naira(price(s, 250000)) + ')', 'Something small (' + naira(price(s, 40000)) + ')', 'Just your blessing'] });
       return;
     }
-    if (!k.path && !s.pending.some(function (e) { return e.id === 'kidfuture' && e.kid === i; })) { queue(s, { id: 'kidfuture', kid: i, title: name + ' is 18', text: 'School is finished. What next for ' + name + '?', options: ['University (' + naira(price(s, D.KID_FUTURES.uni.fee)) + ' a term for 4 years)', 'Learn a trade (' + naira(price(s, D.KID_FUTURES.trade.fee)) + ' once)', 'Start work now'], subs: ['A degree, then a better job and more sent home', 'Two years as an apprentice, then work', 'Moves out now and starts sending a little home'] }); return; }
-    if (k.path === 'uni') { if (a >= 22) { k.out = true; unlock(s, 'graduate_kid'); applyFx(s, { fun: 20, social: 10 }); log(s, '🎓 ' + name + ' graduated! A job offer came the same month, and they are moving out.', 'good'); } else if (day(s) >= k.nextFees) { var uf = price(s, D.KID_FUTURES.uni.fee); if (!pay(s, uf, 'University fees for ' + name)) { addDebt(s, uf, 'University fees'); applyFx(s, { stress: 15 }); } k.nextFees = day(s) + 84; } }
+    if (!k.path && !s.pending.some(function (e) { return e.id === 'kidfuture' && e.kid === i; })) { queue(s, { id: 'kidfuture', kid: i, title: name + ' is 18', text: 'School is finished. What next for ' + name + '?', options: ['University (' + naira(price(s, D.KID_FUTURES.uni.fee)) + ' a year for 4 years)', 'Learn a trade (' + naira(price(s, D.KID_FUTURES.trade.fee)) + ' once)', 'Start work now'], subs: ['A degree, then a better job and more sent home', 'Two years as an apprentice, then work', 'Moves out now and starts sending a little home'] }); return; }
+    if (k.path === 'uni') { if (a >= 22) { k.out = true; unlock(s, 'graduate_kid'); applyFx(s, { fun: 20, social: 10 }); log(s, '🎓 ' + name + ' graduated! A job offer came the same month, and they are moving out.', 'good'); } else if (day(s) >= k.nextFees) { var uf = price(s, D.KID_FUTURES.uni.fee); if (!pay(s, uf, 'University fees for ' + name)) { addDebt(s, uf, 'University fees'); applyFx(s, { stress: 15 }); } k.nextFees = day(s) + KID_YEAR; } } // a year's fees each kid-year: four in all
     else if (k.path === 'trade' && a >= 20) { k.out = true; log(s, '🧰 ' + name + ' finished the apprenticeship and opened a small workshop. They are moving out.', 'good'); }
   }
   function weeklyFamily(s) {
