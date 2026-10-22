@@ -2487,7 +2487,59 @@
         { key: 'reg', label: 'Concert ticket', cost: 15000, fx: { fun: 65, social: 40, energy: -30, hygiene: -10 } },
         { key: 'vip', label: 'VIP stand', cost: 60000, fx: { fun: 80, social: 50, energy: -30 }, xp: { charisma: 1 } }
       ],
-      gig: { label: 'Usher at the Independence Jam gates', earn: 2500, mins: 240, fx: { energy: -16, social: 6 }, xp: { charisma: 1 }, from: 12, to: 18 } }
+      gig: { label: 'Usher at the Independence Jam gates', earn: 2500, mins: 240, fx: { energy: -16, social: 6 }, xp: { charisma: 1 }, from: 12, to: 18 } },
+    // Rules 37: one festival in each of the other cities.
+    { id: 'abjculture', rules: 37, name: 'Capital Culture Week', icon: '🪘', place: 'abj_millennium', district: 'abj_maitama', month: 10, start: 7, days: 5, countdown: 10, from: 15, to: 22, color: '#1f7a4d',
+      blurb: 'Five evenings in Millennium Park: dance troupes from every zone, a craft market under the trees and a closing concert.',
+      programme: [
+        { theme: 'Opening: the zones arrive', head: 'Troupes from the six zones', support: ['the Capital Brass Band'] },
+        { theme: 'Northern night', head: 'The Sahel Horsemen and kalangu drummers', support: ['a durbar-style parade on the lawn'] },
+        { theme: 'Southern night', head: 'The Delta Ekpe Dancers', support: ['Atilogwu acrobats from the East'] },
+        { theme: 'Craft and fashion evening', head: 'Weavers, beaders and tailors of the craft village', support: ['an aso-oke runway at sunset'] },
+        { theme: 'Closing concert', head: 'The Capital All-Stars', support: ['fireworks over the park'] }
+      ],
+      tickets: [
+        { key: 'eve', label: 'Evening pass', cost: 5000, fx: { fun: 45, social: 25, stress: -8 } },
+        { key: 'vip', label: 'Front lawn seat with dinner', cost: 25000, mins: 240, fx: { fun: 55, social: 30, hunger: 50 }, xp: { charisma: 1 } }
+      ],
+      gig: { label: 'Steward at Capital Culture Week', earn: 2500, mins: 240, fx: { energy: -16, social: 6 }, xp: { charisma: 1 }, from: 11, to: 16 } },
+    { id: 'phregatta', rules: 37, name: 'Garden City Boat Regatta', icon: '🛶', place: 'ph_waterfront', district: 'ph_borokiri', month: 1, start: 14, days: 3, countdown: 10, from: 10, to: 18, color: '#0e6b8a',
+      blurb: 'Three days on the water at the Port Harcourt waterfront: decorated war canoes, paddle races and masquerades dancing on boats.',
+      programme: [
+        { theme: 'Canoe parade', head: 'Forty decorated war canoes', support: ['the Bonny Brass Band'] },
+        { theme: 'Paddle races', head: 'The creek communities race for the cup', support: ['owu masquerades on the boats'] },
+        { theme: 'Final day: the champions\' sail-past', head: 'The winning crews', support: ['fish pepper soup on the quay'] }
+      ],
+      tickets: [
+        { key: 'quay', label: 'A spot on the quay', cost: 3000, fx: { fun: 40, social: 20, stress: -8 } },
+        { key: 'boat', label: 'Ride along in a support boat', cost: 15000, fx: { fun: 60, social: 25, energy: -10 }, xp: { fitness: 1 } }
+      ],
+      gig: { label: 'Help the race marshals on the quay', earn: 2500, mins: 240, fx: { energy: -16, social: 4 }, xp: { fitness: 1 } } },
+    { id: 'accart', rules: 37, name: 'Jamestown Wall Art Week', icon: '🎨', place: 'acc_lighthouse', district: 'acc_jamestown', month: 7, start: 7, days: 4, countdown: 10, from: 12, to: 22, color: '#d35400',
+      blurb: 'Four days in old Jamestown: murals on every wall, painters at work, street theatre, and highlife and hiplife at night.',
+      programme: [
+        { theme: 'Walls day', head: 'Thirty painters start their murals', support: ['the Lighthouse Street Band'] },
+        { theme: 'Street theatre', head: 'The Jamestown Players', support: ['stilt walkers and puppets'] },
+        { theme: 'Fashion on the street', head: 'Young designers of Accra', support: ['a catwalk down the high street'] },
+        { theme: 'Closing night: highlife and hiplife', head: 'Kwesi Bright and the Harbour Highlife Band', support: ['Ama Gold'] }
+      ],
+      tickets: [
+        { key: 'walk', label: 'Walk the art streets', cost: 2000, fx: { fun: 35, social: 20, stress: -10 } },
+        { key: 'paint', label: 'Paint a panel of a mural', cost: 8000, fx: { fun: 45, social: 15 }, xp: { craft: 1 } }
+      ],
+      gig: { label: 'Help the painters with scaffolds and paint', earn: 2500, mins: 240, fx: { energy: -16, hygiene: -8 }, xp: { craft: 1 } } },
+    { id: 'kumkente', rules: 37, name: 'Kente and Craft Fair', icon: '🧵', place: 'kum_culture', district: 'kum_adum', month: 4, start: 7, days: 3, countdown: 10, from: 9, to: 18, color: '#b8860b',
+      blurb: 'Three days at the Centre for National Culture: kente weavers from Bonwire, wood carvers, adinkra stampers and drummers.',
+      programme: [
+        { theme: 'Weavers\' day', head: 'The master weavers of Bonwire', support: ['looms set up in the courtyard'] },
+        { theme: 'Carvers and stampers', head: 'Wood carvers and adinkra printers', support: ['make your own adinkra cloth'] },
+        { theme: 'Drumming finale', head: 'The Ashanti talking drum ensemble', support: ['a kente fashion parade'] }
+      ],
+      tickets: [
+        { key: 'fair', label: 'Fair day ticket', cost: 2500, fx: { fun: 35, social: 18, stress: -8 } },
+        { key: 'class', label: 'A weaving class with a master', cost: 10000, fx: { fun: 40, stress: -10 }, xp: { craft: 2 } }
+      ],
+      gig: { label: 'Help on the craft stalls', earn: 2500, mins: 240, fx: { energy: -14, social: 6 }, xp: { craft: 1 } } }
   ];
   // Rules 32: Eko Detty Fest, 21 nights at Harbour Live in December, with a countdown and daily news.
   // The festival, its acts and its prices are made up for the game.

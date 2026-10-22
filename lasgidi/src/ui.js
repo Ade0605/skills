@@ -3013,7 +3013,7 @@
         (online.peers[k] ? ' <span class="num">· ' + online.peers[k] + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     return '<div class="panel-h"><h2>' + esc(d.name) + '</h2><span class="label">' + (d.side === 'island' ? 'Island' : 'Mainland') + '</span></div>' +
-      layerChips() + '<div class="pg-wrap">' + (firstRun() ? '' : questChips()) + '<div class="pg-slot"></div></div>' + (firstRun() ? '' : govChips()) + (firstRun() || L.cityOf(S) !== 'lagos' ? '' : festCard('map') + yearFestCards('map')) + placeFilters() + chips +
+      layerChips() + '<div class="pg-wrap">' + (firstRun() ? '' : questChips()) + '<div class="pg-slot"></div></div>' + (firstRun() ? '' : govChips()) + (firstRun() ? '' : festCard('map') + yearFestCards('map')) + placeFilters() + chips +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
       '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
         : ui.chatWith ? chatView(ui.chatWith) : ui.seaOpen ? seaView() : (ui.place || ui.board || ui.homeSel) ? '<p class="note">Opened on the map. Tap ✕ on the card to close it.</p>' : ui.plotSel != null ? plotView(ui.plotSel)
@@ -3264,12 +3264,13 @@
     var a = L.availableActions(S).filter(function (x) { return x.id === 'stall_' + key; })[0];
     if (a) return '<div class="inline"><button class="btn sm" id="stall-' + key + '-' + where + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled title="' + esc(a.disabled) + '"' : '') + '>🛒 Rent a food stall · ' + N(a.price) + '</button></div>';
     var food = (S.businesses || []).some(function (b) { return /^(buka|catering|smallchops)$/.test(b.id); });
-    return '<p class="fc-meta">🛒 ' + (food ? 'Come to Lagos Island to rent a stall for your food business.' : 'Own a buka, a small chops stand or a catering business to rent a stall here.') + '</p>';
+    return '<p class="fc-meta">🛒 ' + (food ? 'Come to ' + esc((D.DISTRICTS[stallDistrict(key)] || {}).name || 'the festival') + ' to rent a stall for your food business.' : 'Own a buka, a small chops stand or a catering business to rent a stall here.') + '</p>';
   }
+  function stallDistrict(key) { if (key === 'detty') return D.DETTY_FEST.district; var F = D.YEAR_FESTS.filter(function (x) { return x.id === key; })[0]; return F ? F.district : null; }
   // Rules 35: festivals through the year, one card each while counting down or on (only at the festival's place in a walk-in).
   function yearFestCards(where, placeId) {
-    if (!(S.rules >= 35) || L.cityOf(S) !== 'lagos') return '';
-    return L.yearFests(S).filter(function (f) { return !placeId || f.place === placeId; }).map(function (f) {
+    if (!(S.rules >= 35)) return '';
+    return L.yearFests(S).filter(function (f) { return placeId ? f.place === placeId : L.districtCity(f.district) === L.cityOf(S); }).map(function (f) {
       var t = f.today, nx = f.tomorrow, top = t || nx, open = ui.yfProg === f.id, pl = placeById(f.place);
       var head = f.phase === 'soon' ? 'Starts in ' + f.daysTo + (f.daysTo === 1 ? ' day' : ' days') : 'Day ' + f.day + ' of ' + f.days + (f.on ? ' <span class="pb-live">ON NOW</span>' : ' · today');
       return '<div class="fest-card yf" style="--fc:' + esc(f.color) + '"><div class="fc-lab">' + f.icon + ' ' + esc(f.name.toUpperCase()) + ' · ' + esc((pl ? pl.name : '').toUpperCase()) + '</div><h3>' + head + '</h3>' +
@@ -4225,7 +4226,7 @@
       else if (app === 'health') body = '<div class="panel-b">' + healthView() + '</div>';
       else if (app === 'ride') body = '<div class="panel-b">' + rideView() + '</div>';
       else if (app === 'settings') body = '<div class="panel-b">' + settingsView() + '</div>';
-      else if (app === 'events') body = '<div class="panel-b">' + (L.cityOf(S) === 'lagos' ? festCard('ev') + yearFestCards('ev') : '') + eventsView() + '</div>';
+      else if (app === 'events') body = '<div class="panel-b">' + festCard('ev') + yearFestCards('ev') + eventsView() + '</div>';
       else if (app === 'travel') body = '<div class="panel-b">' + citiesView() + '</div>';
       else if (app === 'fame') body = '<div class="panel-b">' + (fameView() || '<div class="section"><h3>Lagos Hall of Fame</h3><p class="note">The Hall of Fame is shared with everyone you share Lasgidi with. It works when the game is opened on claude.ai.</p></div>') + '</div>';
       else if (app === 'wardrobe') body = '<div class="panel-b">' + lagosianView() + '</div>';
