@@ -60,7 +60,9 @@
   // Hyde Park, Canary Wharf), two small paid engagements a visitor may do in London, and the Tube.
   // 27 fixes a review find: a ride across town past midnight on your visa's last day no longer lands you back abroad
   // after the flight home (which made you pay for a second flight the next night).
-  var RULES = 27;
+  // 28 opens Cape Coast: a coach-only city (no airport) on Ghana's coast, with Cape Coast and Elmina castles, Kakum's
+  // canopy walk, the University of Cape Coast, Kotokuraba Market, the Elmina harbour and the Fetu Afahye festival.
+  var RULES = 28;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -1370,14 +1372,15 @@
     var bus = { mode: 'bus', name: B.name, mins: B.mins[here + '-' + city], cost: price(s, B.fare), from: from.park, to: C.park };
     if (far) { if (city === 'ldn' && visaState(s).status !== 'valid') fl.disabled = 'You need a valid UK visa (Phone → Travel)'; else if (city === 'ldn' && !visaLasts(s, fl.mins)) fl.disabled = 'Your UK visa runs out before you land';
       else if (city !== 'ldn' && C.visit && visaState(s, city).status !== 'valid') fl.disabled = 'You need a valid ' + UV.name + ' (Phone → Travel)'; else if (city !== 'ldn' && C.visit && !visaLasts(s, fl.mins, city)) fl.disabled = 'Your ' + UV.name + ' runs out before you land'; return [fl].map(function (o) { if (!o.disabled) { if (s.loc !== o.from) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name; else if (s.pending.length) o.disabled = 'Decide on the open event first'; else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost); } return o; }); }
-    [fl, bus].forEach(function (o) {
+    var legs = C.noAir || from.noAir ? [bus] : [fl, bus]; // rules 28: Cape Coast has no airport, coaches only
+    legs.forEach(function (o) {
       if (s.loc !== o.from) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name;
       else if (o.mode === 'bus' && (h >= 20 || h < 5)) o.disabled = 'No night buses: the roads are not safe after dark';
       else if (s.pending.length) o.disabled = 'Decide on the open event first';
       else if (s.over) o.disabled = 'This Weekly Lagos is over';
       else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost);
     });
-    return [fl, bus];
+    return legs;
   }
   function intercity(s, city, mode) {
     var o = intercityOptions(s, city).filter(function (x) { return x.mode === mode; })[0];
@@ -1520,6 +1523,7 @@
     var here = cityOf(s), C = D.CITIES[city], K = D.CABINS[cabin], A = D.AIR;
     if (!C || !K || !cityOpen(s, city) || city === 'ldn' || cityOf(s) === 'ldn' || C.visit || D.CITIES[cityOf(s)].visit) return { disabled: C && (city === 'ldn' || cityOf(s) === 'ldn' || C.visit || D.CITIES[cityOf(s)].visit) ? (C.visit && city !== 'ldn' ? C.name : 'London') + ' flights: use the long-haul flight in Travel' : 'Pick a city and a cabin' };
     if (city === here) return { disabled: 'You are already in ' + C.name };
+    if (C.noAir || D.CITIES[here].noAir) return { disabled: 'No airport in ' + (C.noAir ? C.name : D.CITIES[here].name) + ': take the coach' };
     var from = D.CITIES[here], h = hour(s), rush = h >= A.rushFrom && h < A.rushTo ? A.rush : 1;
     var fare = Math.round(price(s, D.INTERCITY.flight.fare) * K.mult * rush / 100) * 100;
     var cab = cabLeg(s, from.airport), ins = insure ? Math.round(fare * A.insure / 100) * 100 : 0;
@@ -1552,6 +1556,7 @@
   function jetQuote(s, city, charter) {
     var here = cityOf(s), C = D.CITIES[city];
     if (!C || !cityOpen(s, city) || city === here) return { disabled: C && cityOpen(s, city) ? 'You are already in ' + C.name : 'Unknown city' };
+    if (C.noAir || D.CITIES[here].noAir) return { disabled: 'No airport in ' + (C.noAir ? C.name : D.CITIES[here].name) + ': take the coach' };
     if (city === 'ldn' && visaState(s).status !== 'valid') return { disabled: 'You need a valid UK visa' };
     if (city !== 'ldn' && C.visit && visaState(s, city).status !== 'valid') return { disabled: 'You need a valid ' + visaOf(city).name };
     var from = D.CITIES[here], cab = cabLeg(s, from.airport), far = s.rules >= 24 && (city === 'ldn' || here === 'ldn' || !!C.visit || !!from.visit); // rules 24: London is a long-haul hop, even private

@@ -44,6 +44,11 @@
     acc_central:  { city: 'accra', name: 'Accra Central', x: 11, y: 19, side: 'mainland', blurb: 'Makola Market, Independence Square and the old town.' },
     acc_jamestown:{ city: 'accra', name: 'Jamestown',    x: 7,  y: 22, side: 'mainland', blurb: 'The lighthouse, fishing canoes and boxing gyms.' },
     acc_korlebu:  { city: 'accra', name: 'Korle Bu',     x: 4,  y: 17, side: 'mainland', blurb: 'The teaching hospital by the Korle Lagoon.' },
+    // Cape Coast (rules 28): Ghana's old capital on the Central Region coast. No airport: coaches and tro-tros only.
+    cc_kakum:     { city: 'capecoast', name: 'Kakum',        x: 16, y: 3,  side: 'mainland', blurb: 'Rainforest and the canopy walkway, forty metres up in the trees.' },
+    cc_ucc:       { city: 'capecoast', name: 'UCC',          x: 25, y: 11, side: 'mainland', blurb: 'The University of Cape Coast on its hill, and the student hostels of Amamoma.' },
+    cc_town:      { city: 'capecoast', name: 'Cape Coast town', x: 15, y: 16, side: 'mainland', blurb: 'The castle, Kotokuraba Market, the lorry station and old colonial streets.' },
+    cc_elmina:    { city: 'capecoast', name: 'Elmina',       x: 5,  y: 17, side: 'mainland', blurb: 'The oldest European building in sub-Saharan Africa, and a harbour full of painted canoes.' },
     // Kumasi (rules 25): the Garden City, the seat of the Asante kingdom.
     kum_airport:  { city: 'kumasi', name: 'Airport Roundabout', x: 22, y: 5,  side: 'mainland', blurb: 'Kumasi airport, the Prempeh I Airport road and new hotels.' },
     kum_manhyia:  { city: 'kumasi', name: 'Manhyia',      x: 14, y: 5,  side: 'mainland', blurb: 'The Asantehene\'s palace, the museum and the festival grounds.' },
@@ -309,6 +314,7 @@
     accra: { name: 'Accra', airport: 'acc_airport', park: 'acc_circle', hospital: 'acc_korlebu', hospitalName: 'Korle Bu Teaching Hospital', rules: 22, country: 'Ghana' },
     kumasi: { name: 'Kumasi', airport: 'kum_airport', park: 'kum_kejetia', hospital: 'kum_bantama', hospitalName: 'Komfo Anokye Teaching Hospital', rules: 25, country: 'Ghana' },
     dxb:   { name: 'Dubai', airport: 'dxb_airport', park: 'dxb_airport', hospital: 'dxb_downtown', hospitalName: 'Rashid Hospital', rules: 26, country: 'UAE', visit: true },
+    capecoast: { name: 'Cape Coast', airport: 'cc_town', park: 'cc_town', hospital: 'cc_town', hospitalName: 'Cape Coast Teaching Hospital', rules: 28, country: 'Ghana', noAir: true },
     ldn:   { name: 'London', airport: 'ldn_heathrow', park: 'ldn_heathrow', hospital: 'ldn_southbank', hospitalName: 'St Thomas\' Hospital', rules: 23, country: 'UK', visit: true }
   };
   // Airport departures: cabin classes (fare multiples and how you arrive), city codes, jets, charters, choppers.
@@ -378,7 +384,7 @@
   // Flight and bus times (minutes) and base fares between cities.
   var INTERCITY = {
     flight: { name: 'Flight', mins: 180, fare: 150000 },
-    bus:    { name: 'Long-distance bus', fare: 30000, mins: { 'lagos-abuja': 720, 'abuja-lagos': 720, 'lagos-ph': 660, 'ph-lagos': 660, 'abuja-ph': 690, 'ph-abuja': 690, 'lagos-accra': 720, 'accra-lagos': 720, 'abuja-accra': 1200, 'accra-abuja': 1200, 'ph-accra': 1140, 'accra-ph': 1140, 'accra-kumasi': 300, 'kumasi-accra': 300, 'lagos-kumasi': 960, 'kumasi-lagos': 960, 'abuja-kumasi': 1380, 'kumasi-abuja': 1380, 'ph-kumasi': 1320, 'kumasi-ph': 1320 } }
+    bus:    { name: 'Long-distance bus', fare: 30000, mins: { 'lagos-abuja': 720, 'abuja-lagos': 720, 'lagos-ph': 660, 'ph-lagos': 660, 'abuja-ph': 690, 'ph-abuja': 690, 'lagos-accra': 720, 'accra-lagos': 720, 'abuja-accra': 1200, 'accra-abuja': 1200, 'ph-accra': 1140, 'accra-ph': 1140, 'accra-kumasi': 300, 'kumasi-accra': 300, 'lagos-kumasi': 960, 'kumasi-lagos': 960, 'abuja-kumasi': 1380, 'kumasi-abuja': 1380, 'ph-kumasi': 1320, 'kumasi-ph': 1320, 'accra-capecoast': 180, 'capecoast-accra': 180, 'kumasi-capecoast': 240, 'capecoast-kumasi': 240, 'lagos-capecoast': 900, 'capecoast-lagos': 900, 'abuja-capecoast': 1380, 'capecoast-abuja': 1380, 'ph-capecoast': 1320, 'capecoast-ph': 1320 } }
   };
 
   // Drawn on the map only; travel uses straight-line distance x 1.3.
@@ -393,6 +399,7 @@
     ['ph_gra', 'ph_transamadi'], ['ph_dline', 'ph_oldgra'], ['ph_oldgra', 'ph_borokiri'], ['ph_transamadi', 'ph_oldgra'], ['ph_gra', 'ph_oldgra'],
     ['acc_airport', 'acc_legon'], ['acc_legon', 'acc_eastlegon'], ['acc_airport', 'acc_eastlegon'], ['acc_airport', 'acc_circle'], ['acc_circle', 'acc_central'], ['acc_circle', 'acc_osu'],
     ['acc_osu', 'acc_labadi'], ['acc_osu', 'acc_central'], ['acc_central', 'acc_jamestown'], ['acc_central', 'acc_korlebu'], ['acc_korlebu', 'acc_jamestown'], ['acc_eastlegon', 'acc_labadi'],
+    ['cc_kakum', 'cc_town'], ['cc_kakum', 'cc_ucc'], ['cc_ucc', 'cc_town'], ['cc_town', 'cc_elmina'],
     ['kum_airport', 'kum_manhyia'], ['kum_airport', 'kum_knust'], ['kum_manhyia', 'kum_kejetia'], ['kum_bantama', 'kum_kejetia'], ['kum_kejetia', 'kum_adum'], ['kum_kejetia', 'kum_knust'],
     ['kum_adum', 'kum_asokwa'], ['kum_adum', 'kum_ahodwo'], ['kum_bantama', 'kum_ahodwo'], ['kum_knust', 'kum_asokwa'], ['kum_asokwa', 'kum_bosomtwe'],
     ['dxb_marina', 'dxb_palm'], ['dxb_marina', 'dxb_jumeirah'], ['dxb_palm', 'dxb_jumeirah'], ['dxb_jumeirah', 'dxb_downtown'], ['dxb_downtown', 'dxb_creek'], ['dxb_creek', 'dxb_deira'],
@@ -493,6 +500,8 @@
     ph_oldgra_bungalow:{ name: 'Bungalow, Old GRA', district: 'ph_oldgra', rent: 45000, power: 0.75, sleep: 1.05, type: 'flat3', x: 13.8, y: 15.0 },
     acc_jt_room:       { name: 'Room in a compound house, Jamestown', district: 'acc_jamestown', rent: 7000, power: 0.7, sleep: 0.9, type: 'room', x: 7.6, y: 21.4 },
     acc_osu_flat:      { name: '2-bed flat, Osu', district: 'acc_osu', rent: 42000, power: 0.85, sleep: 1, type: 'flat2', x: 18.6, y: 17.4 },
+    cc_town_room:      { name: 'Room in a family house, Cape Coast', district: 'cc_town', rent: 5000, power: 0.7, sleep: 0.9, type: 'room', x: 14.4, y: 15.4 },
+    cc_ucc_flat:       { name: 'Chamber and hall near UCC', district: 'cc_ucc', rent: 24000, power: 0.8, sleep: 1, type: 'flat2', x: 24.4, y: 11.6 },
     kum_bt_room:       { name: 'Room in a compound house, Bantama', district: 'kum_bantama', rent: 6000, power: 0.7, sleep: 0.9, type: 'room', x: 5.6, y: 10.6 },
     kum_ah_flat:       { name: '2-bed flat, Ahodwo', district: 'kum_ahodwo', rent: 34000, power: 0.85, sleep: 1, type: 'flat2', x: 9.6, y: 20.4 },
     kum_ah_house:      { name: 'House in Ahodwo', district: 'kum_ahodwo', rent: 72000, power: 0.9, sleep: 1.1, type: 'duplex', x: 8.4, y: 21.0 },
@@ -595,6 +604,12 @@
     acc_guide:   { name: 'Tour Guiding (Accra)', district: 'acc_jamestown', skill: 'charisma', start: 9, end: 17, days: [1,2,3,4,5,6],
       titles: ['Trainee Guide', 'Guide', 'Senior Guide', 'Tour Lead', 'Tour Company Owner'],
       pay: [4500, 7000, 11000, 18000, 30000], req: [0, 2, 4, 6, 9] },
+    cc_guide:    { name: 'Heritage Guiding (Cape Coast)', district: 'cc_town', skill: 'charisma', start: 9, end: 17, days: [0,1,2,3,4,5,6],
+      titles: ['Trainee Guide', 'Castle Guide', 'Senior Guide', 'Head of Tours', 'Heritage Tours Owner'],
+      pay: [4200, 6600, 10500, 17500, 29000], req: [0, 2, 4, 6, 9] },
+    cc_fishco:   { name: 'Canoe Fishing Company (Elmina)', district: 'cc_elmina', skill: 'fitness', start: 5, end: 13, days: [0,1,2,3,4,5],
+      titles: ['Net Hand', 'Crew', 'Bosun', 'Canoe Captain', 'Fleet Owner'],
+      pay: [4000, 6200, 10000, 16500, 28000], req: [0, 2, 4, 6, 9] },
     kum_kente:   { name: 'Kente Weaving (Kumasi)', district: 'kum_manhyia', skill: 'craft', start: 8, end: 17, days: [0,1,2,3,4,5],
       titles: ['Thread Winder', 'Apprentice Weaver', 'Weaver', 'Master Weaver', 'Kente House Owner'],
       pay: [4000, 6400, 10500, 17500, 30000], req: [0, 2, 4, 6, 9] },
@@ -745,6 +760,23 @@
     acc_korlebu: [
       { id: 'acc_kb_waakye', label: 'Waakye from the hospital gate', mins: 30, cost: 1300, fx: { hunger: 32 }, when: { from: 6, to: 14 } },
       { id: 'acc_kb_gig', label: 'Porter shift at the hospital', mins: 180, earn: 2000, fx: { energy: -12 }, gig: true, when: { from: 7, to: 19 } }
+    ],
+    // Cape Coast (rules 28).
+    cc_kakum: [
+      { id: 'cc_kak_birds', label: 'Bird-watching at the forest edge at dawn', mins: 60, fx: { fun: 10, stress: -10 }, when: { from: 5, to: 9 } },
+      { id: 'cc_kak_gig', label: 'Carry water and snacks for the tour groups', mins: 180, earn: 2000, fx: { energy: -14 }, xp: { fitness: 1 }, gig: true, when: { from: 7, to: 16 } }
+    ],
+    cc_ucc: [
+      { id: 'cc_ucc_walk', label: 'Walk the hill campus and look out to sea', mins: 60, fx: { fun: 8, stress: -6 }, when: { from: 7, to: 19 } },
+      { id: 'cc_ucc_gig', label: 'Type and print theses for final-year students', mins: 120, earn: 1800, fx: { energy: -8 }, xp: { tech: 1 }, gig: true, when: { from: 9, to: 21 } }
+    ],
+    cc_town: [
+      { id: 'cc_town_kenkey', label: 'Fante kenkey and fried fish with pepper', mins: 30, cost: 1700, fx: { hunger: 34 }, when: { from: 6, to: 21 } },
+      { id: 'cc_town_gig', label: 'Call passengers at the lorry station (mate)', mins: 180, earn: 2000, fx: { energy: -12, social: 4 }, xp: { hustle: 1 }, gig: true, when: { from: 5, to: 19 } }
+    ],
+    cc_elmina: [
+      { id: 'cc_elm_canoes', label: 'Watch the canoes come in on the lagoon', mins: 45, fx: { fun: 10, stress: -6 }, when: { from: 6, to: 12 } },
+      { id: 'cc_elm_gig', label: 'Help pull the canoes up the beach', mins: 180, earn: 2200, fx: { energy: -18, hygiene: -12 }, xp: { fitness: 1 }, gig: true, when: { from: 5, to: 12 } }
     ],
     // Kumasi (rules 25).
     kum_airport: [
@@ -1479,6 +1511,7 @@
     abj_wuse: { mult: 1.1, rent: 16000 }, abj_garki: { mult: 1.05, rent: 14000 }, abj_kubwa: { mult: 0.85, rent: 4500 },
     ph_gra: { mult: 1.1, rent: 15000 }, ph_dline: { mult: 1.0, rent: 8000 }, ph_rumuokoro: { mult: 0.9, rent: 5000 },
     acc_osu: { mult: 1.1, rent: 15000 }, acc_central: { mult: 1.0, rent: 9000 }, acc_eastlegon: { mult: 1.15, rent: 26000 },
+    cc_town: { mult: 0.95, rent: 7000 },
     kum_adum: { mult: 1.05, rent: 11000 }, kum_kejetia: { mult: 1.0, rent: 8000 }, kum_ahodwo: { mult: 1.1, rent: 20000 }
   };
   // Upgrades: what each business becomes at levels 2 and 3, and its emoji on the map.
@@ -1926,6 +1959,7 @@
     ['acc_court', '⚖️', 'High Court, Accra', 'services', 'gavel', 'acc_central', 12.2, 18.2, 'court', 'The bench, the dock, the witness box and a public gallery.'],
     ['acc_library', '📚', 'George Padmore Library', 'learn', 'book', 'acc_central', 10.0, 18.0, 'library', 'Rows of shelves, reading tables, a computer room and a strict librarian.'],
     ['kum_komfo', '🏥', 'Komfo Anokye Teaching Hospital', 'services', 'cross', 'kum_bantama', 4.6, 9.4, 'hospital', 'Reception, the nurses\' station, the doctor, a ward and the pharmacy.'],
+    ['cc_hotel', '🏨', 'Castle View Hotel', 'nightlife', 'hotel', 'cc_town', 17.0, 17.6, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
     ['kum_hotel', '🏨', 'Garden City Hotel', 'nightlife', 'hotel', 'kum_ahodwo', 8.0, 19.0, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
     ['ph_office', '🏢', 'Trans-Amadi Business Tower', 'services', 'tower', 'ph_transamadi', 22.6, 12.6, 'office', 'Glass towers on the industrial layout: a co-working floor, meeting rooms and the canteen.']
   ].forEach(function (q) {
@@ -2243,6 +2277,41 @@
     ['dxb_dxb', '✈️', 'Dubai International Airport', 'transport', 'plane', 'dxb_airport', 28.4, 9.4, null, 'Duty free the size of a mall, open all night. Flights home to Lagos.', [
       act('dxb_duty', 'Browse duty free', 60, 0, 0, { fun: 8 }, null, { from: 0, to: 24 })
     ]],
+    // Cape Coast (rules 28). The castles are told as what they were: places where enslaved Africans were held and shipped.
+    ['cc_castle', '🏰', 'Cape Coast Castle', 'culture', 'frame', 'cc_town', 15.6, 18.6, 'castle', 'The white castle on the rocks: the male and female dungeons, the governor\'s rooms and the Door of No Return.', [
+      act('ccc_tour', 'Guided tour of the castle and its dungeons', 90, 6500, 0, { stress: 10, social: 6 }, { charisma: 1 }, { from: 9, to: 17 }),
+      act('ccc_door', 'Stand at the Door of No Return in silence', 30, 0, 0, { stress: 6, social: 4 }, null, { from: 9, to: 17 }),
+      act('ccc_museum', 'Read the museum of the slave trade, room by room', 60, 0, 0, { fun: 4 }, { charisma: 1 }, { from: 9, to: 17 })
+    ]],
+    ['cc_elmina_castle', '🏰', 'Elmina Castle', 'culture', 'frame', 'cc_elmina', 6.2, 18.8, 'castle', 'São Jorge da Mina, built in 1482: the courtyard, the cells, the church and the harbour below.', [
+      act('elc_tour', 'Guided tour of Elmina Castle', 90, 6500, 0, { stress: 10, social: 6 }, { charisma: 1 }, { from: 9, to: 17 }),
+      act('elc_fort', 'Climb up to Fort St Jago for the view back', 45, 1300, 0, { fun: 8, energy: -6 }, null, { from: 9, to: 17 }),
+      act('elc_plaque', 'Read the memorial plaque in the courtyard', 15, 0, 0, { stress: 4, social: 2 }, null, { from: 9, to: 17 })
+    ]],
+    ['cc_kakum_park', '🌳', 'Kakum National Park', 'outdoors', 'tree', 'cc_kakum', 16.6, 2.4, null, 'Seven rope bridges hung between the treetops, and a rainforest full of birds and butterflies.', [
+      act('kak_canopy', 'Cross the canopy walkway, forty metres up', 60, 7800, 0, { fun: 28, stress: 6, energy: -8 }, null, { from: 8, to: 16 }),
+      act('kak_trail', 'Walk the forest trail with a ranger', 90, 2600, 0, { fun: 14, stress: -10, energy: -10 }, { fitness: 1 }, { from: 8, to: 16 })
+    ]],
+    ['cc_market', '🧺', 'Kotokuraba Market', 'food', 'basket', 'cc_town', 14.0, 15.0, null, 'A new market hall: smoked fish, cassava, kenkey, cloth and phone accessories.', [
+      act('kot_food', 'Buy smoked fish, gari and pepper for the week', 30, 4200, 0, { hunger: 24 }, null, { from: 6, to: 18 }),
+      act('kot_cloth', 'Buy wax-print cloth for a dress', 30, 7800, 0, { fun: 8 }, null, { from: 8, to: 18 })
+    ]],
+    ['cc_ucc_uni', '🎓', 'University of Cape Coast', 'learn', 'cap', 'cc_ucc', 25.4, 10.4, null, 'Lecture halls on the hill, the Sam Jonah Library, a canteen and the halls by the sea.', 'ucc_'],
+    ['cc_harbour', '🛶', 'Elmina fishing harbour', 'outdoors', 'boat', 'cc_elmina', 4.4, 18.2, null, 'Hundreds of painted canoes on the Benya lagoon, nets everywhere and the fish auction.', [
+      act('elh_auction', 'Watch the fish auction', 30, 0, 0, { fun: 8, social: 4 }, null, { from: 6, to: 12 }),
+      act('elh_fish', 'Buy fresh red snapper off a canoe', 15, 3900, 0, { hunger: 16 }, null, { from: 6, to: 13 })
+    ]],
+    ['cc_beach', '🏖️', 'Cape Coast beach front', 'outdoors', 'wave', 'cc_town', 18.4, 19.2, null, 'Fishing canoes on the sand, drummers on Sundays and a long walk to the Oguaa lagoon.', [
+      act('ccb_walk', 'Walk the beach at sunset', 45, 0, 0, { fun: 10, stress: -8 }, null, { from: 16, to: 19 }),
+      act('ccb_drums', 'Join the Sunday drumming on the sand', 60, 0, 0, { fun: 16, social: 10 }, null, { days: [6], from: 14, to: 19 })
+    ]],
+    ['cc_chopbar', '🍲', 'Auntie Efua\'s Chop Bar', 'food', 'bowl', 'cc_town', 16.2, 15.6, null, 'Fante fante: fish light soup, banku with okro stew and kenkey with shito.', [
+      act('aef_soup', 'Fante fante fish soup with banku', 30, 2600, 0, { hunger: 42, fun: 6 }, null, { from: 11, to: 21 }),
+      act('aef_okro', 'Banku and okro stew', 30, 2000, 0, { hunger: 38 }, null, { from: 11, to: 21 })
+    ]],
+    ['cc_station', '🚌', 'Kotokuraba Lorry Station', 'transport', 'bus', 'cc_town', 13.2, 16.6, null, 'Tro-tros to Elmina, Kakum and Takoradi, and coaches to Accra, Kumasi and Lagos.', [
+      act('ccs_tea', 'Tea and bread at the station', 15, 700, 0, { hunger: 16 }, null, { from: 5, to: 22 })
+    ]],
     // Kumasi (rules 25): real landmarks keep their names; the businesses are made up.
     ['kum_kejetia_mkt', '🧺', 'Kejetia Market', 'food', 'basket', 'kum_kejetia', 12.4, 11.6, null, 'Thousands of stalls under new roofs: kente, beads, shea butter, tomatoes and car parts.', [
       act('kej_kente', 'Price kente cloth from a trader', 45, 0, 0, { fun: 8 }, { charisma: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 7, to: 18 }),
@@ -2352,7 +2421,7 @@
       act('bfj_canoe', 'Paddle a canoe round the creek', 45, 1500, 0, { fun: 12, energy: -6 }, { fitness: 1 }, { from: 7, to: 17 })
     ]]
   ].forEach(function (q) {
-    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^ldn_/.test(q[5]) ? 'london' : /^dxb_/.test(q[5]) ? 'dubai' : 'lagos'), text: q[9] };
+    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^cc_/.test(q[5]) ? 'capecoast' : /^ldn_/.test(q[5]) ? 'london' : /^dxb_/.test(q[5]) ? 'dubai' : 'lagos'), text: q[9] };
     if (q[8]) p.inside = q[8];
     CIVIC_PLACES.push(p);
     if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
@@ -2370,6 +2439,10 @@
   ], GOAL_REWARD = 5000;
   // Rules 21: weekend events on a four-week rotation (when.wk is the week of the month), at their places.
   var EVENT_ACTS = {
+    cc_castle: [
+      { id: 'ev_fetu', label: 'Fetu Afahye: the chiefs\' procession through town (first Saturday of September)', mins: 180, fx: { fun: 30, social: 20 }, when: { months: [8], wk: [0], days: [5], from: 9, to: 17 } },
+      { id: 'ev_fetu_sell', label: 'Fetu Afahye: sell water to the crowds', mins: 180, earn: 2200, fx: { energy: -12, social: 6 }, gig: true, fest: true, when: { months: [8], wk: [0], days: [5], from: 8, to: 17 } }
+    ],
     kum_manhyia_pal: [
       { id: 'ev_akwasidae', label: 'Akwasidae: the Asantehene sits in state (Sunday, week 3)', mins: 180, fx: { fun: 30, social: 20, stress: -6 }, when: { wk: [2], days: [6], from: 9, to: 15 } },
       { id: 'ev_akwasidae_drum', label: 'Akwasidae: carry water for the drummers', mins: 180, earn: 2200, fx: { energy: -12, social: 6 }, gig: true, fest: true, when: { wk: [2], days: [6], from: 8, to: 15 } }
@@ -2435,7 +2508,7 @@
     // and the University of Port Harcourt, the same campus life under its own ids (Mama Ngozi runs the buka there).
     CIVIC_ACTS.ph_uniport = cloneActs(CIVIC_ACTS.unilag, 'uni_', 'uniport_').map(function (a) { a.label = a.label.replace(/Mama B/g, 'Mama Ngozi').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river'); return a; });
     // and the Abuja campuses (Mama Hauwa's buka; lawns and hills where Lagos has the lagoon).
-    CAMPUS_CLONES.forEach(function (c) { var ph = /^ph_/.test(c[0]), acc = /^acc_/.test(c[0]), kum = /^kum_/.test(c[0]), lag = /^lag_/.test(c[0]), mama = c[0] === 'lag_lasu' ? 'Mama Toyin' : 'Mama Kemi'; CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = kum ? a.label.replace(/Mama B's/g, 'Auntie Abena\'s chop bar').replace(/Mama B/g, 'Auntie Abena').replace(/Lagoon front/g, 'Great Hall lawn').replace(/the lagoon/g, 'the lawns').replace(/lagoon/g, 'lawn') : acc ? a.label.replace(/Mama B's/g, 'Auntie Akos\'s chop bar').replace(/Mama B/g, 'Auntie Akos').replace(/Lagoon front/g, 'Legon hill').replace(/the lagoon/g, 'the hill').replace(/lagoon/g, 'hill') : lag ? a.label.replace(/Mama B/g, mama).replace(/Lagoon front/g, 'Campus field').replace(/the lagoon/g, 'the campus').replace(/lagoon/g, 'campus') : ph ? a.label.replace(/Mama B/g, 'Mama Ibiere').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river') : a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
+    CAMPUS_CLONES.forEach(function (c) { var ph = /^ph_/.test(c[0]), acc = /^acc_/.test(c[0]), kum = /^kum_/.test(c[0]), cc = /^cc_/.test(c[0]), lag = /^lag_/.test(c[0]), mama = c[0] === 'lag_lasu' ? 'Mama Toyin' : 'Mama Kemi'; CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = cc ? a.label.replace(/Mama B's/g, 'Auntie Efua\'s chop bar').replace(/Mama B/g, 'Auntie Efua').replace(/Lagoon front/g, 'Beach front').replace(/the lagoon/g, 'the sea').replace(/lagoon/g, 'sea') : kum ? a.label.replace(/Mama B's/g, 'Auntie Abena\'s chop bar').replace(/Mama B/g, 'Auntie Abena').replace(/Lagoon front/g, 'Great Hall lawn').replace(/the lagoon/g, 'the lawns').replace(/lagoon/g, 'lawn') : acc ? a.label.replace(/Mama B's/g, 'Auntie Akos\'s chop bar').replace(/Mama B/g, 'Auntie Akos').replace(/Lagoon front/g, 'Legon hill').replace(/the lagoon/g, 'the hill').replace(/lagoon/g, 'hill') : lag ? a.label.replace(/Mama B/g, mama).replace(/Lagoon front/g, 'Campus field').replace(/the lagoon/g, 'the campus').replace(/lagoon/g, 'campus') : ph ? a.label.replace(/Mama B/g, 'Mama Ibiere').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river') : a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
   })();
   // Rules 19: Lekki Conservation Centre, close up.
   CIVIC_ACTS.lcc = [
