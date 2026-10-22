@@ -3378,7 +3378,7 @@ test('rules 37: a festival in each other city, in its own month and district; ne
 
 test('rules 38: stage career: rehearse, rep and levels, a manager at 30, a weekly capped headline at 60, and a weekly chart', () => {
   const s = L.newGame({ seed: 3810, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 38); s.cash = 5e6;
+  assert.ok(s.rules >= 38); s.cash = 5e6;
   const step = (loc) => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); s.loc = loc; };
   const fresh = () => { s.needs.energy = 100; s.needs.hunger = 70; };
   // Rehearse: once a day, practice +2.
@@ -3412,4 +3412,29 @@ test('rules 38: stage career: rehearse, rep and levels, a manager at 30, a weekl
   for (let i = 0; i < 400; i++) { while (v.pending.length) L.resolveChoice(v, 0); const a = L.availableActions(v).find(x => x.id === 'stage_rehearse'); if (a && !a.disabled) { assert.ok(L.doAction(v, 'stage_rehearse').ok); break; } L.wait(v, 30); }
   assert.equal(L.stageCareer(v).practice, 2);
   assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
+});
+
+test('rules 39: review fixes: stalls after 18:00 start tomorrow and stay on one business; headliner needs a passable show', () => {
+  const mk = () => { const s = L.newGame({ seed: 3910, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.bank = 5e7; s.cash = 5e6; s.loc = 'island'; return s; };
+  const s = mk(); assert.equal(s.rules, 39);
+  s.businesses.push({ id: 'buka', paid: 600000, visit: 0, site: 'island', level: 1, manager: true });
+  s.businesses.push({ id: 'buka', paid: 900000, visit: 0, site: 'ikoyi', level: 3, manager: true }); // the bigger one is priced and boosted
+  // At 19:00 on day 0 the Independence Jam stall starts tomorrow and is priced from that day.
+  for (let i = 0; i < 200 && L.hour(s) < 19; i++) { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); s.loc = 'island'; }
+  const a = L.availableActions(s).find(x => x.id === 'stall_indep'); assert.ok(a, 'offered'); assert.equal(a.first, 4);
+  // On the last festival day after 18:00 there is nothing left to sell, so no stall is offered.
+  const late = mk(); late.businesses.push({ id: 'buka', paid: 600000, visit: 0, site: 'island', level: 1, manager: true });
+  for (let i = 0; i < 2000 && !(L.day(late) === 6 && L.hour(late) >= 19); i++) { while (late.pending.length) L.resolveChoice(late, 0); L.wait(late, 15); late.loc = 'island'; }
+  assert.ok(!L.availableActions(late).some(x => x.id === 'stall_indep'));
+  assert.ok(L.doAction(s, 'stall_indep').ok); const st = s.stalls['indep-0']; assert.equal(st.paid, 900000); assert.equal(st.site, 'ikoyi');
+  // Selling the boosted business ends the boost: a new buka of the same type does not inherit it.
+  s.businesses.splice(1, 1); s.businesses.push({ id: 'buka', paid: 650000, visit: 0, site: 'island', level: 1, manager: true });
+  const before = s.ledger.filter(e => e.memo === 'Business payout').length;
+  for (let i = 0; i < 7 * 96; i++) { while (s.pending.length) L.resolveChoice(s, 0); s.businesses.forEach(b => { b.visit = L.day(s); }); L.wait(s, 15); }
+  assert.ok(s.ledger.filter(e => e.memo === 'Business payout').length > before);
+  assert.ok(!s.log.some(l => /rival stall/.test(l.text)), 'no stall boost (or rival) on a business it was not booked for');
+  // The headliner achievement needs 40%+.
+  const h = mk(); h.stage = { rep: 70, practice: 0, manager: true, headWeek: null }; h.loc = 'vi';
+  for (let i = 0; i < 4000 && !(L.dow(h) === 5 && L.hour(h) === 20); i++) { while (h.pending.length) L.resolveChoice(h, 0); L.wait(h, 15); h.loc = 'vi'; }
+  h.needs.energy = 100; h.needs.hunger = 70; assert.ok(L.startMinigame(h, 'stage').ok); assert.ok(L.stageShow(h, 10, 64, 3).ok); assert.ok(!h.ach.headliner);
 });

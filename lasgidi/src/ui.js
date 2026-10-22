@@ -2191,6 +2191,9 @@
         var a = avail.filter(function (x) { return x.id === r[0]; })[0]; out.push({ id: r[0], def: r[1], a: a || null, icon: r[2], short: r[3], off: !a || a.disabled });
       });
     }
+    if (S.rules >= 38) avail.filter(function (x) { return pl.id === 'eko_convention' ? /^stage_(manager|headline)$/.test(x.id) : pl.id === 'theatre' && x.id === 'stage_rehearse'; }).forEach(function (a) { // rules 38: the stage career's acts
+      out.push({ id: a.id, def: a, a: a, icon: a.minigame ? '🎮' : a.id === 'stage_manager' ? '✍️' : '🎼', short: a.id === 'stage_manager' ? 'Sign a manager' : a.id === 'stage_headline' ? 'Headline' : 'Rehearse', off: !!a.disabled });
+    });
     if (S.rules >= 35) avail.filter(function (x) { return /^yf_/.test(x.id) && L.yearFests(S).some(function (f) { return f.place === pl.id && x.id.indexOf('yf_' + f.id + '_') === 0; }); }).forEach(function (a) { // rules 35: this place's festival tickets and gig
       out.push({ id: a.id, def: a, a: a, icon: a.gig ? '🦺' : '🎟️', short: a.gig ? 'Volunteer' : 'Ticket', off: !!a.disabled });
     });
@@ -2294,7 +2297,7 @@
   // Rules 38: the stage career card: level, rep, practice, manager, what unlocks next, and this week's Top 10.
   function careerCard(where) {
     var C = L.stageCareer ? L.stageCareer(S) : null; if (!C) return ''; var ch = L.stageChart(S), pct = C.next ? Math.round((C.rep - (C.rep >= 60 ? 60 : C.rep >= 30 ? 30 : 0)) / ((C.next.at - (C.rep >= 60 ? 60 : C.rep >= 30 ? 30 : 0)) || 1) * 100) : 100;
-    var hint = !C.manager ? (C.canSign ? 'You can sign with a manager at Eko Convention Centre (Victoria Island).' : 'Reach 30 rep to sign with a manager.') : C.canHeadline ? 'Headline at Eko Convention Centre on Saturday nights, 20:00–23:00, once a week.' : 'Reach 60 rep to headline Eko Convention Centre.';
+    var hint = !C.manager ? (C.canSign ? 'You can sign with a manager at Eko Convention Centre (Victoria Island).' : 'Reach 30 rep to sign with a manager.') : C.canHeadline ? (S.stage && S.stage.headWeek === L.week(S) ? 'You headlined this week. Next Saturday you can again.' : 'Headline at Eko Convention Centre on Saturday nights, 20:00–23:00, once a week.') : 'Reach 60 rep to headline Eko Convention Centre.';
     return '<div class="career-card"><div class="fc-lab">🎤 STAGE CAREER</div><h3>' + esc(C.level) + ' act · ' + C.rep + ' rep</h3>' +
       '<div class="cc-bar" role="img" aria-label="' + pct + '% to the next level"><i style="width:' + Math.max(0, Math.min(100, pct)) + '%"></i></div>' +
       '<p class="fc-meta">' + (C.next ? C.next.at - C.rep + ' rep to ' + esc(C.next.name) : 'Top of the bill') + ' · practice ' + C.practice + '/10 · ' + (C.manager ? 'manager: Eko Talent Management' : 'no manager yet') + '</p><p class="fc-meta">' + esc(hint) + ' Rehearse at the National Theatre (Monday to Saturday, 10:00–17:00).</p>' +
@@ -3271,11 +3274,14 @@
     if (!(S.rules >= 36)) return '';
     var booked = S.stalls && Object.keys(S.stalls).some(function (k) { return k.indexOf(key + '-') === 0; });
     if (booked) return '<p class="fc-meta">🛒 Your food stall is booked for this festival.</p>';
-    var a = L.availableActions(S).filter(function (x) { return x.id === 'stall_' + key; })[0];
-    if (a) return '<div class="inline"><button class="btn sm" id="stall-' + key + '-' + where + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled title="' + esc(a.disabled) + '"' : '') + '>🛒 Rent a food stall · ' + N(a.price) + '</button></div>';
+    var a = availMemo().filter(function (x) { return x.id === 'stall_' + key; })[0];
+    if (a) return '<div class="inline"><button class="btn sm" id="stall-' + key + '-' + where + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled title="' + esc(a.disabled) + '"' : '') + '>🛒 Rent a food stall · ' + N(a.price) + '</button></div>' + (a.disabled ? '<p class="fc-meta">' + esc(a.disabled) + '</p>' : '');
     var food = (S.businesses || []).some(function (b) { return /^(buka|catering|smallchops)$/.test(b.id); });
     return '<p class="fc-meta">🛒 ' + (food ? 'Come to ' + esc((D.DISTRICTS[stallDistrict(key)] || {}).name || 'the festival') + ' to rent a stall for your food business.' : 'Own a buka, a small chops stand or a catering business to rent a stall here.') + '</p>';
   }
+  // One list of available acts per game moment, shared by the festival cards in a render.
+  var availCache = { k: null, v: null };
+  function availMemo() { var k = S.t + '|' + S.loc + '|' + S.cash + '|' + S.bank + '|' + (S.replay ? S.replay.acts.length : '') + '|' + (S.pending ? S.pending.length : 0); if (availCache.k !== k) { availCache.k = k; availCache.v = L.availableActions(S); } return availCache.v; }
   function stallDistrict(key) { if (key === 'detty') return D.DETTY_FEST.district; var F = D.YEAR_FESTS.filter(function (x) { return x.id === key; })[0]; return F ? F.district : null; }
   // Rules 35: festivals through the year, one card each while counting down or on (only at the festival's place in a walk-in).
   function yearFestCards(where, placeId) {
@@ -4157,6 +4163,7 @@
       { icon: '🎤', name: 'Naija Quiz', where: 'Millennium Park, Maitama, Abuja', when: 'Friday to Sunday, 15:00–20:00, once a day', best: S.stats.quizBest != null ? 'Best ' + S.stats.quizBest + '/10' : 'Not played yet', act: 'abj_quiz', kind: 'quiz', place: 'abj_millennium', district: 'abj_maitama' },
       { icon: '💃', name: 'Owambe dance-off', where: 'Event hall, Surulere', when: 'Saturdays, 12:00–20:00', best: S.stats.danceBest ? 'Best ' + S.stats.danceBest + '% on the beat' : 'Not played yet', act: 'suru_danceoff', kind: 'dance', place: 'owambe_hall', district: 'surulere' }
     ];
+    if (S.rules >= 38 && S.stage && S.stage.manager) rows.push({ icon: '🌟', name: 'Headline show', where: 'Eko Convention Centre, Victoria Island', when: 'Saturdays, 20:00–23:00, once a week', best: 'Stage rep ' + (S.stage.rep || 0) + (S.stage.rep >= 60 ? '' : ' · headliners need 60'), act: 'stage_headline', kind: 'stage', place: 'eko_convention', district: 'vi' });
     if (S.rules >= 33) rows.push({ icon: '🎤', name: 'On stage', where: 'National Theatre, Surulere (and Eko Detty Fest in December)', when: 'Wednesdays, 18:00–22:00 · fest days 16:00–18:00', best: S.stats.stageBest ? 'Best ' + S.stats.stageBest + '% on the beat' + (S.stats.stageBest >= 70 ? ' · fest-ready' : '') : 'Not played yet', act: 'stage_open', kind: 'stage', place: 'theatre', district: 'surulere' });
     var acts = L.availableActions(S);
     return '<div class="section" style="padding-top:0"><h3>🎮 Mini-games</h3><p class="note">Arcade games that pay as part of your life, with capped takings, so skill helps but never prints money.</p><div class="list">' + rows.map(function (g) {

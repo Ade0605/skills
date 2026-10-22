@@ -50,7 +50,7 @@
     function step(dt) {
       if (st.over) return;
       st.t += dt;
-      st.notes.forEach(function (n) { if (!n.hit && !n.gone && st.t - n.t > 0.2) { n.gone = true; st.combo = 0; } });
+      var lateWin = 0.2 * (1 + Math.min(10, Math.max(0, (opts && opts.ease) || 0)) * 0.03); st.notes.forEach(function (n) { if (!n.hit && !n.gone && st.t - n.t > lateWin) { n.gone = true; st.combo = 0; } });
       st.cash.forEach(function (c) { c.y += c.v * dt; c.r += dt * 3; });
       st.cash = st.cash.filter(function (c) { return c.y < H + 30; });
       for (var i = 0; i < LANES; i++) if (st.flash[i] > 0) st.flash[i] -= dt;
