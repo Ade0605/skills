@@ -87,7 +87,14 @@
     // The landmarks you pass, each with its green sign.
     (o.sights || []).forEach(function (name, i) {
       var g = new T.Group(), sd = i % 2 ? -1 : 1, h = air ? 34 + i * 6 : 14 + i * 4, y0 = air ? -60 : 0, lx = air ? sd * 24 : sd * 16; box3(g, 8, h, 8, M(0xe9e2d4, 0.6, 0, air && night ? { emissive: 0xffd28c, emissiveIntensity: 0.25 } : {}), lx, y0 + h / 2, 0); box3(g, 8.4, 1, 8.4, M(0x1d7a43), lx, y0 + h + 0.5, 0);
-      var st = tex(512, 160, function (c, w, hh) { c.fillStyle = '#1d7a43'; c.fillRect(0, 0, w, hh); c.strokeStyle = '#ffffff'; c.lineWidth = 6; c.strokeRect(8, 8, w - 16, hh - 16); c.fillStyle = '#cfe8d6'; c.font = '700 26px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText('NOW PASSING', w / 2, 50); c.fillStyle = '#ffffff'; c.font = '900 44px system-ui, sans-serif'; c.fillText(String(name).slice(0, 26), w / 2, 112, w - 30); });
+      var st = tex(512, 160, function (c, w, hh) { c.fillStyle = '#1d7a43'; c.fillRect(0, 0, w, hh); c.strokeStyle = '#ffffff'; c.lineWidth = 6; c.strokeRect(8, 8, w - 16, hh - 16); var sub = o.subs && o.subs[i]; c.textAlign = 'center'; if (sub) { c.fillStyle = '#ffffff'; c.font = '900 56px system-ui, sans-serif'; c.fillText(String(name).toUpperCase().slice(0, 18), w / 2, 78, w - 30); c.fillStyle = '#cfe8d6'; c.font = '800 28px system-ui, sans-serif'; c.fillText(sub, w / 2, 128, w - 30); return; } c.fillStyle = '#cfe8d6'; c.font = '700 26px system-ui, sans-serif'; c.fillText('NOW PASSING', w / 2, 50); c.fillStyle = '#ffffff'; c.font = '900 44px system-ui, sans-serif'; c.fillText(String(name).slice(0, 26), w / 2, 112, w - 30); });
+      // The River Niger: a steel truss bridge and the wide water under the road at Jebba, and at Onitsha or Asaba.
+      if (o.highway && /Jebba|Onitsha|Asaba/.test(name)) {
+        var wm = M(0x4f8aa0, 0.15, 0.1), stl = M(0x5d6670, 0.5, 0.5);
+        [-1, 1].forEach(function (sdw) { var wp = new T.Mesh(new T.PlaneGeometry(160, 90).rotateX(-Math.PI / 2), wm); wp.position.set(sdw * 86, 0.06, 0); g.add(wp); });
+        [-5.6, 5.6].forEach(function (bx) { box3(g, 0.5, 0.5, 84, stl, bx, 6.5, 0); box3(g, 0.5, 0.5, 84, stl, bx, 0.6, 0); for (var k = -40; k <= 40; k += 8) { box3(g, 0.35, 6, 0.35, stl, bx, 3.5, k); var dg = new T.Mesh(new T.BoxGeometry(0.25, 9.6, 0.25), stl); dg.position.set(bx, 3.5, k + 4); dg.rotation.x = 0.92; g.add(dg); } });
+        for (var cb = -40; cb <= 40; cb += 8) box3(g, 11.4, 0.3, 0.3, stl, 0, 6.6, cb);
+      }
       var sign = new T.Mesh(new T.PlaneGeometry(7, 2.2), new T.MeshBasicMaterial({ map: st, side: T.DoubleSide })); sign.position.set(air ? lx : sd * 6.5, air ? y0 + h + 4.5 : 5, 0); if (air) sign.scale.setScalar(2.2); g.add(sign); [-3, 3].forEach(function (px) { if (!air) { var post = new T.Mesh(new T.CylinderGeometry(0.08, 0.08, 4, 6), M(0x9aa0a6)); post.position.set(sd * 6.5 + px, 2, 0); g.add(post); } });
       g.position.set(0, air ? 0 : 0, -400); world.add(g); sights.push({ g: g, at: secs * (0.12 + i * 0.8 / Math.max(1, o.sights.length)) });
     });
