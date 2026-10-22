@@ -2426,6 +2426,13 @@
     CIVIC_PLACES.push(p);
     if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
   });
+  // Rules 30: what a grown child does at 18, and a chief's duties (cost in naira before inflation; mins on the 15-minute grid).
+  var KID_FUTURES = { uni: { fee: 120000 }, trade: { fee: 150000 } };
+  var CHIEF_DUTIES = {
+    dispute: { name: 'Settling a land dispute', text: 'Two families are fighting over a plot. The elders want you to sit with them and settle it.', yes: 'Sit with the elders', sub: 'Half a day; respect and calm', cost: 0, mins: 240, fx: { social: 15, stress: 6, energy: -10 }, done: 'You listened for hours, split the plot fairly and shared kola. Both families went home quiet.' },
+    donate: { name: 'Community project donation', text: 'The community is building a borehole and a new classroom block. They hope their chief will lead the giving.', yes: 'Lead the giving', sub: 'Respect; a small chance of a street named after you', cost: 60000, mins: 60, fx: { social: 12, fun: 6 }, done: 'Your name went at the top of the donors\' board.' },
+    festival: { name: 'Opening the town festival', text: 'The town festival needs a chief to open it: a speech, the first dance and a lot of hands to shake.', yes: 'Open the festival', sub: 'A long day of dancing and greetings', cost: 0, mins: 360, fx: { fun: 18, social: 20, energy: -20 }, done: 'You danced in with the drummers and the whole town followed.' }
+  };
   // Rules 21: the daily goals (three a day; the first is always 'do 3 activities') and the reward for all three.
   var DAILY_GOALS = [
     { k: 'acts', n: 3, icon: '✅', label: 'Do 3 activities' },
@@ -2640,7 +2647,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, insideKind: insideKind
   };
 
   // Keyed tables have no prototype, so an id like 'constructor' or '__proto__' from a save, a replay or another player's
