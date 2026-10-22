@@ -1224,3 +1224,19 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .pb-t .muted { font-size: 11.5px; }
 .pb-when { flex: none; font-size: 11.5px; color: rgba(244,239,230,.75); text-align: right; }
 .playbill > .btn { margin: 8px 14px 12px; background: #ffd23f; color: #17181a; }
+/* Rules 32: Eko Detty Fest card */
+.fest-card { margin: 10px 0; padding: 12px 14px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, #2a0b3d, #7b1fa2 55%, #ff6f00); box-shadow: 0 6px 18px rgba(123,31,162,.25); }
+.fest-card h3 { margin: 4px 0; font-size: 20px; color: #fff; }
+.fc-lab { font: 800 11.5px/1.3 system-ui, sans-serif; letter-spacing: .07em; color: #ffd23f; }
+.fc-head { margin: 4px 0; font-size: 14.5px; }
+.fc-meta { margin: 3px 0; font-size: 13px; color: rgba(255,255,255,.85); }
+.fest-card .btn { background: #ffd23f; color: #17181a; }
+.fest-card .btn.ghost { background: rgba(255,255,255,.15); color: #fff; }
+.fc-prog { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow: auto; }
+.fc-prog li { display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 10px; background: rgba(0,0,0,.18); font-size: 13px; }
+.fc-prog li.now { background: #ffd23f; color: #17181a; }
+.fc-prog li.past { opacity: .6; }
+.fc-n { flex: none; width: 22px; font-weight: 800; text-align: center; }
+.fc-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fc-t em { font-style: normal; font-size: 11.5px; opacity: .8; }
+.fc-ok { flex: none; font-weight: 800; }
