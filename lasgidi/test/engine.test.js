@@ -3328,7 +3328,7 @@ test('rules 35: festivals through the year: countdown, programme day by day, tic
 
 test('rules 36: a food business can rent a festival stall: a fee up front, double takings on festival days, a rival some days', () => {
   const mk = (rules) => { const s = L.newGame({ seed: 3610, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); s.bank = 5e7; s.cash = 5e6; s.businesses.push({ id: 'buka', paid: 600000, visit: 0, site: 'island', level: 1, manager: true }); return s; };
-  const s = mk(); assert.equal(s.rules, 36); s.loc = 'island';
+  const s = mk(); assert.ok(s.rules >= 36); s.loc = 'island';
   // No stall act without a food business.
   const n = L.newGame({ seed: 3611, origin: 'nepo', goal: 'freestyle' }); while (n.pending.length) L.resolveChoice(n, 0); n.loc = 'island';
   assert.ok(!L.availableActions(n).some(a => /^stall_/.test(a.id)));
@@ -3345,4 +3345,33 @@ test('rules 36: a food business can rent a festival stall: a fee up front, doubl
   assert.equal(Object.keys(s.stalls).length, 0, 'the stall is cleared after the festival');
   // A rules 35 life never sees stalls.
   const old = mk(35); old.loc = 'island'; assert.ok(!L.availableActions(old).some(x => /^stall_/.test(x.id)));
+});
+
+test('rules 37: a festival in each other city, in its own month and district; news follows your city; stalls work there too', () => {
+  const s = L.newGame({ seed: 3710, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 37); s.bank = 5e7; s.cash = 5e6;
+  const want = { abjculture: [10, 'abj_maitama'], phregatta: [1, 'ph_borokiri'], accart: [7, 'acc_jamestown'], kumkente: [4, 'kum_adum'] };
+  const seen = {};
+  for (let i = 0; i < 400 && Object.keys(seen).length < 4; i++) {
+    for (const f of L.yearFests(s)) if (want[f.id] && f.phase === 'on' && !seen[f.id]) {
+      seen[f.id] = 1; assert.equal(L.monthIndex(s), want[f.id][0], f.id + ' month');
+      s.loc = want[f.id][1]; s.needs.energy = 100; s.needs.hunger = 60;
+      assert.ok(L.availableActions(s).some(a => a.id === 'yf_' + f.id + '_gig'), f.id + ' acts at its place');
+      s.loc = 'island'; assert.ok(!L.availableActions(s).some(a => a.id.indexOf('yf_' + f.id) === 0), 'not in Lagos');
+    }
+    while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 1440);
+  }
+  assert.equal(Object.keys(seen).length, 4);
+  // News follows the city you are in: Lagos festivals are not announced to a player in Abuja.
+  const n = L.newGame({ seed: 3711, origin: 'nepo', goal: 'freestyle' }); while (n.pending.length) L.resolveChoice(n, 0); n.loc = 'abj_maitama';
+  for (let d = 0; d < 6; d++) { while (n.pending.length) L.resolveChoice(n, 0); L.wait(n, 1440); n.loc = 'abj_maitama'; }
+  assert.ok(!n.log.some(l => /Independence Jam/.test(l.text)), 'no Lagos festival news in Abuja');
+  // A food business can take a stall in Abuja at Capital Culture Week.
+  const b = L.newGame({ seed: 3712, origin: 'nepo', goal: 'freestyle' }); while (b.pending.length) L.resolveChoice(b, 0); b.cash = 5e6;
+  b.businesses.push({ id: 'buka', paid: 600000, visit: 0, site: 'island', level: 1, manager: true });
+  for (let i = 0; i < 400 && !L.yearFests(b).some(f => f.id === 'abjculture'); i++) { while (b.pending.length) L.resolveChoice(b, 0); L.wait(b, 1440); }
+  b.loc = 'abj_maitama'; assert.ok(L.doAction(b, 'stall_abjculture').ok);
+  // Older lives keep only the Lagos festivals.
+  const o = L.newGame({ seed: 3710, origin: 'nepo', goal: 'freestyle', rules: 36 }); while (o.pending.length) L.resolveChoice(o, 0);
+  for (let i = 0; i < 400; i++) { assert.ok(L.yearFests(o).every(f => !want[f.id])); L.wait(o, 1440 * 7); if (L.day(o) > 400) break; }
 });

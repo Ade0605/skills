@@ -80,7 +80,10 @@
   // Independence Jam in October, each with a countdown, a daily news line, a programme, tickets and a volunteer gig.
   // 36 lets a food business owner rent a stall at a festival (Detty Fest and the three from rules 35): a fee up front,
   // then that business takes double on each festival day, unless a rival stall undercuts it (1 in 4 days: x1.25).
-  var RULES = 36;
+  // 37 adds a festival in each other city: Capital Culture Week (Abuja, November), the Garden City Boat Regatta (Port
+  // Harcourt, February), Jamestown Wall Art Week (Accra, August) and the Kente and Craft Fair (Kumasi, May). Festival news
+  // now follows the city you are in, and a Festival passport achievement is for festivals in five cities.
+  var RULES = 37;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -148,6 +151,7 @@
     explorer:    'Lagos explorer: visited 8 tourist sights',
     theatregoer: 'Theatregoer: saw 5 different shows at the National Theatre',
     fest_regular: 'Fest regular: 5 nights at Eko Detty Fest',
+    fest_passport: 'Festival passport: went to a festival in five cities',
     festival_hopper: 'Festival hopper: Eko Carnival, the Chop Life Food Festival and the Eko Independence Jam',
     banana:      'Banana Island: bought a waterfront mansion',
     ghana_tour:  'Akwaaba: stamped in Accra, Kumasi and Cape Coast',
@@ -564,6 +568,7 @@
   // Rules 35: a news line a day for each festival in its countdown or on. No dice, ledger untouched.
   function yearFestNews(s) {
     yearFests(s).forEach(function (f) {
+      if (s.rules >= 37 && districtCity(f.district) !== cityOf(s)) return; // rules 37: news from the city you are in
       if (f.phase === 'soon') log(s, f.icon + ' ' + f.name + ' starts in ' + f.daysTo + (f.daysTo === 1 ? ' day' : ' days') + ' at ' + placeName(f.place) + '. Day 1: ' + f.tomorrow.head + '.', 'story');
       else log(s, f.icon + ' ' + f.name + ', day ' + f.day + ' of ' + f.days + ': ' + f.today.theme + ' with ' + f.today.head + (f.today.support.length ? ' and ' + f.today.support.join(', ') : '') + '. ' + String(f.from).padStart(2, '0') + ':00–' + String(f.to).padStart(2, '0') + ':00.', 'story');
     });
@@ -904,11 +909,12 @@
       from: F.from, to: F.to, on: phase === 'on' && hour(s) >= F.from && hour(s) < F.to, today: dayNo ? row(dayNo) : null, tomorrow: phase === 'on' ? row(dayNo + 1) : row(1),
       price: price(s, Math.min.apply(null, F.tickets.map(function (t) { return t.cost; }))), programme: F.programme.map(function (r, i) { return row(i + 1); }) };
   }
-  function yearFests(s) { if (!(s.rules >= 35)) return []; return D.YEAR_FESTS.map(function (F) { return yearFest(s, F); }).filter(Boolean); }
+  function festOk(s, F) { return !F.rules || s.rules >= F.rules; } // festivals added in later rules stay out of older lives
+  function yearFests(s) { if (!(s.rules >= 35)) return []; return D.YEAR_FESTS.filter(function (F) { return festOk(s, F); }).map(function (F) { return yearFest(s, F); }).filter(Boolean); }
   function yearFestActions(s) {
     var out = [];
     D.YEAR_FESTS.forEach(function (F) {
-      if (s.loc !== F.district) return; var f = yearFest(s, F); if (!f || f.phase !== 'on') return;
+      if (s.loc !== F.district || !festOk(s, F)) return; var f = yearFest(s, F); if (!f || f.phase !== 'on') return;
       F.tickets.forEach(function (T) { out.push({ id: 'yf_' + F.id + '_' + T.key, label: F.name + ', day ' + f.day + ' (' + f.today.theme.toLowerCase() + ') · ' + T.label, mins: T.mins || (F.from >= 17 ? 300 : 180), cost: T.cost, fx: T.fx, xp: T.xp, special: 'yearfest', event: true, fid: F.id, n: f.day, ed: f.edition, minRules: 35, when: { from: F.from, to: F.to } }); });
       var G = F.gig; out.push({ id: 'yf_' + F.id + '_gig', label: G.label, mins: G.mins, earn: G.earn, fx: G.fx, xp: G.xp, gig: true, once: true, minRules: 35, when: { from: G.from != null ? G.from : F.from, to: G.to != null ? G.to : Math.min(F.to, F.from + 6) } });
     });
@@ -919,7 +925,7 @@
   function stallFests(s) {
     var d = day(s), out = [], df = dettyFest(s), F = D.DETTY_FEST;
     if (df && df.phase) { var first = df.phase === 'on' ? d - (df.night - 1) : d + df.daysTo; out.push({ key: 'detty', ed: festYear(s), name: F.name, place: F.place, district: F.district, first: first, last: first + F.nights - 1 }); }
-    D.YEAR_FESTS.forEach(function (Y) { var f = yearFest(s, Y); if (!f) return; var first = f.phase === 'on' ? d - (f.day - 1) : d + f.daysTo; out.push({ key: Y.id, ed: f.edition, name: Y.name, place: Y.place, district: Y.district, first: first, last: first + Y.days - 1 }); });
+    D.YEAR_FESTS.forEach(function (Y) { if (!festOk(s, Y)) return; var f = yearFest(s, Y); if (!f) return; var first = f.phase === 'on' ? d - (f.day - 1) : d + f.daysTo; out.push({ key: Y.id, ed: f.edition, name: Y.name, place: Y.place, district: Y.district, first: first, last: first + Y.days - 1 }); });
     return out;
   }
   function stallBiz(s) {
@@ -1140,6 +1146,7 @@
     yearfest: function (s, a) {
       var ev = s.evSeen = s.evSeen || {}, mine = ev[a.fid] = ev[a.fid] || {}; mine[a.ed + '-' + a.n] = 1; // the day it started
       if (['carnival', 'foodfest', 'indep'].every(function (k) { return ev[k] && Object.keys(ev[k]).length; })) unlock(s, 'festival_hopper');
+      if (s.rules >= 37) { var cities = {}; D.YEAR_FESTS.forEach(function (Y) { if (ev[Y.id] && Object.keys(ev[Y.id]).length) cities[districtCity(Y.district)] = 1; }); if (s.festNights && Object.keys(s.festNights).length) cities.lagos = 1; if (Object.keys(cities).length >= 5) unlock(s, 'fest_passport'); }
       var F = D.YEAR_FESTS.filter(function (x) { return x.id === a.fid; })[0], r = F.programme[a.n - 1];
       return r.head + ': ' + r.theme.charAt(0).toLowerCase() + r.theme.slice(1) + ' at ' + F.name + '. ' + (F.id === 'foodfest' ? 'You ate until you could not move.' : F.id === 'carnival' ? 'Feathers, brass and drums all afternoon.' : 'The whole square sang along.');
     },
