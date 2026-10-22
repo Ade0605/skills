@@ -73,7 +73,10 @@
   // a volunteer gig, a countdown from late November and a news line every day of the fest.
   // 33 lets you perform: an open stage at the National Theatre on Wednesday nights, and from 70% there (or 5,000
   // followers) an opening-act slot at Eko Detty Fest. A rhythm mini-game; tips capped, and fame for creators.
-  var RULES = 33;
+  // 34 is a review pass: the food village at the fest is once a day; the New Year's Eve ticket counts as a December
+  // event (by the month it started); once-a-day marks use the day the act started; a stage performance needs a full
+  // chart (40+ notes), is collected the day it was played, and stage followers are capped at 3,000 a year.
+  var RULES = 34;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -855,7 +858,6 @@
     if (m === 11 && dd >= F.start && dd < F.start + F.nights) { phase = 'on'; night = dd - F.start + 1; }
     else if (m === 11 && dd < F.start) { phase = 'soon'; daysTo = F.start - dd; }
     else if (m === 10 && week(s) % 4 === 3) { phase = 'soon'; daysTo = F.start + 7 - dow(s); }
-    else if (m === 11) phase = 'over';
     if (!phase) return null;
     var row = function (n) { var r = D.FEST_NIGHTS[n - 1]; return r ? Object.assign({ n: n, seen: !!seen[y + '-' + n], dow: (F.start + n - 1) % 7 }, r) : null; };
     return { name: F.name, place: F.place, phase: phase, daysTo: daysTo, night: night, nights: F.nights, gates: F.gates, on: phase === 'on' && hour(s) >= F.gates,
@@ -989,7 +991,7 @@
     if (a.minigame === 'quiz' && s.quizDay === day(s)) return 'One show a day: come back tomorrow';
     if (s.rules >= 16 && a.compete && dayCount(s, 'c:' + a.id)) return 'One entry a day: come back tomorrow';
     if (s.rules >= 18 && a.fest && dayCount(s, 'f:' + a.id)) return 'Once a day: come back tomorrow';
-    if (s.rules >= 31 && a.once && dayCount(s, 'o:' + a.id)) return 'Once a day: come back tomorrow';
+    if (s.rules >= (a.onceRules || 31) && a.once && dayCount(s, 'o:' + a.id)) return 'Once a day: come back tomorrow';
     if (s.rules >= 32 && a.special === 'dettyfest' && s.festNights && s.festNights[a.fy + '-' + a.night]) return 'You are in for tonight already';
     if (s.rules >= 31 && a.special === 'theshow' && s.seenShows && s.seenShows[week(s)] === a.show) return 'You saw this show already this week';
     if (s.rules >= 18 && a.special === 'casting' && s.castingWeek === week(s)) return 'One casting a week';
@@ -1029,7 +1031,7 @@
   function fail(msg) { return { ok: false, msg: msg }; }
 
   function doAction(s, id) {
-    s.alerts = []; var d0 = day(s);
+    s.alerts = []; var d0 = day(s), m0 = monthIndex(s);
     var a = availableActions(s, true).filter(function (x) { return x.id === id; })[0];
     if (!a) return fail('You cannot do that here.');
     if (a.disabled) return fail(a.disabled);
@@ -1050,11 +1052,11 @@
     }
     if (a.event) s.stats.events = (s.stats.events || 0) + 1;
     if (a.fest && s.rules >= 18) dayBump(s, 'f:' + a.id);
-    if (a.once && s.rules >= 31) dayBump(s, 'o:' + a.id);
+    if (a.once && s.rules >= (a.onceRules || 31)) { if (s.rules >= 34) dayBumpAt(s, 'o:' + a.id, d0); else dayBump(s, 'o:' + a.id); }
     // Sights count on rules 14 only, so older lives that visited them unlock nothing new.
     if (a.sight && s.rules >= 14) { var sg = s.stats.sights = s.stats.sights || {}; sg[a.id] = 1; if (Object.keys(sg).length >= 8) unlock(s, 'explorer'); }
     if (a.sport) { var sp = s.stats.sports = s.stats.sports || {}; sp[a.sport] = (sp[a.sport] || 0) + 1; if (Object.keys(sp).length >= 8) unlock(s, 'allrounder'); }
-    if (a.dec && s.rules >= 14 && isDecember(s)) { s.stats.decEvents = (s.stats.decEvents || 0) + 1; if (s.stats.decEvents >= 6) unlock(s, 'detty_legend'); }
+    if (a.dec && s.rules >= 14 && (s.rules >= 34 ? m0 === 11 : isDecember(s))) { s.stats.decEvents = (s.stats.decEvents || 0) + 1; if (s.stats.decEvents >= 6) unlock(s, 'detty_legend'); }
     addXp(s, a.xp);
     if (a.xp && a.xp.fitness && outfitTags(s).gym) addXp(s, { fitness: 1 }); // gym kit
 
@@ -2864,6 +2866,7 @@
   }
   // Rules 16: per-day counts kept on the life (never on a visit or a job object).
   function dayCount(s, key) { var M = s.dayMarks && s.dayMarks[key]; return M && M.d === day(s) ? M.n : 0; }
+  function dayBumpAt(s, key, d) { if (!s.dayMarks) s.dayMarks = {}; var M = s.dayMarks[key]; s.dayMarks[key] = { d: d, n: (M && M.d === d ? M.n : 0) + 1 }; }
   function dayBump(s, key) { if (!s.dayMarks) s.dayMarks = {}; s.dayMarks[key] = { d: day(s), n: dayCount(s, key) + 1 }; }
   function pad2(n) { return String(n).padStart(2, '0'); }
   function roomEnter(s, id) {
@@ -4837,7 +4840,9 @@
     var m = miniClaim(s, 'stage');
     if (!m) return fail('Start the performance first.');
     if (m.fail) return m.fail;
+    if (s.rules >= 34 && day(s) !== Math.floor(m.t / 1440)) { s.mini = null; return fail('That performance is over: collect on the night you play.'); }
     hits = Math.floor(hits); total = Math.floor(total); best = Math.floor(best);
+    if (s.rules >= 34 && !(total >= 40)) return fail('That performance does not add up.');
     if (!(total > 0 && total <= 200 && hits >= 0 && hits <= total && best >= 0 && best <= hits)) return fail('That performance does not add up.');
     s.alerts = []; s.mini = null;
     var fest = m.at === 'fest', acc = hits / total, pct = Math.round(acc * 100);
@@ -4847,7 +4852,9 @@
     var where = st.stageAt = st.stageAt || {}; where[fest ? 'fest' : 'theatre'] = 1;
     if (where.fest && where.theatre) unlock(s, 'on_stage');
     if (fest && acc >= 0.9) unlock(s, 'show_stopper');
-    var fans = 0; if (s.creator && acc >= 0.5) { fans = Math.round((fest ? 900 : 150) * acc * acc); s.creator.followers += fans; }
+    var fans = 0; if (s.creator && acc >= 0.5) { fans = Math.round((fest ? 900 : 150) * acc * acc);
+      if (s.rules >= 34) { var fy = Math.floor((START_MONTH + Math.floor(week(s) / 4)) / 12), sf = st.stageFans = st.stageFans || {}; fans = Math.max(0, Math.min(fans, 3000 - (sf[fy] || 0))); sf[fy] = (sf[fy] || 0) + fans; } // rules 34: 3,000 a year from the stage
+      s.creator.followers += fans; }
     applyFx(s, { fun: Math.round(acc * 15), stress: acc >= 0.6 ? -8 : 4 });
     var crowd = acc >= 0.9 ? 'A standing ovation!' : acc >= 0.7 ? 'The crowd sang along.' : acc >= 0.4 ? 'Polite applause.' : 'Somebody shouted "Next!".';
     return finish(s, ok('🎤 ' + pct + '% on the beat, best streak ' + best + '. ' + crowd + (tips ? ' ' + (fest ? 'Your fee: ' : 'Tips: ') + naira(tips) + '.' : '') + (fans ? ' +' + fans + ' followers.' : '') + (!fest && pct >= 70 && !(where.fest) ? ' Eko Detty Fest books acts who score 70% here.' : '')));

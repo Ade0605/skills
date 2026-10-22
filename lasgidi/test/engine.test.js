@@ -3214,8 +3214,8 @@ test('rules 32: Eko Detty Fest counts down from late November, runs 21 nights in
 });
 
 test('rules 33: perform at the open stage, then earn an Eko Detty Fest opening slot; tips capped, one show a day', () => {
-  const s = L.newGame({ seed: 3310, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 33);
+  const s = L.newGame({ seed: 3310, origin: 'nepo', goal: 'freestyle', rules: 33 }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 33); // the rules 33 behaviour, kept for lives started then
   const step = () => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); };
   s.loc = 'surulere';
   for (let i = 0; i < 4000 && !(L.dow(s) === 2 && L.hour(s) === 18); i++) { step(); s.loc = 'surulere'; }
@@ -3237,11 +3237,11 @@ test('rules 33: perform at the open stage, then earn an Eko Detty Fest opening s
   assert.ok(s.ach.on_stage && s.ach.show_stopper);
   assert.equal(L.replayLife(s.replay) && 1, 1);
   // Without a good score (and few followers) the fest slot stays closed.
-  const n = L.newGame({ seed: 3311, origin: 'nepo', goal: 'freestyle' }); while (n.pending.length) L.resolveChoice(n, 0); n.loc = 'island';
+  const n = L.newGame({ seed: 3311, origin: 'nepo', goal: 'freestyle', rules: 33 }); while (n.pending.length) L.resolveChoice(n, 0); n.loc = 'island';
   for (let i = 0; i < 40000 && !(L.dettyFest(n) && L.dettyFest(n).phase === 'on' && L.hour(n) === 16); i++) { while (n.pending.length) L.resolveChoice(n, 0); L.wait(n, 15); n.loc = 'island'; }
   assert.match(L.availableActions(n).find(x => x.id === 'stage_fest').disabled || '', /70%/);
   // A real life that performs replays to the same seal; a rules 32 life has no stage.
-  const v = L.newGame({ seed: 3312, origin: 'nepo', goal: 'freestyle' }); while (v.pending.length) L.resolveChoice(v, 0);
+  const v = L.newGame({ seed: 3312, origin: 'nepo', goal: 'freestyle', rules: 33 }); while (v.pending.length) L.resolveChoice(v, 0);
   // Eat and sleep at home for two days, ride to Surulere on Wednesday morning, and take the stage at 18:00.
   const pend = () => { while (v.pending.length) L.resolveChoice(v, 0); };
   const until = (fn) => { for (let i = 0; i < 400 && !fn(); i++) { pend(); L.wait(v, 15); } };
@@ -3256,4 +3256,37 @@ test('rules 33: perform at the open stage, then earn an Eko Detty Fest opening s
   const o = L.newGame({ seed: 3310, origin: 'nepo', goal: 'freestyle', rules: 32 }); while (o.pending.length) L.resolveChoice(o, 0); o.loc = 'surulere';
   for (let i = 0; i < 4000 && !(L.dow(o) === 2 && L.hour(o) === 18); i++) { while (o.pending.length) L.resolveChoice(o, 0); L.wait(o, 15); o.loc = 'surulere'; }
   assert.ok(!L.availableActions(o).some(x => x.minigame === 'stage'));
+});
+
+test('rules 34: review fixes: a full stage chart, collected the same night; capped stage followers; fest food once a day; NYE counts as December', () => {
+  const s = L.newGame({ seed: 3410, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 34);
+  const step = () => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); };
+  s.loc = 'surulere';
+  for (let i = 0; i < 4000 && !(L.dow(s) === 2 && L.hour(s) === 18); i++) { step(); s.loc = 'surulere'; }
+  s.needs.energy = 100; s.needs.hunger = 80;
+  assert.ok(L.startMinigame(s, 'stage').ok);
+  assert.equal(L.stageShow(s, 20, 20, 20).ok, false, 'a 20-note chart is not a real performance');
+  assert.ok(L.stageShow(s, 60, 64, 40).ok);
+  // A run left open past midnight cannot be collected.
+  for (let i = 0; i < 4000 && !(L.dow(s) === 2 && L.hour(s) === 18 && L.day(s) > 3); i++) { step(); s.loc = 'surulere'; }
+  s.needs.energy = 100; s.needs.hunger = 80;
+  assert.ok(L.startMinigame(s, 'stage').ok);
+  for (let i = 0; i < 30; i++) L.wait(s, 15);
+  assert.match(L.stageShow(s, 60, 64, 40).msg, /over/);
+  // Stage followers: capped at 3,000 a year.
+  s.creator = s.creator || { followers: 0 }; s.stats.stageFans = { 0: 2950 };
+  for (let i = 0; i < 4000 && !(L.dow(s) === 2 && L.hour(s) === 18); i++) { step(); s.loc = 'surulere'; }
+  s.needs.energy = 100; s.needs.hunger = 80; const f0 = s.creator.followers;
+  assert.ok(L.startMinigame(s, 'stage').ok); assert.ok(L.stageShow(s, 64, 64, 64).ok);
+  assert.ok(s.creator.followers - f0 <= 50);
+  // December: the fest food village once a day; the NYE ticket counts as a December event.
+  s.loc = 'island'; s.bank = 5e7;
+  for (let i = 0; i < 40000 && !(L.dettyFest(s) && L.dettyFest(s).phase === 'on' && L.hour(s) === 12); i++) { step(); s.loc = 'island'; }
+  s.needs.hunger = 10; s.needs.energy = 100; assert.ok(L.doAction(s, 'df_food').ok);
+  s.needs.hunger = 10; assert.match(L.availableActions(s).find(x => x.id === 'df_food').disabled || '', /Once a day/);
+  for (let i = 0; i < 40000 && !(L.dettyFest(s) && L.dettyFest(s).night === 21 && L.hour(s) === 22); i++) { step(); s.loc = 'island'; }
+  s.needs.energy = 100; s.needs.hunger = 80; const d0 = s.stats.decEvents || 0;
+  const r = L.doAction(s, 'df_regular'); assert.ok(r.ok, r.msg); assert.equal(L.monthIndex(s), 0, 'ends in January');
+  assert.equal(s.stats.decEvents, d0 + 1);
 });

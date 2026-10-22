@@ -2446,7 +2446,7 @@
   ], GOAL_REWARD = 5000;
   // Rules 32: Eko Detty Fest, 21 nights at Harbour Live in December, with a countdown and daily news.
   // The festival, its acts and its prices are made up for the game.
-  var DETTY_FEST = { name: 'Eko Detty Fest', place: 'harbour_live', district: 'island', start: 7, nights: 21, gates: 18, countdown: 7,
+  var DETTY_FEST = { name: 'Eko Detty Fest', place: 'harbour_live', district: 'island', start: 7, nights: 21, gates: 18,
     tickets: { df_regular: { label: 'Regular ticket', cost: 20000, fx: { fun: 70, social: 45, energy: -35, hygiene: -15 } }, df_vip: { label: 'VIP ticket (front of stage, open bar)', cost: 80000, fx: { fun: 85, social: 55, energy: -35, hygiene: -10 }, xp: { charisma: 1 } }, df_table: { label: 'A table for the night (bottles and a host)', cost: 400000, fx: { fun: 95, social: 70, energy: -35, hygiene: -10 }, xp: { charisma: 3 } } } };
   var FEST_NIGHTS = [
     { theme: 'Opening night: Afrobeats', head: 'Kwesi Bright', support: ['Lola Eko', 'DJ Tunde Wave'] },
@@ -2472,7 +2472,7 @@
     { theme: 'Countdown to the New Year', head: 'The Countdown Show', support: ['fireworks over the lagoon at midnight'] }
   ];
   var FEST_ACTS = [
-    { id: 'df_food', label: 'Eko Detty Fest food village: jollof, suya, asun and small chops', mins: 90, cost: 7000, fx: { hunger: 60, fun: 20, social: 12 }, event: true, dec: true, minRules: 32, when: { from: 12, to: 18 } },
+    { id: 'df_food', label: 'Eko Detty Fest food village: jollof, suya, asun and small chops', mins: 90, cost: 7000, fx: { hunger: 60, fun: 20, social: 12 }, event: true, dec: true, once: true, onceRules: 34, minRules: 32, when: { from: 12, to: 18 } },
     { id: 'df_volunteer', label: 'Volunteer at the Eko Detty Fest gates', mins: 240, earn: 2500, fx: { energy: -16, social: 6 }, xp: { charisma: 1 }, gig: true, once: true, minRules: 32, when: { from: 12, to: 18 } }
   ];
   // Rules 31: the National Theatre's programme. One show a week on a fixed rotation, the same for everyone that week.

@@ -1075,6 +1075,7 @@
       for (var i = 0; i < W.n; i++) { var b = PZ.walkBase[i]; if (i >= n) { m4.makeTranslation(0, -9, 0); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4); continue; } var x = ((b[0] + t * b[2] + 45) % 90 + 90) % 90 - 45, z = ((b[1] + t * b[3] + 40) % 80 + 80) % 80 - 40; if (Math.hypot(x, z + 4) < 10) x += 12; e.set(0, Math.atan2(-b[3], b[2]), 0); q.setFromEuler(e); m4.compose(v.set(x, Math.abs(Math.sin(t * 6 + b[4])) * 0.06, z), q, one); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4); }
       W.body.instanceMatrix.needsUpdate = W.head.instanceMatrix.needsUpdate = true;
       (PZ.board || []).forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0.12; });
+      if (PZ.boardTex && sc.th && !!sc.th.on !== PZ.boardOn) { PZ.boardOn = !!sc.th.on; PZ.boardTex.userData.last = null; redrawAt(PZ.boardTex, t, 1); } // the show started or ended: repaint, no rebuild
       PZ.flags.forEach(function (f, k) { var p = f.geometry.attributes.position, b0 = f.userData.base; for (var j = 0; j < p.count; j++) { var x0 = b0[j * 3]; p.array[j * 3 + 2] = Math.sin(t * 4 + x0 * 1.6 + k) * 0.3 * (x0 / 4); } p.needsUpdate = true; });
       (PZ.jets || []).forEach(function (jt, i) { var hj = night ? 6 + 14 * Math.abs(Math.sin(t * 1.3 + i * 0.5)) : 0.01; jt.scale.set(1, hj, 1); jt.position.y = hj / 2; jt.visible = night; }); // the fountain dances after dark
       PZ.spray.forEach(function (d, i) { var u = (t * 0.55 + i / PZ.spray.length) % 1, a = i * 2.39, rad = (i % 5 === 0 ? 0.4 : 4) * u; d.position.set(Math.cos(a) * rad, 1.2 + Math.sin(u * Math.PI) * (i % 5 === 0 ? 7 : 3.5), -4 + Math.sin(a) * rad); });
@@ -1139,15 +1140,15 @@
       var th = sc.th, g = new T.Group(); g.position.set(x, 0, z); var steel = mat('tbPost', { color: 0x3a3f46, metalness: 0.6, roughness: 0.4 });
       [-7, 7].forEach(function (px) { g.add(mesh(new T.CylinderGeometry(0.45, 0.55, 10, 10), steel, px, 5, 0)); });
       g.add(mesh(new T.BoxGeometry(18.6, 9.6, 0.6), mat('tbFrame', { color: 0x17181a, roughness: 0.5 }), 0, 14.6, 0));
-      var tex = canvasTex(1024, 512, function (c, w, h) {
+      var tex = screenTex(1024, 512, function (c, w, h) { th = sc.th || th;
         c.fillStyle = '#120c0a'; c.fillRect(0, 0, w, h); c.fillStyle = th.color || '#8e2b2b'; c.fillRect(0, 0, w, 74); c.fillRect(0, h - 120, w, 120);
         c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.font = '800 40px system-ui, sans-serif'; c.fillText('NATIONAL THEATRE · IGANMU', w / 2, 38, w - 40);
         c.fillStyle = '#ffd23f'; c.font = '900 44px system-ui, sans-serif'; c.fillText(th.on ? '★ ON NOW ★' : 'NOW SHOWING', w / 2, 118);
         c.fillStyle = '#fff'; c.font = '900 86px system-ui, sans-serif'; c.fillText(String(th.title).toUpperCase(), w / 2, 210, w - 50);
-        c.fillStyle = '#e9e5dc'; c.font = '700 38px system-ui, sans-serif'; c.fillText(String(th.kind).toUpperCase() + ' · ' + th.by, w / 2, 290, w - 50); c.font = '600 34px system-ui, sans-serif'; c.fillText(th.when, w / 2, 340, w - 50);
+        c.fillStyle = '#e9e5dc'; c.font = '700 38px system-ui, sans-serif'; c.fillText(String(th.kind || '').toUpperCase() + (th.by ? ' · ' + th.by : ''), w / 2, 290, w - 50); c.font = '600 34px system-ui, sans-serif'; c.fillText(th.when || '', w / 2, 340, w - 50);
         c.fillStyle = '#fff'; c.font = '700 32px system-ui, sans-serif'; c.fillText('NEXT WEEK: ' + th.next, w / 2, h - 84, w - 50); c.fillStyle = 'rgba(255,255,255,0.75)'; c.fillText(th.last ? 'LAST WEEK: ' + th.last : 'THE NEW SEASON STARTS NOW', w / 2, h - 38, w - 50);
       });
-      PZ.board = [];
+      redrawAt(tex, 0, 1); PZ.boardTex = tex; PZ.boardOn = !!th.on; PZ.board = [];
       [0, Math.PI].forEach(function (ry) { var m = new T.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.12, roughness: 0.6 }); var pnl = new T.Mesh(new T.PlaneGeometry(18, 9), m); pnl.position.set(0, 14.6, ry ? -0.32 : 0.32); pnl.rotation.y = ry; pnl.userData.dyn = true; g.add(pnl); PZ.board.push(m); });
       plzG.add(g); return g;
     }

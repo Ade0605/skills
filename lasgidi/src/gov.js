@@ -155,7 +155,8 @@
       var v = weekVal(r.raw, wk), c = v && typeof v[office] === 'string' && typeof r.id === 'string' && own(cands, v[office]) ? cands[v[office]] : null;
       if (!c || !inPhase(v[office + 'At'], wk, 'election')) return;
       voters[r.id] = c.id;
-      var u = typeof v.unit === 'string' && v.unit.length <= 40 && (!units || own(units, v.unit)) ? v.unit : 'other';
+      var vu = v[office + 'Unit'] || v.unit; // the President's ballot keeps its own unit (presUnit), so it never moves the others
+      var u = typeof vu === 'string' && vu.length <= 40 && (!units || own(units, vu)) ? vu : 'other';
       c.votes++; c.units[u] = (c.units[u] || 0) + 1; unitTotals[u] = (unitTotals[u] || 0) + 1;
     });
     var unitIds = Object.keys(unitTotals), need = Math.ceil(unitIds.length * SPREAD_UNITS), total = unitIds.reduce(function (a, u) { return a + unitTotals[u]; }, 0);
