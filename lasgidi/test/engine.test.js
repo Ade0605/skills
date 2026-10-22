@@ -3133,7 +3133,7 @@ test('rules 30: no buying or selling a business while a decision about one is op
 
 test('rules 31: the National Theatre runs one show a week, on its nights; seen shows are ticked; stage crew is once a day', () => {
   const s = L.newGame({ seed: 3110, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 31);
+  assert.ok(s.rules >= 31);
   const b0 = L.theatreBill(s); assert.equal(b0.now.id, D.THEATRE_SHOWS[0].id); assert.equal(b0.past.length, 0); assert.equal(b0.next.length, 2);
   // The same week gives the same show to every life.
   const o = L.newGame({ seed: 99, origin: 'mid', goal: 'japa' }); assert.equal(L.theatreBill(o).now.id, b0.now.id);
@@ -3168,4 +3168,47 @@ test('rules 31: the National Theatre runs one show a week, on its nights; seen s
   // A rules 30 life keeps the old play and never sees the new acts.
   const old = L.newGame({ seed: 3110, origin: 'nepo', goal: 'freestyle', rules: 30 }); while (old.pending.length) L.resolveChoice(old, 0); old.loc = 'surulere';
   const oi = L.availableActions(old).map(a => a.id); assert.ok(oi.includes('suru_theatre')); assert.ok(!oi.includes('th_show') && !oi.includes('th_crew'));
+});
+
+test('rules 32: Eko Detty Fest counts down from late November, runs 21 nights in December with a news line a day', () => {
+  const s = L.newGame({ seed: 3210, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 32); assert.equal(D.FEST_NIGHTS.length, D.DETTY_FEST.nights);
+  const step = () => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); };
+  // Nothing before the countdown week.
+  assert.equal(L.dettyFest(s), null);
+  let soon = null; for (let i = 0; i < 20000 && !(soon = L.dettyFest(s)); i++) step();
+  assert.equal(soon.phase, 'soon'); assert.equal(L.monthIndex(s), 10); assert.ok(soon.daysTo > 7 && soon.daysTo <= 14);
+  // Tickets only on fest nights, at the island, from the gates.
+  s.loc = 'island'; s.bank = 5e6;
+  assert.ok(!L.availableActions(s).some(a => a.id === 'df_regular'));
+  for (let i = 0; i < 20000 && !(L.dettyFest(s).phase === 'on' && L.hour(s) === 17); i++) { step(); s.loc = 'island'; }
+  const f = L.dettyFest(s); assert.equal(f.night, 1); assert.equal(f.tonight.head, D.FEST_NIGHTS[0].head);
+  assert.ok(s.log.some(l => /night 1 of 21 tonight/.test(l.text)), 'the day\'s news line');
+  assert.match(L.availableActions(s).find(a => a.id === 'df_regular').disabled || '', /Only/);
+  for (let i = 0; i < 8 && L.hour(s) < 18; i++) { step(); s.loc = 'island'; }
+  s.needs.energy = 100; s.needs.hunger = 80;
+  const r = L.doAction(s, 'df_regular'); assert.ok(r.ok, r.msg);
+  assert.ok(L.dettyFest(s).programme[0].seen);
+  assert.match(L.availableActions(s).find(a => a.id === 'df_vip').disabled || '', /already|Only/);
+  // Volunteer at the gates: small pay, once a day.
+  for (let i = 0; i < 20000 && L.hour(s) !== 12; i++) { step(); s.loc = 'island'; }
+  s.needs.energy = 100; s.needs.hunger = 80;
+  const c0 = s.cash + s.bank; const vr = L.doAction(s, 'df_volunteer'); assert.ok(vr.ok, vr.msg); assert.ok(s.cash + s.bank - c0 <= 3000 * 1.2 * 1.2);
+  assert.match(L.availableActions(s).find(a => a.id === 'df_volunteer').disabled || '', /Once a day/);
+  // Night 21 is the last day of the year; then it is over.
+  for (let i = 0; i < 40000 && L.dettyFest(s) && L.dettyFest(s).night !== 21; i++) { step(); s.loc = 'island'; }
+  assert.equal(L.dettyFest(s).night, 21); assert.equal(L.monthIndex(s), 11);
+  for (let i = 0; i < 200 && L.dettyFest(s); i++) step();
+  assert.equal(L.monthIndex(s), 0);
+  // A rules 31 life never sees it.
+  const o = L.newGame({ seed: 3210, origin: 'nepo', goal: 'freestyle', rules: 31 }); while (o.pending.length) L.resolveChoice(o, 0);
+  for (let d = 0; d < 70; d++) { L.wait(o, 1440); while (o.pending.length) L.resolveChoice(o, 0); }
+  o.loc = 'island'; assert.ok(!L.availableActions(o).some(a => /^df_/.test(a.id))); assert.ok(!o.log.some(l => /Detty Fest/.test(l.text)));
+  // A real life that rides to the island and goes on night 1 replays to the same seal.
+  const v = L.newGame({ seed: 3211, origin: 'nepo', goal: 'freestyle' });
+  for (let i = 0; i < 40000; i++) { while (v.pending.length) L.resolveChoice(v, 0); const fv = L.dettyFest(v);
+    if (fv && fv.phase === 'on' && v.loc !== 'island') { const o2 = L.travelOptions(v, 'island').filter(x => !x.disabled).sort((x, y) => x.cost - y.cost)[0]; if (o2) L.travel(v, 'island', o2.mode); }
+    const t = L.availableActions(v).find(a => a.id === 'df_regular'); if (t && !t.disabled) { assert.ok(L.doAction(v, 'df_regular').ok); break; } L.wait(v, 30); }
+  assert.ok(L.dettyFest(v).programme.some(p => p.seen));
+  assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
 });

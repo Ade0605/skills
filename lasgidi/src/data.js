@@ -2444,6 +2444,37 @@
     { k: 'newplace', n: 1, icon: '📍', label: 'Do an activity at one of the new places' },
     { k: 'shop', n: 1, icon: '🏪', label: 'Check in on your shops' }
   ], GOAL_REWARD = 5000;
+  // Rules 32: Eko Detty Fest, 21 nights at Harbour Live in December, with a countdown and daily news.
+  // The festival, its acts and its prices are made up for the game.
+  var DETTY_FEST = { name: 'Eko Detty Fest', place: 'harbour_live', district: 'island', start: 7, nights: 21, gates: 18, countdown: 7,
+    tickets: { df_regular: { label: 'Regular ticket', cost: 20000, fx: { fun: 70, social: 45, energy: -35, hygiene: -15 } }, df_vip: { label: 'VIP ticket (front of stage, open bar)', cost: 80000, fx: { fun: 85, social: 55, energy: -35, hygiene: -10 }, xp: { charisma: 1 } }, df_table: { label: 'A table for the night (bottles and a host)', cost: 400000, fx: { fun: 95, social: 70, energy: -35, hygiene: -10 }, xp: { charisma: 3 } } } };
+  var FEST_NIGHTS = [
+    { theme: 'Opening night: Afrobeats', head: 'Kwesi Bright', support: ['Lola Eko', 'DJ Tunde Wave'] },
+    { theme: 'Amapiano night', head: 'Log Drum Republic', support: ['Zara Ife', 'DJ Kemi'] },
+    { theme: 'Street pop', head: 'Larry Street', support: ['Mushin Mafia', 'Seyi Vibes'] },
+    { theme: 'Highlife and fuji', head: 'Alhaji Kola and the Fuji Band', support: ['Broad Street Highlife Band'] },
+    { theme: 'Alté night', head: 'Odera Sky', support: ['Yaba Moon', 'Fola Soft'] },
+    { theme: 'Gospel Sunday', head: 'The Victory Mass Choir', support: ['Pastor Nifemi', 'Praise Team Eko'] },
+    { theme: 'Comedy and music', head: 'Mr Wahala', support: ['Aunty Ronke', 'The Danfo Crew'] },
+    { theme: 'Ghana–Naija link-up', head: 'Kofi Highlife', support: ['Ama Gold', 'Lagoon Twins'] },
+    { theme: 'R&B and slow jams', head: 'Dayo Smooth', support: ['Sade Ray', 'Adekunle Soft'] },
+    { theme: 'Old school night', head: 'The Lagos Legends Reunion', support: ['DJ Baba Oldies'] },
+    { theme: 'Amapiano and afro-house', head: 'Third Mainland Groove', support: ['DJ Tolu', 'Midnight Log'] },
+    { theme: 'Rap night', head: 'Bars of Lagos', support: ['MC Ikorodu', 'Lady Flows'] },
+    { theme: 'Afrobeats headliner', head: 'Eko Royale', support: ['Yemi Heat', 'DJ Wheelz'] },
+    { theme: 'Gospel Sunday', head: 'The Island Praise Collective', support: ['Choir of 100 Voices'] },
+    { theme: 'Comedy and music', head: 'Uncle Gbenga Jokes', support: ['Laugh Wahala crew'] },
+    { theme: 'Women in music', head: 'Queen Adaeze', support: ['Bisola Joy', 'Nkem Gold'] },
+    { theme: 'Street pop', head: 'Agege Pete', support: ['Okada Boys', 'DJ Agege'] },
+    { theme: 'Afrobeats night', head: 'Tobi Lagos', support: ['Rae Rae', 'Kele Cee'] },
+    { theme: 'Fuji and juju', head: 'King Juju Royale', support: ['Saheed Fuji Fire'] },
+    { theme: 'The big one: all-star night', head: 'All-Star Eko Lineup', support: ['every headliner, one stage'] },
+    { theme: 'Countdown to the New Year', head: 'The Countdown Show', support: ['fireworks over the lagoon at midnight'] }
+  ];
+  var FEST_ACTS = [
+    { id: 'df_food', label: 'Eko Detty Fest food village: jollof, suya, asun and small chops', mins: 90, cost: 7000, fx: { hunger: 60, fun: 20, social: 12 }, event: true, dec: true, minRules: 32, when: { from: 12, to: 18 } },
+    { id: 'df_volunteer', label: 'Volunteer at the Eko Detty Fest gates', mins: 240, earn: 2500, fx: { energy: -16, social: 6 }, xp: { charisma: 1 }, gig: true, once: true, minRules: 32, when: { from: 12, to: 18 } }
+  ];
   // Rules 31: the National Theatre's programme. One show a week on a fixed rotation, the same for everyone that week.
   // All titles and companies are made up for the game.
   var THEATRE_SHOWS = [
@@ -2677,7 +2708,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, THEATRE_SHOWS: THEATRE_SHOWS, TH_KIND: TH_KIND, THEATRE_CREW: THEATRE_CREW, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, THEATRE_SHOWS: THEATRE_SHOWS, TH_KIND: TH_KIND, THEATRE_CREW: THEATRE_CREW, DETTY_FEST: DETTY_FEST, FEST_NIGHTS: FEST_NIGHTS, FEST_ACTS: FEST_ACTS, insideKind: insideKind
   };
 
   // Keyed tables have no prototype, so an id like 'constructor' or '__proto__' from a save, a replay or another player's

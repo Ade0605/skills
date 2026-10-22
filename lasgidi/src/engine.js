@@ -69,7 +69,9 @@
   // staff skimming, a rival, an inspection); and a chief's duties, which cost your title its status if refused.
   // 31 gives the National Theatre a weekly programme (plays, concerts, dance, comedy, musicals) shown on a billboard,
   // tickets for this week's show on its nights, and a once-a-day stage crew gig.
-  var RULES = 31;
+  // 32 adds Eko Detty Fest: 21 nights at Harbour Live in December with a nightly lineup, tickets, a food village,
+  // a volunteer gig, a countdown from late November and a news line every day of the fest.
+  var RULES = 32;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -134,6 +136,7 @@
     allrounder:  'All-rounder: played 8 different sports in Lagos',
     explorer:    'Lagos explorer: visited 8 tourist sights',
     theatregoer: 'Theatregoer: saw 5 different shows at the National Theatre',
+    fest_regular: 'Fest regular: 5 nights at Eko Detty Fest',
     banana:      'Banana Island: bought a waterfront mansion',
     ghana_tour:  'Akwaaba: stamped in Accra, Kumasi and Cape Coast',
     globetrotter: 'Globetrotter: stamped in London and Dubai',
@@ -227,7 +230,7 @@
 
   // Spending and income categories for the weekly report.
   var FOOD_LABELS = {}, GIG_LABELS = {};
-  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; }), Object.keys(D.BRANCH_ACTS).map(function (k) { return D.BRANCH_ACTS[k]; }), Object.keys(D.CIVIC_ACTS).map(function (k) { return D.CIVIC_ACTS[k]; }), Object.keys(D.EVENT_ACTS).map(function (k) { return D.EVENT_ACTS[k]; }), [[D.THEATRE_CREW]]).forEach(function (list) {
+  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; }), Object.keys(D.BRANCH_ACTS).map(function (k) { return D.BRANCH_ACTS[k]; }), Object.keys(D.CIVIC_ACTS).map(function (k) { return D.CIVIC_ACTS[k]; }), Object.keys(D.EVENT_ACTS).map(function (k) { return D.EVENT_ACTS[k]; }), [[D.THEATRE_CREW], D.FEST_ACTS]).forEach(function (list) {
     list.forEach(function (a) {
       if ((a.fx && a.fx.hunger > 0) || a.special === 'pantry7') FOOD_LABELS[a.label] = true;
       if (a.gig) GIG_LABELS[a.label] = true;
@@ -533,10 +536,18 @@
       log(s, '🛂 Your ' + VV.name + ' ran out, so you flew home to Lagos. Plan the next trip better.', 'bad');
     }
     if (dow(s) === 0) onNewWeek(s);
+    if (s.rules >= 32) festNews(s);
     if (s.rules >= 6) dailyLove(s);
     dailyEvent(s);
   }
 
+  // Rules 32: one news line a day about Eko Detty Fest, from the countdown to the day after the last night. No dice.
+  function festNews(s) {
+    var f = dettyFest(s);
+    if (!f) { if (monthIndex(s) === 0 && week(s) % 4 === 0 && dow(s) === 0 && week(s) > 0) log(s, '🎆 ' + D.DETTY_FEST.name + ' is over for this year. See you next December.', 'story'); return; }
+    if (f.phase === 'soon') log(s, '🎆 ' + f.name + ' starts in ' + f.daysTo + (f.daysTo === 1 ? ' day' : ' days') + ' at Harbour Live, Lagos Island. Night 1: ' + f.tomorrow.head + '.', 'story');
+    else if (f.phase === 'on') log(s, '🎆 ' + f.name + ', night ' + f.night + ' of ' + f.nights + ' tonight: ' + f.tonight.head + (f.tonight.support.length ? ' with ' + f.tonight.support.join(', ') : '') + '. ' + f.tonight.theme + '. Gates ' + f.gates + ':00.', 'story');
+  }
   function onNewWeek(s) {
     var w = week(s);
     var prevMonth = (START_MONTH + Math.floor((w - 1) / 4)) % 12;
@@ -831,6 +842,27 @@
     var sh = theatreShow(s, 0), K = D.TH_KIND[sh.kind];
     return [{ id: 'th_show', label: 'Watch ' + sh.title + ' (' + K.name.toLowerCase() + ')', mins: K.mins, cost: K.cost, fx: K.fx, xp: K.xp, when: sh.when, special: 'theshow', event: true, th: true, show: sh.id, wk: sh.week, minRules: 31 }, D.THEATRE_CREW];
   }
+  // Rules 32: Eko Detty Fest. December is weeks 8–11 of each game year; night n (1–21) is December day F.start + n - 1.
+  function decDay(s) { return monthIndex(s) === 11 ? (week(s) % 4) * 7 + dow(s) : null; }
+  function festYear(s) { return Math.floor((START_MONTH + Math.floor(week(s) / 4)) / 12); }
+  function dettyFest(s) {
+    var F = D.DETTY_FEST, m = monthIndex(s), dd = decDay(s), seen = s.festNights || {}, y = festYear(s), phase = null, daysTo = null, night = null;
+    if (m === 11 && dd >= F.start && dd < F.start + F.nights) { phase = 'on'; night = dd - F.start + 1; }
+    else if (m === 11 && dd < F.start) { phase = 'soon'; daysTo = F.start - dd; }
+    else if (m === 10 && week(s) % 4 === 3) { phase = 'soon'; daysTo = F.start + 7 - dow(s); }
+    else if (m === 11) phase = 'over';
+    if (!phase) return null;
+    var row = function (n) { var r = D.FEST_NIGHTS[n - 1]; return r ? Object.assign({ n: n, seen: !!seen[y + '-' + n], dow: (F.start + n - 1) % 7 }, r) : null; };
+    return { name: F.name, place: F.place, phase: phase, daysTo: daysTo, night: night, nights: F.nights, gates: F.gates, on: phase === 'on' && hour(s) >= F.gates,
+      tonight: night ? row(night) : null, tomorrow: phase === 'on' ? row(night + 1) : phase === 'soon' ? row(1) : null,
+      from: price(s, F.tickets.df_regular.cost), count: Object.keys(seen).length, programme: D.FEST_NIGHTS.map(function (r, i) { return row(i + 1); }) };
+  }
+  function festActions(s) {
+    var F = D.DETTY_FEST, f = dettyFest(s); if (s.loc !== F.district || !f || f.phase !== 'on') return [];
+    var t = f.tonight, list = Object.keys(F.tickets).map(function (id) { var T = F.tickets[id];
+      return { id: id, label: F.name + ' night ' + t.n + ': ' + t.head + ' · ' + T.label, mins: 300, cost: T.cost, fx: T.fx, xp: T.xp, special: 'dettyfest', event: true, dec: true, night: t.n, fy: festYear(s), minRules: 32, when: { from: F.gates, to: 24 } }; });
+    return list.concat(D.FEST_ACTS);
+  }
   // retired actions are hidden from players but still run, so lives that used them replay.
   function availableActions(s, withRetired) {
     var list = [];
@@ -847,6 +879,7 @@
     if (s.rules >= 19) list = list.concat(civicActions(s));
     if (s.rules >= 21) list = list.concat(eventActions(s));
     if (s.rules >= 31) list = list.concat(theatreActions(s));
+    if (s.rules >= 32) list = list.concat(festActions(s));
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
@@ -944,6 +977,7 @@
     if (s.rules >= 16 && a.compete && dayCount(s, 'c:' + a.id)) return 'One entry a day: come back tomorrow';
     if (s.rules >= 18 && a.fest && dayCount(s, 'f:' + a.id)) return 'Once a day: come back tomorrow';
     if (s.rules >= 31 && a.once && dayCount(s, 'o:' + a.id)) return 'Once a day: come back tomorrow';
+    if (s.rules >= 32 && a.special === 'dettyfest' && s.festNights && s.festNights[a.fy + '-' + a.night]) return 'You are in for tonight already';
     if (s.rules >= 31 && a.special === 'theshow' && s.seenShows && s.seenShows[week(s)] === a.show) return 'You saw this show already this week';
     if (s.rules >= 18 && a.special === 'casting' && s.castingWeek === week(s)) return 'One casting a week';
     if (a.special === 'casecheck' && !openCase(s)) return 'You have no open case';
@@ -1022,6 +1056,12 @@
   }
 
   var specials = {
+    dettyfest: function (s, a) {
+      var seen = s.festNights = s.festNights || {}; seen[a.fy + '-' + a.night] = 1; // the night it started, even past midnight
+      if (Object.keys(seen).length >= 5) unlock(s, 'fest_regular');
+      var t = D.FEST_NIGHTS[a.night - 1], extra = specials.club(s, a);
+      return (a.night === D.DETTY_FEST.nights ? 'Ten, nine, eight… fireworks over the lagoon and the whole of Harbour Live screaming Happy New Year! ' : t.head + ' shut Harbour Live down on ' + t.theme.toLowerCase() + '. ') + (extra || '');
+    },
     theshow: function (s, a) {
       var sh = theatreShow(s, a.wk - week(s)), seen = s.seenShows = s.seenShows || {}; seen[a.wk] = a.show; // the week it started in, even past midnight
       var kinds = {}; Object.keys(seen).forEach(function (w) { kinds[seen[w]] = 1; }); if (Object.keys(kinds).length >= 5) unlock(s, 'theatregoer');
@@ -5182,7 +5222,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, theatreBill: theatreBill, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, theatreBill: theatreBill, dettyFest: dettyFest, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,
