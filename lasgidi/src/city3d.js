@@ -33,7 +33,7 @@
     function labelTex(text, bg, fg, size) { return canvasTex(512, 96, function (g, w, h) { g.clearRect(0, 0, w, h); g.font = '800 ' + (size || 40) + 'px system-ui, sans-serif'; var tw = Math.min(w - 8, g.measureText(text).width + 36); g.fillStyle = bg; g.beginPath(); if (g.roundRect) g.roundRect((w - tw) / 2, 14, tw, 64, 32); else g.rect((w - tw) / 2, 14, tw, 64); g.fill(); g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, 47); }); }
     function sprite(tex, w) { var s = new T.Sprite(new T.SpriteMaterial({ map: tex, depthTest: false, transparent: true, fog: false })); s.renderOrder = 10; s.scale.set(w, w * 96 / 512, 1); s.userData.w = w; return s; }
     function hexNum(h) { return parseInt(String(h || '#888888').replace('#', ''), 16); }
-    var DTINT = {}; function districtTint(k) { if (DTINT[k]) return DTINT[k]; var h = 0; for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0; return (DTINT[k] = 'hsl(' + (70 + h % 50) + ',' + (22 + h % 14) + '%,' + (58 + (h >> 4) % 10) + '%)'); }
+    var DTINT = {}; function districtTint(k) { if (DTINT[k]) return DTINT[k]; var h = 0; for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0; return (DTINT[k] = /^dxb_/.test(k) ? 'hsl(' + (32 + h % 8) + ',' + (40 + h % 12) + '%,' + (68 + (h >> 4) % 8) + '%)' : 'hsl(' + (70 + h % 50) + ',' + (22 + h % 14) + '%,' + (58 + (h >> 4) % 10) + '%)'); } // Dubai: sand, not grass
 
     /* ---------- build a city from the 2D map's world ---------- */
     var DYN = { cars: null, carPath: [], boats: [], boatPath: [], pins: [], areas: [], labels: [], towersM: null, lamps: null, me: null, plane: null, runway: null, flare: null, cables: [] };
@@ -45,7 +45,7 @@
       // Water, then the land with a district-tinted ground texture painted from the 2D map's tiles.
       var water = new T.Mesh(new T.PlaneGeometry(bw * K * 3, bh * K * 3).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x2f86b0, roughness: 0.42, metalness: 0.05, clearcoat: 0.4, clearcoatRoughness: 0.5 })); water.position.set((x0 + bw / 2) * K, -0.4, (y0 + bh / 2) * K); world.add(water); DYN.water = water;
       var PXK = 12, groundT = canvasTex(Math.round(bw * PXK), Math.round(bh * PXK), function (g, w, h) {
-        g.fillStyle = '#a8b57e'; g.fillRect(0, 0, w, h);
+        g.fillStyle = name === 'dxb' ? '#e2c290' : '#a8b57e'; g.fillRect(0, 0, w, h);
         (Wd.tiles || []).forEach(function (t) { if (!t.k) return; g.fillStyle = districtTint(t.k); g.fillRect((t.x - x0) * PXK, (y1 - t.y - 1) * PXK, PXK + 1, PXK + 1); });
         var rr = 7; for (var i = 0; i < w * h / 40; i++) { rr = (rr * 16807) % 2147483647; var px = rr % w; rr = (rr * 16807) % 2147483647; var py = rr % h; g.fillStyle = (rr & 1) ? 'rgba(0,0,0,.05)' : 'rgba(255,255,255,.05)'; g.fillRect(px, py, 2, 2); }
       });
@@ -114,10 +114,18 @@
     }
     // Billboards turn to face the default view, so their ads read from the start.
     function orbitFacing() { return 0; }
-    function liveKey() { return JSON.stringify([city, sc.board, sc.sel, sc.home, (sc.gems || []).map(function (g) { return g.place + g.n; }), (sc.biz || []).map(function (b) { return b.district + b.icon; }), (sc.players || []).map(function (p) { return p.by + p.d + (p.unread || 0); }), sc.layers && sc.layers.boards, Object.keys(sc.boards || {}).map(function (k) { return (sc.boards[k] || []).length; })]); }
+    function liveKey() { return JSON.stringify([city, sc.rules, sc.board, sc.sel, sc.home, (sc.gems || []).map(function (g) { return g.place + g.n; }), (sc.biz || []).map(function (b) { return b.district + b.icon; }), (sc.players || []).map(function (p) { return p.by + p.d + (p.unread || 0); }), sc.layers && sc.layers.boards, Object.keys(sc.boards || {}).map(function (k) { return (sc.boards[k] || []).length; })]); }
     function buildLive() {
       wipe(LIVE); LV = { boards: [], gems: [], players: [], ring: null, key: liveKey(), imgs: LV.imgs || {} };
       var post = mat('bpost', { color: 0x4b4f55, metalness: 0.5 }), frameMat = mat('bframe2', { color: 0x202226 });
+      // Rail lines on raised track: Lagos's Blue and Red lines, and (rules 26) the London Tube. One mesh per line, stations instanced.
+      var RL = D.RAIL_LINES || {}, stops = [];
+      Object.keys(RL).forEach(function (k) { var Ln = RL[k]; if ((D.DISTRICTS[Ln.stops[0]] || {}).city !== city && !(city === 'lagos' && !(D.DISTRICTS[Ln.stops[0]] || {}).city)) return; if (Ln.rules && !((sc.rules || 0) >= Ln.rules)) return;
+        var path = new T.CurvePath(), off = (Object.keys(RL).indexOf(k) % 3 - 1) * 0.35, pts = Ln.stops.map(function (d) { var a = D.DISTRICTS[d]; stops.push([a.x, a.y]); return new T.Vector3((a.x + 0.35) * K + off, 1.4, (a.y + 0.35) * K + off); });
+        for (var i = 1; i < pts.length; i++) path.add(new T.LineCurve3(pts[i - 1], pts[i]));
+        LIVE.add(new T.Mesh(new T.TubeGeometry(path, pts.length * 8, 0.32, 5, false), new T.MeshStandardMaterial({ color: new T.Color(Ln.color), roughness: 0.5 })));
+      });
+      if (stops.length) { var stn = new T.InstancedMesh(new T.CylinderGeometry(0.9, 0.9, 1.8, 10), mat('railStop', { color: 0xf4f3ec, roughness: 0.6 }), stops.length), sm4 = new T.Matrix4(); stops.forEach(function (p0, i) { sm4.makeTranslation((p0[0] + 0.35) * K, 0.9, (p0[1] + 0.35) * K); stn.setMatrixAt(i, sm4); }); LIVE.add(stn); }
       if (city === 'lagos' && !(sc.layers && sc.layers.boards === false)) D.BILLBOARDS.forEach(function (b) {
         var ads = (sc.boards && sc.boards[b.id]) || []; if (!ads.length) return; var g = new T.Group(); g.position.set(b.x * K, 0, b.y * K);
         [-1.4, 1.4].forEach(function (x) { g.add(mesh(new T.CylinderGeometry(0.12, 0.14, 4.4, 6), post, x, 2.2, 0)); }); g.add(mesh(new T.BoxGeometry(5.4, 2.9, 0.25), frameMat, 0, 5.4, -0.1));

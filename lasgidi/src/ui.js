@@ -1085,10 +1085,10 @@
   var LAYER_KEY = 'lasgidi.layers.v1';
   function mapLayers() { if (!ui.layers) { try { ui.layers = JSON.parse(localStorage.getItem(LAYER_KEY) || 'null'); } catch (e) {} ui.layers = ui.layers || { names: true, boards: true, players: true }; } return ui.layers; }
   // The map bar: a city picker (where you are, or ✈ Fly), Names, More (the other layers), and the letter-hunt badge.
-  var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊', accra: '🇬🇭', kumasi: '👑', ldn: '🇬🇧' };
+  var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊', accra: '🇬🇭', kumasi: '👑', ldn: '🇬🇧', dxb: '🇦🇪' };
   // Cities this life can go to (Accra opens with rules 22).
   // In Accra prices read in cedi first, at the game's fixed rate (₵1 = ₦130). The ledger stays in naira.
-  var CEDI = 130, POUND = 2000; function money(n) { var c = S && L.cityOf(S); return c === 'accra' || c === 'kumasi' ? '₵' + Math.max(1, Math.round(n / CEDI)).toLocaleString('en') + ' (' + N(n) + ')' : c === 'ldn' ? '£' + Math.max(1, Math.round(n / POUND)).toLocaleString('en') + ' (' + N(n) + ')' : N(n); }
+  var CEDI = 130, POUND = 2000, DIRHAM = 420; function money(n) { var c = S && L.cityOf(S); return c === 'dxb' ? 'AED ' + Math.max(1, Math.round(n / DIRHAM)).toLocaleString('en') + ' (' + N(n) + ')' : c === 'accra' || c === 'kumasi' ? '₵' + Math.max(1, Math.round(n / CEDI)).toLocaleString('en') + ' (' + N(n) + ')' : c === 'ldn' ? '£' + Math.max(1, Math.round(n / POUND)).toLocaleString('en') + ' (' + N(n) + ')' : N(n); }
   function openCities() { return Object.keys(D.CITIES).filter(function (c) { return !S || !L.cityOpen || L.cityOpen(S, c); }); }
   function layerChips() {
     var l = mapLayers(), here = L.cityOf(S), h = huntNow(), hs = huntState(), got = hs.found.length, tf = L.traffic ? L.traffic(S) : null;
@@ -1112,7 +1112,7 @@
     else if (S.econ.fuelDays) banner = 'Fuel scarcity: fares are up 60%';
     else if (S.econ.flood) banner = 'Flooding on the Island today';
     else if (L.isDecember(S)) banner = 'Detty December: prices up, parties everywhere';
-    return {
+    return { rules: S.rules,
       city: L.cityOf(S), loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
       flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(), players: mapPlayers(), layers: mapLayers(), showBoards: ui.placeCat === 'boards', weather: L.weatherNow(S), sea: { claims: seaClaims(), mine: online.me || 'me', sel: ui.seaOpen ? seaSel() : null }, trip: ui.trip && Date.now() - ui.trip.at < 2600 ? ui.trip : null,
@@ -2083,6 +2083,7 @@
     refinery: [['Plant hand', 'Shift change is at two. Hard hat on before the gate.', 1], ['Process engineer', 'Column three is running hot today.', 1], ['Security', 'Visitors sign the book first, abeg.', 0], ['Tanker driver', 'Loading since six. Na so the work be.', 1], ['Visitor', 'The flare stack is bigger than I thought.', 0]],
     airport: [['Traveller', 'Boarding in forty minutes. Where is gate three?', 0], ['Ground crew', 'Chocks in, fuel truck next.', 1], ['Pilot', 'Clear skies over Abuja this evening.', 0], ['Cab driver', 'Island or mainland? Traffic is bad at Ikeja.', 0]],
     transport: [['Conductor', 'Last two seats! Enter with your change!', 0], ['Driver', 'We move when the bus full.', 0], ['Passenger', 'This queue no dey move at all.', 0], ['Hawker', 'Gala, Lacasera, pure water!', 0]],
+    dubai: [['Taxi driver', 'First time in Dubai? Everything is big here.', 0], ['Gold trader', 'My friend, special price for you, by the gram.', 0], ['Naija trader', 'Ah, my brother! You came from Lagos?', 0], ['Guide', 'The camels are friendly. Mostly.', 0], ['Shopper', 'This mall has an aquarium inside it.', 0], ['Abra man', 'One dirham, sit down, we go.', 0]],
     london: [['Busker', 'Any requests? I know some Wizkid.', 0], ['Tourist', 'Excuse me, which way to the Tube?', 0], ['Peckham aunty', 'You are welcome! Have you eaten?', 0], ['Guard', 'Mind the gap, please.', 0], ['Shopper', 'Everything is on sale but nothing is cheap.', 0]],
     kumasi: [['Auntie', 'Akwaaba! Fufu is ready, come and sit.', 0], ['Tro-tro mate', 'Kejetia! Kejetia! Adum, Adum!', 0], ['Trader', 'Me nua, this kente is the real one.', 0], ['Fan', 'Kotoko will win today, no doubt.', 0], ['Weaver', 'Each pattern has a name and a story.', 0], ['Guide', 'You are welcome to the Garden City.', 0]],
     accra: [['Auntie', 'Akwaaba! Banku or fufu today?', 0], ['Trotro mate', 'Circle! Circle! One more seat!', 0], ['Market queen', 'Ei, my sister, come and buy.', 0], ['Customer', 'The shito here is hot paa.', 0], ['Drummer', 'Come and dance small, my friend.', 0], ['Guide', 'You are welcome to Accra. First time?', 0]],
@@ -2125,7 +2126,7 @@
   var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', badge: 'govt', ballot: 'govt', gavel: 'govt', book: 'campus', hotel: 'nightlife', dice: 'nightlife', tower: 'tech', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
   // Nightlife rooms drawn in 3D: the club strips, lounges and the members' house (not the harbour, which has its own scene).
   // Every other kind of place opens as a street scene or an interior hall in 3D; music venues use the club hall.
-  var PLACE3D = { bigben: 'plaza', towerbridge: 'plaza', londoneye: 'park', blackstar: 'plaza', shop: 'street', conference: 'hall', funpark: 'park', rail: 'street', polo: 'park', waterpark: 'park', bowling: 'hall', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
+  var PLACE3D = { burj: 'plaza', desert: 'plaza', bigben: 'plaza', towerbridge: 'plaza', londoneye: 'park', blackstar: 'plaza', shop: 'street', conference: 'hall', funpark: 'park', rail: 'street', polo: 'park', waterpark: 'park', bowling: 'hall', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
   function NIGHT3D(pl) { return (pl.type === 'nightlife' && pl.glyph === 'glass' && !/^harbour_/.test(pl.id)) || pl.id === 'club_tidewater'; }
   function venueSet(pl) {
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
@@ -2332,7 +2333,7 @@
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? placeById(ui.venueOpen) : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
-    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling|shop|blackstar|bigben|towerbridge|londoneye)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
+    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling|shop|blackstar|bigben|towerbridge|londoneye|burj|desert)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
     if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
@@ -2378,7 +2379,7 @@
   }
   /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
   var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
-  var AIR_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR' };
+  var AIR_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR', dxb: 'DXB' };
   // A deterministic board for this game day, between Lagos, Port Harcourt and Abuja: an airliner about every
   // 30 minutes at gates 1–5, and a chopper shuttle about every 90 minutes from helipads H1–H4. Status follows the clock.
   function fids(kind) {
@@ -2519,7 +2520,7 @@
   }
   function airportGo(tab) { ui.airportOpen = false; ui.depTab = tab; clearPicks(); ui.place = ui.airportPlace || 'airport'; ui.tab = 'map'; render(); }
   /* ---------- airport departures: Air (cabins, insurance, boarding pass), My jet / charter, Chopper ---------- */
-  var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1, acc_kotoka: 1, kum_airport_pl: 1, ldn_lhr: 1 };
+  var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1, acc_kotoka: 1, kum_airport_pl: 1, ldn_lhr: 1, dxb_dxb: 1 };
   function departuresView(pl) {
     var tab = ui.depTab || 'air', here = L.cityOf(S), cities = openCities().filter(function (c) { return c !== here; });
     var city = cities.indexOf(ui.depCity) >= 0 ? ui.depCity : cities[0], code = D.CITY_CODES;
@@ -2605,7 +2606,7 @@
   // Towns on the road between the cities, for the coach (the real routes, in order).
   var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'], 'lagos-accra': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'abuja-accra': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'ph-accra': ['Owerri', 'Benin City', 'Ore', 'Sagamu', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'accra-kumasi': ['Achimota', 'Nsawam', 'Apedwa', 'Bunso', 'Nkawkaw', 'Konongo', 'Ejisu'], 'lagos-kumasi': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw', 'Ejisu'], 'abuja-kumasi': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'], 'ph-kumasi': ['Owerri', 'Benin City', 'Ore', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'] };
   // Abuja's and Port Harcourt's own words for the same rides (display only: the engine and its ledger keep the mode names).
-  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, kumasi: { danfo: 'Tro-tro', cab: 'Taxi' }, ldn: { danfo: 'Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike' } };
+  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, kumasi: { danfo: 'Tro-tro', cab: 'Taxi' }, dxb: { danfo: 'Metro and bus', cab: 'Taxi', okada: 'Scooter', keke: 'Scooter' }, ldn: { danfo: 'Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike', rail: 'Tube' } };
   function modeName(o) { var m = CITY_MODE_NAMES[L.cityOf(S)]; return (m && own(m, o.mode)) ? m[o.mode] : o.name; }
   var RIDE_NAMES = { coach: 'Savanna Line coach', danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
   function showRide(from, to, mode, t0) {
@@ -2851,18 +2852,20 @@
   }
 
   // Rules 23: the UK visitor visa, applied for from the travel screen.
-  function visaCard() {
-    var q = L.visaQuote(S), st = q.state, d = L.day(S);
-    var line = st.status === 'valid' ? '<span class="gain">Visa valid for ' + (st.until - d + 1) + ' more days</span>' : st.status === 'pending' ? 'Being processed: ready in ' + (st.ready - d) + (st.ready - d === 1 ? ' day' : ' days') : st.status === 'expired' ? 'Your last visa ran out. Apply again for a new trip.' : 'You need a UK visitor visa to fly to London.';
-    return '<div class="list"><div class="item"><div><h3>🛂 UK visitor visa</h3><div class="meta"><span>' + line + '</span><span>Fee ' + N(q.fee) + '</span><span>Proof of funds ' + N(q.funds) + '</span><span>Ready in ' + q.wait + ' days, stay up to ' + q.days + '</span></div>' + (q.disabled && st.status === 'none' ? '<p class="note">' + esc(q.disabled) + '.</p>' : '') + '<p class="note">London is a visit: you can sightsee, shop and see family, but there are no homes, jobs or shops for you there. Overstay and you are flown home.</p></div>' +
-      (st.status === 'none' || st.status === 'expired' ? '<button class="btn sm" id="visa-apply" data-visa="1"' + (q.disabled ? ' disabled' : '') + '>Apply</button>' : '') + '</div></div>';
+  function visaCard(city) {
+    city = city || 'ldn';
+    var q = L.visaQuote(S, city), st = q.state, d = L.day(S), nm = q.name || 'UK visitor visa', cn = D.CITIES[city].name;
+    var line = st.status === 'valid' ? '<span class="gain">Visa valid for ' + (st.until - d + 1) + ' more days</span>' : st.status === 'pending' ? 'Being processed: ready in ' + (st.ready - d) + (st.ready - d === 1 ? ' day' : ' days') : st.status === 'expired' ? 'Your last visa ran out. Apply again for a new trip.' : 'You need a ' + esc(nm) + ' to fly to ' + esc(cn) + '.';
+    var why = city === 'ldn' ? 'London is a visit: you can sightsee, shop and see family, but there are no homes, jobs or shops for you there' + (S.rules >= 26 ? ' (only a couple of small paid engagements a visitor may do)' : '') + '. Overstay and you are flown home.' : esc(cn) + ' is a visit: sightsee, shop the souks and the malls, ride the desert, but there are no homes, jobs or shops for you there, and nothing pays. Overstay and you are flown home.';
+    return '<div class="list"><div class="item"><div><h3>🛂 ' + esc(nm.charAt(0).toUpperCase() + nm.slice(1)) + '</h3><div class="meta"><span>' + line + '</span><span>Fee ' + N(q.fee) + '</span><span>Proof of funds ' + N(q.funds) + '</span><span>Ready in ' + q.wait + ' days, stay up to ' + q.days + '</span></div>' + (q.disabled && st.status === 'none' ? '<p class="note">' + esc(q.disabled) + '.</p>' : '') + '<p class="note">' + why + '</p></div>' +
+      (st.status === 'none' || st.status === 'expired' ? '<button class="btn sm" id="visa-apply-' + city + '" data-visa="' + city + '"' + (q.disabled ? ' disabled' : '') + '>Apply</button>' : '') + '</div></div>';
   }
   // Fly or take the bus to another city.
   function citiesView() {
     var here = L.cityOf(S), html = '<div class="section cities"><h3>✈️ Other cities</h3><p class="note">You are in ' + esc(D.CITIES[here].name) + '. Flights leave from ' + esc(D.DISTRICTS[D.CITIES[here].airport].name) + '; buses from ' + esc(D.DISTRICTS[D.CITIES[here].park].name) + ' (daytime only). Your home and rent stay where they are; you can move house to another city from its Homes list.</p>';
     openCities().filter(function (c) { return c !== here; }).forEach(function (c) {
       var opts = L.intercityOptions(S, c);
-      html += '<div class="city-card"><h4>' + (CITY_ICON[c] || '') + ' ' + esc(D.CITIES[c].name) + (D.CITIES[c].visit ? ' <span class="muted">· visit only</span>' : '') + '</h4>' + (c === 'ldn' && L.visaQuote ? visaCard() : '') + '<div class="list">' + opts.map(function (o) {
+      html += '<div class="city-card"><h4>' + (CITY_ICON[c] || '') + ' ' + esc(D.CITIES[c].name) + (D.CITIES[c].visit ? ' <span class="muted">· visit only</span>' : '') + '</h4>' + (D.CITIES[c].visit && L.visaQuote ? visaCard(c) : '') + '<div class="list">' + opts.map(function (o) {
         var at = S.loc === o.from;
         return '<div class="item"><div><h3>' + (o.mode === 'flight' ? '✈️ ' : '🚌 ') + esc(o.name) + '</h3><div class="meta"><span>' + dur(o.mins) + '</span><span class="cost num">' + (o.cost ? N(o.cost) : 'Free') + '</span>' + (o.disabled ? '<span class="why">' + esc(o.disabled) + '</span>' : '') + '</div></div>' +
           (o.disabled && !at ? '<button class="btn sm ghost" id="go-' + c + '-' + o.mode + '" data-tripto="' + o.from + '">Go to ' + esc(D.DISTRICTS[o.from].name) + '</button>' : '<button class="btn sm go" id="fly-' + c + '-' + o.mode + '" data-fly="' + c + ':' + o.mode + '"' + (o.disabled ? ' disabled' : '') + '>Go</button>') + '</div>';
@@ -4518,7 +4521,7 @@
       if (gx) run(function () { return L.openGift(S, gx.from + ':' + gx.raw.at, gx.raw.gift); });
       return;
     }
-    if (ds.visa) { run(function () { return L.applyVisa(S); }); return; }
+    if (ds.visa) { var vcity = ds.visa === '1' ? 'ldn' : ds.visa; run(function () { return vcity === 'ldn' ? L.applyVisa(S) : L.applyVisa(S, vcity); }); return; }
     if (ds.fly) { var fp = ds.fly.split(':'), ff = S.loc, ft = S.t; run(function () { var r = L.intercity(S, fp[0], fp[1]); if (r.ok) { ui.sel = null; ui.place = null; ui.placeCat = null; showRide(ff, S.loc, fp[1] === 'bus' ? 'coach' : 'flight', ft); } return r; }, 'travel'); return; }
     if (ds.gem) { var gid = gemToday(), gn = +ds.gem; run(function () { return L.collectGem(S, gid, gn); }); return; }
     if (ds.picsubmit) {

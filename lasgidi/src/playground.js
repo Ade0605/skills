@@ -39,6 +39,9 @@
       water: [[[2.4, 18.8], [5.0, 18.7], [5.6, 19.8], [4.4, 21.0], [2.8, 20.6]]], label: [['Gulf of Guinea', 16, 25.4], ['Korle Lagoon', 3.4, 20.2]] },
     kumasi: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 27], [-2, 27]]],
       water: [[[30.7, 24.2], [30.6, 25.1], [29.6, 25.7], [28.6, 25.9], [27.5, 25.7], [26.7, 25.1], [26.6, 24.2], [26.9, 23.4], [27.5, 22.7], [28.6, 22.5], [29.6, 22.7], [30.4, 23.3]], [[9.2, -2], [9.8, -2], [10.6, 6], [10.4, 12], [11.0, 17], [12.4, 22], [13.0, 27], [12.4, 27], [11.8, 22], [10.4, 17], [9.8, 12], [10.0, 6]]], label: [['Lake Bosomtwe', 28.6, 24.4], ['Subin River', 10.2, 8.4]] },
+    dxb: { box: [-2, 32, -2, 27], land: [[[-2, 21], [4, 16.6], [10, 12.2], [16, 7.8], [22, 3.4], [28, -1], [32, -2], [32, 27], [-2, 27]],
+        [[4.6, 15.8], [6.4, 15.4], [6.6, 13.2], [7.8, 12.0], [7.4, 10.2], [5.6, 9.4], [3.6, 10.0], [3.0, 11.8], [4.4, 13.0]]],
+      water: [[[22.4, 3.0], [23.6, 2.2], [24.4, 5.0], [25.0, 8.0], [24.6, 10.2], [23.8, 10.0], [23.6, 7.6], [22.8, 5.0]]], label: [['Arabian Gulf', 6, 4], ['Dubai Creek', 24.2, 7.4]] },
     ldn: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 27], [-2, 27]]],
       water: [[[-2, 13.6], [6, 13.8], [12, 14.4], [16, 14.0], [19, 14.6], [22, 15.6], [26, 14.4], [32, 14.2], [32, 15.6], [26, 15.8], [22, 17.0], [19, 16.0], [16, 15.4], [12, 15.8], [6, 15.2], [-2, 15.0]]], label: [['River Thames', 9, 14.6]] }
   };
@@ -84,6 +87,14 @@
     acc_central:  { h: [5, 16], dens: 0.8, r: 2.8, foot: [0.6, 0.85], roof: '#a87850', wall: '#d6c4a8' },
     acc_jamestown:{ h: [3, 7], dens: 0.85, r: 2.4, foot: [0.6, 0.9], roof: '#b06a40', wall: '#c8a888' },
     acc_korlebu:  { h: [4, 10], dens: 0.6, r: 2.4, foot: [0.6, 0.85], roof: '#c0b8a8', wall: '#e8e4dc', trees: 0.2 },
+    dxb_marina:   { h: [20, 60], dens: 0.7, r: 3.0, foot: [0.5, 0.75], roof: '#9fb8c8', wall: '#7f9aae' },
+    dxb_palm:     { h: [3, 8], dens: 0.35, r: 2.8, foot: [0.55, 0.8], roof: '#d9c8a4', wall: '#f1e8d4', trees: 0.5 },
+    dxb_jumeirah: { h: [3, 9], dens: 0.45, r: 3.0, foot: [0.55, 0.8], roof: '#d8c4a0', wall: '#f2eadc', trees: 0.3 },
+    dxb_downtown: { h: [20, 70], dens: 0.65, r: 3.0, foot: [0.5, 0.75], roof: '#a8c0d0', wall: '#86a0b4' },
+    dxb_creek:    { h: [3, 10], dens: 0.75, r: 2.6, foot: [0.6, 0.85], roof: '#c9b48a', wall: '#e2d4b4' },
+    dxb_deira:    { h: [5, 14], dens: 0.8, r: 2.6, foot: [0.6, 0.85], roof: '#b8a07a', wall: '#ddcfb0' },
+    dxb_airport:  { h: [4, 14], dens: 0.4, r: 3.2, foot: [0.55, 0.8], roof: '#c4ccd2', wall: '#9aa6b0' },
+    dxb_desert:   { h: [2, 4], dens: 0.06, r: 2.4, foot: [0.5, 0.7], roof: '#e8d0a8', wall: '#f1e4c8' },
     kum_airport:  { h: [3, 10], dens: 0.4, r: 3.0, foot: [0.55, 0.8], roof: '#b8c4cc', wall: '#8a98a4', trees: 0.3 },
     kum_manhyia:  { h: [3, 8], dens: 0.45, r: 2.8, foot: [0.55, 0.8], roof: '#8a5a32', wall: '#e9dcc4', trees: 0.45 },
     kum_bantama:  { h: [3, 8], dens: 0.75, r: 2.6, foot: [0.6, 0.85], roof: '#a86a3e', wall: '#cdb08c', trees: 0.2 },
@@ -107,6 +118,7 @@
     abj_kubwa: 0.5, abj_maitama: 0.92, abj_wuse: 0.75, abj_jabi: 0.75, abj_asokoro: 0.95, abj_garki: 0.85, abj_nyanya: 0.45, abj_airport: 0.8,
     ph_airport: 0.7, ph_choba: 0.45, ph_rumuokoro: 0.45, ph_gra: 0.75, ph_transamadi: 0.65, ph_dline: 0.4, ph_oldgra: 0.55, ph_borokiri: 0.45,
     acc_airport: 0.7, acc_legon: 0.5, acc_eastlegon: 0.65, acc_circle: 0.45, acc_osu: 0.5, acc_labadi: 0.5, acc_central: 0.45, acc_jamestown: 0.35, acc_korlebu: 0.5,
+    dxb_marina: 1, dxb_palm: 1, dxb_jumeirah: 1, dxb_downtown: 1, dxb_creek: 0.98, dxb_deira: 0.97, dxb_airport: 1, dxb_desert: 0.9,
     kum_airport: 0.65, kum_manhyia: 0.7, kum_bantama: 0.45, kum_kejetia: 0.45, kum_adum: 0.55, kum_knust: 0.6, kum_asokwa: 0.4, kum_ahodwo: 0.65, kum_bosomtwe: 0.25,
     ldn_heathrow: 0.7, ldn_wembley: 0.55, ldn_notting: 0.5, ldn_oxford: 0.4, ldn_westminster: 0.5, ldn_southbank: 0.5, ldn_tower: 0.55, ldn_peckham: 0.45 };
   var FERRIES = [['ikorodu', 'island'], ['ikorodu', 'ikoyi'], ['island', 'lekki'], ['ikoyi', 'lekki']];
@@ -584,6 +596,7 @@
       if (CITY === 'abuja') drawAbuja(g, s);
       if (CITY === 'accra') drawAccra(g, s);
       if (CITY === 'kumasi') drawKumasi(g, s);
+      if (CITY === 'dxb') drawDubai(g, s);
       if (CITY === 'ldn') drawLondon(g, s);
       if (CITY === 'ph') drawPH(g, s);
 
@@ -635,8 +648,9 @@
       });
       g.setLineDash([]);
       // Rail lines: a coloured track with sleepers, and a station dot at each stop.
-      if (CITY === 'lagos' && D.RAIL_LINES) Object.keys(D.RAIL_LINES).forEach(function (k) {
-        var Ln = D.RAIL_LINES[k], pts = Ln.stops.map(function (d) { var a = D.DISTRICTS[d]; return toScreen(a.x + 0.35, a.y + 0.35, 0); });
+      if (D.RAIL_LINES) Object.keys(D.RAIL_LINES).forEach(function (k) {
+        var Ln = D.RAIL_LINES[k]; if (cityOfDistrict(Ln.stops[0]) !== CITY || (Ln.rules && !((scene && scene.rules) >= Ln.rules))) return; // rules 26: the Tube lines in London
+        var pts = Ln.stops.map(function (d) { var a = D.DISTRICTS[d]; return toScreen(a.x + 0.35, a.y + 0.35, 0); });
         g.strokeStyle = Ln.color; g.lineWidth = Math.max(2.5, 3.2 * s); g.globalAlpha = 0.9;
         g.beginPath(); pts.forEach(function (p, i) { if (i) g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y); }); g.stroke();
         g.lineWidth = Math.max(0.6, 0.8 * s); g.setLineDash([1 * s, 4 * s]); g.strokeStyle = theme.dark ? '#111' : '#fff';
@@ -817,6 +831,13 @@
       poly(g, [[22.4, 21.6], [27.6, 21.6], [27.8, 22.4], [22.2, 22.6]], theme.sand || '#e8d6a8'); // La beach
       var lh = toScreen(6.4, 22.8, 0); [0, 1, 2, 3].forEach(function (i) { g.fillStyle = i % 2 ? '#ffffff' : '#c0392b'; g.fillRect(lh.x - 2 * s, lh.y - (i + 1) * 5 * s, 4 * s, 5 * s); }); // lighthouse
       g.strokeStyle = theme.road; g.lineWidth = Math.max(1, 2 * s); g.beginPath(); [[8, 10], [14, 8], [19, 11], [19, 16], [13, 17], [8, 15], [8, 10]].forEach(function (p, i) { var c = toScreen(p[0], p[1], 0); if (i) g.lineTo(c.x, c.y); else g.moveTo(c.x, c.y); }); g.stroke(); // Ring Road
+    }
+    function drawDubai(g, s) {
+      // The Burj Khalifa's needle, the fronds of the Palm, a sweep of desert sand and Sheikh Zayed Road.
+      poly(g, [[19, 18], [32, 18], [32, 27], [17, 27]], theme.dark ? '#5a4a36' : '#ecd2a4'); // the desert edge
+      [[5.6, 14.6, 3.4, 11.2], [5.2, 13.6, 3.6, 12.6], [6.0, 13.6, 7.4, 12.4], [5.6, 12.6, 4.2, 10.6], [5.8, 12.6, 7.0, 10.8]].forEach(function (f) { var a = toScreen(f[0], f[1], 0), b = toScreen(f[2], f[3], 0); g.strokeStyle = theme.dark ? '#c9b48a' : '#f4e8cc'; g.lineWidth = Math.max(1.5, 3 * s); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); });
+      var bk = toScreen(17.6, 15.4, 0); g.fillStyle = theme.dark ? '#b8ccd8' : '#dfe8ee'; g.beginPath(); g.moveTo(bk.x - 4 * s, bk.y); g.lineTo(bk.x - 1.2 * s, bk.y - 34 * s); g.lineTo(bk.x, bk.y - 46 * s); g.lineTo(bk.x + 1.2 * s, bk.y - 34 * s); g.lineTo(bk.x + 4 * s, bk.y); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = Math.max(0.5, 0.6 * s); g.stroke();
+      g.strokeStyle = theme.road; g.lineWidth = Math.max(1.5, 2.6 * s); g.beginPath(); [[2, 24], [8, 19.5], [14, 16.6], [19, 13.6], [24, 11], [29, 9]].forEach(function (p, i) { var c = toScreen(p[0], p[1], 0); if (i) g.lineTo(c.x, c.y); else g.moveTo(c.x, c.y); }); g.stroke(); // Sheikh Zayed Road
     }
     function drawKumasi(g, s) {
       // Kejetia's green roofs, the Manhyia palace with its gold stool, the Baba Yara bowl and the hills round the lake.
