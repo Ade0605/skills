@@ -86,7 +86,10 @@
   // 38 adds a stage career: rehearse at the National Theatre (practice widens the beat and adds up to 10% on fees), a
   // stage reputation with levels, a manager (Eko Talent Management, 20% of fees) and a weekly headline slot at Eko
   // Convention Centre (capped fee), plus a weekly Lasgidi Live Top 10 chart.
-  var RULES = 38;
+  // 39 is a review pass: a stall booked after 18:00 starts the next day; the stall is tied to one business (not its
+  // type) and its fee follows that business's weekday pattern and site; Detty Fest nights count for the Festival
+  // passport; the Headliner achievement needs a passable show (40%+).
+  var RULES = 39;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -569,6 +572,7 @@
     if (f.phase === 'soon') log(s, '🎆 ' + f.name + ' starts in ' + f.daysTo + (f.daysTo === 1 ? ' day' : ' days') + ' at Harbour Live, Lagos Island. Night 1: ' + f.tomorrow.head + '.', 'story');
     else if (f.phase === 'on') log(s, '🎆 ' + f.name + ', night ' + f.night + ' of ' + f.nights + ' tonight: ' + f.tonight.head + (f.tonight.support.length ? ' with ' + f.tonight.support.join(', ') : '') + '. ' + f.tonight.theme + '. Gates ' + f.gates + ':00.', 'story');
   }
+  function festPassport(s) { var ev = s.evSeen || {}, cities = {}; D.YEAR_FESTS.forEach(function (Y) { if (ev[Y.id] && Object.keys(ev[Y.id]).length) cities[districtCity(Y.district)] = 1; }); if (s.festNights && Object.keys(s.festNights).length) cities.lagos = 1; if (Object.keys(cities).length >= 5) unlock(s, 'fest_passport'); }
   // Rules 35: a news line a day for each festival in its countdown or on. No dice, ledger untouched.
   function yearFestNews(s) {
     yearFests(s).forEach(function (f) {
@@ -958,9 +962,12 @@
   }
   function stallActions(s) {
     var B = stallBiz(s); if (!B) return [];
-    return stallFests(s).filter(function (f) { return f.district === s.loc && !(s.stalls && s.stalls[f.key + '-' + f.ed]); }).map(function (f) {
-      var days = f.last - Math.max(day(s), f.first) + 1, nm = businessName(B.b);
-      return { id: 'stall_' + f.key, label: 'Rent a stall at ' + f.name + ' for your ' + nm + ' (' + days + (days === 1 ? ' day' : ' days') + ')', mins: 30, cost: roundTo(B.v * 0.6 * days, 1000), fx: { stress: 3 }, special: 'stallbook', fest: f.key, ed: f.ed, first: Math.max(day(s), f.first), last: f.last, bid: B.b.id, minRules: 36,
+    var r39 = s.rules >= 39, from0 = r39 && hour(s) >= 18 ? day(s) + 1 : day(s); // rules 39: today's payout (18:00) is gone
+    return stallFests(s).filter(function (f) { return f.district === s.loc && !(s.stalls && s.stalls[f.key + '-' + f.ed]) && (!r39 || f.last >= Math.max(from0, f.first)); }).map(function (f) {
+      var start = Math.max(from0, f.first), days = f.last - start + 1, nm = businessName(B.b), fee = roundTo(B.v * 0.6 * days, 1000);
+      if (r39) { var def = D.BUSINESSES[B.b.id], sum = 0; for (var dd = start; dd <= f.last; dd++) { var dw = dd % 7, m0 = (START_MONTH + Math.floor(Math.floor(dd / 7) / 4)) % 12; sum += (def.weekend ? (dw >= 4 ? 2.2 : 0.3) : def.weekdays ? (dw <= 4 ? 1.3 : 0.2) : 1) * (def.december && m0 === 11 ? def.december : 1); }
+        fee = roundTo(B.v * 0.6 * sum * (B.b.site ? D.BUSINESS_SITES[B.b.site].mult : 1), 1000); }
+      return { id: 'stall_' + f.key, label: 'Rent a stall at ' + f.name + ' for your ' + nm + ' (' + days + (days === 1 ? ' day' : ' days') + ')', mins: 30, cost: fee, fx: { stress: 3 }, special: 'stallbook', fest: f.key, ed: f.ed, first: start, last: f.last, bid: B.b.id, bpaid: B.b.paid, bsite: B.b.site || null, minRules: 36,
         note: 'On each festival day your ' + nm + ' takes double, unless a rival stall undercuts it (1 day in 4: only x1.25).' };
     });
   }
@@ -1168,19 +1175,20 @@
     rehearse: function (s) { var g = stageState(s); g.practice = Math.min(10, (g.practice || 0) + 2); return 'Two hours of scales, runs and stage moves. Practice ' + g.practice + '/10.'; },
     signmanager: function (s) { stageState(s).manager = true; log(s, 'You signed with Eko Talent Management. They book the bigger rooms and keep 20% of your stage fees.', 'good'); return 'Signed. Your manager says: "Headline slots open when you are Known (60 rep)."'; },
     stallbook: function (s, a) {
-      var st = s.stalls = s.stalls || {}; st[a.fest + '-' + a.ed] = { bid: a.bid, first: a.first, last: a.last };
+      var st = s.stalls = s.stalls || {}; st[a.fest + '-' + a.ed] = { bid: a.bid, first: a.first, last: a.last }; if (s.rules >= 39) { st[a.fest + '-' + a.ed].paid = a.bpaid; st[a.fest + '-' + a.ed].site = a.bsite; } // rules 39: this business, not just its type
       return 'Your stall is booked, ' + (a.first > day(s) ? 'from day ' + (a.first - day(s)) + ' from now' : 'from today') + '. Keep the stock coming.';
     },
     yearfest: function (s, a) {
       var ev = s.evSeen = s.evSeen || {}, mine = ev[a.fid] = ev[a.fid] || {}; mine[a.ed + '-' + a.n] = 1; // the day it started
       if (['carnival', 'foodfest', 'indep'].every(function (k) { return ev[k] && Object.keys(ev[k]).length; })) unlock(s, 'festival_hopper');
-      if (s.rules >= 37) { var cities = {}; D.YEAR_FESTS.forEach(function (Y) { if (ev[Y.id] && Object.keys(ev[Y.id]).length) cities[districtCity(Y.district)] = 1; }); if (s.festNights && Object.keys(s.festNights).length) cities.lagos = 1; if (Object.keys(cities).length >= 5) unlock(s, 'fest_passport'); }
+      if (s.rules >= 37) festPassport(s);
       var F = D.YEAR_FESTS.filter(function (x) { return x.id === a.fid; })[0], r = F.programme[a.n - 1];
       return r.head + ': ' + r.theme.charAt(0).toLowerCase() + r.theme.slice(1) + ' at ' + F.name + '. ' + (F.id === 'foodfest' ? 'You ate until you could not move.' : F.id === 'carnival' ? 'Feathers, brass and drums all afternoon.' : 'The whole square sang along.');
     },
     dettyfest: function (s, a) {
       var seen = s.festNights = s.festNights || {}; seen[a.fy + '-' + a.night] = 1; // the night it started, even past midnight
       if (Object.keys(seen).length >= 5) unlock(s, 'fest_regular');
+      if (s.rules >= 39) festPassport(s); // rules 39: Detty nights count for the passport too
       var t = D.FEST_NIGHTS[a.night - 1], extra = specials.club(s, a);
       return (a.night === D.DETTY_FEST.nights ? 'Ten, nine, eight… fireworks over the lagoon and the whole of Harbour Live screaming Happy New Year! ' : t.head + ' shut Harbour Live down on ' + t.theme.toLowerCase() + '. ') + (extra || '');
     },
@@ -2574,7 +2582,7 @@
       if (s.rules >= 30 && b.mods && b.mods.length) { b.mods = b.mods.filter(function (m) { return m.until > day(s); }); b.mods.forEach(function (m) { v *= m.x; }); } // rules 30: decisions
       if (def.power && !s.power) v -= def.daily * 0.12 * s.econ.fuel * s.econ.infl * (b.level > 1 ? D.BUSINESS_LEVEL.mult[b.level - 1] : 1);
       if (def.risky && rand(s) < 0.05) { v -= def.daily * 1.5; notes.push('union and LASTMA "dues" on the bus'); }
-      if (s.rules >= 36 && s.stalls && v > 0) { var dd0 = day(s), stl = Object.keys(s.stalls).filter(function (k) { var x = s.stalls[k]; return x.bid === b.id && x.first <= dd0 && x.last >= dd0 && !x['d' + dd0]; })[0];
+      if (s.rules >= 36 && s.stalls && v > 0) { var dd0 = day(s), stl = Object.keys(s.stalls).filter(function (k) { var x = s.stalls[k]; return x.bid === b.id && (s.rules < 39 || (x.paid === b.paid && x.site === (b.site || null))) && x.first <= dd0 && x.last >= dd0 && !x['d' + dd0]; })[0];
         if (stl) { var X = s.stalls[stl]; X['d' + dd0] = 1; if (rand(s) < 0.25) { v *= 1.25; notes.push('a rival stall undercut your festival stall'); } else v *= 2; } } // one stall boost per business per day
       total += v;
     });
@@ -4964,7 +4972,7 @@
       var dRep = acc < 0.4 ? -2 : Math.round(pct / (head ? 4 : fest ? 6 : 10)), lv0 = stageCareer(s).level; g.rep = Math.max(0, g.rep + dRep);
       if (g.week !== week(s)) { g.week = week(s); g.weekBest = 0; } if (pct > g.weekBest) g.weekBest = pct;
       var lv1 = stageCareer(s).level; car = ' Stage rep ' + (dRep >= 0 ? '+' : '') + dRep + ' (' + g.rep + ')' + (lv1 !== lv0 ? '. You are now a ' + lv1 + ' act!' : '') + '.';
-      if (head) unlock(s, 'headliner');
+      if (head && (s.rules < 39 || acc >= 0.4)) unlock(s, 'headliner');
     }
     if (tips > 0) earn(s, tips, head ? 'Headline fee: Eko Convention Centre' + (cut ? ' (after the manager\'s 20%)' : '') : fest ? 'Opening act fee: Eko Detty Fest' : 'Open stage tips: National Theatre');
     var st = s.stats; if (pct > (st.stageBest || 0)) st.stageBest = pct;
@@ -4976,7 +4984,7 @@
       s.creator.followers += fans; }
     applyFx(s, { fun: Math.round(acc * 15), stress: acc >= 0.6 ? -8 : 4 });
     var crowd = acc >= 0.9 ? 'A standing ovation!' : acc >= 0.7 ? 'The crowd sang along.' : acc >= 0.4 ? 'Polite applause.' : 'Somebody shouted "Next!".';
-    return finish(s, ok('🎤 ' + pct + '% on the beat, best streak ' + best + '. ' + crowd + (tips ? ' ' + (fest ? 'Your fee: ' : 'Tips: ') + naira(tips) + '.' : '') + (fans ? ' +' + fans + ' followers.' : '') + car + (!fest && !head && pct >= 70 && !(where.fest) ? ' Eko Detty Fest books acts who score 70% here.' : '')));
+    return finish(s, ok('🎤 ' + pct + '% on the beat, best streak ' + best + '. ' + crowd + (tips ? ' ' + (fest || head ? 'Your fee: ' : 'Tips: ') + naira(tips) + '.' : '') + (fans ? ' +' + fans + ' followers.' : '') + car + (!fest && !head && pct >= 70 && !(where.fest) ? ' Eko Detty Fest books acts who score 70% here.' : '')));
   }
 
   /* ---------- go-slow hawker: a capped shift from the mini-game ---------- */
