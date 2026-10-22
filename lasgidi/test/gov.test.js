@@ -55,3 +55,20 @@ test('gov: the Executive Council: only the governor appoints; the Assembly confi
   assert.equal(by.finance.id, 'p1'); assert.equal(by.finance.status, 'confirmed'); assert.equal(by.finance.yes, 2);
   assert.equal(by.health.status, 'rejected'); assert.equal(by.sa_media.status, 'appointed');
 });
+
+test('gov: Senator and President races on the same ballot; one office a week; the President needs spread', () => {
+  const parties = [doc('a', { party: 'epp' }), doc('b', { party: 'phc' }), doc('c', { party: 'lyp' }), doc('v1', { party: 'epp' })];
+  const runs = [doc('a', { office: 'sen', party: 'epp', motto: 1, at: TUE }), doc('b', { office: 'pres', party: 'phc', motto: 2, at: WED }), doc('c', { office: 'pres', party: 'lyp', motto: 3, at: MON }),
+    doc('late', { office: 'sen', party: 'epp', motto: 0, at: SAT }), doc('nomember', { office: 'sen', party: 'odf', motto: 0, at: MON })];
+  // The governor's nominees ignore anyone running for another office.
+  assert.equal(G.nominees(runs, parties, [], WK).candidates.length, 0);
+  const votes = [doc('v1', { unit: 'yaba', sen: 'a', senAt: SAT, pres: 'b', presAt: SAT }), doc('v2', { unit: 'ikeja', sen: 'a', senAt: SUN, pres: 'b', presAt: SUN }),
+    doc('v3', { unit: 'abj_wuse', pres: 'c', presAt: SAT }), doc('v4', { unit: 'abj_wuse', pres: 'c', presAt: WED }) /* before the polls */, doc('v5', { unit: 'yaba', sen: 'late', senAt: SAT }) /* not a candidate */];
+  const sen = G.race('sen', runs, parties, votes, WK);
+  assert.deepEqual(sen.rows.map(r => r.cand.id), ['a']); assert.equal(sen.winner.cand.id, 'a'); assert.equal(sen.total, 2);
+  const pres = G.race('pres', runs, parties, votes, WK);
+  assert.equal(pres.total, 3); assert.equal(pres.rows[0].cand.id, 'b'); assert.equal(pres.rows[0].votes, 2);
+  assert.equal(pres.winner.cand.id, 'b'); assert.equal(pres.need, 2); assert.ok(pres.rows[0].meetsSpread);
+  assert.equal(G.race('nope', runs, parties, votes, WK), null);
+  assert.equal(G.race('sen', [doc('a', { office: 'sen', party: 'epp', motto: 1, at: TUE })], parties, [], WK).winner, null, 'no votes, no senator');
+});
