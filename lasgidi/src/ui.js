@@ -162,7 +162,7 @@
   function musicWanted() {
     if (!prefs.sound || document.hidden || !window.LasgidiMusic || !S) return null;
     if (ui.huntListenUntil && Date.now() < ui.huntListenUntil) return { style: huntNow().style }; // the hunt's single
-    if (mini) return mini.kind === 'dance' ? { style: 'afro', bpm: 112 } : null;
+    if (mini) return mini.kind === 'dance' || mini.kind === 'stage' ? { style: 'afro', bpm: 112 } : null;
     if (ui.venueOpen) {
       var pl = placeById(ui.venueOpen), hr = L.hour(S), night = hr >= 19 || hr < 5;
       if (!pl) return null; if (pl.id === 'owambe_hall') return { style: 'highlife' };
@@ -3061,6 +3061,11 @@
       live: function (st) { return st.hits + ' of ' + st.total + ' beats, streak ' + st.combo; },
       done: function (r) { return 'The DJ cuts the music: ' + r.hits + ' of ' + r.total + ' beats.'; },
       pay: function (r) { return L.danceOff(S, r.hits, r.total, r.best); } },
+    stage: { lib: 'LasgidiDance', label: 'On stage', title: function () { return stageAt() === 'fest' ? '🎤 Opening act · Eko Detty Fest' : '🎤 Open stage · National Theatre'; }, salt: 4242, collect: 'Take a bow', hype: ['Encore!', 'Odogwu!', 'Sing am!', 'Lagos, make noise!', 'Omo!', 'E choke!'], cheer: ' The crowd is going wild!',
+      note: function () { return 'Tap the lane (or press ← ↓ ↑ → or D F J K) as each note hits the line. Every 10 in a row gets the crowd on its feet. ' + (stageAt() === 'fest' ? 'Your opening-act fee is' : 'Tips are') + ' capped at ' + N(L.price(S, 3000)) + ', and creators gain followers.' + (stageAt() === 'fest' ? ' Hit 90% for a show-stopper.' : ' Score 70% here to get booked at Eko Detty Fest.'); },
+      live: function (st) { return st.hits + ' of ' + st.total + ' beats, streak ' + st.combo; },
+      done: function (r) { return 'The last note rings out: ' + r.hits + ' of ' + r.total + ' beats.'; },
+      pay: function (r) { return L.stageShow(S, r.hits, r.total, r.best); } },
     hawk: { lib: 'LasgidiHawker', label: 'Go-slow hawker', title: '🛒 Hawk in the Oshodi go-slow', salt: 313, collect: 'Count the money and go home',
       note: function () { return 'When a driver raises a hand, pick what they want from your tray (or press 1–4) and tap their car before the light turns green. Hold 🙈 HIDE (or space) when the task force van comes. Your tray costs ' + N(L.price(S, 4000)) + ' and sales are capped at ' + N(L.price(S, 10000)) + '.'; },
       live: function (st) { return st.served + ' sales, ' + st.goods + ' items left' + (st.van ? '. Task force van coming!' : ''); },
@@ -3079,6 +3084,8 @@
   };
   var mini = null; // { kind, game, ov, result, timer, onKey }
   function miniFocusables(ov) { return Array.prototype.filter.call(ov.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'), function (el) { return el.offsetParent !== null; }); }
+  // Rules 33: where the stage game is played (the theatre open stage, or the fest's opening slot).
+  function stageAt() { var a = L.availableActions(S).filter(function (x) { return x.minigame === 'stage'; })[0]; return (S.mini && S.mini.at) || (a && a.stageAt) || 'theatre'; }
   function openMinigame(kind) {
     var g = MINIGAMES[kind];
     if (!g || !window[g.lib] || document.getElementById('danfo-overlay')) return;
@@ -3092,14 +3099,14 @@
       paid = true;
     }
     var ov = document.createElement('div'); ov.id = 'danfo-overlay'; ov.className = 'scrim danfo-scrim'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', g.label);
-    ov.innerHTML = '<div class="sheet danfo-sheet" tabindex="-1"><div class="inline" style="justify-content:space-between"><b>' + g.title + '</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
-      '<p class="note">' + g.note() + (paid ? ' <b>Paid up front: quitting forfeits this run.</b>' : '') + ' Esc quits.</p><p class="sr-only" id="mini-live" aria-live="polite"></p><div class="danfo-end"></div></div>';
+    ov.innerHTML = '<div class="sheet danfo-sheet" tabindex="-1"><div class="inline" style="justify-content:space-between"><b>' + (typeof g.title === 'function' ? g.title() : g.title) + '</b><button class="btn sm ghost" id="danfo-quit">Quit</button></div><div class="danfo-slot"></div>' +
+      '<p class="note">' + g.note() + (paid && kind !== 'stage' ? ' <b>Paid up front: quitting forfeits this run.</b>' : paid ? ' <b>Quitting ends this performance.</b>' : '') + ' Esc quits.</p><p class="sr-only" id="mini-live" aria-live="polite"></p><div class="danfo-end"></div></div>';
     document.body.appendChild(ov);
     var m = mini = { kind: kind, ov: ov, result: null, timer: 0 };
     var reduce = document.documentElement.classList.contains('lite');
     // The 3D stage only changes the picture: the game's own state, seed and result are the same as in 2D.
-    var view3d = prefs.mini3d !== false && threeState === 'ready' && window.LasgidiGames3D ? window.LasgidiGames3D.view(kind, { look: S.look, outfit: S.outfit, lite: reduce, reduce: reduce }) : null;
-    m.game = window[g.lib].create({ seed: (S.seed ^ S.t ^ g.salt) | 0, reduce: reduce, view: view3d, sfx: miniSfx, onDone: function (r) {
+    var view3d = prefs.mini3d !== false && threeState === 'ready' && window.LasgidiGames3D ? window.LasgidiGames3D.view(kind, { look: S.look, outfit: S.outfit, lite: reduce, reduce: reduce, at: kind === 'stage' ? stageAt() : null }) : null;
+    m.game = window[g.lib].create({ seed: (S.seed ^ S.t ^ g.salt) | 0, reduce: reduce, view: view3d, sfx: miniSfx, hype: g.hype, cheer: g.cheer, onDone: function (r) {
       m.result = r;
       ov.querySelector('#mini-live').textContent = g.done(r) + ' Press ' + g.collect + '.';
       ov.querySelector('.danfo-end').innerHTML = '<div class="inline"><button class="btn go" id="danfo-collect">' + g.collect + '</button></div>';
@@ -4112,6 +4119,7 @@
       { icon: '🎤', name: 'Naija Quiz', where: 'Millennium Park, Maitama, Abuja', when: 'Friday to Sunday, 15:00–20:00, once a day', best: S.stats.quizBest != null ? 'Best ' + S.stats.quizBest + '/10' : 'Not played yet', act: 'abj_quiz', kind: 'quiz', place: 'abj_millennium', district: 'abj_maitama' },
       { icon: '💃', name: 'Owambe dance-off', where: 'Event hall, Surulere', when: 'Saturdays, 12:00–20:00', best: S.stats.danceBest ? 'Best ' + S.stats.danceBest + '% on the beat' : 'Not played yet', act: 'suru_danceoff', kind: 'dance', place: 'owambe_hall', district: 'surulere' }
     ];
+    if (S.rules >= 33) rows.push({ icon: '🎤', name: 'On stage', where: 'National Theatre, Surulere (and Eko Detty Fest in December)', when: 'Wednesdays, 18:00–22:00 · fest days 16:00–18:00', best: S.stats.stageBest ? 'Best ' + S.stats.stageBest + '% on the beat' + (S.stats.stageBest >= 70 ? ' · fest-ready' : '') : 'Not played yet', act: 'stage_open', kind: 'stage', place: 'theatre', district: 'surulere' });
     var acts = L.availableActions(S);
     return '<div class="section" style="padding-top:0"><h3>🎮 Mini-games</h3><p class="note">Arcade games that pay as part of your life, with capped takings, so skill helps but never prints money.</p><div class="list">' + rows.map(function (g) {
       var a = acts.filter(function (x) { return x.id === g.act; })[0], can = a && !a.disabled;

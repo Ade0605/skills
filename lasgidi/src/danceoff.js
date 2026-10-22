@@ -45,7 +45,7 @@
       st.notes.forEach(function (n) { if (n.lane === lane && !n.hit && !n.gone) { var d = Math.abs(n.t - st.t); if (d < bd) { bd = d; best = n; } } });
       if (!best) { st.combo = 0; fx('miss'); return; }
       best.hit = true; fx('hit', lane); st.hits++; st.combo++; if (st.combo > st.best) st.best = st.combo;
-      if (st.combo % 10 === 0) { st.msg = HYPE[Math.floor(rnd() * HYPE.length)] + ' Guests are spraying!'; st.msgT = 1.6; fx('spray'); for (var i = 0; i < 6; i++) st.cash.push({ x: rnd() * W, y: -20 - rnd() * 80, v: 120 + rnd() * 80, r: rnd() * 6 }); }
+      if (st.combo % 10 === 0) { var HY = (opts && opts.hype) || HYPE; st.msg = HY[Math.floor(rnd() * HY.length)] + ((opts && opts.cheer) || ' Guests are spraying!'); st.msgT = 1.6; fx('spray'); for (var i = 0; i < 6; i++) st.cash.push({ x: rnd() * W, y: -20 - rnd() * 80, v: 120 + rnd() * 80, r: rnd() * 6 }); }
     }
     function step(dt) {
       if (st.over) return;

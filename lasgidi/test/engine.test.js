@@ -3172,7 +3172,7 @@ test('rules 31: the National Theatre runs one show a week, on its nights; seen s
 
 test('rules 32: Eko Detty Fest counts down from late November, runs 21 nights in December with a news line a day', () => {
   const s = L.newGame({ seed: 3210, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 32); assert.equal(D.FEST_NIGHTS.length, D.DETTY_FEST.nights);
+  assert.ok(s.rules >= 32); assert.equal(D.FEST_NIGHTS.length, D.DETTY_FEST.nights);
   const step = () => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); };
   // Nothing before the countdown week.
   assert.equal(L.dettyFest(s), null);
@@ -3211,4 +3211,49 @@ test('rules 32: Eko Detty Fest counts down from late November, runs 21 nights in
     const t = L.availableActions(v).find(a => a.id === 'df_regular'); if (t && !t.disabled) { assert.ok(L.doAction(v, 'df_regular').ok); break; } L.wait(v, 30); }
   assert.ok(L.dettyFest(v).programme.some(p => p.seen));
   assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
+});
+
+test('rules 33: perform at the open stage, then earn an Eko Detty Fest opening slot; tips capped, one show a day', () => {
+  const s = L.newGame({ seed: 3310, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 33);
+  const step = () => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); };
+  s.loc = 'surulere';
+  for (let i = 0; i < 4000 && !(L.dow(s) === 2 && L.hour(s) === 18); i++) { step(); s.loc = 'surulere'; }
+  s.needs.energy = 100; s.needs.hunger = 80;
+  const a = L.availableActions(s).find(x => x.id === 'stage_open'); assert.ok(a && !a.disabled, a && a.disabled);
+  assert.equal(L.stageShow(s, 10, 20, 5).ok, false, 'must start first');
+  assert.ok(L.startMinigame(s, 'stage').ok);
+  assert.equal(L.stageShow(s, 30, 20, 5).ok, false, 'nonsense refused');
+  const c0 = s.cash + s.bank; const r = L.stageShow(s, 19, 20, 15); assert.ok(r.ok, r.msg);
+  const tips = s.cash + s.bank - c0; assert.ok(tips > 0 && tips <= L.price(s, 3000) * 1.3, 'capped tips ' + tips);
+  assert.equal(s.stats.stageBest, 95);
+  assert.match(L.availableActions(s).find(x => x.id === 'stage_open').disabled || '', /One performance a day/);
+  // December: the fest slot opens to someone who scored 70%+.
+  s.loc = 'island';
+  for (let i = 0; i < 40000 && !(L.dettyFest(s) && L.dettyFest(s).phase === 'on' && L.hour(s) === 16); i++) { step(); s.loc = 'island'; }
+  s.needs.energy = 100; s.needs.hunger = 80;
+  const f = L.availableActions(s).find(x => x.id === 'stage_fest'); assert.ok(f && !f.disabled, f && f.disabled);
+  assert.ok(L.startMinigame(s, 'stage').ok); assert.ok(L.stageShow(s, 20, 20, 20).ok);
+  assert.ok(s.ach.on_stage && s.ach.show_stopper);
+  assert.equal(L.replayLife(s.replay) && 1, 1);
+  // Without a good score (and few followers) the fest slot stays closed.
+  const n = L.newGame({ seed: 3311, origin: 'nepo', goal: 'freestyle' }); while (n.pending.length) L.resolveChoice(n, 0); n.loc = 'island';
+  for (let i = 0; i < 40000 && !(L.dettyFest(n) && L.dettyFest(n).phase === 'on' && L.hour(n) === 16); i++) { while (n.pending.length) L.resolveChoice(n, 0); L.wait(n, 15); n.loc = 'island'; }
+  assert.match(L.availableActions(n).find(x => x.id === 'stage_fest').disabled || '', /70%/);
+  // A real life that performs replays to the same seal; a rules 32 life has no stage.
+  const v = L.newGame({ seed: 3312, origin: 'nepo', goal: 'freestyle' }); while (v.pending.length) L.resolveChoice(v, 0);
+  // Eat and sleep at home for two days, ride to Surulere on Wednesday morning, and take the stage at 18:00.
+  const pend = () => { while (v.pending.length) L.resolveChoice(v, 0); };
+  const until = (fn) => { for (let i = 0; i < 400 && !fn(); i++) { pend(); L.wait(v, 15); } };
+  const eat = () => { pend(); const e = L.availableActions(v).find(x => /^in_eatery_/.test(x.id) && !x.disabled); if (e) L.doAction(v, e.id); };
+  for (let d = 0; d < 2; d++) { until(() => L.hour(v) === 12); eat(); until(() => L.hour(v) === 19); eat(); until(() => L.hour(v) === 21); pend(); L.doAction(v, 'home_sleep'); }
+  until(() => L.dow(v) === 2 && L.hour(v) >= 8); eat(); pend();
+  const fast = L.travelOptions(v, 'surulere').filter(x => !x.disabled).sort((x, y) => x.mins - y.mins)[0]; assert.ok(L.travel(v, 'surulere', fast.mode).ok);
+  eat(); until(() => L.hour(v) >= 18); pend();
+  assert.ok(L.startMinigame(v, 'stage').ok); assert.ok(L.stageShow(v, 15, 20, 8).ok);
+  assert.ok(v.stats.stageBest === 75);
+  assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
+  const o = L.newGame({ seed: 3310, origin: 'nepo', goal: 'freestyle', rules: 32 }); while (o.pending.length) L.resolveChoice(o, 0); o.loc = 'surulere';
+  for (let i = 0; i < 4000 && !(L.dow(o) === 2 && L.hour(o) === 18); i++) { while (o.pending.length) L.resolveChoice(o, 0); L.wait(o, 15); o.loc = 'surulere'; }
+  assert.ok(!L.availableActions(o).some(x => x.minigame === 'stage'));
 });
