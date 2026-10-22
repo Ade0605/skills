@@ -67,7 +67,9 @@
   // 30 adds gameplay depth: children grow up on a compressed clock (two game weeks a year) and choose university, a
   // trade or work at 18, then move out and send a little home and later marry; weekly business decisions (a big order,
   // staff skimming, a rival, an inspection); and a chief's duties, which cost your title its status if refused.
-  var RULES = 30;
+  // 31 gives the National Theatre a weekly programme (plays, concerts, dance, comedy, musicals) shown on a billboard,
+  // tickets for this week's show on its nights, and a once-a-day stage crew gig.
+  var RULES = 31;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -131,6 +133,7 @@
     streamer:    'Streamer: 1,000 people watched you live',
     allrounder:  'All-rounder: played 8 different sports in Lagos',
     explorer:    'Lagos explorer: visited 8 tourist sights',
+    theatregoer: 'Theatregoer: saw 5 different shows at the National Theatre',
     banana:      'Banana Island: bought a waterfront mansion',
     ghana_tour:  'Akwaaba: stamped in Accra, Kumasi and Cape Coast',
     globetrotter: 'Globetrotter: stamped in London and Dubai',
@@ -224,7 +227,7 @@
 
   // Spending and income categories for the weekly report.
   var FOOD_LABELS = {}, GIG_LABELS = {};
-  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; }), Object.keys(D.BRANCH_ACTS).map(function (k) { return D.BRANCH_ACTS[k]; }), Object.keys(D.CIVIC_ACTS).map(function (k) { return D.CIVIC_ACTS[k]; }), Object.keys(D.EVENT_ACTS).map(function (k) { return D.EVENT_ACTS[k]; })).forEach(function (list) {
+  [D.HOME_ACTIONS].concat(Object.keys(D.PLACE_ACTIONS).map(function (k) { return D.PLACE_ACTIONS[k]; }), Object.keys(D.INSIDE).map(function (k) { return D.INSIDE[k]; }), Object.keys(D.FESTIVALS).map(function (k) { return D.FESTIVALS[k]; }), Object.keys(D.BRANCH_ACTS).map(function (k) { return D.BRANCH_ACTS[k]; }), Object.keys(D.CIVIC_ACTS).map(function (k) { return D.CIVIC_ACTS[k]; }), Object.keys(D.EVENT_ACTS).map(function (k) { return D.EVENT_ACTS[k]; }), [[D.THEATRE_CREW]]).forEach(function (list) {
     list.forEach(function (a) {
       if ((a.fx && a.fx.hunger > 0) || a.special === 'pantry7') FOOD_LABELS[a.label] = true;
       if (a.gig) GIG_LABELS[a.label] = true;
@@ -816,6 +819,18 @@
     var d = s.loc, all = FEST_AT[d] || (FEST_AT[d] = D.PLACES.filter(function (p) { return p.district === d && (D.FESTIVALS[p.id] || D.BRANCH_ACTS[p.id]); }).reduce(function (o, p) { return o.concat(D.FESTIVALS[p.id] || [], D.BRANCH_ACTS[p.id] || []); }, [])), m = monthIndex(s); // and the Pulse gym branches' acts
     return all.filter(function (a) { return !a.when || !a.when.months || a.when.months.indexOf(m) >= 0; });
   }
+  // Rules 31: the National Theatre programme. Week w shows THEATRE_SHOWS[w mod n]; the same for every life that week.
+  function theatreShow(s, off) { var n = D.THEATRE_SHOWS.length, w = week(s) + (off || 0); if (w < 0) return null; var sh = D.THEATRE_SHOWS[w % n], K = D.TH_KIND[sh.kind]; return Object.assign({ week: w, kindName: K.name, icon: K.icon, cost: price(s, K.cost), when: { days: K.days, from: K.from, to: K.to }, whenLabel: windowLabel({ days: K.days, from: K.from, to: K.to }) }, sh); }
+  function theatreBill(s) {
+    var seen = s.seenShows || {}, now = theatreShow(s, 0), past = [];
+    for (var k = 1; k <= 4; k++) { var p = theatreShow(s, -k); if (p) past.push(Object.assign({ weeksAgo: k, seen: seen[p.week] === p.id }, p)); }
+    return { now: Object.assign({ on: inWindow(s, now.when), seen: seen[now.week] === now.id }, now), next: [theatreShow(s, 1), theatreShow(s, 2)], past: past, count: Object.keys(seen).length };
+  }
+  function theatreActions(s) {
+    if (s.loc !== 'surulere') return [];
+    var sh = theatreShow(s, 0), K = D.TH_KIND[sh.kind];
+    return [{ id: 'th_show', label: 'Watch ' + sh.title + ' (' + K.name.toLowerCase() + ')', mins: K.mins, cost: K.cost, fx: K.fx, xp: K.xp, when: sh.when, special: 'theshow', event: true, th: true, show: sh.id, wk: sh.week, minRules: 31 }, D.THEATRE_CREW];
+  }
   // retired actions are hidden from players but still run, so lives that used them replay.
   function availableActions(s, withRetired) {
     var list = [];
@@ -823,6 +838,7 @@
     if (shift) list.push(shift);
     (D.PLACE_ACTIONS[s.loc] || []).forEach(function (a) {
       if (a.retired && !withRetired) return;
+      if (s.rules >= 31 && a.id === 'suru_theatre') return; // rules 31: replaced by this week's show
       if (a.needsVehicle && !(s.vehicles || []).some(function (v) { return D.VEHICLES[v.id].kind === a.needsVehicle; })) return;
       list.push(a);
     });
@@ -830,6 +846,7 @@
     if (s.rules >= 18) list = list.concat(festivalActions(s));
     if (s.rules >= 19) list = list.concat(civicActions(s));
     if (s.rules >= 21) list = list.concat(eventActions(s));
+    if (s.rules >= 31) list = list.concat(theatreActions(s));
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
     if (homeDistrict(s) === s.loc) D.HOME_ACTIONS.forEach(function (a) { list.push(Object.assign({ atHome: true }, a)); });
@@ -926,6 +943,8 @@
     if (a.minigame === 'quiz' && s.quizDay === day(s)) return 'One show a day: come back tomorrow';
     if (s.rules >= 16 && a.compete && dayCount(s, 'c:' + a.id)) return 'One entry a day: come back tomorrow';
     if (s.rules >= 18 && a.fest && dayCount(s, 'f:' + a.id)) return 'Once a day: come back tomorrow';
+    if (s.rules >= 31 && a.once && dayCount(s, 'o:' + a.id)) return 'Once a day: come back tomorrow';
+    if (s.rules >= 31 && a.special === 'theshow' && s.seenShows && s.seenShows[week(s)] === a.show) return 'You saw this show already this week';
     if (s.rules >= 18 && a.special === 'casting' && s.castingWeek === week(s)) return 'One casting a week';
     if (a.special === 'casecheck' && !openCase(s)) return 'You have no open case';
     if (a.special === 'mobilise') { var oc = openCase(s); if (!oc) return 'You have no open case'; if (oc.mob) return 'You already "mobilised" for this case'; }
@@ -982,6 +1001,7 @@
     }
     if (a.event) s.stats.events = (s.stats.events || 0) + 1;
     if (a.fest && s.rules >= 18) dayBump(s, 'f:' + a.id);
+    if (a.once && s.rules >= 31) dayBump(s, 'o:' + a.id);
     // Sights count on rules 14 only, so older lives that visited them unlock nothing new.
     if (a.sight && s.rules >= 14) { var sg = s.stats.sights = s.stats.sights || {}; sg[a.id] = 1; if (Object.keys(sg).length >= 8) unlock(s, 'explorer'); }
     if (a.sport) { var sp = s.stats.sports = s.stats.sports || {}; sp[a.sport] = (sp[a.sport] || 0) + 1; if (Object.keys(sp).length >= 8) unlock(s, 'allrounder'); }
@@ -1002,6 +1022,11 @@
   }
 
   var specials = {
+    theshow: function (s, a) {
+      var sh = theatreShow(s, a.wk - week(s)), seen = s.seenShows = s.seenShows || {}; seen[a.wk] = a.show; // the week it started in, even past midnight
+      var kinds = {}; Object.keys(seen).forEach(function (w) { kinds[seen[w]] = 1; }); if (Object.keys(kinds).length >= 5) unlock(s, 'theatregoer');
+      return { play: 'The lights came up on ' + sh.title + '. The hall laughed, gasped and stood up at the end.', concert: sh.by + ' played ' + sh.title + ' and the whole hall danced in the aisles.', dance: sh.title + ': drums, feet and colour. You clapped till your hands hurt.', comedy: sh.title + ' had the hall in tears. Your cheeks still hurt.', musical: 'You left ' + sh.title + ' humming every song.' }[sh.kind];
+    },
     ridehail: function (s) {
       var T = rideTerms(s);
       var gross = gigPay(s, T.trips * T.fare, 0.75 + rand(s) * 0.5), cut = Math.round(gross * RIDE_CUT);
@@ -5157,7 +5182,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, theatreBill: theatreBill, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

@@ -3130,3 +3130,42 @@ test('rules 30: no buying or selling a business while a decision about one is op
   assert.equal(L.sellBusiness(s, 0).ok, false); assert.match(L.sellBusiness(s, 0).msg, /open event/);
   assert.match(L.buyBusiness(s, 'barber', 'yaba').msg, /open event/);
 });
+
+test('rules 31: the National Theatre runs one show a week, on its nights; seen shows are ticked; stage crew is once a day', () => {
+  const s = L.newGame({ seed: 3110, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 31);
+  const b0 = L.theatreBill(s); assert.equal(b0.now.id, D.THEATRE_SHOWS[0].id); assert.equal(b0.past.length, 0); assert.equal(b0.next.length, 2);
+  // The same week gives the same show to every life.
+  const o = L.newGame({ seed: 99, origin: 'mid', goal: 'japa' }); assert.equal(L.theatreBill(o).now.id, b0.now.id);
+  s.loc = 'surulere'; s.bank = 5e6;
+  const ids = () => L.availableActions(s).map(a => a.id);
+  assert.ok(!ids().includes('suru_theatre'), 'the old generic play is replaced');
+  const until = (fn) => { for (let i = 0; i < 2000 && !fn(); i++) { while (s.pending.length) L.resolveChoice(s, 0); s.loc = 'surulere'; L.wait(s, 15); } assert.ok(fn()); };
+  // Off the show's nights the ticket is closed.
+  const K = D.TH_KIND[b0.now.kind];
+  until(() => K.days.indexOf(L.dow(s)) < 0 && L.hour(s) === 19);
+  assert.ok(L.availableActions(s).find(a => a.id === 'th_show').disabled);
+  until(() => K.days.indexOf(L.dow(s)) >= 0 && L.hour(s) === K.from);
+  const r = L.doAction(s, 'th_show'); assert.ok(r.ok, r.msg);
+  assert.ok(L.theatreBill(s).now.seen);
+  assert.match(L.availableActions(s).find(a => a.id === 'th_show').disabled || '', /already|Only/);
+  // Next week: a different show, and last week's is in past shows with a tick.
+  until(() => L.week(s) === 1);
+  const b1 = L.theatreBill(s); assert.notEqual(b1.now.id, b0.now.id); assert.equal(b1.past[0].id, b0.now.id); assert.ok(b1.past[0].seen);
+  // Stage crew: once a day, pays a gig's wage.
+  until(() => [2, 3, 4, 5, 6].indexOf(L.dow(s)) >= 0 && L.hour(s) === 12);
+  const c0 = s.cash + s.bank; const c = L.doAction(s, 'th_crew'); assert.ok(c.ok, c.msg);
+  assert.ok(s.cash + s.bank - c0 <= 3000 * 1.2, 'small pay');
+  assert.match(L.availableActions(s).find(a => a.id === 'th_crew').disabled || '', /Once a day/);
+  for (const k of Object.keys(D.TH_KIND)) assert.equal(D.TH_KIND[k].mins % 15, 0);
+  // A real life that rides to Surulere and sees the show replays to the same seal.
+  const v = L.newGame({ seed: 3111, origin: 'nepo', goal: 'freestyle' }); while (v.pending.length) L.resolveChoice(v, 0);
+  const opt = L.travelOptions(v, 'surulere').filter(x => !x.disabled).sort((x, y) => x.cost - y.cost)[0]; assert.ok(L.travel(v, 'surulere', opt.mode).ok);
+  for (let i = 0; i < 2000; i++) { while (v.pending.length) L.resolveChoice(v, 0); if (v.loc !== 'surulere') { const o2 = L.travelOptions(v, 'surulere').filter(x => !x.disabled)[0]; if (o2) L.travel(v, 'surulere', o2.mode); }
+    const t = L.availableActions(v).find(a => a.id === 'th_show'); if (t && !t.disabled) { assert.ok(L.doAction(v, 'th_show').ok); break; } L.wait(v, 15); }
+  assert.ok(L.theatreBill(v).now.seen || L.theatreBill(v).past.some(p => p.seen));
+  assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
+  // A rules 30 life keeps the old play and never sees the new acts.
+  const old = L.newGame({ seed: 3110, origin: 'nepo', goal: 'freestyle', rules: 30 }); while (old.pending.length) L.resolveChoice(old, 0); old.loc = 'surulere';
+  const oi = L.availableActions(old).map(a => a.id); assert.ok(oi.includes('suru_theatre')); assert.ok(!oi.includes('th_show') && !oi.includes('th_crew'));
+});
