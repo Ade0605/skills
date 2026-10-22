@@ -304,6 +304,8 @@
     mountVenue();
     mountHalls();
     drawHudAvatar();
+    mountWelcome();
+    mountHuntFound();
     mountInterior();
     drawAvatar();
     syncResidence();
@@ -1127,6 +1129,21 @@
 
   // The face in the HUD: draw the full avatar off-screen, then crop the head.
   var hudOff = null;
+  // Welcome back: when you open the game on a saved life, a card with your face, the day and your money, a big
+  // Continue, and who is signed in on this device with Log out (the same two-tap sign-out as Me → Settings).
+  function shortMoney(n) { var a = Math.abs(n), s0 = n < 0 ? '-' : ''; return s0 + '₦' + (a >= 1e9 ? (a / 1e9).toFixed(1).replace(/\.0$/, '') + 'bn' : a >= 1e6 ? (a / 1e6).toFixed(1).replace(/\.0$/, '') + 'm' : a >= 1e3 ? Math.round(a / 1e3) + 'k' : Math.round(a)); }
+  function mountWelcome() {
+    var ov = document.getElementById('welcome-view');
+    if (!ui.welcome || !S || S.over || S.japa) { if (ov) ov.remove(); return; }
+    var html = '<div class="wb-card" role="dialog" aria-modal="true" aria-labelledby="wb-name"><div class="wb-who"><canvas id="welcome-avatar" width="56" height="56" aria-hidden="true"></canvas><div><h2 id="wb-name">' + esc(S.name || 'You') + '</h2><p>' + esc(L.clockLabel(S)) + ' · ' + esc(L.dateLabel(S)) + ' · ' + esc(shortMoney(S.cash + S.bank)) + '</p></div></div>' +
+      '<button type="button" class="btn wb-go" id="welcome-go" data-welcomego="1">Continue</button>' +
+      (ui.confirmSignout ? '<p class="wb-note">' + esc(ui.flash || '') + '</p>' : '') +
+      '<div class="wb-foot"><span>Signed in as <b>@' + esc(String(S.name || 'you').replace(/\s+/g, '').toLowerCase()) + '</b></span><button type="button" class="link-btn wb-out" id="welcome-out" data-signout="1">' + (ui.confirmSignout ? 'Tap again to log out' : 'Log out') + '</button></div></div>';
+    if (!ov) { ov = document.createElement('div'); ov.id = 'welcome-view'; ov.className = 'welcome-view'; document.body.appendChild(ov); }
+    if (ov.getAttribute('data-html') !== html) { ov.innerHTML = html; ov.setAttribute('data-html', html); var go = document.getElementById('welcome-go'); if (go && !ui.confirmSignout) try { go.focus(); } catch (e) {} }
+    var c = document.getElementById('welcome-avatar');
+    if (c && window.LasgidiAvatar) try { var off = document.createElement('canvas'); window.LasgidiAvatar.draw(off, S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit || {}, myExtra()); var r = off.width / 180, dpr = Math.min(2, window.devicePixelRatio || 1); c.width = 56 * dpr; c.height = 56 * dpr; c.style.width = '56px'; c.style.height = '56px'; c.getContext('2d').drawImage(off, 40 * r, 2 * r, 100 * r, 100 * r, 0, 0, c.width, c.height); } catch (e) {}
+  }
   function drawHudAvatar() {
     var c = document.getElementById('hud-avatar');
     if (!c || !S || !window.LasgidiAvatar) return;
@@ -1269,8 +1286,17 @@
     var done = st.found.length >= h.pieces.length;
     if (done && st.badges.indexOf(h.id) < 0) st.badges.push(h.id);
     writeJSON(HUNT_KEY, st); play('good');
+    ui.huntFound = { n: st.found.length, of: h.pieces.length, place: pl.name, title: h.title, color: h.color, ch: pc.ch, done: done }; // the full-screen moment
     ui.toasts.push({ msg: done ? '🏅 You found all of ' + h.title + '! The ' + h.title + ' crew badge is yours.' : 'You caught the ' + pc.ch + ' of ' + h.title + ' (' + st.found.length + '/' + h.pieces.length + '). Your next riddle is in the 🔤 app.', ok: true });
     render();
+  }
+  function mountHuntFound() {
+    var ov = document.getElementById('hunt-found'), f = ui.huntFound;
+    if (!f) { if (ov) ov.remove(); return; }
+    if (ov) return;
+    ov = document.createElement('div'); ov.id = 'hunt-found'; ov.className = 'hunt-found'; ov.style.setProperty('--hc', f.color); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+    ov.innerHTML = '<div class="hf-in"><div class="hf-ch" aria-hidden="true">' + esc(f.ch) + '</div><p class="hf-k">LETTER HUNT · PIECE ' + f.n + ' OF ' + f.of + '</p><h2>Found at ' + esc(f.place) + '</h2><p class="hf-sub">' + (f.done ? 'That is all ' + f.of + ' letters of ' + esc(f.title) + '. The crew badge is yours.' : f.n + ' of ' + f.of + '. ' + (f.of - f.n) + ' more to go: read the next riddle in the hunt card.') + '</p><button type="button" class="hf-go" id="hunt-found-ok" data-huntfound="1">' + (f.done ? 'Brilliant' : 'Keep hunting') + '</button></div>';
+    document.body.appendChild(ov); try { document.getElementById('hunt-found-ok').focus(); } catch (e) {}
   }
   function huntCard() {
     var h = huntNow(), st = huntState(), k = st.found.length, done = k >= h.pieces.length, open = ui.huntOpen == null ? k : ui.huntOpen;
@@ -1300,7 +1326,7 @@
   function gemClue(pl) {
     var txt = String(pl.text || pl.name), words = pl.name.replace(/\(.*?\)/g, '').split(/[\s,–-]+/).filter(function (w) { return w.length > 3; });
     words.forEach(function (w) { txt = txt.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '…'); });
-    return txt.split(/(?<=[.!?])\s/)[0].slice(0, 140);
+    return (txt.match(/^[\s\S]*?[.!?](?=\s|$)/) || [txt])[0].slice(0, 140); // the first sentence (no lookbehind: older iPhones)
   }
   var GEM_SEEN = 'lasgidi.gemseen.v1', GEM_HINT = 5 * 60 * 1000;
   function gemCard() {
@@ -2246,6 +2272,7 @@
   function venuePanel(pl) {
     var here = S.loc === pl.district, acts = venueActs(pl), crowd = venueScene(pl).people.length + (here ? 1 : 0);
     return '<div class="ap-head"><b>' + esc(pl.icon || '📍') + ' ' + esc(pl.name) + '</b><span class="muted">' + esc(D.DISTRICTS[pl.district].name) + ' · ' + crowd + ' here · ' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="venue-fold" data-venuefold="1" aria-expanded="' + !ui.venueFold + '" aria-label="' + (ui.venueFold ? 'Show the panel' : 'Fold the panel away') + '">' + (ui.venueFold ? '▴' : '▾') + '</button><button class="btn sm ghost" id="venue-close" data-venueclose="1" aria-label="Leave the scene">✕</button></div>' +
+      (huntLetterAt(pl) ? '<div class="hunt-here" style="--hc:' + huntNow().color + '">✨ Something is glowing here! ' + (here ? 'Walk into it or tap it to catch it.' : 'Come here to catch it.') + '</div>' : '') +
       (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? '<div class="gem-here"><span>💎 A gem is hidden in this yard. Tap it' + (here ? '' : ' once you are here') + '.</span>' + (here ? '<button class="btn sm" id="vgem-' + gm.n + '" data-gem="' + gm.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '') + '</div>' : ''; })() +
       (venueNamed(pl).length ? '<p class="note">Here: ' + venueNamed(pl).map(function (n) { return '<b>' + esc(n.name) + '</b> (' + esc(n.role) + ')'; }).join(', ') + '. Tap them in the yard.</p>' : '') +
       (pl.shop ? shopPanel(pl) : '') + (pl.shop ? (here ? '' : rideRow(pl.district)) : here ? venueTabs(pl, acts) : '<p class="note">You are in ' + esc(D.DISTRICTS[S.loc].name) + '. Take a ride to ' + esc(D.DISTRICTS[pl.district].name) + ': it pulls up at the gate and you walk in.</p>' + rideRow(pl.district) + venueExtras(pl)) +
@@ -2331,12 +2358,28 @@
     return bar + '<p class="note">Tap a sign in the yard, or a person to hear them. Workers and visitors come in by ' + esc({ refinery: 'staff bus', airport: 'cab' }[venueSet(pl)] || 'danfo, keke and okada') + ' all day.</p>' +
       (acts.length ? '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; }).join('') + '</div>' : '<p class="note">Nothing to do here yet. Try the other tabs.</p>');
   }
+  // A walk-in always opens: "Opening…" shows at once while three.js loads, and if the 3D scene fails on this phone
+  // (an old GPU, memory, a slow or stalled download) the drawn 2D yard opens instead.
+  var venue3dBroken = false;
   function mountVenue() {
+    try { mountVenueIn(false); }
+    catch (e) {
+      if (window.console) console.error('Walk-in 3D failed, using the 2D yard:', e);
+      venue3dBroken = true; var ov0 = document.getElementById('venue-view'); if (ov0) ov0.remove();
+      if (beachStage) { try { beachStage.stop(); } catch (x) {} beachStage = null; } venueStage = null;
+      try { mountVenueIn(true); } catch (e2) { if (window.console) console.error('Walk-in failed:', e2); }
+    }
+  }
+  function mountVenueIn(flat) {
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? placeById(ui.venueOpen) : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
     var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling|shop|blackstar|bigben|towerbridge|londoneye|burj|desert|castle)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
-    if (want3d && threeState !== 'ready' && threeState !== 'failed') { loadThree(mountVenue); return; }
+    if (flat || venue3dBroken) want3d = false;
+    if (want3d && threeState !== 'ready' && threeState !== 'failed') {
+      if (!ov) { ov = document.createElement('div'); ov.id = 'venue-view'; ov.className = 'cruise-view venue-view venue-loading'; ov.setAttribute('data-kind', 'loading'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', pl.name); ov.innerHTML = '<div class="vl-box"><div class="vl-spin" aria-hidden="true"></div><p>Opening ' + esc(pl.name) + '…</p><button type="button" class="btn sm ghost" id="venue-close-loading" data-venueclose="1">Close</button></div>'; document.body.appendChild(ov); }
+      loadThree(mountVenue); return;
+    }
     var kind = want3d && window.THREE ? '3d' : '2d';
     if (kind === '3d' && !beachStage) { beachStage = window.LasgidiBeach3D.create(venueCallbacks()); if (!beachStage) kind = '2d'; }
     window.__venue = kind === '3d' ? beachStage : flatStage; // handle for tests
@@ -2485,7 +2528,8 @@
     if (threeState === 'ready' || threeState === 'failed') { cb(); return; }
     if (threeState === 'loading') { (loadThree.q = loadThree.q || []).push(cb); return; }
     threeState = 'loading'; loadThree.q = [cb];
-    var done = function (ok) { threeState = ok && window.THREE ? 'ready' : 'failed'; var q = loadThree.q; loadThree.q = []; q.forEach(function (f) { try { f(); } catch (e) {} }); if (threeState === 'ready') { faceCache = {}; try { drawHudAvatar(); } catch (e) {} } }; // avatars redraw in 3D once three.js is in
+    var timer = setTimeout(function () { done(!!window.THREE); }, 20000); // a stalled download: carry on in 2D
+    var done = function (ok) { if (threeState !== 'loading') return; clearTimeout(timer); threeState = ok && window.THREE ? 'ready' : 'failed'; var q = loadThree.q; loadThree.q = []; q.forEach(function (f) { try { f(); } catch (e) {} }); if (threeState === 'ready') { faceCache = {}; try { drawHudAvatar(); } catch (e) {} } }; // avatars redraw in 3D once three.js is in
     try {
       var inl = document.getElementById('lsg-three'), sc = document.createElement('script');
       if (inl) { sc.textContent = inl.textContent; document.head.appendChild(sc); done(true); return; }
@@ -2606,6 +2650,8 @@
   /* ---------- the ride view: a short journey scene with "Now passing" signs ---------- */
   // Mounted outside the app so live re-renders never restart it. Tap anywhere or Arrive to skip.
   // Towns on the road between the cities, for the coach (the real routes, in order).
+  // Road distances for the coach routes (km, roughly), for the signs.
+  var ROUTE_KM = { 'lagos-abuja': 760, 'lagos-ph': 620, 'abuja-ph': 590, 'lagos-accra': 480, 'abuja-accra': 1240, 'ph-accra': 1100, 'accra-kumasi': 250, 'lagos-kumasi': 730, 'abuja-kumasi': 1490, 'ph-kumasi': 1350, 'accra-capecoast': 145, 'kumasi-capecoast': 220, 'lagos-capecoast': 625, 'abuja-capecoast': 1385, 'ph-capecoast': 1245 };
   var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'], 'lagos-accra': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'abuja-accra': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'ph-accra': ['Owerri', 'Benin City', 'Ore', 'Sagamu', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'accra-kumasi': ['Achimota', 'Nsawam', 'Apedwa', 'Bunso', 'Nkawkaw', 'Konongo', 'Ejisu'], 'lagos-kumasi': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw', 'Ejisu'], 'abuja-kumasi': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'], 'ph-kumasi': ['Owerri', 'Benin City', 'Ore', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'], 'accra-capecoast': ['Kasoa', 'Winneba', 'Apam junction', 'Mankessim', 'Anomabo'], 'kumasi-capecoast': ['Bekwai', 'Obuasi', 'Fosu', 'Assin Praso', 'Jukwa'], 'lagos-capecoast': ['Mile 2', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Accra', 'Winneba', 'Mankessim'], 'abuja-capecoast': ['Lokoja', 'Ibadan', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Winneba'], 'ph-capecoast': ['Benin City', 'Ore', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Winneba'] };
   // Abuja's and Port Harcourt's own words for the same rides (display only: the engine and its ledger keep the mode names).
   var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, kumasi: { danfo: 'Tro-tro', cab: 'Taxi' }, capecoast: { danfo: 'Tro-tro', cab: 'Taxi' }, dxb: { danfo: 'Metro and bus', cab: 'Taxi', okada: 'Scooter', keke: 'Scooter' }, ldn: { danfo: 'Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike', rail: 'Tube' } };
@@ -2618,6 +2664,8 @@
     var cm = CITY_MODE_NAMES[L.cityOf(S)], name = chauffeur ? 'VIP chauffeur' : (cm && own(cm, mode) ? cm[mode] : RIDE_NAMES[mode] || 'Ride'), water = mode === 'ferry' || mode === 'boat', air = mode === 'heli' || mode === 'flight' || mode === 'jet';
     var cf = L.districtCity(from), ctt = L.districtCity(to), coach = mode === 'coach', route = coach ? (COACH_ROUTE[cf + '-' + ctt] || (COACH_ROUTE[ctt + '-' + cf] || []).slice().reverse()) : null;
     var sights = coach ? route : passing(from, to).slice(0, 3);
+    // Road signs on the coach: each town shows how far you are from the city you left ("LAGOS 300 KM").
+    var tot = coach ? (ROUTE_KM[cf + '-' + ctt] || ROUTE_KM[ctt + '-' + cf] || 0) : 0, subs = coach && tot ? route.map(function (x, i) { return D.CITIES[cf].name.toUpperCase() + ' ' + Math.round((i + 1) / (route.length + 1) * tot / 5) * 5 + ' KM'; }) : null;
     if (!air && !sights.length) {
       var pick = function (d) { var x = D.PLACES.filter(function (p) { return p.district === d && !/_site$/.test(p.id); })[0]; return x ? x.name : D.DISTRICTS[d].name; };
       sights = [pick(from), pick(to)];
@@ -2643,7 +2691,7 @@
     el.addEventListener('keydown', function (e) { if (e.key === 'Escape') done(); });
     document.body.appendChild(el);
     // In 3D when three.js is in: the same window, with the journey built in three.js (the 2D scene stays otherwise).
-    if (window.LasgidiRide3D && window.THREE && threeState === 'ready') { var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { mode: mode, highway: coach, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit })) el.classList.add('rv-3dmode'); } catch (e) {} }
+    if (window.LasgidiRide3D && window.THREE && threeState === 'ready') { var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { mode: mode, highway: coach, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, subs: subs, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit })) el.classList.add('rv-3dmode'); } catch (e) {} }
     var b = document.getElementById('rv-arrive'); if (b) b.focus();
     setTimeout(done, secs * 1000 + 400);
   }
@@ -3462,6 +3510,7 @@
     T.settings += settingsView();
     T.settings += '<div class="section"><h3>Save</h3><p class="note">The game saves in this browser. Copy the save code to move to another device.</p>' +
       '<div class="inline"><button class="btn sm" id="copy-save" data-copy="1">Copy save code</button><button class="btn sm ghost" id="new-game" data-new="1">New life</button></div>' +
+      '<div class="signout-row"><span>Signed in as <b>' + esc(S.name || 'you') + '</b> on this device</span><button type="button" class="link-btn signout" id="sign-out" data-signout="1">' + (ui.confirmSignout ? 'Tap again to sign out' : 'Sign out') + '</button></div>' +
       '<textarea id="save-code" readonly rows="3" style="width:100%" aria-label="Save code">' + esc(L.serialize(S)) + '</textarea>' +
       (ui.flash ? '<p class="note">' + esc(ui.flash) + '</p>' : '') + '</div>' +
       '<div class="section"><h3>Keyboard</h3><p class="note">Number keys switch tabs in the order shown (1 is Do). A runs the top suggestion. Tab and Enter work everywhere, including the map.</p></div>';    // The dream card, your start and what you owe, and today's hustle lead the Goals tab.
@@ -4284,7 +4333,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
+    var t = e.target.closest('[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -4739,6 +4788,21 @@
       } catch (err) { selectText('share-text'); }
       return;
     }
+    // Sign out: there is no password account, so signing out copies your save code and then clears this device
+    // (the life, settings and the anonymous online id). Paste the code on the start screen to carry on anywhere.
+    if (ds.huntfound) { ui.huntFound = null; render(); return; }
+    if (ds.welcomego) { ui.welcome = false; ui.confirmSignout = false; ui.flash = ''; render(); return; }
+    if (ds.signout) {
+      if (!ui.confirmSignout) {
+        ui.confirmSignout = true; var codeSO = L.serialize(S);
+        try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(codeSO).catch(function () {}); } catch (e) {}
+        ui.flash = 'Your save code is copied (it is also in the box above). Keep it safe, for example in your notes. Tap again to remove this life from this device; paste the code on the start screen to carry on.';
+        render(); return;
+      }
+      try { Object.keys(localStorage).filter(function (k) { return /^lasgidi\./.test(k); }).forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
+      try { sessionStorage.clear(); } catch (e) {}
+      location.reload(); return;
+    }
     if (ds.copy) {
       var code = L.serialize(S), box = document.getElementById('save-code');
       var done = function (m) { ui.flash = m; render(); };
@@ -4956,6 +5020,7 @@
   }
   function start(data) {
     S = (data && data.state) ? L.migrate(data.state) : (prefs.mode === 'weekly' && weeklyRun()) || load(SAVE_KEY);
+    if (S && !(data && data.state) && !(navigator.webdriver && !/welcome/.test(location.hash))) ui.welcome = true; // welcome back on a saved life (automated test browsers skip it unless #welcome)
     if (data && data.ui) Object.assign(ui, data.ui, { toasts: [] });
     render();
     initOnline();

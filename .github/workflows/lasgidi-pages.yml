@@ -45,6 +45,9 @@ jobs:
           if [ -n "${{ vars.LASGIDI_SUPABASE_URL }}" ] && [ -n "${{ vars.LASGIDI_SUPABASE_ANON }}" ]; then
             printf 'window.LASGIDI_ONLINE = { url: %s, anon: %s };\n' "$(node -e 'console.log(JSON.stringify(process.argv[1]))' "${{ vars.LASGIDI_SUPABASE_URL }}")" "$(node -e 'console.log(JSON.stringify(process.argv[1]))' "${{ vars.LASGIDI_SUPABASE_ANON }}")" > ../_site/src/online-config.js
           fi
+      - name: Shrink the scripts (same safe minify as the single-file build)
+        working-directory: lasgidi
+        run: node tools/minify-site.js ../_site
       - name: Publish to the gh-pages branch
         working-directory: _site
         run: |

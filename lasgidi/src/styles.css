@@ -1157,3 +1157,38 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 #radio-title { width: 100%; box-sizing: border-box; margin: 2px 0 8px; padding: 8px; border-radius: 10px; border: 1px solid var(--line, #ddd); font: inherit; }
 .radio .ph-promo { flex-direction: column; align-items: flex-start; gap: 4px; }
 .rv-cams { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+/* The walk-in while three.js loads */
+.venue-loading { display: flex; align-items: center; justify-content: center; background: rgba(12, 16, 24, .82); }
+.venue-loading .vl-box { background: var(--card, #fff); color: var(--ink, #17181a); border-radius: 18px; padding: 22px 26px; text-align: center; max-width: 80vw; }
+.venue-loading .vl-spin { width: 34px; height: 34px; margin: 0 auto 10px; border-radius: 50%; border: 4px solid rgba(0,0,0,.12); border-top-color: #f2b600; animation: vlspin .8s linear infinite; }
+@keyframes vlspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .venue-loading .vl-spin { animation: none; } }
+
+/* Sign out (Me → Save) */
+.signout-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0 6px; font-size: 13px; color: var(--muted); }
+.signout-row .signout { color: #c0392b; font-weight: 700; }
+
+/* Welcome back (on opening a saved life) */
+.welcome-view { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(14, 18, 26, .45); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.wb-card { width: min(360px, 100%); background: var(--card, #fff); color: var(--ink, #17181a); border-radius: 22px; padding: 16px; box-shadow: 0 18px 50px rgba(0,0,0,.28); }
+.wb-who { display: flex; align-items: center; gap: 12px; background: var(--soft, #f3f1ec); border-radius: 16px; padding: 10px 12px; }
+.wb-who canvas { width: 56px; height: 56px; border-radius: 50%; background: #e8e3d8; flex: none; }
+.wb-who h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.wb-who p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.wb-go { display: block; width: 100%; margin-top: 14px; padding: 15px; font-size: 17px; font-weight: 800; border-radius: 16px; background: #1d7a43; color: #fff; border: 0; }
+.wb-note { font-size: 12.5px; color: var(--muted); margin: 10px 2px 0; }
+.wb-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.wb-foot .wb-out { color: #2f6fa0; font-weight: 700; }
+
+/* Letter hunt: the banner in a walk-in and the full-screen "found" moment */
+.hunt-here { margin: 8px 0; padding: 9px 12px; border-radius: 12px; font-weight: 700; font-size: 13.5px; color: #fff; background: var(--hc, #c0392b); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hc, #c0392b) 30%, transparent); }
+.hunt-found { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 16px; background: color-mix(in srgb, var(--hc, #c0392b) 72%, rgba(10,10,14,.6)); animation: hfin .35s ease-out; }
+.hf-in { text-align: center; color: #fff; max-width: 420px; }
+.hf-ch { width: 96px; height: 96px; margin: 0 auto 14px; border-radius: 22px; display: flex; align-items: center; justify-content: center; font: 900 64px system-ui, sans-serif; background: rgba(255,255,255,.16); box-shadow: 0 0 40px rgba(255,255,255,.45); }
+.hf-k { letter-spacing: .14em; font-size: 12px; font-weight: 800; opacity: .85; margin: 0; }
+.hunt-found h2 { font-size: 26px; font-weight: 900; margin: 6px 0 8px; }
+.hf-sub { opacity: .9; margin: 0 0 18px; }
+.hf-go { min-width: 240px; padding: 14px 24px; border-radius: 999px; border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.18); color: #fff; font-weight: 800; font-size: 16px; }
+@keyframes hfin { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hunt-found { animation: none; } }
