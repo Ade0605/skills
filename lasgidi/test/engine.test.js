@@ -3293,7 +3293,7 @@ test('rules 34: review fixes: a full stage chart, collected the same night; capp
 
 test('rules 35: festivals through the year: countdown, programme day by day, tickets once a day, a volunteer gig, news, and replay', () => {
   const s = L.newGame({ seed: 3510, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 35); s.bank = 5e7;
+  assert.ok(s.rules >= 35); s.bank = 5e7;
   const step = () => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); s.loc = 'island'; };
   const f0 = L.yearFests(s).find(f => f.id === 'indep'); assert.equal(f0.phase, 'soon'); assert.equal(f0.daysTo, 4);
   // Independence Jam: day 1 from 18:00.
@@ -3324,4 +3324,25 @@ test('rules 35: festivals through the year: countdown, programme day by day, tic
   for (let i = 0; i < 1000; i++) { while (v.pending.length) L.resolveChoice(v, 0); const t = L.availableActions(v).find(a => a.id === 'yf_indep_reg'); if (t && !t.disabled) { assert.ok(L.doAction(v, 'yf_indep_reg').ok); break; } L.wait(v, 30); }
   assert.ok(v.evSeen && v.evSeen.indep);
   assert.equal(L.replayLife(v.replay).ledgerHash, v.ledgerHash);
+});
+
+test('rules 36: a food business can rent a festival stall: a fee up front, double takings on festival days, a rival some days', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 3610, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); s.bank = 5e7; s.cash = 5e6; s.businesses.push({ id: 'buka', paid: 600000, visit: 0, site: 'island', level: 1, manager: true }); return s; };
+  const s = mk(); assert.equal(s.rules, 36); s.loc = 'island';
+  // No stall act without a food business.
+  const n = L.newGame({ seed: 3611, origin: 'nepo', goal: 'freestyle' }); while (n.pending.length) L.resolveChoice(n, 0); n.loc = 'island';
+  assert.ok(!L.availableActions(n).some(a => /^stall_/.test(a.id)));
+  // The Independence Jam countdown is on from day 0: book it.
+  const a = L.availableActions(s).find(x => x.id === 'stall_indep'); assert.ok(a && !a.disabled, a && a.disabled);
+  assert.ok(a.price > 0 && a.price <= 15000 * 0.6 * 3 * 1.2);
+  const r = L.doAction(s, 'stall_indep'); assert.ok(r.ok, r.msg); assert.ok(s.stalls['indep-0']);
+  assert.ok(!L.availableActions(s).some(x => x.id === 'stall_indep'), 'one booking per festival');
+  // Payouts on the three festival days are boosted; compare with the same life without a stall.
+  const o = mk(); o.loc = 'island';
+  const payTotal = (x) => x.ledger.filter(e => e.memo === 'Business payout').reduce((t, e) => t + e.amt, 0);
+  for (const x of [s, o]) for (let i = 0; i < 9 * 96; i++) { while (x.pending.length) L.resolveChoice(x, 0); x.businesses.forEach(b => { b.visit = L.day(x); }); L.wait(x, 15); }
+  assert.ok(payTotal(s) > payTotal(o) * 1.15, 'festival days paid more: ' + payTotal(s) + ' vs ' + payTotal(o));
+  assert.equal(Object.keys(s.stalls).length, 0, 'the stall is cleared after the festival');
+  // A rules 35 life never sees stalls.
+  const old = mk(35); old.loc = 'island'; assert.ok(!L.availableActions(old).some(x => /^stall_/.test(x.id)));
 });
