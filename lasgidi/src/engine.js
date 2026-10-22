@@ -71,7 +71,9 @@
   // tickets for this week's show on its nights, and a once-a-day stage crew gig.
   // 32 adds Eko Detty Fest: 21 nights at Harbour Live in December with a nightly lineup, tickets, a food village,
   // a volunteer gig, a countdown from late November and a news line every day of the fest.
-  var RULES = 32;
+  // 33 lets you perform: an open stage at the National Theatre on Wednesday nights, and from 70% there (or 5,000
+  // followers) an opening-act slot at Eko Detty Fest. A rhythm mini-game; tips capped, and fame for creators.
+  var RULES = 33;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -125,6 +127,8 @@
     japa:        'Japa: left Nigeria for a new life abroad',
     seaplot:     'Sea Plots: own a block in the water',
     dancer:      'Dance-off champion: 90% on the beat',
+    on_stage:    'On stage: performed at the National Theatre and at Eko Detty Fest',
+    show_stopper: 'Show-stopper: 90% on the beat as an opening act at Eko Detty Fest',
     quiz:        'Quiz champion: 10 out of 10',
     vendor:      'Online vendor: sold 100 items',
     corper:      'Corper wee! Finished your NYSC service year',
@@ -840,7 +844,8 @@
   function theatreActions(s) {
     if (s.loc !== 'surulere') return [];
     var sh = theatreShow(s, 0), K = D.TH_KIND[sh.kind];
-    return [{ id: 'th_show', label: 'Watch ' + sh.title + ' (' + K.name.toLowerCase() + ')', mins: K.mins, cost: K.cost, fx: K.fx, xp: K.xp, when: sh.when, special: 'theshow', event: true, th: true, show: sh.id, wk: sh.week, minRules: 31 }, D.THEATRE_CREW];
+    var out = s.rules >= 33 ? [STAGE_ACTS.theatre] : [];
+    return out.concat([{ id: 'th_show', label: 'Watch ' + sh.title + ' (' + K.name.toLowerCase() + ')', mins: K.mins, cost: K.cost, fx: K.fx, xp: K.xp, when: sh.when, special: 'theshow', event: true, th: true, show: sh.id, wk: sh.week, minRules: 31 }, D.THEATRE_CREW]);
   }
   // Rules 32: Eko Detty Fest. December is weeks 8–11 of each game year; night n (1–21) is December day F.start + n - 1.
   function decDay(s) { return monthIndex(s) === 11 ? (week(s) % 4) * 7 + dow(s) : null; }
@@ -861,8 +866,16 @@
     var F = D.DETTY_FEST, f = dettyFest(s); if (s.loc !== F.district || !f || f.phase !== 'on') return [];
     var t = f.tonight, list = Object.keys(F.tickets).map(function (id) { var T = F.tickets[id];
       return { id: id, label: F.name + ' night ' + t.n + ': ' + t.head + ' · ' + T.label, mins: 300, cost: T.cost, fx: T.fx, xp: T.xp, special: 'dettyfest', event: true, dec: true, night: t.n, fy: festYear(s), minRules: 32, when: { from: F.gates, to: 24 } }; });
+    if (s.rules >= 33) list.push(STAGE_ACTS.fest);
     return list.concat(D.FEST_ACTS);
   }
+  // Rules 33: performing. The open stage (Wednesday nights at the National Theatre) and the opening-act slot at Eko Detty Fest.
+  var STAGE_ACTS = {
+    theatre: { id: 'stage_open', label: 'Perform at the open stage night (mini-game)', mins: 60, fx: { fun: 20, social: 15, stress: 4, energy: -12 }, xp: { charisma: 1, music: 1 }, minigame: 'stage', stageAt: 'theatre', minRules: 33, when: { days: [2], from: 18, to: 22 } },
+    fest: { id: 'stage_fest', label: 'Opening act at Eko Detty Fest (mini-game)', mins: 60, fx: { fun: 30, social: 25, stress: 6, energy: -15 }, xp: { charisma: 2, music: 1 }, minigame: 'stage', stageAt: 'fest', minRules: 33, when: { from: 16, to: 18 } }
+  };
+  var STAGE_CAP = 3000;
+  function stageReady(s) { return (s.stats.stageBest || 0) >= 70 || !!(s.creator && s.creator.followers >= 5000); }
   // retired actions are hidden from players but still run, so lives that used them replay.
   function availableActions(s, withRetired) {
     var list = [];
@@ -985,6 +998,8 @@
     if (a.special === 'accredit' && s.accredited === week(s)) return 'Accredited already this week';
     if (a.special === 'highroller' && netWorth(s) < price(s, 50000000)) return 'High rollers only: net worth of ' + naira(price(s, 50000000));
     if (a.special === 'shutdown' && s.shutdownWeek === week(s)) return 'Once a week: the club needs to restock';
+    if (s.rules >= 33 && a.minigame === 'stage' && dayCount(s, 'm:stage')) return 'One performance a day';
+    if (s.rules >= 33 && a.stageAt === 'fest' && !stageReady(s)) return 'Score 70% at the National Theatre open stage first (or have 5,000 followers)';
     if (s.rules >= 16 && (a.minigame === 'bole' || a.minigame === 'hawk' || a.minigame === 'danfo') && dayCount(s, 'm:' + a.minigame) >= 2) return 'Two runs a day: rest and come back tomorrow';
     switch (a.special) {
       case 'cook': if (s.pantry <= 0) return 'No foodstuff at home'; break;
@@ -4752,7 +4767,8 @@
     dance: 'Dance-offs are at the Surulere event hall on Saturdays.',
     hawk: 'Hawk in the Oshodi go-slow.',
     bole: 'The bole grill is in Old GRA, Port Harcourt.',
-    quiz: 'The quiz show is at Millennium Park, Abuja, Friday to Sunday from 15:00.'
+    quiz: 'The quiz show is at Millennium Park, Abuja, Friday to Sunday from 15:00.',
+    stage: 'The open stage is at the National Theatre, Surulere, on Wednesdays from 18:00. In December, Eko Detty Fest books opening acts.'
   };
   function miniAction(s, kind) { return availableActions(s).filter(function (x) { return x.minigame === kind; })[0]; }
   function miniStarts(s) { return s.rules >= MINI_RULES; }
@@ -4785,6 +4801,7 @@
     if (kind === 'quiz') s.quizDay = day(s);
     if (s.rules >= 16) dayBump(s, 'm:' + kind);
     s.mini = { kind: kind, t: s.t, cost: cost };
+    if (kind === 'stage') s.mini.at = a.stageAt;
     var spent = (cost.entry || 0) + (cost.stock || 0) + (cost.owner || 0) + (cost.fuel || 0);
     return finish(s, ok('▶ ' + a.label.replace(/ \(mini-game\)$/, '') + (spent ? ': ' + naira(spent) + ' paid up front' : '') + '. Quitting forfeits the run.'));
   }
@@ -4813,6 +4830,27 @@
     if (acc >= 0.9) unlock(s, 'dancer');
     if (Math.round(acc * 100) > (s.stats.danceBest || 0)) s.stats.danceBest = Math.round(acc * 100);
     return finish(s, ok('💃 ' + Math.round(acc * 100) + '% on the beat, best streak ' + best + '. ' + (spray ? 'The guests sprayed you ' + naira(spray) + '!' : 'Nobody sprayed. Practise and come back.') + dressBonus(s, 'owambe')));
+  }
+
+  /* ---------- on stage (rules 33): tips capped like a gig, applause, and followers for creators ---------- */
+  function stageShow(s, hits, total, best) {
+    var m = miniClaim(s, 'stage');
+    if (!m) return fail('Start the performance first.');
+    if (m.fail) return m.fail;
+    hits = Math.floor(hits); total = Math.floor(total); best = Math.floor(best);
+    if (!(total > 0 && total <= 200 && hits >= 0 && hits <= total && best >= 0 && best <= hits)) return fail('That performance does not add up.');
+    s.alerts = []; s.mini = null;
+    var fest = m.at === 'fest', acc = hits / total, pct = Math.round(acc * 100);
+    var tips = acc < 0.4 ? 0 : Math.min(price(s, STAGE_CAP), gigPay(s, (fest ? 3200 : 2400) * Math.pow(acc, 2) + best * 10, 1));
+    if (tips > 0) earn(s, tips, fest ? 'Opening act fee: Eko Detty Fest' : 'Open stage tips: National Theatre');
+    var st = s.stats; if (pct > (st.stageBest || 0)) st.stageBest = pct;
+    var where = st.stageAt = st.stageAt || {}; where[fest ? 'fest' : 'theatre'] = 1;
+    if (where.fest && where.theatre) unlock(s, 'on_stage');
+    if (fest && acc >= 0.9) unlock(s, 'show_stopper');
+    var fans = 0; if (s.creator && acc >= 0.5) { fans = Math.round((fest ? 900 : 150) * acc * acc); s.creator.followers += fans; }
+    applyFx(s, { fun: Math.round(acc * 15), stress: acc >= 0.6 ? -8 : 4 });
+    var crowd = acc >= 0.9 ? 'A standing ovation!' : acc >= 0.7 ? 'The crowd sang along.' : acc >= 0.4 ? 'Polite applause.' : 'Somebody shouted "Next!".';
+    return finish(s, ok('🎤 ' + pct + '% on the beat, best streak ' + best + '. ' + crowd + (tips ? ' ' + (fest ? 'Your fee: ' : 'Tips: ') + naira(tips) + '.' : '') + (fans ? ' +' + fans + ' followers.' : '') + (!fest && pct >= 70 && !(where.fest) ? ' Eko Detty Fest books acts who score 70% here.' : '')));
   }
 
   /* ---------- go-slow hawker: a capped shift from the mini-game ---------- */
@@ -5251,7 +5289,7 @@
     nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
     buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
     decRates: decRates, luxuryCar: luxuryCar, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
-    startMinigame: recorded('mg', startMinigame), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
+    startMinigame: recorded('mg', startMinigame), stageShow: recorded('st', stageShow), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
     joinParty: recorded('pj', joinParty),
     hostParty: recorded('hp', hostParty), partyBlock: partyBlock,
     claimStreak: recorded('ds', claimStreak), streakInfo: streakInfo,
