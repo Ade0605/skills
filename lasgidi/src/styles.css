@@ -1204,3 +1204,23 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .race-main { flex: 1; min-width: 0; } .race-main p { margin: 2px 0 6px; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .race-bar { height: 7px; border-radius: 99px; background: rgba(0,0,0,.08); overflow: hidden; } .race-bar i { display: block; height: 100%; background: #22a35a; border-radius: 99px; }
 .race-n { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 52px; } .race-n small { color: var(--muted); }
+/* Rules 31: the National Theatre playbill */
+.playbill { margin: 10px 0; border-radius: 16px; overflow: hidden; background: #140d0b; color: #f4efe6; box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc, #8e2b2b) 45%, transparent); }
+.playbill .pb-now { padding: 12px 14px; background: linear-gradient(160deg, var(--pc, #8e2b2b), #140d0b 85%); }
+.playbill h3 { margin: 4px 0 2px; font-size: 20px; color: #fff; }
+.playbill p { margin: 4px 0; font-size: 13.5px; }
+.playbill .muted { color: rgba(244,239,230,.75); }
+.pb-lab { font: 800 11.5px/1.2 system-ui, sans-serif; letter-spacing: .08em; color: #ffd23f; }
+.pb-live { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: #e53935; color: #fff; animation: pbpulse 1.6s ease-in-out infinite; }
+@keyframes pbpulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .pb-live { animation: none; } }
+.pb-meta { font-weight: 700; color: #fff; }
+.pb-col { padding: 8px 14px; border-top: 1px solid rgba(255,255,255,.1); }
+.pb-col ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.pb-row { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.pb-k { flex: none; padding: 2px 7px; border-radius: 8px; font-size: 11.5px; font-weight: 700; background: var(--pc, #555); color: #fff; }
+.pb-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pb-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-t .muted { font-size: 11.5px; }
+.pb-when { flex: none; font-size: 11.5px; color: rgba(244,239,230,.75); text-align: right; }
+.playbill > .btn { margin: 8px 14px 12px; background: #ffd23f; color: #17181a; }

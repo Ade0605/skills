@@ -2444,6 +2444,36 @@
     { k: 'newplace', n: 1, icon: '📍', label: 'Do an activity at one of the new places' },
     { k: 'shop', n: 1, icon: '🏪', label: 'Check in on your shops' }
   ], GOAL_REWARD = 5000;
+  // Rules 31: the National Theatre's programme. One show a week on a fixed rotation, the same for everyone that week.
+  // All titles and companies are made up for the game.
+  var THEATRE_SHOWS = [
+    { id: 'palmwine_court', title: 'The Palm-Wine Court', kind: 'play', by: 'Iganmu Repertory Company', color: '#8e2b2b', blurb: 'A village elder holds court over one stolen keg of palm wine. Everybody is guilty of something.' },
+    { id: 'horns_cap', title: 'Horns Under the Cap', kind: 'concert', by: 'The Surulere Horns', color: '#d4a017', blurb: 'Twelve-piece afrobeat: horns, talking drum and a two-hour groove.' },
+    { id: 'bata_bodies', title: 'Bata Bodies', kind: 'dance', by: 'Iganmu Dance Troupe', color: '#2f6fd0', blurb: 'Bata drums and thirty dancers telling the story of a river.' },
+    { id: 'laugh_wahala', title: 'Laugh Wahala Live', kind: 'comedy', by: 'Five stand-up comedians', color: '#e67e22', blurb: 'Danfo drivers, landlords, in-laws: nobody is safe.' },
+    { id: 'ajegunle_dreams', title: 'Ajegunle Dreams', kind: 'musical', by: 'Eko Stage Musicals', color: '#8e44ad', blurb: 'Three friends, one talent show and a song for every street.' },
+    { id: 'oba_market', title: 'The Oba\'s Last Market Day', kind: 'play', by: 'Lagos Theatre Guild', color: '#6b3a1f', blurb: 'An old king walks his market one last time, in disguise.' },
+    { id: 'highlife_social', title: 'Highlife Sunday Social', kind: 'concert', by: 'The Broad Street Band', color: '#16a35a', blurb: 'Guitar highlife the way your grandparents danced it.' },
+    { id: 'tailor_idumota', title: 'The Tailor of Idumota', kind: 'play', by: 'Yaba Players', color: '#1f5fa0', blurb: 'A tailor sews a wedding dress for the woman he loves, for another man\'s wedding.' },
+    { id: 'egungun_rising', title: 'Masquerade Rising', kind: 'dance', by: 'Iganmu Heritage Company', color: '#c0392b', blurb: 'Masks, raffia and acrobats in a whirl of colour.' },
+    { id: 'fuji_fire', title: 'Fuji Fire Night', kind: 'concert', by: 'Alhaji Kola and the Iganmu Fuji Band', color: '#f2b600', blurb: 'Fuji till your legs give up.' },
+    { id: 'danfo_diaries', title: 'Danfo Diaries', kind: 'comedy', by: 'The Conductor Crew', color: '#f2c200', blurb: 'One bus, one route, fourteen passengers and no change.' },
+    { id: 'rain_broad', title: 'Rain on Broad Street', kind: 'play', by: 'Iganmu Repertory Company', color: '#34495e', blurb: 'A banker, a hawker and a flood. One long night in the city.' },
+    { id: 'wedding_year', title: 'Wedding of the Year', kind: 'musical', by: 'Eko Stage Musicals', color: '#e84393', blurb: 'Two families, one hall, too many aso-ebi colours.' },
+    { id: 'lagoon_strings', title: 'Lagoon Strings', kind: 'concert', by: 'The Lagos City Orchestra', color: '#2c3e50', blurb: 'An orchestra playing Nigerian folk songs, with a choir of sixty.' },
+    { id: 'atilogwu_night', title: 'Night of the Acrobats', kind: 'dance', by: 'Eastern Heritage Dancers', color: '#27ae60', blurb: 'High jumps and flips to the ogene and the flute.' },
+    { id: 'third_mainland', title: 'Third Mainland Love Letters', kind: 'play', by: 'Lagos Theatre Guild', color: '#7b5cff', blurb: 'Two strangers stuck in traffic on the bridge, every morning for a year.' }
+  ];
+  // What a night of each kind is like: the nights it plays (0 = Monday), the hours, ticket, effects.
+  var TH_KIND = {
+    play:    { name: 'Play',     icon: '🎭', days: [3, 4, 5, 6], from: 18, to: 22, mins: 150, cost: 4000, fx: { fun: 35, social: 10, stress: -8 }, xp: { charisma: 1 } },
+    concert: { name: 'Concert',  icon: '🎷', days: [4, 5],       from: 19, to: 23, mins: 180, cost: 8000, fx: { fun: 45, social: 14, energy: -10 } },
+    dance:   { name: 'Dance',    icon: '💃', days: [5, 6],       from: 16, to: 21, mins: 120, cost: 3500, fx: { fun: 30, social: 8, stress: -10 } },
+    comedy:  { name: 'Comedy',   icon: '😂', days: [4, 5],       from: 19, to: 23, mins: 120, cost: 5000, fx: { fun: 40, stress: -14 } },
+    musical: { name: 'Musical',  icon: '🎶', days: [4, 5, 6],    from: 17, to: 22, mins: 180, cost: 6000, fx: { fun: 42, social: 12, stress: -6 } }
+  };
+  // Backstage work: once a day, small pay.
+  var THEATRE_CREW = { id: 'th_crew', label: 'Work as stage crew at the National Theatre', mins: 240, earn: 2500, fx: { energy: -16, social: 4 }, xp: { craft: 1 }, gig: true, once: true, minRules: 31, when: { days: [2, 3, 4, 5, 6], from: 12, to: 20 } };
   // Rules 21: weekend events on a four-week rotation (when.wk is the week of the month), at their places.
   var EVENT_ACTS = {
     cc_castle: [
@@ -2647,7 +2677,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, THEATRE_SHOWS: THEATRE_SHOWS, TH_KIND: TH_KIND, THEATRE_CREW: THEATRE_CREW, insideKind: insideKind
   };
 
   // Keyed tables have no prototype, so an id like 'constructor' or '__proto__' from a save, a replay or another player's

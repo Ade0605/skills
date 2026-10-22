@@ -1038,7 +1038,7 @@
       var pave = mesh(new T.PlaneGeometry(500, 500).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: paveT, roughness: 0.85 }), 0, 0, 0); pave.castShadow = false; plzG.add(pave);
       var gr = mesh(new T.PlaneGeometry(500, 160).rotateX(-Math.PI / 2), mat('plzlawn', { map: grassTex, roughness: 0.95 }), 0, 0.02, -150); gr.castShadow = false; plzG.add(gr);
       if (id === 'worship') { cathedral(-55, 50, 0.9); mosque(55, 50, 0.85); }
-      else if (id === 'theatre') theatre(0, 70);
+      else if (id === 'theatre') { theatre(0, 70); if (sc.th) theatreBoard(0, 20); }
       else if (/abj_tower/.test(id)) millenniumTower(0, 80);
       else if (id === 'acc_blackstar') blackStarGate(0, 60);
       else if (id === 'dxb_burj') burjKhalifa(0, 110);
@@ -1074,6 +1074,7 @@
       var m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), one = new T.Vector3(1, 1, 1);
       for (var i = 0; i < W.n; i++) { var b = PZ.walkBase[i]; if (i >= n) { m4.makeTranslation(0, -9, 0); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4); continue; } var x = ((b[0] + t * b[2] + 45) % 90 + 90) % 90 - 45, z = ((b[1] + t * b[3] + 40) % 80 + 80) % 80 - 40; if (Math.hypot(x, z + 4) < 10) x += 12; e.set(0, Math.atan2(-b[3], b[2]), 0); q.setFromEuler(e); m4.compose(v.set(x, Math.abs(Math.sin(t * 6 + b[4])) * 0.06, z), q, one); W.body.setMatrixAt(i, m4); W.head.setMatrixAt(i, m4); }
       W.body.instanceMatrix.needsUpdate = W.head.instanceMatrix.needsUpdate = true;
+      (PZ.board || []).forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0.12; });
       PZ.flags.forEach(function (f, k) { var p = f.geometry.attributes.position, b0 = f.userData.base; for (var j = 0; j < p.count; j++) { var x0 = b0[j * 3]; p.array[j * 3 + 2] = Math.sin(t * 4 + x0 * 1.6 + k) * 0.3 * (x0 / 4); } p.needsUpdate = true; });
       (PZ.jets || []).forEach(function (jt, i) { var hj = night ? 6 + 14 * Math.abs(Math.sin(t * 1.3 + i * 0.5)) : 0.01; jt.scale.set(1, hj, 1); jt.position.y = hj / 2; jt.visible = night; }); // the fountain dances after dark
       PZ.spray.forEach(function (d, i) { var u = (t * 0.55 + i / PZ.spray.length) % 1, a = i * 2.39, rad = (i % 5 === 0 ? 0.4 : 4) * u; d.position.set(Math.cos(a) * rad, 1.2 + Math.sin(u * Math.PI) * (i % 5 === 0 ? 7 : 3.5), -4 + Math.sin(a) * rad); });
@@ -1133,6 +1134,101 @@
       g.add(mesh(new T.CylinderGeometry(30, 38, 6, 48), wall, 0, 17, 0)); g.add(mesh(new T.CylinderGeometry(22, 30, 5, 48), mat('throof', { color: 0x9aa3ab, metalness: 0.4, roughness: 0.4 }), 0, 22.5, 0));
       plzG.add(g); return g;
     }
+    // Rules 31: the National Theatre's billboard on the plaza: now showing, next week, last week. Lit at night.
+    function theatreBoard(x, z) {
+      var th = sc.th, g = new T.Group(); g.position.set(x, 0, z); var steel = mat('tbPost', { color: 0x3a3f46, metalness: 0.6, roughness: 0.4 });
+      [-7, 7].forEach(function (px) { g.add(mesh(new T.CylinderGeometry(0.45, 0.55, 10, 10), steel, px, 5, 0)); });
+      g.add(mesh(new T.BoxGeometry(18.6, 9.6, 0.6), mat('tbFrame', { color: 0x17181a, roughness: 0.5 }), 0, 14.6, 0));
+      var tex = canvasTex(1024, 512, function (c, w, h) {
+        c.fillStyle = '#120c0a'; c.fillRect(0, 0, w, h); c.fillStyle = th.color || '#8e2b2b'; c.fillRect(0, 0, w, 74); c.fillRect(0, h - 120, w, 120);
+        c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.font = '800 40px system-ui, sans-serif'; c.fillText('NATIONAL THEATRE · IGANMU', w / 2, 38, w - 40);
+        c.fillStyle = '#ffd23f'; c.font = '900 44px system-ui, sans-serif'; c.fillText(th.on ? '★ ON NOW ★' : 'NOW SHOWING', w / 2, 118);
+        c.fillStyle = '#fff'; c.font = '900 86px system-ui, sans-serif'; c.fillText(String(th.title).toUpperCase(), w / 2, 210, w - 50);
+        c.fillStyle = '#e9e5dc'; c.font = '700 38px system-ui, sans-serif'; c.fillText(String(th.kind).toUpperCase() + ' · ' + th.by, w / 2, 290, w - 50); c.font = '600 34px system-ui, sans-serif'; c.fillText(th.when, w / 2, 340, w - 50);
+        c.fillStyle = '#fff'; c.font = '700 32px system-ui, sans-serif'; c.fillText('NEXT WEEK: ' + th.next, w / 2, h - 84, w - 50); c.fillStyle = 'rgba(255,255,255,0.75)'; c.fillText(th.last ? 'LAST WEEK: ' + th.last : 'THE NEW SEASON STARTS NOW', w / 2, h - 38, w - 50);
+      });
+      PZ.board = [];
+      [0, Math.PI].forEach(function (ry) { var m = new T.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.12, roughness: 0.6 }); var pnl = new T.Mesh(new T.PlaneGeometry(18, 9), m); pnl.position.set(0, 14.6, ry ? -0.32 : 0.32); pnl.rotation.y = ry; pnl.userData.dyn = true; g.add(pnl); PZ.board.push(m); });
+      plzG.add(g); return g;
+    }
+    // Rules 31: inside the National Theatre's main hall: raked seats, a proscenium stage with curtains, footlights and
+    // spotlights, and this week's show on stage (a play, a band, dancers, a comedian or a musical). Curtain closed off show hours.
+    function buildAuditorium(room, floor, RW, RD, RH) {
+      var th = sc.th || { title: 'National Theatre', kind: 'play', on: false, color: '#8e2b2b', by: '' }, on = !!th.on, col = new T.Color(th.color || '#8e2b2b');
+      room.material.color.set(0x2a1416); floor.material.color.set(0x3a2418); floor.material.roughness = 0.7; floor.material.metalness = 0;
+      var AU = GL.au = { perf: [], spots: [], curtain: [], on: on, kind: th.kind, aud: null, audBase: [] }, SZ = RD / 2 - 6, red = mat('auCurtain', { color: 0x8e1a1f, roughness: 0.85 }), gold = mat('auGold', { color: 0xc9a227, metalness: 0.7, roughness: 0.35 }), wood = mat('auStage', { color: 0x5a3a22, roughness: 0.6 });
+      galG.add(mesh(new T.BoxGeometry(46, 1.5, 12), wood, 0, 0.75, SZ)); // the stage
+      galG.add(mesh(new T.BoxGeometry(46.4, 0.3, 0.4), gold, 0, 1.5, SZ - 6));
+      [-1, 1].forEach(function (sd) { galG.add(mesh(new T.BoxGeometry(3, RH, 1.6), gold, sd * 24.5, RH / 2, SZ - 6)); galG.add(mesh(new T.BoxGeometry(3.2, 12, 0.6), red, sd * 21.6, 7.5, SZ - 5.2)); });
+      var hdr = canvasTex(1024, 128, function (c, w, h) { c.fillStyle = '#1a0d0d'; c.fillRect(0, 0, w, h); c.strokeStyle = '#c9a227'; c.lineWidth = 6; c.strokeRect(6, 6, w - 12, h - 12); c.fillStyle = '#ffd23f'; c.font = '900 64px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(th.title).toUpperCase(), w / 2, h / 2 + 2, w - 60); });
+      var hm = new T.Mesh(new T.PlaneGeometry(46, 3.4), new T.MeshBasicMaterial({ map: hdr })); hm.position.set(0, RH - 2, SZ - 6.9); hm.rotation.y = Math.PI; galG.add(hm);
+      galG.add(mesh(new T.BoxGeometry(50, 2.6, 1.2), gold, 0, RH - 2, SZ - 6.1));
+      // Main curtain: two halves that draw apart when the show is on.
+      [-1, 1].forEach(function (sd) { var c = mesh(new T.BoxGeometry(21, 12, 0.4), red, sd * 10.5, 7.5, SZ - 4.6); c.userData.dyn = true; c.userData.side = sd; galG.add(c); AU.curtain.push(c); });
+      // Footlights.
+      var fl = new T.MeshBasicMaterial({ color: 0xffe2a0 }); for (var f = 0; f < 15; f++) galG.add(mesh(new T.BoxGeometry(0.9, 0.25, 0.4), fl, -21 + f * 3, 1.62, SZ - 5.6));
+      // The backdrop, painted for the kind of show (a live LED wall for a concert).
+      var drawDrop = function (c, w, h, t) {
+        var k = th.kind; t = t || 0;
+        if (k === 'concert') { c.fillStyle = '#05060a'; c.fillRect(0, 0, w, h); for (var b = 0; b < 32; b++) { var v = (Math.sin(t * 3 + b * 0.7) * 0.5 + 0.5) * (Math.sin(t * 1.3 + b) * 0.3 + 0.7); c.fillStyle = 'hsl(' + ((b * 11 + t * 40) % 360) + ',90%,55%)'; c.fillRect(b * w / 32 + 2, h - v * h * 0.8, w / 32 - 4, v * h * 0.8); } c.fillStyle = '#fff'; c.font = '900 70px system-ui'; c.textAlign = 'center'; c.fillText(String(th.title).toUpperCase(), w / 2, 90, w - 40); return; }
+        var g2 = c.createLinearGradient(0, 0, 0, h); g2.addColorStop(0, k === 'dance' ? '#f39c12' : k === 'comedy' ? '#3a1d14' : k === 'musical' ? '#2c1a4a' : '#5d8aa8'); g2.addColorStop(1, k === 'dance' ? '#8e2b2b' : k === 'comedy' ? '#1a0d0a' : k === 'musical' ? '#8e44ad' : '#d9c79a'); c.fillStyle = g2; c.fillRect(0, 0, w, h);
+        if (k === 'comedy') { c.fillStyle = '#5a2a1a'; for (var y = 0; y < h; y += 34) for (var x = (y / 34) % 2 * 40; x < w; x += 80) c.fillRect(x + 2, y + 2, 76, 30); c.fillStyle = '#ffd23f'; c.font = '900 90px system-ui'; c.textAlign = 'center'; c.fillText(String(th.title).toUpperCase(), w / 2, h / 2, w - 40); return; }
+        if (k === 'dance') { c.fillStyle = '#ffdb6e'; c.beginPath(); c.arc(w / 2, h * 0.62, 110, 0, Math.PI * 2); c.fill(); c.fillStyle = '#3a1a0a'; c.fillRect(0, h * 0.72, w, h); return; }
+        if (k === 'musical') { c.fillStyle = '#17121f'; for (var bx = 0; bx < 26; bx++) { var bh = 60 + (bx * 37 % 140); c.fillRect(bx * 40, h - bh, 34, bh); } c.fillStyle = '#ffd23f'; for (var st = 0; st < 40; st++) c.fillRect((st * 97) % w, (st * 53) % (h * 0.5), 3, 3); return; }
+        // a play: a village compound, palms and a hut wall
+        c.fillStyle = '#b07a4a'; c.fillRect(0, h * 0.6, w, h * 0.4); c.fillStyle = '#8a5a34'; c.fillRect(w * 0.1, h * 0.35, w * 0.3, h * 0.3); c.fillStyle = '#5a3a20'; c.beginPath(); c.moveTo(w * 0.07, h * 0.36); c.lineTo(w * 0.25, h * 0.15); c.lineTo(w * 0.43, h * 0.36); c.fill();
+        c.fillStyle = '#2f6b3a'; [0.62, 0.8].forEach(function (px) { c.fillRect(w * px, h * 0.2, 10, h * 0.42); for (var lf = 0; lf < 6; lf++) { c.beginPath(); c.ellipse(w * px + 5, h * 0.2, 60, 12, lf * 0.55, 0, Math.PI * 2); c.fill(); } });
+      };
+      var drop = th.kind === 'concert' ? screenTex(1024, 320, drawDrop) : canvasTex(1024, 320, function (c, w, h) { drawDrop(c, w, h, 0); });
+      var dm = new T.Mesh(new T.PlaneGeometry(40, 12.5), new T.MeshBasicMaterial({ map: drop })); dm.position.set(0, 7.6, RD / 2 - 0.4); dm.rotation.y = Math.PI; galG.add(dm); if (th.kind === 'concert') AU.drop = drop;
+      // Who is on stage.
+      var perf = function (i, female, x, z, mode, y) { var p = person(i, female); p.position.set(x, y || 1.5, z); p.rotation.y = Math.PI / 2; p.userData.dyn = true; galG.add(p); AU.perf.push({ g: p, mode: mode, ph: i * 1.7, x: x, z: z, y: y || 1.5 }); return p; };
+      var micStand = function (x, z) { galG.add(mesh(new T.CylinderGeometry(0.05, 0.05, 1.7, 6), steelM(), x, 2.35, z - 0.6)); galG.add(mesh(new T.SphereGeometry(0.12, 8, 6), mat('auMic', { color: 0x17181a }), x, 3.25, z - 0.6)); };
+      if (th.kind === 'concert') {
+        perf(200, true, 0, SZ - 3, 'sway'); micStand(0, SZ - 3); perf(201, false, -7, SZ - 1, 'sway'); perf(202, false, 7, SZ - 1, 'sway');
+        galG.add(mesh(new T.BoxGeometry(8, 0.8, 5), wood, 0, 1.9, SZ + 3)); perf(203, false, 0, SZ + 4, 'drum', 2.3); [-1.3, 0, 1.3].forEach(function (dx) { galG.add(mesh(new T.CylinderGeometry(0.6, 0.6, 0.6, 14), mat('auDrum', { color: 0xc0392b, roughness: 0.4 }), dx, 3.1, SZ + 2.6)); });
+        for (var hn = 0; hn < 3; hn++) { perf(204 + hn, hn === 1, 12 + hn * 2.6, SZ + 1, 'sway'); galG.add(mesh(new T.CylinderGeometry(0.08, 0.25, 1.1, 8), gold, 12 + hn * 2.6, 3.0, SZ + 0.3)); }
+      } else if (th.kind === 'dance' || th.kind === 'musical') {
+        for (var dn = 0; dn < (th.kind === 'dance' ? 8 : 6); dn++) perf(210 + dn, dn % 2 === 0, -12 + (dn % 4) * 8, SZ - 2 + Math.floor(dn / 4) * 4, 'dance');
+        if (th.kind === 'musical') { perf(220, true, 0, SZ - 4, 'sway'); micStand(0, SZ - 4); }
+        else [-19, -17].forEach(function (dx, k) { perf(221 + k, false, dx, SZ + 1, 'drum'); galG.add(mesh(new T.CylinderGeometry(0.35, 0.35, 1.0, 12), mat('auTalk', { color: 0x8a5a34 }), dx, 2.6, SZ + 0.4)); });
+      } else if (th.kind === 'comedy') {
+        perf(230, false, 0, SZ - 3, 'sway'); micStand(0, SZ - 3); galG.add(mesh(new T.CylinderGeometry(0.5, 0.5, 1.4, 12), wood, 3, 2.2, SZ - 1));
+      } else {
+        perf(240, false, -6, SZ - 1, 'walk'); perf(241, true, 2, SZ - 2, 'walk'); perf(242, false, 9, SZ, 'sway');
+        galG.add(mesh(new T.BoxGeometry(6, 4, 4), mat('auHut', { color: 0x9a6a3a, roughness: 0.9 }), -15, 3.5, SZ + 2)); galG.add(mesh(new T.ConeGeometry(4.6, 3, 6), mat('auThatch', { color: 0x6b4a22, roughness: 0.95 }), -15, 7, SZ + 2));
+        galG.add(mesh(new T.CylinderGeometry(0.7, 0.6, 1.2, 12), mat('auKeg', { color: 0x6b3a1f }), 14, 2.1, SZ - 1)); galG.add(mesh(new T.BoxGeometry(2.6, 1.2, 1.2), wood, 10, 2.1, SZ + 2));
+      }
+      AU.perf.forEach(function (p) { p.g.visible = on; });
+      // Spotlights from the lighting rig over the seats.
+      if (on) for (var sp = 0; sp < (LITE ? 2 : 3); sp++) { var sl = new T.SpotLight([0xfff1d6, th.kind === 'concert' ? 0xff3d7f : 0xffe0b0, th.kind === 'concert' ? 0x3dd6ff : 0xfff1d6][sp], 140, 70, 0.22, 0.5, 1.2); sl.position.set(-10 + sp * 10, RH - 1, -6); sl.target.position.set(0, 1.5, SZ); galG.add(sl, sl.target); AU.spots.push(sl); }
+      // Raked seats, two blocks with an aisle, and the audience (full on show nights).
+      var seat = mat('auSeat', { color: 0x9e1b24, roughness: 0.7 }), tier = mat('auTier', { color: 0x2c1a14, roughness: 0.9 }), r0 = rnd(hashStr(th.title || 'show')), places = [];
+      for (var r = 0; r < 9; r++) { var zz = 5 - r * 2.7, yy = r * 0.55; if (r) galG.add(mesh(new T.BoxGeometry(52, yy, 2.7), tier, 0, yy / 2, zz));
+        [-1, 1].forEach(function (sd) { galG.add(mesh(new T.BoxGeometry(22, 0.35, 1.0), seat, sd * 13, yy + 0.55, zz)); galG.add(mesh(new T.BoxGeometry(22, 1.0, 0.25), seat, sd * 13, yy + 1.1, zz - 0.55)); for (var k = 0; k < 15; k++) places.push([sd * (3 + k * 1.43), yy + 0.4, zz]); }); }
+      var full = on ? 0.8 : 0.04, seated = places.filter(function () { return r0() < full; }); if (!seated.length) seated = places.slice(0, 2);
+      AU.aud = squad(seated.length, function (i) { return [0xc0392b, 0xf4f3ec, 0x2f6fa0, 0x16a35a, 0x8e44ad, 0xf2b600, 0x17181a][i % 7]; }, 0.8, galG); AU.audBase = seated;
+      var m4 = new T.Matrix4(); seated.forEach(function (q, i) { m4.makeTranslation(q[0], q[1], q[2]); AU.aud.body.setMatrixAt(i, m4); AU.aud.head.setMatrixAt(i, m4); }); AU.aud.body.instanceMatrix.needsUpdate = AU.aud.head.instanceMatrix.needsUpdate = true;
+      // Programme posters on the side walls.
+      [[-1, 'NOW: ' + th.title], [1, th.on ? 'TONIGHT' : (th.when || '')]].forEach(function (pp) { var pt = canvasTex(256, 384, function (c, w, h) { c.fillStyle = th.color || '#8e2b2b'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = '900 34px system-ui'; String(pp[1]).toUpperCase().split(' ').reduce(function (ln, wd) { var l = ln[ln.length - 1]; if ((l + ' ' + wd).length > 12 && l) ln.push(wd); else ln[ln.length - 1] = (l ? l + ' ' : '') + wd; return ln; }, ['']).slice(0, 7).forEach(function (l, k) { c.fillText(l, w / 2, 70 + k * 44, w - 20); }); });
+        var pm = new T.Mesh(new T.PlaneGeometry(4, 6), new T.MeshBasicMaterial({ map: pt })); pm.position.set(pp[0] * (RW / 2 - 0.3), 6, -4); pm.rotation.y = -pp[0] * Math.PI / 2; galG.add(pm); });
+    }
+    function steelM() { return mat('auSteel', { color: 0xc7ccd1, metalness: 0.8, roughness: 0.3 }); }
+    function auditoriumFrame(t) {
+      var AU = GL.au, on = AU.on;
+      AU.curtain.forEach(function (c) { var want = on ? c.userData.side * 19 : c.userData.side * 10.5; c.position.x += (want - c.position.x) * 0.04; c.scale.x += ((on ? 0.25 : 1) - c.scale.x) * 0.04; });
+      if (GL.amb) GL.amb.intensity = on ? 14 : 60; if (on) hemi.intensity = 0.32;
+      AU.spots.forEach(function (sl, k) { sl.target.position.set(Math.sin(t * (AU.kind === 'concert' ? 0.9 : 0.25) + k * 2.1) * (AU.kind === 'concert' ? 12 : 6), 1.5, RD_AU + Math.cos(t * 0.5 + k) * 2); });
+      if (AU.drop) redrawAt(AU.drop, t, LITE ? 6 : 12);
+      if (!on) return;
+      AU.perf.forEach(function (p) { var g = p.g, lg = g.userData.legs, ph = t + p.ph;
+        if (p.mode === 'dance') { g.position.y = p.y + Math.abs(Math.sin(ph * 5)) * 0.45; g.rotation.y = Math.PI / 2 + Math.sin(ph * 1.5) * 0.9; if (lg) lg.forEach(function (l, i) { l.rotation.z = Math.sin(ph * 10 + i * Math.PI) * 0.5; }); }
+        else if (p.mode === 'walk') { var dx = Math.sin(ph * 0.35) * 3; g.position.x = p.x + dx; g.rotation.y = Math.PI / 2 + Math.cos(ph * 0.35) * 0.9; if (lg) lg.forEach(function (l, i) { l.rotation.z = Math.sin(ph * 4 + i * Math.PI) * 0.35 * Math.abs(Math.cos(ph * 0.35)); }); }
+        else if (p.mode === 'drum') { g.position.y = p.y + Math.abs(Math.sin(ph * 8)) * 0.12; }
+        else { g.rotation.z = Math.sin(ph * 2.2) * 0.08; g.position.y = p.y + Math.abs(Math.sin(ph * 4)) * 0.06; } });
+      if (AU.kind === 'concert' && !LITE && !reduce) { var m4 = new T.Matrix4(); AU.audBase.forEach(function (q, i) { m4.makeTranslation(q[0], q[1] + Math.max(0, Math.sin(t * 6 + i)) * 0.35, q[2]); AU.aud.body.setMatrixAt(i, m4); AU.aud.head.setMatrixAt(i, m4); }); AU.aud.body.instanceMatrix.needsUpdate = AU.aud.head.instanceMatrix.needsUpdate = true; }
+    }
+    var RD_AU = 46 / 2 - 6;
     function millenniumTower(x, z) {
       var g = new T.Group(); g.position.set(x, 0, z); var steel = mat('mtsteel', { color: 0xdfe3e8, metalness: 0.7, roughness: 0.3 });
       [0, 2.1, 4.2].forEach(function (a) { var leg = mesh(new T.CylinderGeometry(1.2, 2.4, 150, 10), steel, Math.cos(a) * 6, 75, Math.sin(a) * 6); leg.rotation.z = Math.cos(a) * 0.04; leg.rotation.x = -Math.sin(a) * 0.04; g.add(leg); });
@@ -1499,7 +1595,7 @@
     }
     function buildHall() {
       wipe(galG); var kind = sc.kind, r = rnd(hashStr(sc.placeId || 'hall')); GL = { spots: [], screens: [], flow: [] };
-      var RW = 60, RD = 46, RH = kind === 'cinema' ? 18 : 10;
+      var RW = 60, RD = 46, RH = kind === 'cinema' ? 18 : kind === 'auditorium' ? 16 : 10;
       var room = new T.Mesh(new T.BoxGeometry(RW, RH, RD), new T.MeshStandardMaterial({ color: kind === 'gym' ? 0x2b2f36 : 0xf2f0eb, roughness: 0.85, side: T.BackSide })); room.position.set(0, RH / 2, 0); galG.add(room);
       var floor = new T.Mesh(new T.PlaneGeometry(RW, RD).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ color: kind === 'gym' ? 0x1c1c1f : kind === 'cinema' ? 0xe9e5dc : 0xb08a5a, roughness: kind === 'cinema' ? 0.12 : 0.6, metalness: kind === 'cinema' ? 0.2 : 0 })); floor.position.y = 0.02; floor.receiveShadow = true; galG.add(floor);
       var title = String(sc.name || '').toUpperCase(), tt = canvasTex(1024, 128, function (g, w, h) { g.clearRect(0, 0, w, h); g.fillStyle = kind === 'gym' ? '#f2b600' : '#17181a'; g.font = '800 64px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(title, w / 2, h / 2, w - 40); });
@@ -1529,6 +1625,8 @@
           var ps = new T.Mesh(new T.PlaneGeometry(10, 2.5), new T.MeshBasicMaterial({ map: pt })); ps.position.set(14, RH - 2.4, -RD / 2 + 0.4); galG.add(ps);
           for (var pl2 = 0; pl2 < 3; pl2++) { galG.add(mesh(new T.CylinderGeometry(0.7, 0.55, 1.2, 12), mat('pot', { color: 0xd8c3a5 }), RW / 2 - 4, 0.6, -16 + pl2 * 14)); galG.add(mesh(new T.ConeGeometry(0.9, 2.6, 7), mat('leaf', { color: 0x2f8f4a }), RW / 2 - 4, 2.4, -16 + pl2 * 14)); } // potted plants
         }
+      } else if (kind === 'auditorium') {
+        tm.visible = false; buildAuditorium(room, floor, RW, RD, RH);
       } else if (/^(police|polling|hospital|court|library|hotel|casino|office|conference|bowling)$/.test(kind)) {
         tm.visible = false; buildCivic(kind, room, floor, RW, RD, RH);
         mergeStatic(galG, [room, floor].concat((GL.flow || []).map(function (f) { return f.g; }), GL.wheel ? [GL.wheel] : [], GL.steam || []));
@@ -1543,7 +1641,7 @@
         galG.add(mesh(new T.CylinderGeometry(4, 4.4, 0.8, 32), mat('basin', { color: 0xc9ccd1 }), 0, 0.4, -2)); palm(0, -2, 6, 0.1);
       }
       GL.amb = new T.PointLight(0xffffff, 60, 90, 1); GL.amb.position.set(0, RH - 1, 0); galG.add(GL.amb);
-      var NW = kind === 'cinema' ? 70 : /^(police|polling|hospital|court|library|hotel|casino|office|conference|bowling)$/.test(kind) ? 1 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
+      var NW = kind === 'auditorium' ? 1 : kind === 'cinema' ? 70 : /^(police|polling|hospital|court|library|hotel|casino|office|conference|bowling)$/.test(kind) ? 1 : 24, wr = rnd(53), wb = []; for (var w = 0; w < NW; w++) wb.push([wr() * 6.28, 6 + wr() * 12, (wr() < 0.5 ? 1 : -1) * (0.02 + wr() * 0.03), wr() * 6]);
       GL.walkers = squad(NW, function (i) { return [0x17181a, 0xf4f3ec, 0xc0392b, 0x2f6fa0, 0x8e44ad, 0xe67e22][i % 6]; }, 1, galG); GL.walkBase = wb;
       if (!/^(police|polling|hospital|court|library|hotel|casino|office|conference|bowling)$/.test(kind)) mergeStatic(galG, [room, floor]); // civic rooms merged in their own branch
     }
@@ -1658,11 +1756,12 @@
     /* ---------- build per place ---------- */
     var built = '';
     function build() {
-      var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.rooftop ? 'r' : '') + (sc.name || ''); if (key === built) return; built = key; WK.reset = true;
+      var key = (sc.mode || 'beach') + (sc.villas ? 'v' : 'b') + (sc.rooftop ? 'r' : '') + (sc.name || '') + (sc.th ? sc.th.key : ''); if (key === built) return; built = key; WK.reset = true;
       DOLL = sc.mode === 'hall' || sc.mode === 'gallery' || (sc.mode === 'club' && !sc.rooftop && sc.placeId !== 'owambe_hall'); ESTATE = sc.mode === 'estate'; HARBOUR = sc.mode === 'harbour'; CLUB = sc.mode === 'club'; ROOF = CLUB && !!sc.rooftop; STAD = sc.mode === 'stadium'; MKT = sc.mode === 'market'; JTY = sc.mode === 'jetty'; PRK = sc.mode === 'park'; PLZ = sc.mode === 'plaza'; GAL = sc.mode === 'gallery' || sc.mode === 'hall'; STR = sc.mode === 'street'; if (sc.mode === 'gallery') buildGallery(); if (sc.mode === 'hall') buildHall(); if (STR) buildStreet(); if (PLZ) buildPlaza(); if (PRK) buildPark(); if (MKT) buildMarket(); if (JTY) buildJetty(); if (ESTATE) buildEstate(); if (HARBOUR) buildHarbour(); if (CLUB) buildClub(); if (STAD) buildStadium();
       harbourG.visible = HARBOUR; clubG.visible = CLUB; stadG.visible = STAD; mktG.visible = MKT; jetG.visible = JTY; parkG.visible = PRK; plzG.visible = PLZ; galG.visible = GAL; strG.visible = STR; sky.visible = !CLUB || ROOF; S3.environment = CLUB && !ROOF ? null : envRT.texture;
       // Frame: the estate uses a wider lens so the pool below and the skyline above both fit, as in a terrace photo.
       orbit.ty = 0; if (PLZ && /abj_tower|dxb_burj/.test(sc.placeId || '')) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.42; orbit.r = 120; orbit.tx = 0; orbit.ty = 55; orbit.tz = 40; } else if (STR) { cam.fov = 52; orbit.az = 0; orbit.pol = 1.25; orbit.pol = 1.32; orbit.r = sc.kind === 'refinery' ? 90 : sc.kind === 'hospital' || sc.kind === 'motorpark' || sc.kind === 'airport' || sc.kind === 'rail' ? 60 : 38; orbit.tx = 0; orbit.ty = sc.kind === 'refinery' ? 10 : 3; orbit.tz = 14; } else if ((GAL || CLUB) && DOLL) { var narrow0 = (root.innerWidth || 1000) < 700; cam.fov = 50; orbit.az = narrow0 ? 1.25 : 0.5; orbit.pol = 0.9; orbit.r = CLUB ? (narrow0 ? 104 : 70) : narrow0 ? 84 : 52; orbit.tx = 0; orbit.ty = 0; orbit.tz = 2; } else if (GAL) { cam.fov = 60; orbit.az = 0; orbit.pol = 1.25; orbit.r = 24; orbit.tx = 0; orbit.ty = 1; orbit.tz = 6; } else if (PLZ) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.3; orbit.r = 70; orbit.tx = 0; orbit.ty = 12; orbit.tz = 20; } else if (PRK) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.18; orbit.r = 50; orbit.tx = 0; orbit.tz = 8; } else if (JTY) { cam.fov = 52; orbit.az = 0.35; orbit.pol = 1.2; orbit.r = 52; orbit.tx = 0; orbit.tz = 8; } else if (MKT) { cam.fov = 55; orbit.az = 0; orbit.pol = 1.16; orbit.r = 36; orbit.tx = 0; orbit.tz = 4; } else if (STAD) { cam.fov = 50; orbit.az = 0; orbit.pol = sc.street ? 1.12 : 1.08; orbit.r = sc.street ? 40 : 84; orbit.tx = 0; orbit.tz = sc.street ? 2 : 4; } else if (CLUB) { cam.fov = ROOF ? 52 : 62; orbit.az = 0; orbit.pol = ROOF ? 1.3 : 1.22; orbit.r = ROOF ? 34 : 26; orbit.tx = 0; orbit.tz = ROOF ? 4 : 8; } else if (HARBOUR) { cam.fov = 50; orbit.az = sc.club ? Math.PI - 0.55 : 0; orbit.pol = sc.club ? 1.25 : 1.2; orbit.r = sc.club ? 85 : 130; orbit.tx = sc.club ? -10 : 0; orbit.tz = sc.club ? 126 : 40; } else if (ESTATE) { cam.fov = 55; orbit.az = 0.05; orbit.pol = 1.23; orbit.r = 39; orbit.tx = -12; orbit.tz = -2; } else { cam.fov = 42; orbit.az = 0.08; orbit.pol = 1.17; orbit.r = 40; orbit.tx = -12; orbit.tz = -6; }
+      if (GAL && sc.kind === 'auditorium') { var nrw = (root.innerWidth || 1000) < 700; cam.fov = 52; orbit.az = 0; orbit.pol = 1.08; orbit.r = nrw ? 50 : 40; orbit.tx = 0; orbit.ty = 5; orbit.tz = 8; } // from the back of the hall, facing the stage
       cam.updateProjectionMatrix(); place();
       estateG.visible = ESTATE; [sand, sea, foam, wet, skyline, lawn, path, jetski, sail].forEach(function (o) { o.visible = !ESTATE && !HARBOUR && !CLUB && !STAD && !MKT && !JTY && !PRK && !PLZ && !GAL && !STR; });
       wipe(dyn); palms = []; villas = new T.Group(); beachBits = new T.Group(); dyn.add(villas, beachBits);
@@ -1815,6 +1914,7 @@
         streetFrame(reduce ? 30 : t, !!night); if (night) hemi.intensity = 0.4;
       } else if (GAL) {
         galleryFrame(reduce ? 30 : t); flowFrame(reduce ? 30 : t); if (GL.screens) GL.screens.forEach(function (m, k) { m.color.setHSL(0.6 + Math.sin(t * 0.3 + k) * 0.05, 0.6, 0.45); }); if (GL.screenTex) redrawAt(GL.screenTex, t, 4); hemi.intensity = 0.9; hemi.color.set(0xffffff); sun.intensity = 0; S3.fog.density = 0.002;
+        if (GL.au) auditoriumFrame(reduce ? 30 : t);
       } else if (PLZ) {
         plazaFrame(reduce ? 30 : t, !!night); if (night) hemi.intensity = 0.4;
       } else if (PRK) {
