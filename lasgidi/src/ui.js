@@ -2865,6 +2865,8 @@
   // Fly or take the bus to another city.
   function citiesView() {
     var here = L.cityOf(S), html = '<div class="section cities"><h3>✈️ Other cities</h3><p class="note">You are in ' + esc(D.CITIES[here].name) + (D.CITIES[here].noAir ? '. There is no airport here: coaches leave from ' + esc(D.DISTRICTS[D.CITIES[here].park].name) : '. Flights leave from ' + esc(D.DISTRICTS[D.CITIES[here].airport].name) + '; buses from ' + esc(D.DISTRICTS[D.CITIES[here].park].name)) + ' (daytime only). Your home and rent stay where they are; you can move house to another city from its Homes list.</p>';
+    var pp = L.passport ? L.passport(S) : null; // rules 29: passport stamps
+    if (pp) html += '<div class="list"><div class="item"><div><h3>🛂 Your passport · ' + pp.filter(function (x) { return x.day != null; }).length + ' of ' + pp.length + ' stamps</h3><div class="meta">' + pp.map(function (x) { return '<span class="' + (x.day != null ? 'gain' : 'muted') + '">' + (CITY_ICON[x.city] || '📍') + ' ' + esc(x.name) + (x.day != null ? ' · day ' + (x.day + 1) : ' · not yet') + '</span>'; }).join('') + '</div></div></div></div>';
     openCities().filter(function (c) { return c !== here; }).forEach(function (c) {
       var opts = L.intercityOptions(S, c);
       html += '<div class="city-card"><h4>' + (CITY_ICON[c] || '') + ' ' + esc(D.CITIES[c].name) + (D.CITIES[c].visit ? ' <span class="muted">· visit only</span>' : '') + '</h4>' + (D.CITIES[c].visit && L.visaQuote ? visaCard(c) : '') + '<div class="list">' + opts.map(function (o) {

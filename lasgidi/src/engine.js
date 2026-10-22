@@ -62,7 +62,8 @@
   // after the flight home (which made you pay for a second flight the next night).
   // 28 opens Cape Coast: a coach-only city (no airport) on Ghana's coast, with Cape Coast and Elmina castles, Kakum's
   // canopy walk, the University of Cape Coast, Kotokuraba Market, the Elmina harbour and the Fetu Afahye festival.
-  var RULES = 28;
+  // 29 adds passport stamps (the first time you are in each city) and three travel achievements.
+  var RULES = 29;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -126,7 +127,10 @@
     streamer:    'Streamer: 1,000 people watched you live',
     allrounder:  'All-rounder: played 8 different sports in Lagos',
     explorer:    'Lagos explorer: visited 8 tourist sights',
-    banana:      'Banana Island: bought a waterfront mansion'
+    banana:      'Banana Island: bought a waterfront mansion',
+    ghana_tour:  'Akwaaba: stamped in Accra, Kumasi and Cape Coast',
+    globetrotter: 'Globetrotter: stamped in London and Dubai',
+    every_city:  'Full passport: a stamp from every city'
   };
 
   /* ---------- small helpers ---------- */
@@ -3366,7 +3370,18 @@
   }
 
   // Runs after every player action.
+  // Rules 29: a passport stamp the first time you are in each city (no dice, no money), and three travel achievements.
+  function stampPassport(s) {
+    var c = cityOf(s); s.stamps = s.stamps || {}; if (s.stamps[c] != null) return;
+    s.stamps[c] = day(s); if (Object.keys(s.stamps).length > 1) log(s, '🛂 New passport stamp: ' + D.CITIES[c].name + '.', 'good');
+    var has = function (k) { return s.stamps[k] != null; };
+    if (has('accra') && has('kumasi') && has('capecoast')) unlock(s, 'ghana_tour');
+    if (has('ldn') && has('dxb')) unlock(s, 'globetrotter');
+    if (Object.keys(D.CITIES).every(function (k) { return !cityOpen(s, k) || has(k); })) unlock(s, 'every_city');
+  }
+  function passport(s) { return s.rules >= 29 ? Object.keys(D.CITIES).filter(function (k) { return cityOpen(s, k); }).map(function (k) { return { city: k, name: D.CITIES[k].name, day: s.stamps && s.stamps[k] != null ? s.stamps[k] : null }; }) : null; }
   function finish(s, res) {
+    if (s.rules >= 29) stampPassport(s);
     if (!s.over && (s.needs.hunger <= 0 || s.needs.energy <= 0)) collapse(s, res);
     if (s.over) res.over = true;
     var w = netWorth(s);
@@ -5036,7 +5051,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, ghana: ghana, golfOdds: golfOdds, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, ghana: ghana, golfOdds: golfOdds, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,
