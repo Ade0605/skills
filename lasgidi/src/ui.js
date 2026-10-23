@@ -258,11 +258,27 @@
     h.setAttribute('lang', prefs.lang === 'pcm' ? 'pcm' : 'en');
   }
   applyPrefs();
+  // Rules 42: study paths. Every degree, apprenticeship and certificate, where it is taught and how far along you are.
+  function studyView() {
+    if (!(S.rules >= 42) || !D.STUDY) return '';
+    var html = '<div class="section"><h3>🎓 Build your career: study</h3><p class="note">Enrol where it is taught, then go to class (once a day). Finish to get a qualification on your CV, the skill, and a head start: careers that use the same skill take you without the skill level, one rank up. Degrees also count as a university degree. Apprentices earn a small stipend each day.</p>';
+    Object.keys(D.STUDY_KINDS).forEach(function (kind) {
+      var K = D.STUDY_KINDS[kind], ids = Object.keys(D.STUDY).filter(function (k) { return D.STUDY[k].kind === kind; });
+      html += '<details class="study-g"' + (kind === 'degree' ? ' open' : '') + '><summary>' + K.icon + ' ' + esc(K.name) + 's · ' + ids.length + '</summary><div class="list">' + ids.map(function (id) {
+        var st = L.studyState(S, id), P = st.P, here = S.loc === P.district, city = L.districtCity(P.district);
+        var status = st.done ? '<span class="gain">✓ Qualified</span>' : st.enrolled ? '<span class="study-bar"><i style="width:' + Math.round(st.classes / st.total * 100) + '%"></i></span><span>' + st.classes + ' of ' + st.total + '</span>' : st.residentOnly ? '<span class="muted">For people who live in ' + esc(D.CITIES[city].name) + '</span>' : '<span class="cost num">' + N(L.price(S, P.fee)) + ' to enrol</span>';
+        var go = st.done ? '' : here ? '<span class="muted">📍 You are here: see Do</span>' : city === L.cityOf(S) ? '<button class="btn sm ghost" id="st-go-' + id + '" data-tab="map" data-tripto="' + P.district + '">🧭 Go</button>' : '<span class="muted">In ' + esc(D.CITIES[city].name) + '</span>';
+        return '<div class="item"><div><h3>' + esc(P.name) + '</h3><div class="meta"><span>' + esc(P.where) + '</span><span>' + D.SKILLS[P.skill] + ' +' + P.xp + ' a class</span><span>' + P.classes + (kind === 'apprentice' ? ' days' : ' classes') + '</span>' + (P.stipend ? '<span class="gain">' + N(P.stipend) + ' a day</span>' : '') + status + '</div></div>' + go + '</div>';
+      }).join('') + '</div></details>';
+    });
+    return html + '</div>';
+  }
   function settingsView() {
     var opt = function (id, label, on, desc) { return '<div class="item"><div><h3>' + label + '</h3><div class="act-note">' + desc + '</div></div><button class="btn sm' + (on ? ' go' : ' ghost') + '" id="set-' + id + '" data-setpref="' + id + '" aria-pressed="' + !!on + '">' + (on ? 'On' : 'Off') + '</button></div>'; };
     return '<div class="section"><h3>Settings</h3><div class="list">' +
       opt('lang', '🗣️ Naija Pidgin', prefs.lang === 'pcm', 'Tabs, app names, headings and buttons in Pidgin. Story text stays in English.') +
       opt('big', '🔠 Large text', prefs.big, 'Bigger text everywhere.') +
+      opt('family', '👨‍👩‍👧 Family mode', prefs.family, 'For all ages: hides nightlife, casinos, drinking and adult shop items, and turns off chat with other players. Everything else stays.') +
       opt('usd', '💵 Show dollars too', prefs.usd, 'Every price also shows about how much it is in US dollars (≈ $). Each city still uses its own money.') +
       opt('lite', '🪶 Lite mode', liteOn(), 'Fewer animations and no moving traffic on the map, for cheap phones and low data. The page reloads.') +
       '</div></div>';
@@ -543,6 +559,7 @@
           ui.toasts.push({ msg: msg.data.bell ? '🔔 ' + nm + ' rang your bell. They are at your party!' : '👋 ' + nm + ' waved at you.', ok: true }); scheduleRender();
         });
         room.on('deck', function (msg) {
+          if (familyOn()) return; // Family mode: no player chat
           if (msg && msg.data && typeof msg.data.venue === 'string') { // a walk-in scene's chat: only from players in that place's district
             var vp = D.PLACES.filter(function (p) { return p.id === msg.data.venue; })[0];
             if (!vp || msg.by === online.me || online.muted[msg.by] || !(online.peerList || []).some(function (p) { return p.by === msg.by && p.d === vp.district; })) return;
@@ -564,7 +581,7 @@
           mountCruise(); setTimeout(mountCruise, 7200);
         });
         room.on('chat', function (msg) {
-          if (!msg || !msg.by || !msg.data || msg.data.to !== online.me || online.muted[msg.by] || msg.by === online.me) return;
+          if (familyOn() || !msg || !msg.by || !msg.data || msg.data.to !== online.me || online.muted[msg.by] || msg.by === online.me) return;
           var r = CH.clean(msg.data.text); if (!r.ok) return; // the sender's filter is not trusted
           var log0 = online.chats[msg.by] = online.chats[msg.by] || [];
           if (log0.filter(function (m) { return !m.me && Date.now() - m.at < 60000; }).length >= 15) return;
@@ -799,7 +816,13 @@
     }).join('') + '</div>' : '<p class="note">Nobody else is online right now.</p>') + (blocked ? '<p class="note">' + blocked + ' blocked player' + (blocked === 1 ? '' : 's') + ' hidden. Unblock from their player card.</p>' : '') + '</div>';
   }
   // The chat filter for what you send. Refused messages are counted, and three in ten minutes pause your chat.
+  // Family mode (all ages): no player chat, no nightlife, casinos or drinking. A per-device setting; the game itself is unchanged.
+  function familyOn() { return !!(prefs && prefs.family); }
+  var ADULT_ACT = /casino|\bbet|poker|roulette|blackjack|slot machine|beer|\bbar\b|shisha|club|pole|bottle|rave|lounge|strip|money rain|cocktail|champagne|sundowner|wine|night out|nightclub|vip/i;
+  function familyPlace(p) { return !familyOn() || !(p.type === 'nightlife' || /casino/.test(p.id)); }
+  function familyAct(a) { return !familyOn() || !(ADULT_ACT.test(a.label || '') || ADULT_ACT.test(a.id || '')); }
   function chatClean(text) {
+    if (familyOn()) return { ok: false, why: 'Chat is off in Family mode (Settings).' };
     var r = CH.clean(text);
     if (!r.ok && String(text || '').trim() && !/under/.test(r.why)) online.blocked = (online.blocked || []).concat([Date.now()]).slice(-5);
     return r;
@@ -935,7 +958,7 @@
     }
     var slot = ui.clothSlot || 'top', canHaggle = !L.haggleOpen(S);
     html += '<h3>Clothes shop</h3>' + (canHaggle ? '<p class="note">🛍️ You are at Balogun: haggle! The trader opens high and has a secret last price. You get three offers per item a day.</p>' : '<p class="note">Go to Balogun market (Lagos Island, Monday to Saturday) to haggle prices down.</p>') + '<div class="pg-chips" style="padding:0">' + Object.keys(SLOT_NAMES).map(function (k) { return '<button type="button" class="pg-chip' + (k === slot ? ' sel' : '') + '" id="cs-' + k + '" data-clothslot="' + k + '">' + SLOT_NAMES[k] + '</button>'; }).join('') + '</div><div class="list">' +
-      Object.keys(D.CLOTHES).filter(function (k) { return D.CLOTHES[k].slot === slot && !D.CLOTHES[k].gift; }).map(function (k) {
+      Object.keys(D.CLOTHES).filter(function (k) { var c = D.CLOTHES[k]; return c.slot === slot && !c.gift && localBuy(c); }).map(function (k) {
         var c = D.CLOTHES[k], p = L.price(S, c.price), own = S.wardrobe.some(function (w) { return w.id === k; });
         return '<div class="item"><div><h3><i class="swatch" style="background:' + c.color + (c.alt ? ';box-shadow:inset -6px 0 0 ' + c.alt : '') + '"></i>' + esc(c.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(c.fabric) + '</span>' + (c.tags.length ? '<span>for ' + esc(c.tags.map(function (t) { return TAG_NAMES[t]; }).join(', ')) + '</span>' : '') + (c.status ? '<span>+' + c.status + ' status</span>' : '') + '</div></div>' +
           (own ? '<span class="muted">Owned</span>' : '<span class="inline">' + (canHaggle ? '<button class="btn sm ghost" id="hag-' + k + '" data-haggle="' + k + '">Haggle</button>' : '') + '<button class="btn sm" id="buyc-' + k + '" data-buycloth="' + k + '"' + (S.cash + S.bank >= p ? '' : ' disabled') + '>Buy</button></span>') + '</div>' +
@@ -1040,7 +1063,7 @@
   function strip() {
     var e = S.econ, chips = [];
     if (L.cityOf(S) !== 'lagos' || L.districtCity(L.homeDef(S).district) !== 'lagos') chips.push('<span class="chip">📍 ' + esc(D.CITIES[L.cityOf(S)].name) + '</span>');
-    chips.push('<span class="chip' + (S.power ? '' : ' off') + '">' + (S.power ? 'Light: on' : 'NEPA took light') + '</span>');
+    chips.push('<span class="chip' + (S.power ? '' : ' off') + '">' + (S.power ? 'Light: on' : ({ ctn: 'Load shedding', accra: 'Dumsor', kumasi: 'Dumsor', capecoast: 'Dumsor', ldn: 'Power cut', dxb: 'Power cut' })[L.cityOf(S)] || 'NEPA took light') + '</span>');
     if (e.fuelDays) chips.push('<span class="chip off">Fuel scarcity · ' + e.fuelDays + 'd</span>');
     if (e.flood) chips.push('<span class="chip off">Flooding on the Island</span>');
     if (L.isDecember(S)) chips.push('<span class="chip">Detty December</span>');
@@ -1107,7 +1130,7 @@
   var LAYER_KEY = 'lasgidi.layers.v1';
   function mapLayers() { if (!ui.layers) { try { ui.layers = JSON.parse(localStorage.getItem(LAYER_KEY) || 'null'); } catch (e) {} ui.layers = ui.layers || { names: true, boards: true, players: true }; } return ui.layers; }
   // The map bar: a city picker (where you are, or ✈ Fly), Names, More (the other layers), and the letter-hunt badge.
-  var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊', accra: '🇬🇭', kumasi: '👑', capecoast: '🏰', ldn: '🇬🇧', dxb: '🇦🇪' };
+  var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊', accra: '🇬🇭', kumasi: '👑', capecoast: '🏰', ldn: '🇬🇧', dxb: '🇦🇪', ctn: '🇿🇦' };
   // Cities this life can go to (Accra opens with rules 22).
   // Money on screen is in the money of the city you are in (₵ in Ghana, £ in London, AED in Dubai, R in Cape Town), at the
   // game's fixed rates, with an optional "≈ $" next to it (Settings). The ledger always counts in naira.
@@ -1122,6 +1145,8 @@
     return out;
   }
   var money = N;
+  // Rules 42: things only sold in some cities show up when you are there.
+  function localBuy(x) { return !(x.rules && !(S.rules >= x.rules)) && (!x.city || x.city.indexOf(L.cityOf(S)) >= 0); }
   function personOf(c) { var x = localOf(c); return x ? x.person : 'Lagosian'; }
   function peopleOf(c) { var x = localOf(c); return x ? x.people : 'Lagosians'; }
   function homeCityOf() { var h = S && D.HOMES[S.home]; return h ? L.districtCity(h.district) : (S ? L.cityOf(S) : 'lagos'); }
@@ -1153,7 +1178,7 @@
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
       flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(), players: mapPlayers(), layers: mapLayers(), showBoards: ui.placeCat === 'boards', weather: L.weatherNow(S), sea: { claims: seaClaims(), mine: online.me || 'me', sel: ui.seaOpen ? seaSel() : null }, trip: ui.trip && Date.now() - ui.trip.at < 2600 ? ui.trip : null,
       clock: L.clockLabel(S), banner: banner,
-      places: ui.placeCat === 'boards' || ui.placeCat === 'homes' || ui.placeCat === 'cities' ? [] : D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && (!ui.placeCat || p.type === ui.placeCat); }), place: ui.place,
+      places: ui.placeCat === 'boards' || ui.placeCat === 'homes' || ui.placeCat === 'cities' ? [] : D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && (!ui.placeCat || p.type === ui.placeCat) && familyPlace(p); }), place: ui.place,
       homeId: S.home, homePaint: myPaint(), homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
       myPlot: L.myPlot(S), plotSel: ui.plotSel, plotOwners: plotOwners(),
       boards: boardAdsMap(), board: ui.board, gems: gemsLeft(),
@@ -1701,7 +1726,7 @@
     if (only) kinds = kinds.filter(function (k) { return only.indexOf(k[0]) >= 0; });
     var kind = kinds.some(function (k) { return k[0] === ui.vehKind; }) ? ui.vehKind : kinds[0][0];
     html += (note ? '<p class="note">' + esc(note) + '</p>' : '') + '<div class="pg-chips" style="padding:0">' + kinds.map(function (k) { return '<button type="button" class="pg-chip' + (k[0] === kind ? ' sel' : '') + '" id="vk-' + k[0] + '" data-vehkind="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div><div class="list">' +
-      (function () { var TO = Object.keys(D.VEHICLE_TIERS), last = null; return Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind; }).sort(function (a, b) { var A = D.VEHICLES[a], B = D.VEHICLES[b]; return (A.tier ? TO.indexOf(A.tier) + 1 : 0) - (B.tier ? TO.indexOf(B.tier) + 1 : 0) || A.price - B.price; }).map(function (k) { var tr = D.VEHICLES[k].tier || '', h = tr !== last ? '<div class="dl-tier">' + esc(tr ? D.VEHICLE_TIERS[tr] : 'Classic range') + '</div>' : ''; last = tr; return [k, h]; }); })().map(function (kh) {
+      (function () { var TO = Object.keys(D.VEHICLE_TIERS), last = null; return Object.keys(D.VEHICLES).filter(function (k) { return D.VEHICLES[k].kind === kind && localBuy(D.VEHICLES[k]); }).sort(function (a, b) { var A = D.VEHICLES[a], B = D.VEHICLES[b]; return (A.tier ? TO.indexOf(A.tier) + 1 : 0) - (B.tier ? TO.indexOf(B.tier) + 1 : 0) || A.price - B.price; }).map(function (k) { var tr = D.VEHICLES[k].tier || '', h = tr !== last ? '<div class="dl-tier">' + esc(tr ? D.VEHICLE_TIERS[tr] : 'Classic range') + '</div>' : ''; last = tr; return [k, h]; }); })().map(function (kh) {
         var k = kh[0], V = D.VEHICLES[k], p = L.price(S, V.price), own = S.vehicles.filter(function (v) { return v.id === k; }).length;
         var what = V.kind === 'car' ? 'Top speed ' + V.speed + ' km/h on clear roads' : V.kind === 'boat' ? 'Use the jetties without waiting' : V.kind === 'heli' ? 'Anywhere in Lagos in about 30 minutes, ' + N(L.price(S, V.trip)) + ' a trip' : V.kind === 'bus' ? 'Danfo Runs with no owner\'s returns, or a driver for weekly returns (and risks)' : 'Fly it from any airport\'s Departures board; upkeep covers the hangar and crew';
         return kh[1] + '<div class="item dl-car">' + vehPic(k) + '<div><h3>' + esc(V.name) + (own ? ' <span class="muted">· own ' + own + '</span>' : '') + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span>' + esc(what) + '</span><span>Upkeep ' + N(L.vehicleUpkeep(S, k)) + '/wk</span><span>+' + V.status + ' status</span></div></div>' +
@@ -1713,7 +1738,7 @@
   /* ---------- homes and the Mainland Estate ---------- */
   function clearPicks() { ui.chatWith = null; ui.sel = null; ui.place = null; ui.board = null; ui.homeSel = null; ui.plotSel = null; ui.seaSel = null; ui.seaOpen = false; online.status = ''; }
   function marketHomes() {
-    return Object.keys(D.HOMES).filter(function (k) { var h = D.HOMES[k]; return !h.hidden && (!h.owned || L.ownsHome(S, k)); })
+    return Object.keys(D.HOMES).filter(function (k) { var h = D.HOMES[k]; return !h.hidden && (!h.owned || L.ownsHome(S, k)) && !(h.rules && !(S.rules >= h.rules)) && !(S.rules >= 42 && L.visitBar(S, h.district)); })
       .sort(function (a, b) { return D.HOMES[a].rent - D.HOMES[b].rent; });
   }
   function residentCounts() {
@@ -2518,7 +2543,7 @@
   }
   /* ---------- the live airport: an animated scene with Departures and Arrivals boards ---------- */
   var AIRLINES = [['EA', 'Eagle Air'], ['LG', 'Lagoon Airways'], ['SJ', 'Savannah Jet'], ['AW', 'Atlantic Wings'], ['NX', 'Niger Express']];
-  var AIR_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR', dxb: 'DXB' };
+  var AIR_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR', dxb: 'DXB', ctn: 'CPT' };
   // A deterministic board for this game day, between Lagos, Port Harcourt and Abuja: an airliner about every
   // 30 minutes at gates 1–5, and a chopper shuttle about every 90 minutes from helipads H1–H4. Status follows the clock.
   function fids(kind) {
@@ -2660,7 +2685,7 @@
   }
   function airportGo(tab) { ui.airportOpen = false; ui.depTab = tab; clearPicks(); ui.place = ui.airportPlace || 'airport'; ui.tab = 'map'; render(); }
   /* ---------- airport departures: Air (cabins, insurance, boarding pass), My jet / charter, Chopper ---------- */
-  var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1, acc_kotoka: 1, kum_airport_pl: 1, ldn_lhr: 1, dxb_dxb: 1 };
+  var DEP_PLACES = { airport: 1, abj_airport_pl: 1, ph_airport_pl: 1, acc_kotoka: 1, kum_airport_pl: 1, ldn_lhr: 1, dxb_dxb: 1, ctn_cpt: 1 };
   function departuresView(pl) {
     var tab = ui.depTab || 'air', here = L.cityOf(S), cities = openCities().filter(function (c) { return c !== here && !D.CITIES[c].noAir; }); // no flights to Cape Coast
     var city = cities.indexOf(ui.depCity) >= 0 ? ui.depCity : cities[0], code = D.CITY_CODES;
@@ -2748,7 +2773,7 @@
   var ROUTE_KM = { 'lagos-abuja': 760, 'lagos-ph': 620, 'abuja-ph': 590, 'lagos-accra': 480, 'abuja-accra': 1240, 'ph-accra': 1100, 'accra-kumasi': 250, 'lagos-kumasi': 730, 'abuja-kumasi': 1490, 'ph-kumasi': 1350, 'accra-capecoast': 145, 'kumasi-capecoast': 220, 'lagos-capecoast': 625, 'abuja-capecoast': 1385, 'ph-capecoast': 1245 };
   var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'], 'lagos-accra': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'abuja-accra': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'ph-accra': ['Owerri', 'Benin City', 'Ore', 'Sagamu', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'accra-kumasi': ['Achimota', 'Nsawam', 'Apedwa', 'Bunso', 'Nkawkaw', 'Konongo', 'Ejisu'], 'lagos-kumasi': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw', 'Ejisu'], 'abuja-kumasi': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'], 'ph-kumasi': ['Owerri', 'Benin City', 'Ore', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'], 'accra-capecoast': ['Kasoa', 'Winneba', 'Apam junction', 'Mankessim', 'Anomabo'], 'kumasi-capecoast': ['Bekwai', 'Obuasi', 'Fosu', 'Assin Praso', 'Jukwa'], 'lagos-capecoast': ['Mile 2', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Accra', 'Winneba', 'Mankessim'], 'abuja-capecoast': ['Lokoja', 'Ibadan', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Winneba'], 'ph-capecoast': ['Benin City', 'Ore', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Winneba'] };
   // Abuja's and Port Harcourt's own words for the same rides (display only: the engine and its ledger keep the mode names).
-  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, kumasi: { danfo: 'Tro-tro', cab: 'Taxi' }, capecoast: { danfo: 'Tro-tro', cab: 'Taxi' }, dxb: { danfo: 'Metro and bus', cab: 'Taxi', okada: 'Scooter', keke: 'Scooter' }, ldn: { danfo: 'Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike', rail: 'Tube' } };
+  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, kumasi: { danfo: 'Tro-tro', cab: 'Taxi' }, capecoast: { danfo: 'Tro-tro', cab: 'Taxi' }, dxb: { danfo: 'Metro and bus', cab: 'Taxi', okada: 'Scooter', keke: 'Scooter' }, ctn: { danfo: 'MyCiTi bus', cab: 'Taxi', okada: 'Scooter', keke: 'Minibus taxi' }, ldn: { danfo: 'Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike', rail: 'Tube' } };
   function modeName(o) { var m = CITY_MODE_NAMES[L.cityOf(S)]; return (m && own(m, o.mode)) ? m[o.mode] : o.name; }
   var RIDE_NAMES = { coach: 'Savanna Line coach', danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
   function showRide(from, to, mode, t0) {
@@ -3023,7 +3048,7 @@
   function ddOpen(k, def) { var o = ui.ddOpen || {}; return o[k] != null ? o[k] : !!def; }
   function dd(k, title, body, def) { return '<details class="map-dd" data-dd="' + k + '"' + (ddOpen(k, def) ? ' open' : '') + '><summary>' + title + '</summary><div class="map-dd-b">' + body + '</div></details>'; }
   function placeChips(types) {
-    return '<div class="pg-chips">' + D.PLACES.filter(function (p) { return types.indexOf(p.type) >= 0 && L.districtCity(p.district) === L.cityOf(S); }).map(function (p) {
+    return '<div class="pg-chips">' + D.PLACES.filter(function (p) { return types.indexOf(p.type) >= 0 && L.districtCity(p.district) === L.cityOf(S) && familyPlace(p); }).map(function (p) {
       return '<button type="button" class="pg-chip' + (ui.place === p.id ? ' sel' : '') + '" id="pl-' + p.id + '" data-place="' + p.id + '">' + (p.icon || '') + ' ' + esc(p.name) + '</button>';
     }).join('') + '</div>';
   }
@@ -3034,7 +3059,7 @@
       '<dl class="lt-terms">' + x.terms.map(function (t) { return '<dt>' + esc(t[0]) + '</dt><dd>' + esc(t[1]) + '</dd>'; }).join('') + '</dl></div>';
   }
   function placeFilters(chips) {
-    var cats = Object.keys(D.PLACE_TYPES).filter(function (c) { return c !== 'services' && c !== 'transport'; }), lagos = L.cityOf(S) === 'lagos';
+    var cats = Object.keys(D.PLACE_TYPES).filter(function (c) { return c !== 'services' && c !== 'transport' && !(familyOn() && c === 'nightlife'); }), lagos = L.cityOf(S) === 'lagos';
     var pick = '<div class="pg-chips" role="group" aria-label="Show places">' +
       '<button type="button" class="pg-chip' + (!ui.placeCat ? ' sel' : '') + '" id="pc-all" data-placecat="">All</button>' +
       cats.map(function (c) { return '<button type="button" class="pg-chip' + (ui.placeCat === c ? ' sel' : '') + '" id="pc-' + c + '" data-placecat="' + c + '"><i class="sw" style="background:' + D.PLACE_TYPES[c].color + '"></i>' + esc(D.PLACE_TYPES[c].name) + '</button>'; }).join('') + '</div>' +
@@ -3346,7 +3371,7 @@
   }
   // One list of available acts per game moment, shared by the festival cards in a render.
   var availCache = { k: null, v: null };
-  function availMemo() { var k = S.t + '|' + S.loc + '|' + S.cash + '|' + S.bank + '|' + (S.replay ? S.replay.acts.length : '') + '|' + (S.pending ? S.pending.length : 0); if (availCache.k !== k) { availCache.k = k; availCache.v = L.availableActions(S); } return availCache.v; }
+  function availMemo() { var k = S.t + '|' + S.loc + '|' + S.cash + '|' + S.bank + '|' + (S.replay ? S.replay.acts.length : '') + '|' + (S.pending ? S.pending.length : 0); if (availCache.k !== k + familyOn()) { availCache.k = k + familyOn(); availCache.v = L.availableActions(S).filter(familyAct); } return availCache.v; }
   function stallDistrict(key) { if (key === 'detty') return D.DETTY_FEST.district; var F = D.YEAR_FESTS.filter(function (x) { return x.id === key; })[0]; return F ? F.district : null; }
   // Rules 35: festivals through the year, one card each while counting down or on (only at the festival's place in a walk-in).
   function yearFestCards(where, placeId) {
@@ -3461,7 +3486,7 @@
     } else {
       html += '<p class="note">You have no job. Apply in person at the district where the job is.</p>';
     }
-    html += '<div class="section"><h3>Careers</h3><div class="list">' + Object.keys(D.CAREERS).map(function (cid) {
+    html += '<div class="section"><h3>Careers</h3><div class="list">' + Object.keys(D.CAREERS).filter(function (cid) { var c = D.CAREERS[cid]; return !(c.rules && !(S.rules >= c.rules)) && !(S.rules >= 42 && L.visitBar(S, c.district)); }).map(function (cid) {
       var c = D.CAREERS[cid], e = L.jobEligibility(S, cid), mine = S.job && S.job.id === cid;
       return '<div class="item"><div><h3>' + esc(c.titles[0]) + ' → ' + esc(c.titles[4]) + '</h3><div class="meta"><span>' + esc(c.name) + '</span><span>' + esc(D.DISTRICTS[c.district].name) + '</span><span class="num">' + pad(c.start) + '–' + pad(c.end) + '</span><span class="gain">' + N(c.pay[0]) + '–' + N(c.pay[4]) + '/shift</span><span>' + esc(D.SKILLS[c.skill]) + '</span></div>' +
         (!e.ok && !mine ? '<div class="why">' + esc(e.reason) + '</div>' : '') + (e.connect ? '<div class="meta gain">' + esc(D.NPCS[e.connect].name) + ' is your connect here</div>' : '') + '</div>' +
@@ -3522,9 +3547,10 @@
       btns += '<button class="link-btn" id="sell-' + i + '" data-sellb="' + i + '">Sell (60%)</button>';
       return '<div class="item biz">' + pic('biz:' + b.id, L.businessName(b), '<div class="dl-ic">' + (g ? g.icon : '🏪') + '</div>', 'dl-pic') + '<div><h3>' + esc(L.businessName(b)) + (stars ? ' <span class="biz-stars">' + stars + '</span>' : '') + '</h3><div class="meta">' + meta.map(function (m) { return '<span>' + m + '</span>'; }).join('') + '</div><div class="inline biz-btns">' + btns + '</div></div></div>';
     }).join('') + '</div>' + (S.businesses.some(function (b) { return !b.manager; }) ? '<div class="inline"><button class="btn sm" id="visit" data-visit="1">Check on businesses (2h)</button></div>' : '');
-    var site = ui.bizSite || (D.BUSINESS_SITES[S.loc] ? S.loc : 'surulere'), sd = D.BUSINESS_SITES[site];
+    var hereSites = Object.keys(D.BUSINESS_SITES).filter(function (k) { var R = D.BUSINESS_SITES[k].rules; return (!R || S.rules >= R) && L.districtCity(k) === L.cityOf(S); });
+    var site = ui.bizSite && hereSites.indexOf(ui.bizSite) >= 0 ? ui.bizSite : D.BUSINESS_SITES[S.loc] && hereSites.indexOf(S.loc) >= 0 ? S.loc : hereSites[0] || 'surulere', sd = D.BUSINESS_SITES[site];
     html += '<details' + (S.businesses.length && !ui.bizOpen ? '' : ' open') + '><summary>Build a business</summary>' +
-      '<div class="inline"><label class="label" for="biz-site">Site</label><select id="biz-site">' + Object.keys(D.BUSINESS_SITES).filter(function (k) { var R = D.BUSINESS_SITES[k].rules; return !R || S.rules >= R; }).map(function (k) {
+      '<div class="inline"><label class="label" for="biz-site">Site</label><select id="biz-site">' + Object.keys(D.BUSINESS_SITES).filter(function (k) { var R = D.BUSINESS_SITES[k].rules; return (!R || S.rules >= R) && L.districtCity(k) === L.cityOf(S); }).map(function (k) {
         var ct = L.districtCity(k), lic = D.BIZ_LICENCES && D.BIZ_LICENCES[ct], need = lic && !(S.bizLicence && S.bizLicence[ct]);
         return '<option value="' + k + '"' + (k === site ? ' selected' : '') + '>' + esc(D.DISTRICTS[k].name) + (ct !== 'lagos' ? ', ' + esc(D.CITIES[ct].name) : '') + ' · ×' + D.BUSINESS_SITES[k].mult.toFixed(2) + ' · rent ' + N(L.price(S, D.BUSINESS_SITES[k].rent)) + '/wk' + (need ? ' · needs ' + esc(lic.name) : '') + '</option>';
       }).join('') + '</select></div>' + (S.rules >= 41 ? '<p class="note">London and Dubai: get a UK business visa at Canary Wharf (' + N(L.price(S, D.BIZ_LICENCES.ldn.fee)) + ') or a Dubai trade licence in Downtown Dubai (' + N(L.price(S, D.BIZ_LICENCES.dxb.fee)) + '), then build there. Income in this life pays 1.5×.</p>' : '') + ['high', 'mid', 'low'].map(function (tier) {
@@ -3547,7 +3573,7 @@
 
     html += '<div class="section"><h3>Rent · ' + esc(h.name) + '</h3><dl class="kv"><dt>Weekly rent</dt><dd class="num">' + N(S.rentRate) + '</dd><dt>Due</dt><dd>Saturdays 12:00</dd><dt>Arrears</dt><dd class="num ' + (S.arrears ? 'cost' : '') + '">' + N(S.arrears) + (S.rentLate ? ' · strike ' + S.rentLate + '/3' : '') + '</dd><dt>Light</dt><dd>' + Math.round(h.power * 100) + '% of the time</dd></dl>' +
       (S.arrears ? '<div class="inline"><button class="btn sm" id="pay-arrears" data-arrears="1">Pay arrears</button></div>' : '') +
-      '<details><summary>Move house (4 weeks upfront + 10% agent fee)</summary><div class="list">' + marketHomes().map(function (k) {
+      '<details><summary>Move house in ' + esc(D.CITIES[L.cityOf(S)].name) + ' (4 weeks upfront + 10% agent fee)</summary><p class="note">Homes where you are now. To rent in another city, travel there first.</p><div class="list">' + marketHomes().filter(function (k) { return L.districtCity(D.HOMES[k].district) === L.cityOf(S); }).map(function (k) {
         var hm = D.HOMES[k], c = L.moveInCost(S, k);
         return '<div class="item"><div><h3>' + esc(hm.name) + '</h3><div class="meta"><span class="num">' + N(c.rent) + '/week</span><span>Light ' + Math.round(hm.power * 100) + '%</span><span class="cost num">Move-in ' + N(c.total) + '</span></div></div>' +
           '<button class="btn sm" id="move-' + k + '" data-move="' + k + '"' + (k === S.home ? ' disabled' : '') + '>' + (k === S.home ? 'Home' : 'Move') + '</button></div>';
@@ -3573,7 +3599,7 @@
     html += businessesView();
 
     html += '<div class="section"><h3>Property and car</h3>' + (S.properties.length ? '<ul class="note">' + S.properties.map(function (p) { return '<li>' + esc(D.PROPERTIES[p.id].name) + ' · worth ' + N(p.value) + '</li>'; }).join('') + '</ul>' : '') +
-      buildView() + '<div class="list">' + Object.keys(D.PROPERTIES).filter(function (k) { return !D.PROPERTIES[k].hidden && !D.PROPERTIES[k].hydepark && !D.PROPERTIES[k].hpZone; }).map(function (k) {
+      (L.cityOf(S) !== 'lagos' ? '<p class="note">Land and houses for sale are in Lagos. Buy them when you are back in Lagos.</p>' : '') + (L.cityOf(S) === 'lagos' ? buildView() : '') + '<div class="list">' + Object.keys(D.PROPERTIES).filter(function (k) { return L.cityOf(S) === 'lagos' && !D.PROPERTIES[k].hidden && !D.PROPERTIES[k].hydepark && !D.PROPERTIES[k].hpZone; }).map(function (k) {
         var p = D.PROPERTIES[k], pr = L.price(S, p.price);
         return '<div class="item"><div><h3>' + esc(p.name) + '</h3><div class="meta"><span class="cost num">' + N(pr) + '</span>' + (p.weekly ? '<span class="gain num">' + N(p.weekly) + '/week from tenants</span>' : '<span>Appreciates ~1.2%/week</span>') + '</div></div>' +
           '<button class="btn sm" id="buyp-' + k + '" data-buyp="' + k + '"' + (S.cash + S.bank >= pr ? '' : ' disabled') + '>Buy</button></div>';
@@ -3611,7 +3637,8 @@
   function checkCv(raw) {
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.work)) return null;
     var work = raw.work.slice(0, 10).filter(function (w) { return w && own(D.CAREERS, w.id) && Number.isInteger(w.level) && w.level >= 0 && w.level < D.CAREERS[w.id].titles.length; }).map(function (w) { var c = D.CAREERS[w.id]; return { title: c.titles[w.level], org: c.name, current: !!w.current, shifts: Math.max(0, Math.min(9999, w.shifts | 0)), why: w.why === 'dismissed' ? 'dismissed' : w.why === 'resigned' ? 'resigned' : null }; });
-    var edu = (Array.isArray(raw.edu) ? raw.edu : []).filter(function (e) { return own(EDU, e); }).map(function (e) { return { icon: EDU[e][0], title: EDU[e][1] }; });
+    var qOf = function (e) { var m = typeof e === 'string' && /^(q|qs):([a-z_]+)$/.exec(e); return m && own(D.STUDY, m[2]) ? m : null; };
+    var edu = (Array.isArray(raw.edu) ? raw.edu : []).filter(function (e) { return own(EDU, e) || qOf(e); }).slice(0, 12).map(function (e) { var m = qOf(e); if (m) { var P = D.STUDY[m[2]]; return { icon: m[1] === 'q' ? D.STUDY_KINDS[P.kind].icon : '📚', title: (m[1] === 'q' ? '' : 'Studying ') + P.name + ', ' + P.where }; } return { icon: EDU[e][0], title: EDU[e][1] }; });
     var skills = (Array.isArray(raw.skills) ? raw.skills : []).filter(function (k) { return k && own(D.SKILLS, k.id) && Number.isInteger(k.level) && k.level > 0 && k.level < 10; }).slice(0, 4).map(function (k) { return { name: D.SKILLS[k.id], level: k.level }; });
     return { weeks: Math.max(1, Math.min(999, raw.weeks | 0)), work: work, edu: edu, skills: skills, record: { clean: true } };
   }
@@ -4363,7 +4390,7 @@
       else if (app === 'news') body = '<div class="panel-b">' + newsView() + '</div>';
       else if (app === 'music') body = '<div class="panel-b">' + musicView() + '</div>';
       else if (app === 'calendar') body = '<div class="panel-b">' + calendarView() + '</div>';
-      else if (app === 'courses') body = '<div class="panel-b">' + actsApp('🎓 Courses', 'Learning in Lagos: enrol, lectures, exams and short courses. Go to the place to do it.', function (a) { return /enrol|lecture|ielts|course|class|lesson|exam|study|tutor/i.test((a.special || '') + ' ' + a.label); }) + '</div>';
+      else if (app === 'courses') body = '<div class="panel-b">' + studyView() + actsApp('🎓 Courses', 'Learning in Lagos: enrol, lectures, exams and short courses. Go to the place to do it.', function (a) { return /enrol|lecture|ielts|course|class|lesson|exam|study|tutor/i.test((a.special || '') + ' ' + a.label); }) + '</div>';
       else if (app === 'health') body = '<div class="panel-b">' + healthView() + '</div>';
       else if (app === 'ride') body = '<div class="panel-b">' + rideView() + '</div>';
       else if (app === 'settings') body = '<div class="panel-b">' + settingsView() + '</div>';
@@ -4515,7 +4542,7 @@
   var ONB_STEPS = ['Profile', 'Look', 'Personality', 'Dream', 'Birth lottery', 'Home'];
   function onb() { return ui.onb || (ui.onb = { step: 0, name: ui.draftName || 'Ade', adult: false, look: { skin: 2, hair: 0, shape: 1 }, outfit: { top: 'st_tee', bottom: 'st_jeans' }, traits: [], goal: null, home: null }); }
   function onbValid(o, step) {
-    if (step === 0) return o.name.trim().length > 0 && o.adult;
+    if (step === 0) return o.name.trim().length > 0 && (o.adult || familyOn()); // under 18: Family mode
     if (step === 2) return o.traits.length === 2;
     if (step === 3) return !!o.goal;
     if (step === 4) return !!ui.draftOrigin;
@@ -4527,7 +4554,8 @@
     if (st === 0) body = '<h2>Who are you in Lagos?</h2>' +
       '<div class="field"><label class="label" for="pname">Your name in the game</label><input id="pname" maxlength="24" value="' + esc(o.name) + '" autocomplete="off"></div>' +
       '<p class="note">Other players see you as <b>' + esc(window.LasgidiChat ? window.LasgidiChat.handle(o.name) : o.name) + '</b>. Your account is your claude.ai sign-in: Lasgidi never asks for a password or an email.</p>' +
-      '<label class="onb-check"><input type="checkbox" id="onb-adult"' + (o.adult ? ' checked' : '') + '> I am 18 or older</label>';
+      '<label class="onb-check"><input type="checkbox" id="onb-adult"' + (o.adult ? ' checked' : '') + '> I am 18 or older</label>' +
+      '<label class="onb-check"><input type="checkbox" id="onb-family"' + (familyOn() ? ' checked' : '') + '> Play in Family mode: for all ages, no chat with other players and no nightlife (you can change it in Settings)</label>';
     else if (st === 1) body = '<h2>Your look</h2><div class="onb-look"><canvas id="onb-av" width="180" height="220" aria-label="Your avatar"></canvas><div>' +
       '<span class="label">Skin tone</span><div class="pick">' + D.LOOKS.skin.map(function (c, i) { return '<button type="button" class="pick-c' + (o.look.skin === i ? ' on' : '') + '" id="onb-sk-' + i + '" data-onbskin="' + i + '" aria-label="Skin tone ' + (i + 1) + '" aria-pressed="' + (o.look.skin === i) + '" style="background:' + c + '"></button>'; }).join('') + '</div>' +
       '<span class="label">Hairstyle</span><div class="pick">' + D.LOOKS.hair.map(function (h, i) { return '<button type="button" class="pg-chip' + (o.look.hair === i ? ' sel' : '') + '" id="onb-hr-' + i + '" data-onbhair="' + i + '">' + esc(h) + '</button>'; }).join('') + '</div>' +
@@ -4545,10 +4573,16 @@
     else if (st === 4) body = '<h2>The birth lottery</h2><div class="lottery">' + (orig ? '<b>' + esc(orig.name) + '</b><p style="margin:0">' + esc(orig.text) + '</p>' : '<p style="margin:0">Lagos decides where you start. The roll is random and happens once per life.</p>') +
       '<div class="odds"><span>LAPO Baby 50%</span><span>Ajepako 35%</span><span>Nepo Baby 15%</span></div>' + (orig ? '' : '<div class="inline"><button class="btn go" id="roll" data-roll="1">Roll the birth lottery</button></div>') + '</div>';
     else {
-      var homes = (orig && D.START_HOMES[ui.draftOrigin]) || [];
-      body = '<h2>Your first home</h2><p class="note">' + (orig ? esc(orig.name) + ': these are the homes your start can pay for.' : 'Roll the birth lottery first.') + ' Rent is due every Saturday at noon.</p><div class="onb-grid">' + homes.map(function (k) {
+      // Rules 42: pick the city you live in. Lagos, or start a life in Accra, London, Dubai or Cape Town.
+      var cities = ['lagos'].concat(Object.keys(D.START_ABROAD || {})), city = cities.indexOf(o.city) >= 0 ? o.city : 'lagos', AB = city !== 'lagos' && D.START_ABROAD[city];
+      var homes = !orig ? [] : AB ? [AB.homes[ui.draftOrigin]].filter(Boolean) : (D.START_HOMES[ui.draftOrigin] || []);
+      var lx = localOf(city), cm = function (n) { return lx && lx.rate !== 1 ? fmtCur(n / lx.rate, lx.sym, lx.dp) + ' (' + L.naira(n) + ')' : L.naira(n); };
+      body = '<h2>Where you live</h2><div class="pg-chips onb-cities" role="group" aria-label="City">' + cities.map(function (c) {
+        var on = c === city; return '<button type="button" class="pg-chip' + (on ? ' sel' : '') + '" id="onb-city-' + c + '" data-onbcity="' + c + '" aria-pressed="' + on + '">' + (CITY_ICON[c] || '📍') + ' ' + esc(D.CITIES[c].name) + '</button>';
+      }).join('') + '</div>' + (lx ? '<p class="note">You will be a <b>' + esc(lx.person) + '</b>. “' + esc(lx.slogan) + '”' + (AB ? ' You live here with no visa, and arrive with ' + cm(Math.round(orig ? orig.cash * AB.cash / 1000 : 0) * 1000) + '. Other cities are trips.' : '') + '</p>' : '') +
+        '<h2>Your first home</h2><p class="note">' + (orig ? esc(orig.name) + ': these are the homes your start can pay for.' : 'Roll the birth lottery first.') + ' Rent is due every Saturday at noon.</p><div class="onb-grid">' + homes.map(function (k) {
         var H = D.HOMES[k], on = o.home === k;
-        return '<button type="button" class="onb-card' + (on ? ' sel' : '') + '" id="onb-home-' + k + '" data-onbhome="' + k + '" aria-pressed="' + on + '">' + (icon3d('h_' + (H.type === 'flat2' || H.type === 'flat3' ? 'flat' : H.type)) || '<span class="onb-e">🏠</span>') + '<b>' + esc(H.name) + '</b><small>' + esc(D.DISTRICTS[H.district].name) + ' · ' + N(H.rent) + ' a week · light ' + Math.round(H.power * 100) + '%</small></button>';
+        return '<button type="button" class="onb-card' + (on ? ' sel' : '') + '" id="onb-home-' + k + '" data-onbhome="' + k + '" aria-pressed="' + on + '">' + (icon3d('h_' + (H.type === 'flat2' || H.type === 'flat3' ? 'flat' : H.type)) || '<span class="onb-e">🏠</span>') + '<b>' + esc(H.name) + '</b><small>' + esc(D.DISTRICTS[H.district].name) + ' · ' + cm(H.rent) + ' a week · light ' + Math.round(H.power * 100) + '%</small></button>';
       }).join('') + '</div>';
     }
     var ok = onbValid(o, st), last = st === ONB_STEPS.length - 1;
@@ -4577,7 +4611,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -4599,6 +4633,7 @@
     if (ds.onbcloth) { var oc = ds.onbcloth.split(':'); onb().outfit[oc[0]] = oc[1]; render(); return; }
     if (ds.onbgoal) { onb().goal = ds.onbgoal; render(); return; }
     if (ds.onbhome) { onb().home = ds.onbhome; render(); return; }
+    if (ds.onbcity) { var ob0 = onb(); ob0.city = ds.onbcity; ob0.home = null; render(); return; }
     if (ds.roll) {
       introState();
       ui.seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
@@ -5099,6 +5134,7 @@
   });
   document.addEventListener('change', function (e) {
     if (e.target && e.target.id === 'onb-adult') { onb().adult = e.target.checked; render(); return; }
+    if (e.target && e.target.id === 'onb-family') { prefs.family = e.target.checked; writeJSON(PREF_KEY, prefs); render(); return; }
     if (e.target && e.target.id === 'dep-insure') { ui.depInsure = e.target.checked; render(); return; }
     if (e.target && e.target.id === 'gov-deputy') { govWrite('govrun', { deputy: e.target.value || null }, e.target.value ? 'Offer sent to ' + nameOf(e.target.value) + '.' : 'Running mate cleared.'); return; }
     if (e.target && e.target.dataset && e.target.dataset.govappoint) {

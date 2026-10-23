@@ -2889,7 +2889,7 @@ test('rules 23: London is visit-only with a UK visa: fee, proof of funds, a wait
   assert.ok(!L.moveHouse(r, 'acc_osu_flat').ok || true);
   for (const p of D.PLACES.filter(p => L.districtCity(p.district) === 'ldn')) { assert.ok(p.nogem, p.id); for (const a of D.CIVIC_ACTS[p.id] || []) assert.ok(!a.earn || (a.permitted && a.minRules >= 26 && a.earn <= 3000), a.id + ' pays nothing (rules 26: a small permitted engagement)'); }
   for (const k of Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === 'ldn')) { assert.ok(!(D.PLACE_ACTIONS[k] || []).length); assert.ok(!D.BUSINESS_SITES[k] || D.BUSINESS_SITES[k].rules >= 41); }
-  assert.ok(!Object.values(D.HOMES).some(h => L.districtCity(h.district) === 'ldn')); assert.ok(!Object.values(D.CAREERS).some(c => L.districtCity(c.district) === 'ldn'));
+  assert.ok(!Object.values(D.HOMES).some(h => L.districtCity(h.district) === 'ldn' && !(h.rules >= 42))); assert.ok(!Object.values(D.CAREERS).some(c => L.districtCity(c.district) === 'ldn' && !(c.rules >= 42))); // rules 42: for residents only
   // Overstay: wait until the visa runs out and you are flown home.
   for (let d = 0; d < 32 && L.cityOf(r) === 'ldn'; d++) { L.wait(r, 24 * 60); while (r.pending.length) L.resolveChoice(r, 0); }
   assert.equal(L.cityOf(r), 'lagos'); assert.ok(r.ledger.some(e => /UK visa ran out/.test(e.memo)));
@@ -3001,7 +3001,7 @@ test('rules 26: Dubai is visit-only with a UAE tourist visa; nothing pays there;
   assert.ok(L.intercity(s, 'dxb', 'flight').ok); assert.equal(L.cityOf(s), 'dxb');
   for (const p of D.PLACES.filter(p => L.districtCity(p.district) === 'dxb')) { assert.ok(p.nogem, p.id); for (const a of D.CIVIC_ACTS[p.id] || []) assert.ok(!a.earn, a.id + ' pays nothing'); assert.ok(D.insideKind(p), p.id); }
   for (const k of Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === 'dxb')) { assert.ok(!(D.PLACE_ACTIONS[k] || []).length); assert.ok(!D.BUSINESS_SITES[k] || D.BUSINESS_SITES[k].rules >= 41); }
-  assert.ok(!Object.values(D.HOMES).some(h => L.districtCity(h.district) === 'dxb'));
+  assert.ok(!Object.values(D.HOMES).some(h => L.districtCity(h.district) === 'dxb' && !(h.rules >= 42)));
   assert.ok(L.flightQuote(s, 'lagos', 'economy').disabled, 'cabin classes do not fly to or from Dubai');
   for (let d = 0; d < 34 && L.cityOf(s) === 'dxb'; d++) { L.wait(s, 24 * 60); while (s.pending.length) L.resolveChoice(s, 0); }
   assert.equal(L.cityOf(s), 'lagos'); assert.ok(s.ledger.some(e => /UAE tourist visa ran out/.test(e.memo)));
@@ -3071,7 +3071,7 @@ test('rules 29: passport stamps the first time you are in each city; travel achi
   assert.ok(s.ach.ghana_tour); assert.ok(!s.ach.globetrotter);
   for (const c of ['ldn', 'dxb']) { s.loc = D.CITIES[c].airport; L.wait(s, 15); }
   assert.ok(s.ach.globetrotter); assert.ok(!s.ach.every_city);
-  for (const c of ['abuja', 'ph']) { s.loc = D.CITIES[c].park; L.wait(s, 15); }
+  for (const c of ['abuja', 'ph', 'ctn']) { s.loc = D.CITIES[c].park; L.wait(s, 15); }
   assert.ok(s.ach.every_city); const day0 = s.stamps.accra; s.loc = D.CITIES.accra.park; s.t += 1440; L.wait(s, 15); assert.equal(s.stamps.accra, day0, 'a stamp is kept from the first visit');
   const old = L.newGame({ seed: 2900, origin: 'nepo', goal: 'freestyle', rules: 28 }); while (old.pending.length) L.resolveChoice(old, 0); L.wait(old, 60);
   assert.equal(old.stamps, undefined); assert.equal(L.passport(old), null);
@@ -3477,7 +3477,7 @@ test('rules 40: Eko Sunday League: sign, train, play Sundays, a table that adds 
 
 test('rules 41: income pays 1.5x (not sales or loans); businesses and a tech startup open in London and Dubai with a licence; new sights', () => {
   const mk = (rules) => { const s = L.newGame({ seed: 4110, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); s.bank = 0; s.cash = 5e7; return s; };
-  const s = mk(); assert.equal(s.rules, 41);
+  const s = mk(41); assert.equal(s.rules, 41);
   // A gig pays 1.5x what the same gig pays on rules 40.
   const o = mk(40);
   for (const x of [s, o]) { x.loc = 'mushin'; x.needs.energy = 100; x.needs.hunger = 70; }
@@ -3495,4 +3495,65 @@ test('rules 41: income pays 1.5x (not sales or loans); businesses and a tech sta
   const old = mk(40); assert.ok(!L.buyBusiness(old, 'startup', 'yaba').ok); assert.ok(!L.buyBusiness(old, 'pos', 'ldn_tower').ok);
   // New sights exist in London and Dubai and are gated.
   for (const id of ['tol_jewels', 'wa_tour', 'df2_sky', 'pr_water', 'dgm_aqua', 'bm_treasures', 'bkp_rooms']) assert.ok(Object.values(D.CIVIC_ACTS).some(l => (l || []).some(a => a.id === id && a.minRules === 41)), id);
+});
+
+test('rules 42: start a life in Accra, London, Dubai or Cape Town; residents need no visa; local clothes and cars; replays', () => {
+  const mk = (origin, home, rules) => { const s = L.newGame({ seed: 4200, origin, goal: 'freestyle', startHome: home, rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  for (const [c, A] of Object.entries(D.START_ABROAD)) for (const [o, h] of Object.entries(A.homes)) {
+    const s = mk(o, h); assert.equal(s.home, h); assert.equal(L.cityOf(s), c, c + ' ' + o); sane(s);
+    assert.equal(s.opening.bank, Math.round(D.ORIGINS[o].cash * A.cash / 1000) * 1000);
+    if (D.CITIES[c].visit) { assert.equal(s.residence, c); assert.equal(L.visaQuote(s, c).state.status, 'valid'); } else assert.equal(s.residence, undefined);
+  }
+  // Rules 41 lives cannot start abroad: the home is ignored.
+  const old = mk('mid', 'ldn_wb_flat', 41); assert.equal(old.home, 'yaba_selfcon'); assert.equal(old.residence, undefined);
+  // A Londoner works in London, rents there and buys London-only things there, not elsewhere.
+  const ldn = mk('mid', 'ldn_wb_flat'); ldn.cash = 5e8;
+  ldn.loc = D.CAREERS.ldn_care.district; assert.ok(L.jobEligibility(ldn, 'ldn_care').ok, L.jobEligibility(ldn, 'ldn_care').reason);
+  assert.ok(L.moveHouse(ldn, 'ldn_pk_room').ok);
+  assert.ok(L.buyClothes(ldn, 'ldn_coat').ok); assert.ok(!L.buyClothes(ldn, 'dxb_kandura').ok); assert.ok(!L.buyVehicle(ldn, 'ctn_bakkie').ok);
+  assert.ok(!L.moveHouse(ldn, 'dxb_mr_studio').ok, 'not a Dubai resident');
+  // A Lagosian visiting Cape Town needs the SA visa, cannot rent or work there.
+  const lag = mk('nepo'); lag.cash = 5e7; assert.ok(!L.intercityOptions(lag, 'ctn')[0] || L.intercityOptions(lag, 'ctn')[0].disabled);
+  lag.loc = 'ctn_obs'; assert.ok(!L.moveHouse(lag, 'ctn_ob_room').ok); assert.ok(!L.jobEligibility(lag, 'ctn_guide').ok);
+  lag.t = Math.floor(lag.t / 1440) * 1440 + 14 * 60;
+  const tut = L.availableActions(lag).find(a => a.id === 'ctn_ob_tutor'); assert.ok(tut && /Visitors/.test(tut.disabled || ''), tut && tut.disabled);
+  // A Cape Town life replays to the same seal.
+  const ct = mk('lapo', 'ctn_ob_room');
+  for (let i = 0; i < 6; i++) { const a = L.availableActions(ct).find(x => !x.disabled && x.mins <= 60); if (a) L.doAction(ct, a.id); else L.wait(ct, 60); while (ct.pending.length) L.resolveChoice(ct, 0); }
+  const r = L.replayLife(ct.replay); assert.ok(r); assert.equal(r.ledgerHash, ct.ledgerHash); assert.equal(r.home, 'ctn_ob_room'); assert.equal(r.residence, 'ctn');
+});
+
+test('rules 42: homes, Lagos property, building and businesses are only bought or rented in the city you are in', () => {
+  const s = L.newGame({ seed: 4201, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.cash = 5e9;
+  assert.match(L.moveHouse(s, 'acc_osu_flat').msg, /Go to Accra/);
+  assert.match(L.moveHouse(s, 'abj_jabi_flat').msg, /Go to Abuja/);
+  assert.match(L.buyBusiness(s, 'buka', 'acc_osu').msg || '', /Go to Accra|Pick/);
+  s.loc = 'acc_osu';
+  assert.match(L.buyProperty(s, 'iko_plot').msg, /Lagos/); assert.match(L.buyPlot(s, 0).msg, /Lagos/);
+  assert.ok(L.moveHouse(s, 'acc_osu_flat').ok, 'renting in Accra while in Accra');
+  const old = L.newGame({ seed: 4201, origin: 'nepo', goal: 'freestyle', rules: 41 }); while (old.pending.length) L.resolveChoice(old, 0); old.cash = 5e9;
+  assert.ok(L.moveHouse(old, 'acc_osu_flat').ok, 'older lives keep their rules');
+});
+
+test('rules 42: study paths: enrol, go to class once a day, finish for a qualification and a head start; apprentices earn a stipend', () => {
+  for (const [k, P] of Object.entries(D.STUDY)) { assert.ok(D.DISTRICTS[P.district], k); assert.ok(P.mins % 15 === 0, k); assert.ok(!P.stipend || P.stipend <= 3000, k); assert.ok(D.SKILLS[P.skill], k); }
+  const s = L.newGame({ seed: 4202, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.cash = 5e6;
+  s.loc = 'festac'; s.t = Math.floor(s.t / 1440) * 1440 + 9 * 60; if (L.dow ? false : false) {}
+  const en = L.availableActions(s).find(a => a.id === 'study_enrol_tailor'); assert.ok(en && !en.disabled, en && en.disabled);
+  assert.ok(L.doAction(s, en.id).ok); assert.ok(L.studyState(s, 'tailor').enrolled);
+  let n = 0, paid = 0;
+  for (let d = 0; d < 40 && !L.studyState(s, 'tailor').done; d++) {
+    s.loc = 'festac'; s.t = Math.floor(s.t / 1440) * 1440 + 8 * 60 + 1440 * (d ? 1 : 0); s.needs.energy = 90; s.needs.hunger = 90; s.needs.stress = 10;
+    const a = L.availableActions(s).find(x => x.id === 'study_class_tailor');
+    if (a && !a.disabled) { const c0 = s.cash; assert.ok(L.doAction(s, a.id).ok); n++; if (s.cash > c0) paid++; const again = L.availableActions(s).find(x => x.id === 'study_class_tailor'); assert.ok(!again || again.disabled, 'once a day'); }
+    while (s.pending.length) L.resolveChoice(s, 0);
+  }
+  assert.equal(n, D.STUDY.tailor.classes); assert.ok(paid > 0, 'a stipend'); assert.ok(L.studyState(s, 'tailor').done); assert.ok(s.ach.qualified && s.ach.master_trade);
+  // Craft careers take you one rank up.
+  const cid = Object.keys(D.CAREERS).find(k => D.CAREERS[k].skill === 'craft' && L.districtCity(D.CAREERS[k].district) === 'lagos' && !D.CAREERS[k].degree);
+  s.loc = D.CAREERS[cid].district; assert.equal(L.qualFor(s, cid), 'tailor');
+  const r = L.applyJob(s, cid, true); assert.ok(r.ok); assert.equal(s.job.level, 1);
+  assert.ok(s.ledger.some(l => /Apprentice day/.test(l.memo) && l.amt > 0), 'stipend posts to the ledger');
+  const old = L.newGame({ seed: 4202, origin: 'mid', goal: 'freestyle', rules: 41 }); old.loc = 'festac';
+  assert.ok(!L.availableActions(old).some(a => /^study_/.test(a.id)));
 });
