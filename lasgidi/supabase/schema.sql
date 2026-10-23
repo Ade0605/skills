@@ -15,14 +15,14 @@ create table if not exists public.docs (
   constraint docs_size check (length(data::text) <= 65536),
   constraint docs_known check (coll in ('fame','weekly','ads','sponsored','residents','plots','adreview','adimg','adpaid','homes','gifts',
     'sea','seaimg','seareview','votes','photo','photoreview','photooff','govrun','govvote','govparty','govprimary','govcab','govconfirm',
-    'reports','cvs','clubradio','ajocircle'))
+    'reports','cvs','clubradio','ajocircle','sponsorreq','sponsorjob'))
 );
 create index if not exists docs_coll_time on public.docs (coll, updated_at desc);
 -- Re-running this file refreshes the list of collections (new ones are added over time, like ajocircle).
 alter table public.docs drop constraint if exists docs_known;
 alter table public.docs add constraint docs_known check (coll in ('fame','weekly','ads','sponsored','residents','plots','adreview','adimg','adpaid','homes','gifts',
   'sea','seaimg','seareview','votes','photo','photoreview','photooff','govrun','govvote','govparty','govprimary','govcab','govconfirm',
-  'reports','cvs','clubradio','ajocircle'));
+  'reports','cvs','clubradio','ajocircle','sponsorreq','sponsorjob'));
 
 create table if not exists public.profiles (
   id uuid primary key default auth.uid(),
@@ -57,7 +57,7 @@ drop policy if exists docs_read on public.docs;
 create policy docs_read on public.docs for select using (
   case
     when coll = 'reports' then owner = auth.uid() or public.is_admin() -- your own (an upsert needs it), never anyone else's
-    when coll in ('adreview', 'seareview', 'photoreview') then owner = auth.uid() or public.is_admin()
+    when coll in ('adreview', 'seareview', 'photoreview', 'sponsorreq') then owner = auth.uid() or public.is_admin()
     else true
   end);
 
@@ -65,21 +65,21 @@ create policy docs_read on public.docs for select using (
 drop policy if exists docs_insert on public.docs;
 create policy docs_insert on public.docs for insert to authenticated with check (
   case
-    when coll in ('sponsored', 'adimg', 'seaimg', 'photo') then public.is_admin()
+    when coll in ('sponsored', 'adimg', 'seaimg', 'photo', 'sponsorjob') then public.is_admin()
     else owner = auth.uid() and split_part(path, '/', 2) = auth.uid()::text
   end);
 drop policy if exists docs_update on public.docs;
 create policy docs_update on public.docs for update to authenticated
   using (
     case
-      when coll in ('sponsored', 'adimg', 'seaimg', 'photo') then public.is_admin()
-      when coll in ('adreview', 'seareview', 'photoreview') then owner = auth.uid() or public.is_admin()
+      when coll in ('sponsored', 'adimg', 'seaimg', 'photo', 'sponsorjob') then public.is_admin()
+      when coll in ('adreview', 'seareview', 'photoreview', 'sponsorreq') then owner = auth.uid() or public.is_admin()
       else owner = auth.uid()
     end)
   with check (
     case
-      when coll in ('sponsored', 'adimg', 'seaimg', 'photo') then public.is_admin()
-      when coll in ('adreview', 'seareview', 'photoreview') then (owner = auth.uid() and split_part(path, '/', 2) = auth.uid()::text) or public.is_admin()
+      when coll in ('sponsored', 'adimg', 'seaimg', 'photo', 'sponsorjob') then public.is_admin()
+      when coll in ('adreview', 'seareview', 'photoreview', 'sponsorreq') then (owner = auth.uid() and split_part(path, '/', 2) = auth.uid()::text) or public.is_admin()
       else owner = auth.uid() and split_part(path, '/', 2) = auth.uid()::text
     end);
 

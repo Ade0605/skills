@@ -1334,3 +1334,6 @@ button.need:focus-visible { outline: 2px solid #2f6fd0; }
 .cruise-view > .cruise-stage canvas, .cruise-view > .airport-stage canvas { display: block; }
 .airport-view { background: #0b0f14; }
 .cruise-view > .cv-panel { position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); margin: 0; z-index: 3; }
+.sp-tag { font-size: 12px; padding: 3px 8px; border-radius: 8px; background: rgba(242,182,0,.18); color: var(--ink); margin-bottom: 4px; display: inline-block; }
+.sp-form summary { font-weight: 800; cursor: pointer; }
+.sp-form input, .sp-form select { width: 100%; box-sizing: border-box; margin: 2px 0 8px; }
