@@ -1326,3 +1326,11 @@ button.need:focus-visible { outline: 2px solid #2f6fd0; }
 .onb-city .slogan { font-style: italic; opacity: .8; }
 .campus-news { border-left: 4px solid #f2b600; background: rgba(242,182,0,.08); border-radius: 10px; }
 .promo { border: 2px solid #16a34a; border-radius: 14px; }
+
+/* Walk-ins, the cruise deck, rooms and the airport fill the whole screen: the 3D scene sits behind everything and the
+   panel floats over the bottom, so no background colour ever shows around the scene (tablets, rotation, folding). */
+.cruise-view { display: block; background: #0b0f14; height: 100vh; height: 100dvh; overflow: hidden; }
+.cruise-view > .cruise-stage, .cruise-view > .airport-stage, .cruise-view > .room-stage { position: absolute; inset: 0; min-height: 0; }
+.cruise-view > .cruise-stage canvas, .cruise-view > .airport-stage canvas { display: block; }
+.airport-view { background: #0b0f14; }
+.cruise-view > .cv-panel { position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); margin: 0; z-index: 3; }
