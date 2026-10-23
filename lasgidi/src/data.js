@@ -484,6 +484,15 @@
   };
   var HOMES = {
     squat:    { name: "Squatting with a friend", district: 'mushin', rent: 0, power: 0.3, sleep: 0.6, hidden: true, type: 'room' },
+    // Rules 45: when you are evicted outside Lagos you sleep on a friend's sofa in your own city, not in Mushin.
+    squat_abuja: { name: "On a friend's sofa, Nyanya", district: 'abj_nyanya', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
+    squat_ph: { name: "On a friend's sofa, Rumuokoro", district: 'ph_rumuokoro', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
+    squat_accra: { name: "On a friend's sofa, Jamestown", district: 'acc_jamestown', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
+    squat_kumasi: { name: "On a friend's sofa, Bantama", district: 'kum_bantama', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
+    squat_capecoast: { name: "On a friend's sofa, Cape Coast", district: 'cc_town', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
+    squat_ldn: { name: "On a friend's sofa, Peckham", district: 'ldn_peckham', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
+    squat_dxb: { name: "On a friend's sofa, Deira", district: 'dxb_deira', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
+    squat_ctn: { name: "On a friend's sofa, Observatory", district: 'ctn_obs', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
     ikorodu_room: { name: 'Room in Ikorodu', district: 'ikorodu', rent: 2000, power: 0.4, sleep: 0.85, type: 'room', x: 29.6, y: 2.4 },
     mushin_room:  { name: 'Face-me-I-face-you, Mushin', district: 'mushin', rent: 2500, power: 0.35, sleep: 0.8, type: 'room', x: 12.4, y: 12.9, perk: 'One room off a shared corridor. Shared toilet, shared kitchen, shared everything.' },
     festac_room:  { name: 'Single room, Festac', district: 'festac', rent: 3000, power: 0.5, sleep: 0.85, type: 'room', x: 2.2, y: 18.4 },

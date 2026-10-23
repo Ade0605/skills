@@ -101,7 +101,9 @@
   // 43 adds Eko Lagoon Lights: a floating ring stage on the lagoon off Ikoyi, shows on Friday and Saturday nights.
   // 44 adds a promotion exam for the top two ranks of every career, campus life (strikes, exam week, parties, student
   // union elections) while you study for a degree, and six more careers in Accra, London and Dubai.
-  var RULES = 44;
+  // 45 keeps lives outside Lagos local: no Lagos governorship vote, no Lagos floods or Nigerian fuel queues abroad, power
+  // cuts that match the city (dumsor, load shedding, none in London or Dubai), and eviction to a friend's sofa in your city.
+  var RULES = 45;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -663,7 +665,7 @@
       log(s, 'The ' + D.POLICIES[s.econ.policy].name + ' has ended.', 'info');
       s.econ.policy = null;
     }
-    if (w > 0 && w % 4 === 0) queueVote(s);
+    if (w > 0 && w % 4 === 0 && !(s.rules >= 45 && districtCity(homeDistrict(s)) !== 'lagos')) queueVote(s); // rules 45: the Lagos vote is for Lagosians
     if (s.econ.cbnWeeks > 0 && --s.econ.cbnWeeks === 0) { log(s, D.CBN[s.econ.cbn].name + '\'s term at the CBN has ended. Rates are back to normal.', 'info'); s.econ.cbn = null; }
     if (s.rules >= 7 && w % 4 === 2) queueCbn(s);
 
@@ -705,8 +707,9 @@
     s.rentLate++;
     s.needs.stress = clamp(s.needs.stress + 20, 0, 100);
     if (s.rentLate >= 3) {
-      log(s, 'Quit notice. The landlord has changed the locks. You are squatting with a friend in Mushin. You still owe ' + naira(s.arrears) + '.', 'bad');
-      s.home = 'squat'; s.rentRate = 0; s.rentLate = 0;
+      var hc45 = s.rules >= 45 ? districtCity(homeDistrict(s)) : 'lagos', sq = hc45 !== 'lagos' && D.HOMES['squat_' + hc45] ? 'squat_' + hc45 : 'squat';
+      log(s, sq === 'squat' ? 'Quit notice. The landlord has changed the locks. You are squatting with a friend in Mushin. You still owe ' + naira(s.arrears) + '.' : 'Quit notice. The landlord has changed the locks. You are sleeping ' + D.HOMES[sq].name.charAt(0).toLowerCase() + D.HOMES[sq].name.slice(1) + '. You still owe ' + naira(s.arrears) + '.', 'bad');
+      s.home = sq; s.rentRate = 0; s.rentLate = 0;
       unlock(s, 'evicted');
     } else {
       log(s, 'You could not pay rent. Arrears: ' + naira(s.arrears) + '. Strike ' + s.rentLate + ' of 3 before eviction.', 'bad');
@@ -2255,21 +2258,22 @@
 
   function dailyEvent(s) {
     if (rand(s) > 0.5) return;
-    var pool = [];
-    pool.push(['grid', 3]);
-    if (!s.econ.fuelDays) pool.push(['fuel', 1.2]);
-    if (isRainy(s) && !s.econ.flood) pool.push(['flood', 1.2]);
+    var pool = [], hc = s.rules >= 45 ? districtCity(homeDistrict(s)) : 'lagos', ng = hc === 'lagos' || hc === 'abuja' || hc === 'ph';
+    if (!(s.rules >= 45 && (hc === 'ldn' || hc === 'dxb'))) pool.push(['grid', 3]); // rules 45: no grid collapse in London or Dubai
+    if (!s.econ.fuelDays && ng) pool.push(['fuel', 1.2]);
+    if (isRainy(s) && !s.econ.flood && hc === 'lagos') pool.push(['flood', 1.2]);
     if (s.cash + s.bank > 15000) pool.push(['blacktax', 1.5]);
     if (s.bank > 5000) pool.push(['scam', 1.2]);
     if (!s.ponzi && s.cash + s.bank >= 30000) pool.push(['ponzi', 0.8]);
     if (s.rentRate && s.econ.policy !== 'tenancy') pool.push(['landlord', 0.6]);
-    if (dow(s) === 4) pool.push(['owambe', 3]);
+    if (dow(s) === 4 && hc === 'lagos') pool.push(['owambe', 3]); // rules 45: the owambe is in Surulere
     var offer = jobOfferNpc(s);
-    if (offer) pool.push(['offer', 1.5]);
+    if (offer && !(s.rules >= 45 && D.CAREERS[D.NPCS[offer].career] && districtCity(D.CAREERS[D.NPCS[offer].career].district) !== hc)) pool.push(['offer', 1.5]); // rules 45: offers in your own city
     if (s.rules >= 6) {
       if (!s.partner && s.needs.social >= 40) pool.push(['crush', 1.4]);
       if (s.partner && s.partner.stage === 'dating' && s.partner.aff >= 60) pool.push(['intro', 2]);
     }
+    if (!pool.length) return; // rules 45: a quiet day abroad can have nothing to roll
     var total = pool.reduce(function (a, p) { return a + p[1]; }, 0);
     var r = rand(s) * total, ev = pool[0][0];
     for (var i = 0; i < pool.length; i++) { r -= pool[i][1]; if (r <= 0) { ev = pool[i][0]; break; } }
@@ -2277,7 +2281,7 @@
     switch (ev) {
       case 'grid':
         s.econ.gridDown = 1; s.power = false;
-        log(s, 'National grid collapse. Light is scarce everywhere today. Gens are roaring.', 'bad');
+        log(s, hc === 'ctn' ? 'Stage 6 load shedding today. Candles out, power banks charged.' : /^(accra|kumasi|capecoast)$/.test(hc) ? 'Dumsor is back: lights off across the city today. Gens are roaring.' : 'National grid collapse. Light is scarce everywhere today. Gens are roaring.', 'bad');
         break;
       case 'fuel':
         s.econ.fuelDays = 3; s.econ.fuel = 1.6;

@@ -3575,7 +3575,7 @@ test('rules 44: promotion exam for the top two ranks; campus life; six more care
   for (const [k, bank] of Object.entries(D.PROMO_EXAM)) { assert.ok(D.SKILLS[k], k); assert.ok(bank.length >= 4); for (const q of bank) assert.equal(q[1].length, 3); }
   for (const k of ['acc_media', 'acc_fintech', 'ldn_nurse', 'ldn_chef', 'dxb_build', 'dxb_estate']) assert.equal(D.CAREERS[k].rules, 44);
   const s = L.newGame({ seed: 4400, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 44);
+  assert.ok(s.rules >= 44);
   s.job = { id: 'buka', level: 2, shifts: 50, perfSum: 50, missed: 0, lastShift: -1, since: 0 }; s.skills.cooking = 400;
   // Promotion to rank 3 waits for the exam.
   const why = L.promoBlock(s); assert.ok(why);
@@ -3596,4 +3596,15 @@ test('rules 44: promotion exam for the top two ranks; campus life; six more care
   for (let w = 0; w < 40; w++) { c.t = w * 7 * 1440 + 9 * 60; const cw = L.campusWeek(c); assert.ok(!cw || cw.kind !== 'strike'); }
   const old = L.newGame({ seed: 4401, origin: 'mid', goal: 'freestyle', rules: 43 }); old.study = { unilag_cs: { n: 0, since: 0 } };
   assert.equal(L.campusWeek(old), null);
+});
+
+test('rules 45: lives outside Lagos stay local: no Lagos vote or floods, city power cuts, eviction to a sofa in your city', () => {
+  for (const k of Object.keys(D.HOMES).filter(k => /^squat_/.test(k))) { assert.ok(D.HOMES[k].hidden && D.HOMES[k].rent === 0 && D.HOMES[k].rules === 45, k); assert.ok(D.DISTRICTS[D.HOMES[k].district], k); }
+  const s = L.newGame({ seed: 4500, origin: 'mid', goal: 'freestyle', startHome: 'ldn_wb_flat' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.ok(s.rules >= 45);
+  let votes = 0, floods = 0;
+  for (let d = 0; d < 60; d++) { L.wait(s, 24 * 60); while (s.pending.length) { if (s.pending[0].id === 'vote') votes++; L.resolveChoice(s, 0); } s.needs.hunger = 90; s.needs.energy = 90; }
+  floods = s.log.filter(l => /flooded today|Fuel scarcity|grid collapse/.test(l.text)).length;
+  assert.equal(votes, 0); assert.equal(floods, 0);
+  const ev = s.log.find(l => /Quit notice/.test(l.text)); if (ev) { assert.ok(!/Mushin/.test(ev.text), ev.text); assert.equal(L.districtCity(D.HOMES[s.home].district), 'ldn'); }
 });
