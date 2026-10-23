@@ -1261,3 +1261,38 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .lg-table td { padding: 4px; border-top: 1px solid rgba(255,255,255,.12); }
 .lg-table td:nth-child(2) { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lg-table tr.you td { background: #ffd23f; color: #17181a; }
+/* Zoom slider on the map */
+.pg-zs { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 10px; background: rgba(255,255,255,.92); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+.pg-zslider { writing-mode: vertical-lr; direction: rtl; width: 22px; height: 96px; accent-color: #17181a; }
+.pg-zval { font: 700 11px system-ui, sans-serif; color: #17181a; }
+/* Map drop-downs below the map */
+.map-dds { display: grid; gap: 6px; margin: 8px 0; }
+.map-dd { border-radius: 12px; background: var(--card, #fff); box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.06); }
+.map-dd > summary { cursor: pointer; padding: 10px 12px; font-weight: 800; font-size: 14px; list-style: none; display: flex; justify-content: space-between; }
+.map-dd > summary::-webkit-details-marker { display: none; }
+.map-dd > summary::after { content: '▾'; opacity: .6; }
+.map-dd[open] > summary::after { content: '▴'; }
+.map-dd-b { padding: 0 8px 8px; }
+/* Needs are buttons: tap for what raises them */
+button.need { font: inherit; color: inherit; background: none; border: 0; padding: 2px 4px; text-align: left; cursor: pointer; border-radius: 10px; width: 100%; }
+button.need:hover, button.need.open { background: rgba(0,0,0,.05); }
+button.need:focus-visible { outline: 2px solid #2f6fd0; }
+.need-tip { grid-column: 1 / -1; margin-top: 6px; padding: 10px 12px; border-radius: 12px; background: var(--card, #fff); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.need-tip p { margin: 4px 0 8px; font-size: 13px; }
+.slogan { margin: 6px 0 10px; font: italic 700 15px/1.35 system-ui, sans-serif; color: #b8860b; text-align: center; }
+
+/* Owner dashboard (view only) */
+.od-box { border: 1px solid var(--line, #e5e5e5); border-radius: 12px; padding: 8px 12px; margin: 10px 0; background: var(--card, #fff); }
+.od-box > summary { font-weight: 800; cursor: pointer; padding: 4px 0; }
+.od-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 8px 0; }
+.od-stat { border-radius: 10px; padding: 8px; background: rgba(242, 182, 0, .12); display: flex; flex-direction: column; }
+.od-stat b { font-size: 1.3em; }
+.od-stat span { font-size: .8em; opacity: .8; }
+.od-t { width: 100%; margin: 6px 0; }
+.od-list { margin: 6px 0; padding-left: 18px; line-height: 1.45; }
+.od-list li { margin: 4px 0; }
+.od-parties { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 8px 0; font-size: .9em; }
+.local-talk { padding: 6px 2px; }
+.lt-terms { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 6px 0; }
+.lt-terms dt { font-weight: 800; }
+.lt-terms dd { margin: 0; opacity: .85; }

@@ -33,3 +33,25 @@ test('chat: invisible characters, full-width digits and look-alike letters do no
   assert.equal(C.clean('ѕех tonight').ok, false);
   assert.equal(C.clean('see you at the beach').ok, true);
 });
+
+test('chat: safety phrases (age, photos, personal details, moving off the game, scams, threats) are refused', () => {
+  const bad = ['how old are you?', 'how old r u', 'send me a pic', 'show me your photos', 'where do you live', 'are you alone', 'what is your real name',
+    'dm me', 'add me on whatsapp', 'my snap is cool', 'meet me irl', 'come to my house', 'send me money', 'double your money', 'tell me your otp',
+    'i will hurt you', 'i know where you live', 'go die'];
+  for (const m of bad) assert.ok(!C.clean(m).ok, m + ' should be refused');
+  assert.match(C.clean('i want to die').why, /talk to someone/);
+});
+
+test('chat: everyday Lagos chat with the same words still passes', () => {
+  for (const m of ['Nice house!', 'My house is in Yaba', 'I sent the money for the rent', 'I will find you at the party', 'Who won the match',
+    'See you at the beach', 'The photo booth at the fest is fun', 'Meet the governor at the rally', 'You are killing it']) {
+    const r = C.clean(m); assert.ok(r.ok, m + ': ' + r.why);
+  }
+});
+
+test('chat: three refused messages in ten minutes pause chat, then it opens again', () => {
+  const now = 1e7;
+  assert.equal(C.canSend([], now, [now - 1000, now - 2000]), '');
+  assert.match(C.canSend([], now, [now - 1000, now - 2000, now - 3000]), /paused/);
+  assert.equal(C.canSend([], now + 601000, [now - 1000, now - 2000, now - 3000]), '');
+});

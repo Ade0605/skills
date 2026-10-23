@@ -26,11 +26,28 @@
   SEXUAL.forEach(function (w) { SEX[squeeze(w)] = 1; });
   ABUSE.forEach(function (w) { AB[squeeze(w)] = 1; });
 
+  // Phrases, matched on the normalized text with words kept apart (" how old are you "). Safety first: grooming and
+  // personal details, moving off the game, scams, threats, and self-harm (answered kindly, with where to get help).
+  var PHRASES = [
+    [/\b(how old (are|r) (you|u)|what (is|s) (your|ur) age|ur age|your age|are (you|u) (a )?(kid|child|minor|underage)|(you|u) (in|go to) (school|primary|jss|ss[1-3]))\b/, 'For your safety: no asking about age.'],
+    [/\b(send|show|share|drop) (me )?(a |your |ur |some )?(pic|pics|picture|pictures|photo|photos|selfie|selfies|video|vid|snap)\b/, 'For your safety: no asking for photos.'],
+    [/\b(are (you|u) alone|where do (you|u) (live|stay)|(your|ur) (house|home) address|(your|ur) address|which school|(your|ur) (real|full) name|(your|ur) (number|phone|location))\b/, 'For your safety: no asking for personal details.'],
+    [/\b(meet (me|up)( irl| in person| outside| tonight)?|come to my (house|place|room|hotel)|let (us|s) meet|link up (irl|outside)|(dm|inbox|pm) me|add me on|my (snap|snapchat|insta|instagram|ig|telegram|whatsapp|wa|tiktok|facebook|fb|discord)|on (snap|snapchat|telegram|whatsapp|discord))\b/, 'For your safety: keep chat in the game.'],
+    [/\b(send (me )?(money|cash|credit|airtime|data)|(bitcoin|btc|crypto|usdt|forex) (invest|trade|plan|signal)|double (your|ur) money|investment plan|giveaway|gift ?card|(bank|account) details|(your|ur) (otp|pin|bvn|password|passcode))\b/, 'No money requests or scams in chat.'],
+    [/\b(i (will|go|wan|want to|gonna) (kill|beat|stab|shoot|hurt|slap) (you|u)|kill (yo)?urself|go die|(you|u) (will|go) die|i know where (you|u) (live|stay))\b/, 'No threats. Be kind.'],
+    [/\b(kill myself|end my life|want to die|wanna die|suicide|self harm|cut myself)\b/, 'If you are struggling, please talk to someone you trust, or call your local emergency number. In Nigeria: 112.']
+  ];
+  function phraseWhy(raw) {
+    var n = ' ' + norm(raw).replace(/[^a-z]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ', sq = n.split(' ').map(squeeze).join(' ');
+    for (var i = 0; i < PHRASES.length; i++) if (PHRASES[i][0].test(n) || PHRASES[i][0].test(sq)) return PHRASES[i][1];
+    return '';
+  }
   function why(text) {
     var raw = String(text == null ? '' : text); raw = raw.replace(/[аеорсухкіѕмтнвαοειкντχАЕОРСУХКІЅМТНВ]/g, function (c) { return LOOK[c.toLowerCase()] || c; });
     if (/[^\s@]+@[^\s@]+\.[a-z]{2,}/i.test(raw)) return 'No emails in chat.';
     if (/(https?:|www\.|\.(com|net|org|ng|io|me|xyz|link)\b|t\.me|wa\.me)/i.test(raw)) return 'No links in chat.';
     if ((raw.replace(/[^0-9]/g, '').length >= 7)) return 'No phone numbers or account numbers in chat.';
+    var pw = phraseWhy(raw); if (pw) return pw;
     var n = norm(raw);
     var words = n.split(/[^a-z]+/).concat(raw.toLowerCase().split(/[^a-z]+/)).filter(Boolean).map(squeeze);
     // Joined runs catch spaced-out words: "s e x", "f.u.c.k".
@@ -63,8 +80,11 @@
     var h = String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 15);
     return '@' + (h || 'lagosian');
   }
-  // Sender-side pacing: at most one message every 2 seconds and 12 a minute.
-  function canSend(times, now) {
+  // Sender-side pacing: at most one message every 2 seconds and 12 a minute. Three blocked messages in ten minutes
+  // mean a ten-minute cool-off (blocked: the times of messages the filter refused).
+  function canSend(times, now, blocked) {
+    var bad = (blocked || []).filter(function (t) { return now - t < 600000; });
+    if (bad.length >= 3) return 'Chat is paused for a few minutes. Keep it friendly when you come back.';
     var recent = (times || []).filter(function (t) { return now - t < 60000; });
     if (recent.length && now - recent[recent.length - 1] < 2000) return 'Slow down a little.';
     if (recent.length >= 12) return 'You are sending a lot. Take a breath.';

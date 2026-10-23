@@ -1,7 +1,7 @@
 /* Lasgidi — browser UI. Renders the engine state; never changes money itself. */
 (function () {
   'use strict';
-  var L = window.Lasgidi, D = L.DATA, N = L.naira;
+  var L = window.Lasgidi, D = L.DATA;
   var SAVE_KEY = 'lasgidi.save.v1', WEEKLY_KEY = 'lasgidi.weekly.v1';
   var app = document.getElementById('app');
   var ui = { tab: 'map', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0, plan: 'day' }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
@@ -198,7 +198,7 @@
 
   /* ---------- run an engine call, then render ---------- */
   function run(fn, kind) {
-    var res = fn();
+    var c0 = S ? L.cityOf(S) : null, res = fn(), c1 = S ? L.cityOf(S) : null, lx = c1 !== c0 && localOf(c1);
     if (res && res.ok && kind === 'travel') play('horn');
     else if (res && res.collapsed) play('bad');
     else if (res && (res.won || /Promoted/.test(res.msg || ''))) play('good');
@@ -207,6 +207,7 @@
       if (net > 0) play('credit'); else if (net < 0) play('debit');
     }
     if (res && res.msg) ui.toasts.push({ msg: res.msg, ok: res.ok });
+    if (c0 && lx) ui.toasts.push({ msg: 'Welcome to ' + D.CITIES[c1].name + ': “' + lx.slogan + '” Prices here are in ' + lx.cur + '.', ok: true });
     (S.alerts || []).forEach(function (a) { ui.toasts.push({ alert: a }); });
     S.alerts = []; nightReminders();
     if (ui.toasts.length > 4) ui.toasts = ui.toasts.slice(-4);
@@ -262,6 +263,7 @@
     return '<div class="section"><h3>Settings</h3><div class="list">' +
       opt('lang', '🗣️ Naija Pidgin', prefs.lang === 'pcm', 'Tabs, app names, headings and buttons in Pidgin. Story text stays in English.') +
       opt('big', '🔠 Large text', prefs.big, 'Bigger text everywhere.') +
+      opt('usd', '💵 Show dollars too', prefs.usd, 'Every price also shows about how much it is in US dollars (≈ $). Each city still uses its own money.') +
       opt('lite', '🪶 Lite mode', liteOn(), 'Fewer animations and no moving traffic on the map, for cheap phones and low data. The page reloads.') +
       '</div></div>';
   }
@@ -423,6 +425,8 @@
       if (!u) return;
       online.user = u;
       u.id().then(function (id) { online.me = id; scheduleRender(); subscribeMyReview(); if (typeof u.setName === 'function' && S && S.name) u.setName(CH.clean ? CH.clean(S.name) : S.name); });
+      // The owner's dashboard: only the claude.ai owner of this game. The website has no owner, so it never shows there.
+      if (typeof u.isOwner === 'function' && window.claude.online !== 'supabase') u.isOwner().then(function (o) { online.isOwner = o === true; scheduleRender(); if (o === true) subscribeReports(); }, function () {});
       if (typeof u.canEdit === 'function') u.canEdit().then(function (c) { online.canEdit = !!c; scheduleRender(); if (c) { subscribeReviews(); subscribeReports(); } }, function () {});
       u.can('data.write').then(function (c) { online.canWrite = c; scheduleRender(); });
     });
@@ -794,10 +798,16 @@
         '<div class="inline"><button class="btn sm" id="ppl-chat-' + esc(p.by) + '" data-chatopen="' + esc(p.by) + '">💬 Chat' + (online.unread[p.by] ? ' · ' + online.unread[p.by] : '') + '</button></div></div>';
     }).join('') + '</div>' : '<p class="note">Nobody else is online right now.</p>') + (blocked ? '<p class="note">' + blocked + ' blocked player' + (blocked === 1 ? '' : 's') + ' hidden. Unblock from their player card.</p>' : '') + '</div>';
   }
-  function sendChat(by, text) {
+  // The chat filter for what you send. Refused messages are counted, and three in ten minutes pause your chat.
+  function chatClean(text) {
     var r = CH.clean(text);
+    if (!r.ok && String(text || '').trim() && !/under/.test(r.why)) online.blocked = (online.blocked || []).concat([Date.now()]).slice(-5);
+    return r;
+  }
+  function sendChat(by, text) {
+    var r = chatClean(text);
     if (!r.ok) { ui.chatWhy = r.why; render(); return; }
-    var wait = CH.canSend(online.sentTimes, Date.now());
+    var wait = CH.canSend(online.sentTimes, Date.now(), online.blocked);
     if (wait) { ui.chatWhy = wait; render(); return; }
     if (!online.room) { ui.chatWhy = 'Chat is not open here.'; render(); return; }
     online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
@@ -910,7 +920,7 @@
   var TAG_EFFECT = { owambe: 'better owambes', club: 'better club nights', office: 'better form at banking and tech jobs', gym: 'faster fitness' };
   function lagosianView() {
     var lk = S.look, tags = Object.keys(L.outfitTags(S));
-    var html = '<div class="section" style="padding-top:0"><h3>Your Lagosian</h3><div class="lagosian"><canvas id="avatar-canvas" width="180" height="260" role="img" aria-label="Your Lagosian in their current outfit"></canvas><div class="lg-ctl">' +
+    var html = '<div class="section" style="padding-top:0"><h3>Your ' + esc(personOf(homeCityOf())) + '</h3><div class="lagosian"><canvas id="avatar-canvas" width="180" height="260" role="img" aria-label="Your Lagosian in their current outfit"></canvas><div class="lg-ctl">' +
       '<span class="label">Skin</span><div class="pick">' + D.LOOKS.skin.map(function (c, i) { return '<button type="button" class="pick-c' + (lk.skin === i ? ' on' : '') + '" id="sk-' + i + '" data-lookskin="' + i + '" aria-label="Skin tone ' + (i + 1) + '" aria-pressed="' + (lk.skin === i) + '" style="background:' + c + '"></button>'; }).join('') + '</div>' +
       '<label class="label" for="look-hair">Hair</label><select id="look-hair">' + D.LOOKS.hair.map(function (h, i) { return '<option value="' + i + '"' + (lk.hair === i ? ' selected' : '') + '>' + esc(h) + '</option>'; }).join('') + '</select>' +
       '<span class="label">Shape</span><div class="pick">' + D.LOOKS.shape.map(function (h, i) { return '<button type="button" class="pg-chip' + (lk.shape === i ? ' sel' : '') + '" id="sh-' + i + '" data-lookshape="' + i + '">' + esc(h) + '</button>'; }).join('') + '</div>' +
@@ -1051,15 +1061,25 @@
       '</div></header>';
   }
 
+  // Tap a need to see what it means and what raises it here and now.
+  var NEED_TIPS = { hunger: 'How full you are. It drops through the day; eat at a buka, a market or at home.', energy: 'Sleep, naps and rest bring it back. Long work and parties drain it.', fun: 'Nights out, sights, games and shows lift it.',
+    social: 'Friends, chat, owambes and church or mosque raise it.', hygiene: 'Bathe at home, or freshen up at a salon or a hotel. Markets and football lower it.', stress: 'Calm: rest, parks, the beach and prayer bring calm; traffic, debt and bad news take it away.' };
+  function needTip(labels, icons) {
+    var k = ui.needOpen; if (!k || !labels[k]) return '';
+    var good = function (a) { var f = a.fx || {}; return k === 'stress' ? -(f.stress || 0) : f[k] || 0; };
+    var acts = availMemo().filter(function (a) { return !a.disabled && good(a) > 0 && !a.minigame; }).sort(function (a, b) { return good(b) - good(a); }).slice(0, 3);
+    return '<div class="need-tip" role="dialog" aria-label="' + esc(labels[k]) + '"><b>' + icons[k] + ' ' + esc(labels[k]) + '</b><p>' + esc(NEED_TIPS[k]) + '</p>' +
+      (acts.length ? '<div class="list">' + acts.map(function (a) { return '<div class="item"><div><h3>' + esc(a.label) + '</h3><div class="meta"><span class="gain">+' + good(a) + '</span>' + (a.price ? '<span class="cost num">' + N(a.price) + '</span>' : '') + '</div></div><button class="btn sm go" id="nt-' + esc(a.id) + '" data-act="' + esc(a.id) + '">Do</button></div>'; }).join('') + '</div>' : '<p class="note">Nothing here raises it right now. Try another district or come back later.</p>') + '</div>';
+  }
   function needsView() {
     var labels = { hunger: 'Belle', energy: 'Energy', fun: 'Fun', social: 'Social', hygiene: 'Hygiene', stress: 'Calm' };
     var icons = { hunger: '🍲', energy: '⚡', fun: '🎉', social: '💬', hygiene: '🫧', stress: '😌' };
-    return '<section class="needs hud" aria-label="Needs"><button type="button" class="hud-face" id="hud-face" data-tab="me" aria-label="Your Lagosian"><canvas id="hud-avatar" width="56" height="56" aria-hidden="true"></canvas></button>' + ['hunger', 'energy', 'fun', 'social', 'hygiene', 'stress'].map(function (k) {
+    return '<section class="needs hud" aria-label="Needs"><button type="button" class="hud-face" id="hud-face" data-tab="me" aria-label="Your ' + esc(personOf(homeCityOf())) + '"><canvas id="hud-avatar" width="56" height="56" aria-hidden="true"></canvas></button>' + ['hunger', 'energy', 'fun', 'social', 'hygiene', 'stress'].map(function (k) {
       var v = Math.round(k === 'stress' ? 100 - S.needs.stress : S.needs[k]);
       var cls = v < 25 ? 'low' : v < 50 ? 'mid' : '';
-      return '<div class="need n-' + k + '"><div class="row"><span><span class="need-ic" aria-hidden="true">' + icons[k] + '</span> ' + labels[k] + '</span><span class="num">' + v + '</span></div>' +
-        '<div class="bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '" aria-label="' + labels[k] + '"><i class="' + cls + '" style="width:' + v + '%"></i></div></div>';
-    }).join('') + '</section>';
+      return '<button type="button" class="need n-' + k + (ui.needOpen === k ? ' open' : '') + '" id="need-' + k + '" data-need="' + k + '" aria-expanded="' + (ui.needOpen === k) + '"><div class="row"><span><span class="need-ic" aria-hidden="true">' + icons[k] + '</span> ' + labels[k] + '</span><span class="num">' + v + '</span></div>' +
+        '<div class="bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '" aria-label="' + labels[k] + '"><i class="' + cls + '" style="width:' + v + '%"></i></div></button>';
+    }).join('') + needTip(labels, icons) + '</section>';
   }
 
   function board() {
@@ -1089,8 +1109,22 @@
   // The map bar: a city picker (where you are, or ✈ Fly), Names, More (the other layers), and the letter-hunt badge.
   var CITY_ICON = { lagos: '🏙️', abuja: '🏛️', ph: '🌊', accra: '🇬🇭', kumasi: '👑', capecoast: '🏰', ldn: '🇬🇧', dxb: '🇦🇪' };
   // Cities this life can go to (Accra opens with rules 22).
-  // In Accra prices read in cedi first, at the game's fixed rate (₵1 = ₦130). The ledger stays in naira.
-  var CEDI = 130, POUND = 2000, DIRHAM = 420; function money(n) { var c = S && L.cityOf(S); return c === 'dxb' ? 'AED ' + Math.max(1, Math.round(n / DIRHAM)).toLocaleString('en') + ' (' + N(n) + ')' : c === 'accra' || c === 'kumasi' || c === 'capecoast' ? '₵' + Math.max(1, Math.round(n / CEDI)).toLocaleString('en') + ' (' + N(n) + ')' : c === 'ldn' ? '£' + Math.max(1, Math.round(n / POUND)).toLocaleString('en') + ' (' + N(n) + ')' : N(n); }
+  // Money on screen is in the money of the city you are in (₵ in Ghana, £ in London, AED in Dubai, R in Cape Town), at the
+  // game's fixed rates, with an optional "≈ $" next to it (Settings). The ledger always counts in naira.
+  function localOf(c) { return (D.LOCAL && c && own(D.LOCAL, c)) ? D.LOCAL[c] : null; }
+  function fmtCur(v, sym, dp) {
+    var a = Math.abs(v), d = dp && a < 100 && Math.round(a) !== a ? dp : 0;
+    return (v < 0 ? '-' : '') + sym + a.toLocaleString('en', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function N(n) {
+    var loc = localOf(S && L.cityOf(S)), out = !loc || loc.rate === 1 ? L.naira(n) : fmtCur(n / loc.rate, loc.sym, loc.dp);
+    if (typeof prefs !== 'undefined' && prefs && prefs.usd && n) out += ' ≈ ' + fmtCur(n / D.USD_RATE, '$', 2);
+    return out;
+  }
+  var money = N;
+  function personOf(c) { var x = localOf(c); return x ? x.person : 'Lagosian'; }
+  function peopleOf(c) { var x = localOf(c); return x ? x.people : 'Lagosians'; }
+  function homeCityOf() { var h = S && D.HOMES[S.home]; return h ? L.districtCity(h.district) : (S ? L.cityOf(S) : 'lagos'); }
   function openCities() { return Object.keys(D.CITIES).filter(function (c) { return !S || !L.cityOpen || L.cityOpen(S, c); }); }
   function layerChips() {
     var l = mapLayers(), here = L.cityOf(S), h = huntNow(), hs = huntState(), got = hs.found.length, tf = L.traffic ? L.traffic(S) : null;
@@ -1135,7 +1169,7 @@
   function mountWelcome() {
     var ov = document.getElementById('welcome-view');
     if (!ui.welcome || !S || S.over || S.japa) { if (ov) ov.remove(); return; }
-    var html = '<div class="wb-card" role="dialog" aria-modal="true" aria-labelledby="wb-name"><div class="wb-who"><canvas id="welcome-avatar" width="56" height="56" aria-hidden="true"></canvas><div><h2 id="wb-name">' + esc(S.name || 'You') + '</h2><p>' + esc(L.clockLabel(S)) + ' · ' + esc(L.dateLabel(S)) + ' · ' + esc(shortMoney(S.cash + S.bank)) + '</p></div></div>' +
+    var html = '<div class="wb-card" role="dialog" aria-modal="true" aria-labelledby="wb-name"><p class="slogan">“If you can make it in Lagos, you can make it anywhere.”</p><div class="wb-who"><canvas id="welcome-avatar" width="56" height="56" aria-hidden="true"></canvas><div><h2 id="wb-name">' + esc(S.name || 'You') + '</h2><p>' + esc(L.clockLabel(S)) + ' · ' + esc(L.dateLabel(S)) + ' · ' + esc(shortMoney(S.cash + S.bank)) + '</p></div></div>' +
       '<button type="button" class="btn wb-go" id="welcome-go" data-welcomego="1">Continue</button>' +
       (ui.confirmSignout ? '<p class="wb-note">' + esc(ui.flash || '') + '</p>' : '') +
       '<div class="wb-foot"><span>Signed in as <b>@' + esc(String(S.name || 'you').replace(/\s+/g, '').toLowerCase()) + '</b></span><button type="button" class="link-btn wb-out" id="welcome-out" data-signout="1">' + (ui.confirmSignout ? 'Tap again to log out' : 'Log out') + '</button></div></div>';
@@ -1222,7 +1256,7 @@
     var here = online.peerList.filter(function (p) { return p.d === S.loc; });
     if (!here.length) return '';
     var gifts = Object.keys(D.GIFTS);
-    return '<div class="section people"><h3>👥 Lagosians here <span class="muted">· ' + here.length + ' in ' + esc(D.DISTRICTS[S.loc].name) + '</span></h3><div class="list">' + here.slice(0, 12).map(function (p) {
+    return '<div class="section people"><h3>👥 ' + (L.cityOf(S) === 'lagos' ? 'Lagosians' : esc(peopleOf(L.cityOf(S)))) + ' here <span class="muted">· ' + here.length + ' in ' + esc(D.DISTRICTS[S.loc].name) + '</span></h3><div class="list">' + here.slice(0, 12).map(function (p) {
       var home = checkHome(online.homes[p.by]), waved = online.waved[p.by] && Date.now() - online.waved[p.by] < 30000;
       return '<div class="item person">' + photoImg(p.by) + '<div><h3>' + esc(nameOf(p.by)) + ' <span class="pc-handle">' + esc(handleOf(p.by)) + '</span></h3>' + (home ? '<div class="meta"><span>Lives in ' + esc(home.h.name) + '</span></div>' : '') + '</div><div class="inline">' +
         '<button class="btn sm ghost" id="wave-' + esc(p.by) + '" data-wave="' + esc(p.by) + '"' + (waved ? ' disabled' : '') + '>👋 ' + (waved ? 'Waved' : 'Wave') + '</button>' +
@@ -1905,9 +1939,9 @@
     cruiseStage.update(deckScene()); cruiseStage.start(); window.__cruise = cruiseStage; // handle for tests
   }
   function sendDeck(text) {
-    var r = CH.clean(text);
+    var r = chatClean(text);
     if (!r.ok) { ui.deckWhy = r.why; mountCruise(); return; }
-    var wait = CH.canSend(online.sentTimes, Date.now());
+    var wait = CH.canSend(online.sentTimes, Date.now(), online.blocked);
     if (wait) { ui.deckWhy = wait; mountCruise(); return; }
     ui.deckWhy = '';
     online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
@@ -2095,8 +2129,8 @@
     roomStage.update(roomScene(id)); roomStage.start();
   }
   function sendRoom(text) {
-    var r = CH.clean(text); if (!r.ok) { ui.roomWhy = r.why; mountRoom(); return; }
-    var wait = CH.canSend(online.sentTimes, Date.now()); if (wait) { ui.roomWhy = wait; mountRoom(); return; }
+    var r = chatClean(text); if (!r.ok) { ui.roomWhy = r.why; mountRoom(); return; }
+    var wait = CH.canSend(online.sentTimes, Date.now(), online.blocked); if (wait) { ui.roomWhy = wait; mountRoom(); return; }
     ui.roomWhy = ''; online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
     online.roomChat = (online.roomChat || []).concat([{ room: S.room.id, by: online.me || 'me', text: r.text, at: Date.now() }]).slice(-30);
     var ni = document.getElementById('room-in'); if (ni) ni.value = '';
@@ -2275,8 +2309,8 @@
   function venueSay(id, by) { var m = (online.venueChat || []).filter(function (x) { return x.venue === id && x.by === by && Date.now() - x.at < 7000; }).pop(); return m ? m.text : null; }
   function sendVenue(text) {
     var id = ui.venueOpen; if (!id) return;
-    var r = CH.clean(text); if (!r.ok) { ui.venueWhy = r.why; mountVenue(); return; }
-    var wait = CH.canSend(online.sentTimes, Date.now()); if (wait) { ui.venueWhy = wait; mountVenue(); return; }
+    var r = chatClean(text); if (!r.ok) { ui.venueWhy = r.why; mountVenue(); return; }
+    var wait = CH.canSend(online.sentTimes, Date.now(), online.blocked); if (wait) { ui.venueWhy = wait; mountVenue(); return; }
     ui.venueWhy = ''; online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
     online.venueChat = (online.venueChat || []).concat([{ venue: id, by: online.me || 'me', text: r.text, at: Date.now() }]).slice(-40);
     var ni = document.getElementById('venue-in'); if (ni) ni.value = '';
@@ -2985,31 +3019,41 @@
     });
     return html + '</div>';
   }
-  function placeFilters() {
-    var cats = Object.keys(D.PLACE_TYPES);
-    var html = '<div class="pg-chips" role="group" aria-label="Show places"><span class="label">Places</span>' +
+  // The map's lists, as drop-downs: Places, Location (districts), Services, Cities, Also on the map.
+  function ddOpen(k, def) { var o = ui.ddOpen || {}; return o[k] != null ? o[k] : !!def; }
+  function dd(k, title, body, def) { return '<details class="map-dd" data-dd="' + k + '"' + (ddOpen(k, def) ? ' open' : '') + '><summary>' + title + '</summary><div class="map-dd-b">' + body + '</div></details>'; }
+  function placeChips(types) {
+    return '<div class="pg-chips">' + D.PLACES.filter(function (p) { return types.indexOf(p.type) >= 0 && L.districtCity(p.district) === L.cityOf(S); }).map(function (p) {
+      return '<button type="button" class="pg-chip' + (ui.place === p.id ? ' sel' : '') + '" id="pl-' + p.id + '" data-place="' + p.id + '">' + (p.icon || '') + ' ' + esc(p.name) + '</button>';
+    }).join('') + '</div>';
+  }
+  // The city's slogan, what locals are called, the money, and a few everyday words.
+  function localTalk() {
+    var c = L.cityOf(S), x = localOf(c); if (!x) return '';
+    return '<div class="local-talk"><p class="slogan">“' + esc(x.slogan) + '”</p><p class="note">People here are <b>' + esc(x.people) + '</b>. Prices show in <b>' + esc(x.cur) + '</b>' + (x.rate === 1 ? '' : ' (' + esc(x.sym) + '1 = ' + L.naira(x.rate) + ')') + '.</p>' +
+      '<dl class="lt-terms">' + x.terms.map(function (t) { return '<dt>' + esc(t[0]) + '</dt><dd>' + esc(t[1]) + '</dd>'; }).join('') + '</dl></div>';
+  }
+  function placeFilters(chips) {
+    var cats = Object.keys(D.PLACE_TYPES).filter(function (c) { return c !== 'services' && c !== 'transport'; }), lagos = L.cityOf(S) === 'lagos';
+    var pick = '<div class="pg-chips" role="group" aria-label="Show places">' +
       '<button type="button" class="pg-chip' + (!ui.placeCat ? ' sel' : '') + '" id="pc-all" data-placecat="">All</button>' +
-      cats.map(function (c) { return '<button type="button" class="pg-chip' + (ui.placeCat === c ? ' sel' : '') + '" id="pc-' + c + '" data-placecat="' + c + '"><i class="sw" style="background:' + D.PLACE_TYPES[c].color + '"></i>' + esc(D.PLACE_TYPES[c].name) + '</button>'; }).join('') +
-      (L.cityOf(S) === 'lagos' ? '<button type="button" class="pg-chip' + (ui.placeCat === 'boards' ? ' sel' : '') + '" id="pc-boards" data-placecat="boards">📣 Billboards</button><button type="button" class="pg-chip' + (ui.seaOpen ? ' sel' : '') + '" id="pc-sea" data-seaopen="1">🌊 Sea Plots</button>' : '') +
-      '<button type="button" class="pg-chip' + (ui.placeCat === 'homes' ? ' sel' : '') + '" id="pc-homes" data-placecat="homes">🏠 Homes</button>' +
-      '<button type="button" class="pg-chip' + (ui.placeCat === 'cities' ? ' sel' : '') + '" id="pc-cities" data-placecat="cities">✈️ Cities</button></div>';
-    if (ui.placeCat === 'cities') return html + citiesView();
+      cats.map(function (c) { return '<button type="button" class="pg-chip' + (ui.placeCat === c ? ' sel' : '') + '" id="pc-' + c + '" data-placecat="' + c + '"><i class="sw" style="background:' + D.PLACE_TYPES[c].color + '"></i>' + esc(D.PLACE_TYPES[c].name) + '</button>'; }).join('') + '</div>' +
+      (ui.placeCat && cats.indexOf(ui.placeCat) >= 0 ? placeChips([ui.placeCat]) : '');
+    var also = '<div class="pg-chips">' + (lagos ? '<button type="button" class="pg-chip' + (ui.placeCat === 'boards' ? ' sel' : '') + '" id="pc-boards" data-placecat="boards">📣 Billboards</button><button type="button" class="pg-chip' + (ui.seaOpen ? ' sel' : '') + '" id="pc-sea" data-seaopen="1">🌊 Sea Plots</button>' : '') +
+      '<button type="button" class="pg-chip' + (ui.placeCat === 'homes' ? ' sel' : '') + '" id="pc-homes" data-placecat="homes">🏠 Homes</button></div>';
     if (ui.placeCat === 'homes') {
-      html += '<div class="pg-chips">' + marketHomes().filter(function (k) { return L.districtCity(D.HOMES[k].district) === L.cityOf(S); }).map(function (k) {
+      also += '<div class="pg-chips">' + marketHomes().filter(function (k) { return L.districtCity(D.HOMES[k].district) === L.cityOf(S); }).map(function (k) {
         var h = D.HOMES[k];
         return '<button type="button" class="pg-chip' + (ui.homeSel === k ? ' sel' : '') + (S.home === k ? ' here' : '') + '" id="hm-' + k + '" data-homesel="' + k + '">' + esc(h.name) + ' <span class="num">· ' + N(L.price(S, h.rent)) + '/wk</span></button>';
-      }).join('') + (L.cityOf(S) === 'lagos' ? '<button type="button" class="pg-chip" id="hm-estate" data-plotsel="' + (L.myPlot(S) != null ? L.myPlot(S) : firstFreePlot()) + '">🏡 ' + esc(D.ESTATE.name) + ' plots</button>' : '') + '</div>';
+      }).join('') + (lagos ? '<button type="button" class="pg-chip" id="hm-estate" data-plotsel="' + (L.myPlot(S) != null ? L.myPlot(S) : firstFreePlot()) + '">🏡 ' + esc(D.ESTATE.name) + ' plots</button>' : '') + '</div>';
     } else if (ui.placeCat === 'boards') {
-      html += '<div class="pg-chips">' + D.BILLBOARDS.map(function (b) {
+      also += '<div class="pg-chips">' + D.BILLBOARDS.map(function (b) {
         var n = paidAds(b.id).length + sponsoredAds(b.id).length;
         return '<button type="button" class="pg-chip' + (ui.board === b.id ? ' sel' : '') + '" id="bb-' + b.id + '" data-boardsel="' + b.id + '">' + esc(b.name) + (n ? ' <span class="onair">' + n + '</span>' : '') + '</button>';
       }).join('') + '</div>';
-    } else if (ui.placeCat) {
-      html += '<div class="pg-chips">' + D.PLACES.filter(function (p) { return p.type === ui.placeCat && L.districtCity(p.district) === L.cityOf(S); }).map(function (p) {
-        return '<button type="button" class="pg-chip' + (ui.place === p.id ? ' sel' : '') + '" id="pl-' + p.id + '" data-place="' + p.id + '">' + (p.icon || '') + ' ' + esc(p.name) + '</button>';
-      }).join('') + '</div>';
     }
-    return html;
+    return '<div class="map-dds">' + dd('places', '📍 Places', pick, true) + dd('loc', '🗺️ Location', chips) + dd('svc', '🛠️ Services', placeChips(['services', 'transport'])) +
+      dd('cities', '✈️ Cities', citiesView()) + dd('talk', '🗣️ Local talk', localTalk()) + dd('also', '➕ Also on the map', also) + '</div>';
   }
 
   function questChips() {
@@ -3047,7 +3091,7 @@
         (online.peers[k] ? ' <span class="num">· ' + online.peers[k] + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     return '<div class="panel-h"><h2>' + esc(d.name) + '</h2><span class="label">' + (d.side === 'island' ? 'Island' : 'Mainland') + '</span></div>' +
-      layerChips() + '<div class="pg-wrap">' + (firstRun() ? '' : questChips()) + '<div class="pg-slot"></div></div>' + (firstRun() ? '' : govChips()) + (firstRun() ? '' : festCard('map') + yearFestCards('map')) + placeFilters() + chips +
+      layerChips() + '<div class="pg-wrap">' + (firstRun() ? '' : questChips()) + '<div class="pg-slot"></div></div>' + (firstRun() ? '' : govChips()) + (firstRun() ? '' : festCard('map') + yearFestCards('map')) + placeFilters(chips) +
       '<div class="legend"><span>Road</span><span class="ferry">Ferry</span><span class="muted">BRT: Ikorodu, Ikeja, Oshodi, Yaba, Lagos Island</span></div>' +
       '<div class="where">' + (ui.sel && ui.sel !== S.loc ? travelView(ui.sel) + (ui.place ? '<p class="note">Heading for ' + esc(D.PLACES.filter(function (p) { return p.id === ui.place; })[0].name) + '.</p>' : '')
         : ui.chatWith ? chatView(ui.chatWith) : ui.seaOpen ? seaView() : (ui.place || ui.board || ui.homeSel) ? '<p class="note">Opened on the map. Tap ✕ on the card to close it.</p>' : ui.plotSel != null ? plotView(ui.plotSel)
@@ -3611,9 +3655,10 @@
       var n = D.NPCS[k], f = S.friends[k];
       return '<div class="item"><div><h3>' + esc(n.name) + ' <span class="muted">· ' + esc(n.role) + '</span></h3><div class="meta"><span>' + esc(D.DISTRICTS[n.district].name) + '</span><span>' + esc(D.CAREERS[n.career].name) + ' connect at 60</span></div></div><span class="num">' + f.lvl + '/100</span></div>';
     }).join('') + '</div></div>';
-    T.goals += '<div class="section"><h3>Achievements</h3><div class="ach">' + Object.keys(L.ACHIEVEMENTS).map(function (k) {
+    var achK = Object.keys(L.ACHIEVEMENTS), achGot = achK.filter(function (k) { return S.ach[k]; });
+    T.goals += '<details class="map-dd ach-dd" data-dd="ach"' + (ddOpen('ach') ? ' open' : '') + '><summary>🏆 Achievements · ' + achGot.length + ' of ' + achK.length + '</summary><div class="map-dd-b"><div class="ach">' + achGot.concat(achK.filter(function (k) { return !S.ach[k]; })).map(function (k) {
       return '<div class="' + (S.ach[k] ? 'got' : 'not') + '">' + (S.ach[k] ? '✓ ' : '· ') + esc(L.ACHIEVEMENTS[k]) + '</div>';
-    }).join('') + '</div></div>';
+    }).join('') + '</div></div></details>';
     T.settings += settingsView();
     T.settings += '<div class="section"><h3>Save</h3><p class="note">The game saves in this browser. Copy the save code to move to another device.</p>' +
       '<div class="inline"><button class="btn sm" id="copy-save" data-copy="1">Copy save code</button><button class="btn sm ghost" id="new-game" data-new="1">New life</button></div>' +
@@ -3768,7 +3813,7 @@
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['home', '🏠', 'Home'], ['people', '👥', 'People'], ['jobs', '💼', 'Careers'], ['money', '💰', 'Money'], ['assets', '📊', 'Assets'], ['houses', '🏡', 'Houses'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['hunt', '🔤', 'Letter hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe'], ['style', '🎨', 'Style shop'],
-    ['news', '📰', 'News'], ['music', '🎧', 'Music'], ['calendar', '📅', 'Calendar'], ['courses', '🎓', 'Courses'], ['health', '🩺', 'Health'], ['ride', '🚕', 'Ride'], ['radio', '📻', 'Club radio'], ['settings', '⚙️', 'Settings']
+    ['news', '📰', 'News'], ['music', '🎧', 'Music'], ['calendar', '📅', 'Calendar'], ['courses', '🎓', 'Courses'], ['health', '🩺', 'Health'], ['ride', '🚕', 'Ride'], ['radio', '📻', 'Club radio'], ['settings', '⚙️', 'Settings'], ['owner', '🛡️', 'Dashboard']
   ];
   var NEW_APPS = { radio: 1, hunt: 1, news: 1, music: 1, calendar: 1, courses: 1, health: 1, ride: 1 };
   var APPS_SEEN = 'lasgidi.appsseen.v1';
@@ -3983,6 +4028,62 @@
       '<button type="button" class="gov-chip" id="gov-sea" data-seaopen="1">🌊 Sea Plots</button>' +
       '<button type="button" class="gov-chip" id="gov-homes" data-placecat="homes">🏘️ ' + homes + ' home' + (homes === 1 ? '' : 's') + '</button></div>' +
       '<button type="button" class="gov-banner" id="gov-banner" data-app="govt">🏛️ ' + (g ? 'Gov ' + esc(nameOf(g.gov)) + ' & Deputy ' + esc(nameOf(g.deputy)) + ': ' + esc(G.MOTTOS[g.ticket.motto]) : 'No governor yet. Join a party and run in the primaries') + '</button>';
+  }
+
+  // The owner's dashboard (view only): how people sign in, who is playing, the richest lives, who governs, the parties,
+  // and the safety queues. It only reads what the game already loads; nothing here can change anyone's game.
+  function ownerView() {
+    var stat = function (n, label) { return '<div class="od-stat"><b class="num">' + n + '</b><span>' + esc(label) + '</span></div>'; };
+    var cityOfD = function (d) { return d && own(D.DISTRICTS, d) ? L.districtCity(d) : null; };
+    var homeCity = function (h) { var x = h && D.HOMES[h]; return x ? cityOfD(x.district) : null; };
+    var res = online.residents || [], byCity = {}, live = {};
+    res.forEach(function (r) { var c = homeCity(r.home) || 'other'; byCity[c] = (byCity[c] || 0) + 1; });
+    (online.peerList || []).forEach(function (p) { var c = cityOfD(p.presence && p.presence.d) || 'other'; live[c] = (live[c] || 0) + 1; });
+    var cn = function (c) { return own(D.CITIES, c) ? D.CITIES[c].name : 'Elsewhere'; };
+    var html = '<div class="section od"><p class="note">🛡️ Only you see this page: it shows to the owner of the game on claude.ai, and it never appears on the public website. It is view only.</p>';
+    // Sign-in
+    html += '<details class="od-box" open><summary>🔑 How players sign in</summary><ul class="od-list">' +
+      '<li><b>On claude.ai</b> (this link): a player opens the game while signed in to claude.ai. Their claude.ai account is their identity, so there is no password or email form in the game. Share it from the artifact\'s Share menu; anyone you share it with can play, post to the Hall of Fame, vote and chat.</li>' +
+      '<li><b>On the website</b> (ade0605.github.io/skills): anyone can play with no sign-in. Saves stay on their device. Online play there needs the Supabase settings (docs/HOSTING.md); each device then gets an anonymous key.</li>' +
+      '<li><b>Names</b> come from the name a player picks in the game and are filtered like chat.</li></ul></details>';
+    // Players
+    html += '<details class="od-box" open><summary>👥 Players</summary><div class="od-stats">' +
+      stat(online.room ? online.others + 1 : 0, 'online now') + stat(res.length, 'residents') + stat((rawFame || []).length, 'lives posted') +
+      stat((online.fameAll || []).length, 'verified lives') + stat(Object.keys(online.homes || {}).length, 'homes on the map') + stat(Object.keys(online.cvs || {}).length, 'CVs') + '</div>' +
+      '<table class="stmt od-t"><thead><tr><th>City</th><th class="n">Residents</th><th class="n">Online now</th></tr></thead><tbody>' +
+      Object.keys(D.CITIES).concat(['other']).filter(function (c) { return byCity[c] || live[c]; }).map(function (c) { return '<tr><td>' + esc(cn(c)) + '</td><td class="n num">' + (byCity[c] || 0) + '</td><td class="n num">' + (live[c] || 0) + '</td></tr>'; }).join('') +
+      '</tbody></table>' + (res.length || online.room ? '' : '<p class="note">No one has joined online yet.</p>') + '</details>';
+    // Net worth
+    var rich = (online.fameAll || []).slice().sort(function (a, b) { return b.worth - a.worth; }).slice(0, 10);
+    html += '<details class="od-box" open><summary>💰 Net worth leaders</summary>' + (rich.length ? '<table class="stmt od-t"><thead><tr><th>#</th><th>Player</th><th>City</th><th class="n">Net worth</th></tr></thead><tbody>' +
+      rich.map(function (r, i) { return '<tr><td>' + (i + 1) + '</td><td>' + esc(nameOf(r.id)) + '</td><td>' + esc(cn(homeCity(r.home))) + '</td><td class="n num">' + N(r.worth) + '</td></tr>'; }).join('') + '</tbody></table>' +
+      '<p class="note">Only lives that replay to the same result are counted, so these numbers cannot be faked.</p>' : '<p class="note">No verified lives yet.</p>') + '</details>';
+    // Politics
+    var g = government(), wk = townWeek(), sen = raceOf('sen', lastWeek()), pres = raceOf('pres', lastWeek()), mem = G.members(online.govparty, wk), pc = {};
+    Object.keys(mem).forEach(function (k) { pc[mem[k]] = (pc[mem[k]] || 0) + 1; });
+    var who = function (id, extra) { return id ? '<b>' + esc(nameOf(id)) + '</b>' + (extra || '') : '<span class="muted">Seat open</span>'; };
+    var ballots = (online.govvote || []).filter(function (r) { return G.weekVal(r.raw, wk); }).length, cands = (online.govrun || []).filter(function (r) { return G.weekVal(r.raw, wk); }).length;
+    html += '<details class="od-box" open><summary>🏛️ Politics</summary><table class="stmt od-t"><tbody>' +
+      '<tr><td>Governor of Lagos</td><td>' + who(g && g.gov, g ? ' ' + partyChip(g.ticket.party) : '') + '</td></tr>' +
+      '<tr><td>Deputy Governor</td><td>' + who(g && g.deputy) + '</td></tr>' +
+      '<tr><td>Senator for Lagos</td><td>' + who(sen && sen.winner && sen.winner.cand.id, sen && sen.winner ? ' ' + partyChip(sen.winner.cand.party) + ' · ' + sen.winner.votes + ' votes' : '') + '</td></tr>' +
+      '<tr><td>President of Nigeria</td><td>' + who(pres && pres.winner && pres.winner.cand.id, pres && pres.winner ? ' ' + partyChip(pres.winner.cand.party) + ' · ' + pres.winner.votes + ' votes' : '') + '</td></tr>' +
+      '<tr><td>Executive Council</td><td>' + (g ? g.cabinet.length + ' posts filled' : '<span class="muted">None</span>') + '</td></tr>' +
+      '<tr><td>This week</td><td>' + esc(PHASE_LABEL[govPhase()]) + ' · ' + cands + ' declared · ' + ballots + ' ballots</td></tr></tbody></table>' +
+      '<div class="od-parties">' + Object.keys(G.PARTIES).map(function (k) { return '<span>' + partyChip(k) + ' <b class="num">' + (pc[k] || 0) + '</b> member' + ((pc[k] || 0) === 1 ? '' : 's') + '</span>'; }).join('') + '</div></details>';
+    // Safety
+    var q = function (a) { return (a || []).length; };
+    html += '<details class="od-box" open><summary>🛟 Safety</summary><div class="od-stats">' + stat(q(online.reports), 'player reports') + stat(q(online.photoreview), 'photos to review') + stat(q(online.adreview), 'ads to review') + stat(q(online.seareview), 'sea plots to review') + '</div>' +
+      '<ul class="od-list"><li>Every chat line, name, song title and ad caption goes through the filter (no sexual content, abuse, threats, scams, links, phone numbers, or asking for age, photos or where someone lives), on the sender\'s phone and again on every phone that receives it.</li>' +
+      '<li>Three refused messages in ten minutes pause that player\'s chat for ten minutes. Players can mute and report anyone from their player card.</li>' +
+      '<li>Every picture is reviewed before anyone else sees it. Review them, and read reports, in Creator and on player cards.</li></ul></details>';
+    // Next steps
+    html += '<details class="od-box"><summary>🧭 What to watch next</summary><ul class="od-list">' +
+      '<li>Residents with no posted life: invite them to post from Hall of Fame so they count on the boards.</li>' +
+      '<li>An empty seat in government means nobody ran last week: a party with members but no candidate needs a nudge.</li>' +
+      '<li>Reports or review queues above zero need you. They are empty when everything is handled.</li>' +
+      '<li>Share the game for testing: the website link is public; the claude.ai link works for the people you share it with.</li></ul></details>';
+    return html + '</div>';
   }
 
   function govtView() {
@@ -4242,6 +4343,7 @@
       else if (app === 'jobs') body = workView();
       else if (app === 'town') body = '<div class="panel-b">' + townView() + '</div>';
       else if (app === 'govt') body = '<div class="panel-b">' + govtView() + '</div>';
+      else if (app === 'owner') body = '<div class="panel-b">' + (online.isOwner ? ownerView() : '<p class="note">This page is only for the game\'s owner.</p>') + '</div>';
       else if (app === 'nysc') body = '<div class="panel-b">' + nyscView() + '</div>';
       else if (app === 'sports') body = '<div class="panel-b">' + sportsView() + '</div>';
       else if (app === 'sights') body = '<div class="panel-b">' + sightsView() + '</div>';
@@ -4290,7 +4392,7 @@
     return '<div class="phone-frame' + (h >= 19 || h < 6 ? ' night' : '') + '"><div class="ph-status"><span>' + pad(h) + ':' + pad(mins) + '</span><span class="ph-notch" aria-hidden="true"></span><span>' + net + ' ▮▮▮ ' + batt + '%</span></div>' +
       '<div class="ph-lock"><b>' + pad(h) + ':' + pad(mins) + '</b><span>' + esc(L.dateLabel ? L.dateLabel(S) : L.clockLabel(S)) + ' · ' + esc(D.CITIES[L.cityOf(S)].name) + '</span></div>' +
       (news.length ? '<div class="ph-news" aria-label="Latest news"><span class="ph-news-h">📰 Latest</span><div class="ph-ticker"><div>' + news.map(function (l) { return '<span>' + esc(l.text) + '</span>'; }).join('') + '</div></div></div>' : '') +
-      huntBanner() + '<div class="apps ph-apps">' + APPS.filter(function (x) { return x[0] !== 'style' || online.shop; }).map(function (x, i) {
+      huntBanner() + '<div class="apps ph-apps">' + APPS.filter(function (x) { return (x[0] !== 'style' || online.shop) && (x[0] !== 'owner' || online.isOwner); }).map(function (x, i) {
       var n = badge[x[0]], fresh = NEW_APPS[x[0]] && !(appsSeen()[x[0]]);
       return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic" style="--a1:' + APP_TINTS[i % APP_TINTS.length][0] + ';--a2:' + APP_TINTS[i % APP_TINTS.length][1] + '">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : fresh ? '<span class="badge new">NEW</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';
     }).join('') + '</div><div class="ph-home" aria-hidden="true"></div></div>';
@@ -4395,7 +4497,7 @@
           '<button class="btn sm go" id="heir-start-' + i + '" data-heir="' + i + '">Play as ' + esc(h.name) + '</button></div>';
       }).join('') + '</div><div class="inline"><button class="btn ghost" id="heir-skip" data-heir="skip">Start someone new</button></div></div>' : '';
     return '<div class="intro">' +
-      '<h1>LASGIDI<span>Make it in Lagos. One week of rent at a time.</span></h1>' + heirCard +
+      '<h1>LASGIDI<span>Make it in Lagos. One week of rent at a time.</span></h1><p class="slogan">“If you can make it in Lagos, you can make it anywhere.”</p>' + heirCard +
       '<p class="lede">Work, hustle, sleep through NEPA, take the danfo or the ferry, join an ajo, dodge the loan apps and the Ponzi schemes. Rent is due every Saturday at noon.</p>' +
       onboardView(o) +
       (lives().length ? '<div class="field"><span class="label">Your past lives · best scores</span>' + livesView(5) + '</div>' : '') +
@@ -4475,7 +4577,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -4831,6 +4933,7 @@
     if (ds.venuesend) { var vi = document.getElementById('venue-in'); sendVenue(vi ? vi.value : ''); return; }
     if (ds.venuefold) { ui.venueFold = !ui.venueFold; mountVenue(); return; }
     if (ds.venuetab) { ui.venueTab = ds.venuetab; mountVenue(); return; }
+    if (ds.need) { ui.needOpen = ui.needOpen === ds.need ? null : ds.need; render(); return; }
     if (ds.yfprog) { ui.yfProg = ui.yfProg === ds.yfprog ? null : ds.yfprog; if (ui.venueOpen) mountVenue(); render(); return; }
     if (ds.festprog) { ui.festProg = !ui.festProg; if (ui.venueOpen) mountVenue(); render(); return; }
     if (ds.theatrein) { ui.theatreIn = ui.theatreIn === ui.venueOpen ? null : ui.venueOpen; mountVenue(); return; }
@@ -5033,6 +5136,17 @@
     if (e.target && e.target.id === 'look-hair' && S) { var hv = +e.target.value; run(function () { return L.setLook(S, S.look.skin, hv, S.look.shape); }); }
   });
 
+  // A tap anywhere closes the map's More and city menus, and clears the notifications (taps on them, or on the
+  // buttons that open them, are left alone so those still work).
+  document.addEventListener('pointerdown', function (e) {
+    var t = e.target, re = false;
+    if ((ui.moreMenu || ui.cityMenu) && !(t.closest && t.closest('.mb-menu,[data-moremenu],[data-citymenu]'))) { ui.moreMenu = false; ui.cityMenu = false; re = true; }
+    if (ui.needOpen && !(t.closest && t.closest('.needs'))) { ui.needOpen = null; re = true; }
+    if (ui.toasts && ui.toasts.length && !(t.closest && t.closest('#toasts button,#toasts a'))) { ui.toasts = []; clearTimeout(ui.toastTimer); renderToasts(); }
+    if (re) render();
+  }, true);
+  // Remember which map drop-downs are open across re-renders.
+  document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.getAttribute && d.getAttribute('data-dd')) { ui.ddOpen = ui.ddOpen || {}; ui.ddOpen[d.getAttribute('data-dd')] = d.open; } }, true);
   // Escape closes the welcome card and the letter-found screen.
   document.addEventListener('keydown', function (e) { if (e.key !== 'Escape' || mini) return; if (ui.huntFound) { ui.huntFound = null; render(); } else if (ui.welcome) { ui.welcome = false; ui.confirmSignout = false; ui.flash = ''; render(); } });
   document.addEventListener('keydown', function (e) {
