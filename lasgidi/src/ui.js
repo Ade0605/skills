@@ -106,7 +106,19 @@
     debit: function () { tone(440, 0, 0.18, 'triangle', 0.08); },
     horn: function () { tone(370, 0, 0.12, 'square', 0.05); tone(370, 0.17, 0.2, 'square', 0.05); },
     bad: function () { tone(330, 0, 0.2, 'triangle', 0.1); tone(247, 0.18, 0.35, 'triangle', 0.1); },
-    good: function () { tone(784, 0, 0.12); tone(988, 0.1, 0.12); tone(1175, 0.2, 0.25); }
+    good: function () { tone(784, 0, 0.12); tone(988, 0.1, 0.12); tone(1175, 0.2, 0.25); },
+    // NEPA took light: the fridge hums down, then a generator coughs twice and catches.
+    nepaOff: function () {
+      var a = ctx(); if (!a) return; var o = a.createOscillator(), g = a.createGain(), t = a.currentTime; o.type = 'sawtooth'; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.6); g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.65);
+      [0.9, 1.25].forEach(function (st) { noise(st, 0.18, 180, 0.8, 0.14, 'lowpass'); tone(48, st, 0.2, 'square', 0.03); });
+      for (var i = 0; i < 14; i++) { tone(52 + (i % 2) * 6, 1.6 + i * 0.075, 0.07, 'square', 0.03 - i * 0.0015); noise(1.6 + i * 0.075, 0.05, 220, 1, 0.05, 'lowpass'); }
+    },
+    // Light is back: a quick rising "ding-ding" before the street shouts.
+    nepaOn: function () { tone(880, 0, 0.1, 'triangle', 0.08); tone(1320, 0.09, 0.18, 'triangle', 0.08); },
+    // A short fanfare for a promotion, an achievement or a qualification.
+    fanfare: function () { [[523, 0], [659, 0.11], [784, 0.22], [1047, 0.36]].forEach(function (n, i) { tone(n[0], n[1], i === 3 ? 0.45 : 0.14, 'triangle', 0.09); tone(n[0] * 2, n[1], i === 3 ? 0.3 : 0.08, 'sine', 0.03); }); },
+    // A new message: two quick soft pops.
+    ping: function () { tone(1760, 0, 0.06, 'sine', 0.06); tone(2349, 0.07, 0.09, 'sine', 0.05); }
   };
   // Street voices: touts, bus conductors and hawkers calling out, spoken by the browser's own voice (no audio files).
   // Each city has its own calls; the conductor shouts your stop when you board a danfo, bus or keke.
@@ -139,6 +151,21 @@
     var d = D.DISTRICTS[dest]; if (!d) return; var c = L.districtCity(dest), nm = d.name.split(/[ ,(]/)[0];
     var line = c === 'accra' || c === 'kumasi' || c === 'capecoast' ? nm + '! ' + nm + '! Enter, enter!' : c === 'ctn' ? nm + '! ' + nm + '! Get in, two more!' : c === 'ldn' ? 'This bus goes to ' + d.name + '.' : nm + '! ' + nm + '! Enter with your change o!';
     say(line, { force: true });
+  }
+  // Rain on the map: a soft hiss while it rains, heavier with thunder now and then in a storm.
+  var wamb = { kind: null, stop: null };
+  function weatherAmbience(kind) {
+    if (kind !== 'rain' && kind !== 'storm') kind = null;
+    if (wamb.kind === kind) return; if (wamb.stop) { try { wamb.stop(); } catch (e) {} } wamb = { kind: null, stop: null }; if (!kind) return;
+    var a = ctx(); if (!a) return;
+    try {
+      var len = a.sampleRate * 2, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0); for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      var src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(); src.buffer = buf; src.loop = true; f.type = 'highpass'; f.frequency.value = kind === 'storm' ? 700 : 1100;
+      g.gain.value = 0.0001; g.gain.exponentialRampToValueAtTime(kind === 'storm' ? 0.035 : 0.02, a.currentTime + 1.5); src.connect(f); f.connect(g); g.connect(a.destination); src.start();
+      var timers = [], thunder = function () { if (wamb.kind !== 'storm' || !prefs.sound) return; noise(0, 1.6, 90, 0.7, 0.18, 'lowpass'); noise(0.2, 1.2, 160, 0.6, 0.08, 'lowpass'); timers.push(setTimeout(thunder, 9000 + Math.random() * 12000)); };
+      if (kind === 'storm') timers.push(setTimeout(thunder, 3000));
+      wamb = { kind: kind, stop: function () { timers.forEach(clearTimeout); var t = a.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8); setTimeout(function () { try { src.stop(); } catch (e) {} }, 900); } };
+    } catch (e) { wamb = { kind: null, stop: null }; }
   }
   function play(name) { if (prefs.sound && sounds[name]) { try { sounds[name](); } catch (e) { /* audio blocked */ } } }
   // Ambience for walk-in scenes: quiet looping noise shaped per kind of place, made in WebAudio (no files).
@@ -245,7 +272,7 @@
     if (n === 'cry') { if (!window.speechSynthesis || Date.now() - cryAt < 4000) return; cryAt = Date.now(); try { var u = new SpeechSynthesisUtterance(a + '! ' + a + '! Enter with your change!'); u.rate = 1.15; u.pitch = 1.1; u.lang = 'en-GB'; window.speechSynthesis.speak(u); } catch (e) {} return; }
     window.LasgidiMusic.sfx(ctx(), n, a);
   }
-  document.addEventListener('visibilitychange', function () { syncMusic(); if (document.hidden) ambience(null); else if (ui && ui.venueOpen) { try { mountVenue(); } catch (e) {} } });
+  document.addEventListener('visibilitychange', function () { syncMusic(); if (document.hidden) { ambience(null); weatherAmbience(null); } else if (ui && ui.venueOpen) { try { mountVenue(); } catch (e) {} } });
 
   function esc(v) {
     return String(v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
@@ -254,7 +281,7 @@
 
   /* ---------- run an engine call, then render ---------- */
   function run(fn, kind) {
-    var q0 = S && S.quals ? Object.keys(S.quals).length : 0, c0 = S ? L.cityOf(S) : null, res = fn(), c1 = S ? L.cityOf(S) : null, lx = c1 !== c0 && localOf(c1);
+    var p0 = S ? S.power : null, a0 = S && S.ach ? Object.keys(S.ach).length : 0, q0 = S && S.quals ? Object.keys(S.quals).length : 0, c0 = S ? L.cityOf(S) : null, res = fn(), c1 = S ? L.cityOf(S) : null, lx = c1 !== c0 && localOf(c1);
     if (res && res.ok && kind === 'travel') play('horn');
     else if (res && res.collapsed) play('bad');
     else if (res && (res.won || /Promoted/.test(res.msg || ''))) play('good');
@@ -266,6 +293,9 @@
     }
     if (res && res.msg) ui.toasts.push({ msg: res.msg, ok: res.ok });
     if (S && S.quals && Object.keys(S.quals).length > q0) { var qk = Object.keys(S.quals).sort(function (a, b) { return S.quals[b] - S.quals[a]; })[0]; ui.gradCard = qk; play('good'); }
+    if (S && p0 === true && S.power === false) play('nepaOff');
+    else if (S && p0 === false && S.power === true) { play('nepaOn'); var pc0 = L.cityOf(S); setTimeout(function () { say(pc0 === 'ctn' ? 'Eish! The power is back!' : /^(accra|kumasi|capecoast)$/.test(pc0) ? 'Lights off is over! Light is back!' : pc0 === 'ldn' || pc0 === 'dxb' ? 'The power is back on.' : 'Up NEPA! Up NEPA!', { force: true, rate: 1.25, pitch: 1.2 }); }, 350); }
+    if (S && S.ach && Object.keys(S.ach).length > a0 && !(S.quals && Object.keys(S.quals).length > q0)) setTimeout(function () { play('fanfare'); }, 250);
     if (c0 && lx) ui.toasts.push({ msg: 'Welcome to ' + D.CITIES[c1].name + ': “' + lx.slogan + '” Prices here are in ' + lx.cur + '.', ok: true });
     (S.alerts || []).forEach(function (a) { ui.toasts.push({ alert: a }); });
     S.alerts = []; nightReminders(); try { syncCircle(); } catch (e) {}
@@ -427,6 +457,7 @@
     mountCruise();
     mountAirport();
     drawStory();
+    try { weatherAmbience(prefs.sound && S && !document.hidden && ui.tab === 'map' && !ui.venueOpen && !ui.cruiseOpen && !ui.roomOpen && !ui.airportOpen ? L.weatherNow(S) : null); } catch (e) {}
     mountRoom();
     mountVenue();
     mountHalls();
@@ -700,6 +731,7 @@
           var log0 = online.chats[msg.by] = online.chats[msg.by] || [];
           if (log0.filter(function (m) { return !m.me && Date.now() - m.at < 60000; }).length >= 15) return;
           log0.push({ me: false, text: r.text, at: Date.now() }); if (log0.length > 60) log0.shift();
+          play('ping');
           if (ui.chatWith !== msg.by) { online.unread[msg.by] = (online.unread[msg.by] || 0) + 1; ui.toasts.push({ msg: '💬 ' + handleOf(msg.by) + ': ' + r.text, ok: true }); }
           scheduleRender();
         });
@@ -5584,6 +5616,11 @@
   if (hot && hot.ready) hot.ready(start); else start(hot && hot.data ? hot.data : {});
 
   if ('serviceWorker' in navigator && /^https:|^http:\/\/localhost/.test(location.href) && !hot) {
-    try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) { /* not available */ }
+    try {
+      var hadSW = !!navigator.serviceWorker.controller, reloaded = false;
+      navigator.serviceWorker.register('sw.js').then(function (reg) { try { reg.update(); } catch (e) {} }).catch(function () {});
+      // A new version took over: reload once so the page runs the new code (your game is saved on this device).
+      navigator.serviceWorker.addEventListener('controllerchange', function () { if (!hadSW || reloaded) return; reloaded = true; try { save(); } catch (e) {} location.reload(); });
+    } catch (e) { /* not available */ }
   }
 })();
