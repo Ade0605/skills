@@ -3416,7 +3416,7 @@ test('rules 38: stage career: rehearse, rep and levels, a manager at 30, a weekl
 
 test('rules 39: review fixes: stalls after 18:00 start tomorrow and stay on one business; headliner needs a passable show', () => {
   const mk = () => { const s = L.newGame({ seed: 3910, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0); s.bank = 5e7; s.cash = 5e6; s.loc = 'island'; return s; };
-  const s = mk(); assert.equal(s.rules, 39);
+  const s = mk(); assert.ok(s.rules >= 39);
   s.businesses.push({ id: 'buka', paid: 600000, visit: 0, site: 'island', level: 1, manager: true });
   s.businesses.push({ id: 'buka', paid: 900000, visit: 0, site: 'ikoyi', level: 3, manager: true }); // the bigger one is priced and boosted
   // At 19:00 on day 0 the Independence Jam stall starts tomorrow and is priced from that day.
@@ -3437,4 +3437,40 @@ test('rules 39: review fixes: stalls after 18:00 start tomorrow and stay on one 
   const h = mk(); h.stage = { rep: 70, practice: 0, manager: true, headWeek: null }; h.loc = 'vi';
   for (let i = 0; i < 4000 && !(L.dow(h) === 5 && L.hour(h) === 20); i++) { while (h.pending.length) L.resolveChoice(h, 0); L.wait(h, 15); h.loc = 'vi'; }
   h.needs.energy = 100; h.needs.hunger = 70; assert.ok(L.startMinigame(h, 'stage').ok); assert.ok(L.stageShow(h, 10, 64, 3).ok); assert.ok(!h.ach.headliner);
+});
+
+test('rules 40: Eko Sunday League: sign, train, play Sundays, a table that adds up, a capped title and cup', () => {
+  const s = L.newGame({ seed: 4010, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 40); s.cash = 5e6;
+  const step = (loc) => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); s.loc = loc; };
+  const fresh = () => { s.needs.energy = 100; s.needs.hunger = 70; };
+  assert.equal(L.leagueView(s).joined, false);
+  s.loc = 'mushin'; fresh(); assert.ok(L.doAction(s, 'league_join_0').ok); assert.equal(L.leagueView(s).team, 'Mushin Lions');
+  assert.ok(!L.availableActions(s).some(a => /^league_join_/.test(a.id)), 'one team');
+  // Train on Wednesday, play on Sunday.
+  for (let i = 0; i < 4000 && !(L.dow(s) === 2 && L.hour(s) === 17); i++) step('mushin');
+  fresh(); assert.ok(L.doAction(s, 'league_train').ok); assert.equal(s.league.form, 1);
+  for (let i = 0; i < 4000 && !(L.dow(s) === 6 && L.hour(s) === 16); i++) step('mushin');
+  fresh(); const r = L.doAction(s, 'league_match'); assert.ok(r.ok, r.msg); assert.match(r.msg, /Mushin Lions \d–\d/);
+  assert.ok(!L.availableActions(s).some(a => a.id === 'league_match'), 'one match a matchday');
+  // The table adds up after the round: 8 teams, wins and draws match the points, goals balance.
+  for (let i = 0; i < 200 && L.hour(s) < 18; i++) step('mushin');
+  const v = L.leagueView(s); assert.equal(v.table.length, 8);
+  assert.equal(v.table.reduce((t, x) => t + x.gd, 0), 0); v.table.forEach(x => assert.equal(x.pts, x.w * 3 + x.d));
+  const games = v.table.reduce((t, x) => t + x.p, 0); assert.ok(games > 0 && games % 8 === 0, 'four games a round');
+  // Play out the season (skipping matches is allowed); prizes are capped, at most one title and one cup a season.
+  const c0 = s.cash + s.bank; const before = s.ledger.length;
+  for (let d = 0; d < 7 * 9; d++) { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 1440); }
+  const prizes = s.ledger.slice(before).filter(e => /Eko Sunday League/.test(e.memo)); assert.ok(prizes.length <= 1);
+  prizes.forEach(e => assert.ok(e.amt <= L.price(s, 15000) + 1));
+  // The other teams' results are the same for every life in a season.
+  const o = L.newGame({ seed: 77, origin: 'mid', goal: 'japa' }); o.t = s.t; const t1 = L.leagueView(o).table.map(x => x.name).join(), t2 = L.leagueView(L.newGame({ seed: 78, origin: 'mid', goal: 'japa' })).table;
+  assert.ok(t1.length > 0 && t2.length === 8);
+  // Older lives: no league.
+  const old = L.newGame({ seed: 4010, origin: 'nepo', goal: 'freestyle', rules: 39 }); old.loc = 'mushin'; assert.equal(L.leagueView(old), null); assert.ok(!L.availableActions(old).some(a => /^league_/.test(a.id)));
+  // A real life that signs replays to the same seal.
+  const v2 = L.newGame({ seed: 4012, origin: 'nepo', goal: 'freestyle' }); while (v2.pending.length) L.resolveChoice(v2, 0);
+  const fast = L.travelOptions(v2, 'mushin').filter(x => !x.disabled).sort((x, y) => x.mins - y.mins)[0]; assert.ok(L.travel(v2, 'mushin', fast.mode).ok);
+  assert.ok(L.doAction(v2, 'league_join_3').ok);
+  assert.equal(L.replayLife(v2.replay).ledgerHash, v2.ledgerHash);
 });

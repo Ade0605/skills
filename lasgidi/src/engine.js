@@ -89,7 +89,10 @@
   // 39 is a review pass: a stall booked after 18:00 starts the next day; the stall is tied to one business (not its
   // type) and its fee follows that business's weekday pattern and site; Detty Fest nights count for the Festival
   // passport; the Headliner achievement needs a passable show (40%+).
-  var RULES = 39;
+  // 40 adds the Eko Sunday League: 8 made-up neighbourhood teams, an 8-week season (7 Sunday matchdays at the Mushin
+  // pitch, then a cup final at the National Stadium), sign for a team, train on Wednesdays, play on Sundays, a table, and
+  // capped prizes (league title, cup). Other teams' results come from a hash of the season, not the dice.
+  var RULES = 40;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -146,6 +149,8 @@
     on_stage:    'On stage: performed at the National Theatre and at Eko Detty Fest',
     show_stopper: 'Show-stopper: 90% on the beat as an opening act at Eko Detty Fest',
     headliner:   'Headliner: topped the bill at Eko Convention Centre',
+    league_champ: 'Sunday league champions: won the Eko Sunday League',
+    cup_winner:  'Cup winners: won the Eko Sunday League cup final',
     quiz:        'Quiz champion: 10 out of 10',
     vendor:      'Online vendor: sold 100 items',
     corper:      'Corper wee! Finished your NYSC service year',
@@ -582,8 +587,14 @@
     });
   }
   function placeName(id) { var p = D.PLACES.filter(function (x) { return x.id === id; })[0]; return p ? p.name : id; }
+  function leagueTitle(s, S) {
+    var L0 = s.league, top = leagueTable(s, S, 7)[0];
+    if (top.i === L0.team) { L0.titles = (L0.titles || 0) + 1; var pz = price(s, LEAGUE_PRIZE); earn(s, pz, 'Prize: Eko Sunday League champions'); unlock(s, 'league_champ'); log(s, '🏆 ' + LEAGUE_TEAMS[L0.team] + ' are Eko Sunday League champions! ' + naira(pz) + ' prize money for the squad.', 'good'); }
+    else log(s, '⚽ The Eko Sunday League season is over: ' + top.name + ' are champions. The top two meet in the cup final on Sunday.', 'story');
+  }
   function onNewWeek(s) {
     var w = week(s);
+    if (s.rules >= 40 && s.league && w % 8 === 7) leagueTitle(s, Math.floor(w / 8)); // the table is final after 7 matchdays
     var prevMonth = (START_MONTH + Math.floor((w - 1) / 4)) % 12;
     // Inflation: 0.4%–1.2% a week. Wages chase it at half speed.
     var inf = (0.004 + rand(s) * 0.008) * cbnOf(s, 'infl', 1);
@@ -971,6 +982,47 @@
         note: 'On each festival day your ' + nm + ' takes double, unless a rival stall undercuts it (1 day in 4: only x1.25).' };
     });
   }
+  // Rules 40: the Eko Sunday League. A season is 8 game weeks: rounds 0–6 on Sundays, the cup final in week 7.
+  var LEAGUE_TEAMS = ['Mushin Lions', 'Ojuelegba Stars', 'Surulere Strikers', 'Yaba Tigers', 'Ikeja Eagles', 'Oshodi United', 'Ajegunle Pirates', 'Festac Royals'];
+  var LEAGUE_PRIZE = 15000, CUP_PRIZE = 10000;
+  function lhash(str) { var h = 2166136261; for (var k = 0; k < str.length; k++) h = Math.imul(h ^ str.charCodeAt(k), 16777619); return h >>> 0; }
+  function leaguePairs(r) { var rot = [1, 2, 3, 4, 5, 6, 7], list = [0].concat(rot.slice(7 - r).concat(rot.slice(0, 7 - r))), out = []; for (var i = 0; i < 4; i++) out.push(r % 2 ? [list[7 - i], list[i]] : [list[i], list[7 - i]]); return out; }
+  function teamStrength(S, t) { return 40 + lhash('str:' + S + ':' + t) % 40; }
+  function aiScore(S, r, a, b, bonusA) { var h = lhash('m:' + S + ':' + r + ':' + a + ':' + b), sa = teamStrength(S, a) + (bonusA || 0), sb = teamStrength(S, b) + 4; // the second-named side is at home: a small edge
+    return [Math.max(0, Math.round((sa - sb) / 22 + (h % 7) / 2 - 0.6)), Math.max(0, Math.round((sb - sa) / 22 + ((h >>> 3) % 7) / 2 - 0.6))]; }
+  function leagueResult(s, S, r, a, b) { var L0 = s.league, key = S + '-' + r; if (L0 && L0.played && L0.played[key] && (a === L0.team || b === L0.team)) { var p = L0.played[key]; return a === L0.team ? [p[0], p[1]] : [p[1], p[0]]; }
+    return aiScore(S, r, a, b, 0); }
+  function leagueTable(s, S, upto) {
+    var rows = LEAGUE_TEAMS.map(function (n, i) { return { i: i, name: n, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; });
+    for (var r = 0; r < upto; r++) leaguePairs(r).forEach(function (pr) { var sc = leagueResult(s, S, r, pr[0], pr[1]), A = rows[pr[0]], B = rows[pr[1]];
+      A.p++; B.p++; A.gf += sc[0]; A.ga += sc[1]; B.gf += sc[1]; B.ga += sc[0];
+      if (sc[0] > sc[1]) { A.w++; B.l++; A.pts += 3; } else if (sc[0] < sc[1]) { B.w++; A.l++; B.pts += 3; } else { A.d++; B.d++; A.pts++; B.pts++; } });
+    return rows.sort(function (x, y) { return y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || x.i - y.i; });
+  }
+  function leagueView(s) {
+    if (!(s.rules >= 40)) return null;
+    var w = week(s), S = Math.floor(w / 8), k = w % 8, L0 = s.league || null, played = k < 7 && dow(s) === 6 && hour(s) >= 18 ? k + 1 : k; // results show after Sunday's games (18:00)
+    var tbl = leagueTable(s, S, Math.min(7, played)), mine = L0 ? L0.team : null, next = null, last = [];
+    var nk = played > k ? k + 1 : k; // once this Sunday's games are done, the next fixture is next week's
+    if (mine != null && nk < 7) { var pr = leaguePairs(nk).filter(function (x) { return x[0] === mine || x[1] === mine; })[0]; next = { opp: LEAGUE_TEAMS[pr[0] === mine ? pr[1] : pr[0]], home: pr[0] === mine, round: nk + 1 }; }
+    if (mine != null) for (var r = 0; r < Math.min(7, played); r++) { var p2 = leaguePairs(r).filter(function (x) { return x[0] === mine || x[1] === mine; })[0], sc = leagueResult(s, S, r, p2[0], p2[1]), me0 = p2[0] === mine; last.push({ round: r + 1, opp: LEAGUE_TEAMS[me0 ? p2[1] : p2[0]], gf: me0 ? sc[0] : sc[1], ga: me0 ? sc[1] : sc[0], you: !!(L0.played && L0.played[S + '-' + r]) }); }
+    var fin = k === 7 ? leagueTable(s, S, 7).slice(0, 2).map(function (x) { return x.i; }) : null;
+    return { joined: mine != null, team: mine != null ? LEAGUE_TEAMS[mine] : null, teamIndex: mine, teams: LEAGUE_TEAMS, season: S + 1, round: Math.min(k + 1, 7), finalWeek: k === 7, next: next, results: last.slice(-3).reverse(),
+      table: tbl.map(function (x, n) { return { pos: n + 1, name: x.name, you: x.i === mine, p: x.p, w: x.w, d: x.d, l: x.l, gd: x.gf - x.ga, pts: x.pts }; }), final: fin ? { a: LEAGUE_TEAMS[fin[0]], b: LEAGUE_TEAMS[fin[1]], youIn: fin.indexOf(mine) >= 0 } : null,
+      titles: L0 ? L0.titles || 0 : 0, cups: L0 ? L0.cups || 0 : 0, form: L0 ? L0.form || 0 : 0, prize: price(s, LEAGUE_PRIZE), cupPrize: price(s, CUP_PRIZE) };
+  }
+  function leagueActions(s) {
+    var out = [], L0 = s.league, w = week(s), k = w % 8, S = Math.floor(w / 8);
+    if (s.loc === 'mushin') {
+      if (!L0) LEAGUE_TEAMS.forEach(function (n, i) { out.push({ id: 'league_join_' + i, label: 'Sign for ' + n + ' (Eko Sunday League)', mins: 60, fx: { social: 10 }, special: 'leaguejoin', team: i, minRules: 40 }); });
+      else {
+        out.push({ id: 'league_train', label: 'Team training with ' + LEAGUE_TEAMS[L0.team], mins: 120, fx: { energy: -18, hygiene: -15, fun: 10, stress: -6 }, xp: { fitness: 2 }, special: 'leaguetrain', once: true, minRules: 40, when: { days: [2], from: 17, to: 20 } });
+        if (k < 7 && !(L0.played && L0.played[S + '-' + k])) out.push({ id: 'league_match', label: 'Matchday ' + (k + 1) + ': play for ' + LEAGUE_TEAMS[L0.team], mins: 120, fx: { energy: -25, hygiene: -25, fun: 25, social: 15 }, xp: { fitness: 2 }, special: 'leaguematch', sport: 'football', minRules: 40, when: { days: [6], from: 16, to: 18 } });
+      }
+    }
+    if (s.loc === 'surulere' && L0 && k === 7) { var v = leagueView(s); if (v.final && v.final.youIn && !(L0.cupPlayed === S)) out.push({ id: 'league_final', label: 'Cup final at the National Stadium: ' + v.final.a + ' v ' + v.final.b, mins: 150, fx: { energy: -28, fun: 35, social: 25, stress: 6 }, xp: { fitness: 2 }, special: 'leaguefinal', sport: 'football', minRules: 40, when: { days: [6], from: 16, to: 18 } }); }
+    return out;
+  }
   // retired actions are hidden from players but still run, so lives that used them replay.
   function availableActions(s, withRetired) {
     var list = [];
@@ -990,6 +1042,7 @@
     if (s.rules >= 32) list = list.concat(festActions(s));
     if (s.rules >= 35) list = list.concat(yearFestActions(s));
     if (s.rules >= 36) list = list.concat(stallActions(s));
+    if (s.rules >= 40) list = list.concat(leagueActions(s));
     if (s.rules >= 38 && s.loc === 'vi') list.push(STAGE_ACTS.manager, STAGE_ACTS.headline); // Eko Convention Centre
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
@@ -1172,6 +1225,23 @@
   }
 
   var specials = {
+    leaguejoin: function (s, a) { s.league = { team: a.team, form: 0, formWeek: null, played: {}, titles: 0, cups: 0 }; return 'You signed for ' + LEAGUE_TEAMS[a.team] + '. Training is Wednesday evening; matches are Sunday at 16:00 at the Mushin pitch.'; },
+    leaguetrain: function (s) { var L0 = s.league; L0.form = Math.min(3, (L0.formWeek === week(s) ? L0.form : 0) + 1); L0.formWeek = week(s); return 'Drills, sprints and a small-sided game. The coach is pleased: form ' + L0.form + '.'; },
+    leaguematch: function (s) {
+      var L0 = s.league, w = week(s), S = Math.floor(w / 8), k = w % 8, pr = leaguePairs(k).filter(function (x) { return x[0] === L0.team || x[1] === L0.team; })[0], home = pr[0] === L0.team, opp = home ? pr[1] : pr[0];
+      var form = L0.formWeek === w ? L0.form : 0, bonus = skillLevel(s, 'fitness') * 3 + form * 4 + Math.round(rand(s) * 10);
+      var sc = home ? aiScore(S, k, L0.team, opp, bonus) : aiScore(S, k, opp, L0.team, -bonus), gf = home ? sc[0] : sc[1], ga = home ? sc[1] : sc[0], scored = gf > 0 && rand(s) < 0.35 + skillLevel(s, 'fitness') * 0.04;
+      L0.played[S + '-' + k] = [gf, ga, scored ? 1 : 0];
+      return LEAGUE_TEAMS[L0.team] + ' ' + gf + '–' + ga + ' ' + LEAGUE_TEAMS[opp] + (gf > ga ? '. A win!' : gf === ga ? '. A draw.' : '. A loss.') + (scored ? ' You scored!' : '');
+    },
+    leaguefinal: function (s) {
+      var L0 = s.league, w = week(s), S = Math.floor(w / 8), v = leagueView(s), oppName = v.final.a === LEAGUE_TEAMS[L0.team] ? v.final.b : v.final.a, opp = LEAGUE_TEAMS.indexOf(oppName);
+      var bonus = skillLevel(s, 'fitness') * 3 + (L0.formWeek === w ? L0.form : 0) * 4 + Math.round(rand(s) * 10), sc = aiScore(S, 9, L0.team, opp, bonus), gf = sc[0], ga = sc[1];
+      if (gf === ga) { if (rand(s) < 0.5) gf++; else ga++; } // penalties
+      L0.cupPlayed = S;
+      if (gf > ga) { L0.cups = (L0.cups || 0) + 1; var cp = price(s, CUP_PRIZE); earn(s, cp, 'Prize: Eko Sunday League cup'); unlock(s, 'cup_winner'); return '🏆 Cup final: ' + LEAGUE_TEAMS[L0.team] + ' ' + gf + '–' + ga + ' ' + oppName + '. Cup winners! ' + naira(cp) + ' prize.'; }
+      return 'Cup final: ' + LEAGUE_TEAMS[L0.team] + ' ' + gf + '–' + ga + ' ' + oppName + '. So close. Next season.';
+    },
     rehearse: function (s) { var g = stageState(s); g.practice = Math.min(10, (g.practice || 0) + 2); return 'Two hours of scales, runs and stage moves. Practice ' + g.practice + '/10.'; },
     signmanager: function (s) { stageState(s).manager = true; log(s, 'You signed with Eko Talent Management. They book the bigger rooms and keep 20% of your stage fees.', 'good'); return 'Signed. Your manager says: "Headline slots open when you are Known (60 rep)."'; },
     stallbook: function (s, a) {
@@ -5394,7 +5464,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, leagueView: leagueView, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

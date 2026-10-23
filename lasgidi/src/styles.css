@@ -1251,3 +1251,13 @@ body:has(#cruise-view) .toasts, body:has(#room-view) .toasts, body:has(#airport-
 .cc-chart li { display: flex; gap: 8px; align-items: center; padding: 4px 8px; border-radius: 9px; background: rgba(0,0,0,.2); font-size: 13px; }
 .cc-chart li b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cc-chart li.you { background: #ffd23f; color: #17181a; }
+/* Rules 40: Eko Sunday League card */
+.league-card { margin: 10px 0; padding: 12px 14px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, #0b3d2e, #16a35a 70%, #0b3d2e); }
+.league-card h3 { margin: 4px 0; color: #fff; font-size: 19px; }
+.lg-teams { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.lg-teams .btn { background: #ffd23f; color: #17181a; }
+.lg-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.lg-table th { text-align: left; font-weight: 700; color: #ffd23f; padding: 3px 4px; font-size: 11px; }
+.lg-table td { padding: 4px; border-top: 1px solid rgba(255,255,255,.12); }
+.lg-table td:nth-child(2) { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-table tr.you td { background: #ffd23f; color: #17181a; }
