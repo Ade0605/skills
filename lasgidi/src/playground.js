@@ -385,7 +385,7 @@
     hud.className = 'pg-hud';
     var zoom = document.createElement('div');
     zoom.className = 'pg-zoom';
-    zoom.innerHTML = '<button type="button" class="pg-zbtn" data-z="full" aria-label="Enlarge map" aria-pressed="false">⛶</button><button type="button" class="pg-zbtn" data-z="1" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-z="-1" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-z="0" aria-label="Centre on me">◎</button><button type="button" class="pg-zbtn" data-spin="-1" aria-label="Spin the map left">⟲</button><button type="button" class="pg-zbtn" data-spin="1" aria-label="Spin the map right">⟳</button><button type="button" class="pg-zbtn" data-photo="map" aria-label="Take a photo of the map">📷</button>';
+    zoom.innerHTML = '<button type="button" class="pg-zbtn" data-z="full" aria-label="Enlarge map" aria-pressed="false">⛶</button><button type="button" class="pg-zbtn" data-z="1" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-z="-1" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-z="0" aria-label="Centre on me">◎</button><button type="button" class="pg-zbtn" data-spin="-1" aria-label="Spin the map left">⟲</button><button type="button" class="pg-zbtn" data-spin="1" aria-label="Spin the map right">⟳</button><button type="button" class="pg-zbtn" data-photo="map" aria-label="Take a photo of the map">📷</button><label class="pg-zs"><input type="range" class="pg-zslider" min="0" max="100" value="0" aria-label="Zoom level"><span class="pg-zval">1×</span></label>';
     canvas.tabIndex = 0;
     wrap.appendChild(canvas); wrap.appendChild(hud); wrap.appendChild(zoom);
 
@@ -1823,7 +1823,11 @@
       cam.px = Math.max(-lim, Math.min(lim, cam.px)); cam.py = Math.max(-lim, Math.min(lim, cam.py));
       if (cam.z === 1) { cam.px = 0; cam.py = 0; }
     }
-    function kick() { last = 0; if (reduce) { drawStatic(); drawDynamic(0); } else schedule(); }
+    // The zoom slider: a log scale from 1x to MAXZ, kept in step with pinch, wheel and the buttons.
+    var zs = zoom.querySelector('.pg-zslider'), zv = zoom.querySelector('.pg-zval'), zsBusy = false;
+    function syncZoom() { if (!zs) return; if (!zsBusy) zs.value = String(Math.round(Math.log(cam.z) / Math.log(MAXZ) * 100)); zv.textContent = (cam.z < 10 ? cam.z.toFixed(1) : Math.round(cam.z)) + '×'; }
+    if (zs) { zs.addEventListener('input', function () { zsBusy = true; zoomAt(Math.exp(+zs.value / 100 * Math.log(MAXZ)), W / 2, H / 2); zsBusy = false; }); ['pointerdown', 'touchstart', 'click'].forEach(function (ev) { zs.addEventListener(ev, function (e) { e.stopPropagation(); }); }); }
+    function kick() { last = 0; syncZoom(); if (reduce) { drawStatic(); drawDynamic(0); } else schedule(); }
 
     root.addEventListener('resize', function () { if (wrap.isConnected) kick(); });
     // Billboards keep rotating even when motion is reduced (a slow swap, not animation).
