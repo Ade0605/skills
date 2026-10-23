@@ -92,7 +92,10 @@
   // 40 adds the Eko Sunday League: 8 made-up neighbourhood teams, an 8-week season (7 Sunday matchdays at the Mushin
   // pitch, then a cup final at the National Stadium), sign for a team, train on Wednesdays, play on Sundays, a table, and
   // capped prizes (league title, cup). Other teams' results come from a hash of the season, not the dice.
-  var RULES = 40;
+  // 41 makes money 50% easier: wages, gigs, business takings, tenant rent, prizes and fees pay 1.5x (sales, loans and
+  // refunds do not). Businesses, including a new tech startup, can open in London and Dubai with a UK business visa or
+  // a Dubai trade licence. More sights in London and Dubai.
+  var RULES = 41;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -316,7 +319,11 @@
     pay(s, take, memo);
     return take;
   }
-  function earn(s, amount, memo) { post(s, 'cash', Math.round(amount), memo); }
+  // Rules 41: income pays 1.5x. Only money earned (work, gigs, takings, rent from tenants, prizes, fees), never sales,
+  // loans or refunds, so buying and reselling cannot print money.
+  var INCOME_RX = /^(Shift pay|Business payout|Tenant rent|Prize: |Headline fee|Opening act fee|Open stage tips|Runway booking|Finisher prize|Daily goals|Event appearance fee|Live stream gifts|Brand deal|NYSC )/;
+  function incomeBoost(s, amount, memo) { return s.rules >= 41 && amount > 0 && (INCOME_RX.test(memo) || category(memo, amount) === 'gigs' || category(memo, amount) === 'wages'); }
+  function earn(s, amount, memo) { var a = Math.round(amount); if (incomeBoost(s, a, memo)) a = Math.round(a * 1.5); post(s, 'cash', a, memo); return a; }
 
   function priceFactor(s) {
     var f = s.econ.infl;
@@ -1043,6 +1050,7 @@
     if (s.rules >= 35) list = list.concat(yearFestActions(s));
     if (s.rules >= 36) list = list.concat(stallActions(s));
     if (s.rules >= 40) list = list.concat(leagueActions(s));
+    if (s.rules >= 41) Object.keys(D.BIZ_LICENCES).forEach(function (c) { var B0 = D.BIZ_LICENCES[c]; if (s.loc === B0.district && !(s.bizLicence && s.bizLicence[c])) list.push({ id: 'bizlic_' + c, label: 'Apply for a ' + B0.name + ' (open businesses in ' + D.CITIES[c].name + ')', mins: 120, cost: B0.fee, fx: { stress: 8 }, special: 'bizlicence', city: c, minRules: 41 }); });
     if (s.rules >= 38 && s.loc === 'vi') list.push(STAGE_ACTS.manager, STAGE_ACTS.headline); // Eko Convention Centre
     list = list.concat(npcActions(s)).concat(loveActions(s));
     var rh = rideAction(s); if (rh) list.push(rh);
@@ -1214,7 +1222,7 @@
 
     if (a.earn) {
       var got = gigPay(s, a.earn, 0.8 + rand(s) * 0.4);
-      earn(s, got, a.label);
+      got = earn(s, got, a.label);
       msg = 'You made ' + naira(got) + '.';
       if ((s.loc === 'oshodi' || s.loc === 'mushin') && rand(s) < 0.2) queueAreaBoys(s);
     }
@@ -1225,6 +1233,7 @@
   }
 
   var specials = {
+    bizlicence: function (s, a) { s.bizLicence = s.bizLicence || {}; s.bizLicence[a.city] = true; return 'Approved: you can now open businesses in ' + D.CITIES[a.city].name + '. Pick a site there in Buy → Businesses.'; },
     leaguejoin: function (s, a) { s.league = { team: a.team, form: 0, formWeek: null, played: {}, titles: 0, cups: 0 }; return 'You signed for ' + LEAGUE_TEAMS[a.team] + '. Training is Wednesday evening; matches are Sunday at 16:00 at the Mushin pitch.'; },
     leaguetrain: function (s) { var L0 = s.league; L0.form = Math.min(3, (L0.formWeek === week(s) ? L0.form : 0) + 1); L0.formWeek = week(s); return 'Drills, sprints and a small-sided game. The coach is pleased: form ' + L0.form + '.'; },
     leaguematch: function (s) {
@@ -2545,7 +2554,11 @@
     var b = D.BUSINESSES[id];
     if (!b) return fail('Unknown business.');
     if (s.rules >= 30 && s.pending.length) return fail('Decide on the open event first.'); // a business decision may be waiting
-    if (site != null && (!D.BUSINESS_SITES[site] || !districtOpen(s, site) || visitOnly(site))) return fail('Pick a district for your business.');
+    if (b.minRules && !(s.rules >= b.minRules)) return fail('Unknown business.');
+    var SI = site != null ? D.BUSINESS_SITES[site] : null, abroad = SI && visitOnly(site);
+    if (SI && SI.rules && !(s.rules >= SI.rules)) return fail('Pick a district for your business.');
+    if (abroad && s.rules >= 41 && !(s.bizLicence && s.bizLicence[districtCity(site)])) return fail('You need a ' + D.BIZ_LICENCES[districtCity(site)].name + ' first (get it in ' + D.BIZ_LICENCES[districtCity(site)].where + ').');
+    if (site != null && (!SI || !districtOpen(s, site) || (abroad && !(s.rules >= 41)))) return fail('Pick a district for your business.');
     if (s.rules >= 20 && site == null) return fail('Pick a district for your business.');
     if ((site != null || s.rules >= 20) && s.businesses.length >= 12) return fail('You run 12 businesses already.');
     var cost = price(s, b.price);

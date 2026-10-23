@@ -1498,6 +1498,7 @@
     carrental: { name: 'Luxury car rental', price: 70000000, daily: 900000, power: false, tier: 'high', december: 2.5 },
     haulage:  { name: 'Haulage trucks and freight', price: 60000000, daily: 800000, power: false, risky: true, tier: 'high' },
     nightclub: { name: 'Nightclub share, VI', price: 90000000, daily: 1100000, power: true, weekend: true, tier: 'high', december: 2 },
+    startup:  { name: 'Tech startup (seed round)', price: 5000000, daily: 110000, power: true, risky: true, tier: 'mid', minRules: 41 },
     oilgas:   { name: 'Oil and gas supply services', price: 150000000, daily: 1800000, power: false, risky: true, tier: 'high' }
   };
   var BUSINESS_TIERS = { high: 'High income: big capital, location and networks', mid: 'Mid-range: steady demand, good margins if well run', low: 'Entry level: little capital, daily cash, thin margins' };
@@ -1512,8 +1513,12 @@
     ph_gra: { mult: 1.1, rent: 15000 }, ph_dline: { mult: 1.0, rent: 8000 }, ph_rumuokoro: { mult: 0.9, rent: 5000 },
     acc_osu: { mult: 1.1, rent: 15000 }, acc_central: { mult: 1.0, rent: 9000 }, acc_eastlegon: { mult: 1.15, rent: 26000 },
     cc_town: { mult: 0.95, rent: 7000 },
-    kum_adum: { mult: 1.05, rent: 11000 }, kum_kejetia: { mult: 1.0, rent: 8000 }, kum_ahodwo: { mult: 1.1, rent: 20000 }
+    kum_adum: { mult: 1.05, rent: 11000 }, kum_kejetia: { mult: 1.0, rent: 8000 }, kum_ahodwo: { mult: 1.1, rent: 20000 },
+    // Rules 41: London and Dubai, with a business visa or trade licence (BIZ_LICENCES).
+    ldn_tower: { mult: 1.6, rent: 150000, rules: 41 }, ldn_oxford: { mult: 1.5, rent: 120000, rules: 41 }, ldn_peckham: { mult: 1.3, rent: 60000, rules: 41 },
+    dxb_downtown: { mult: 1.6, rent: 130000, rules: 41 }, dxb_marina: { mult: 1.5, rent: 110000, rules: 41 }, dxb_deira: { mult: 1.3, rent: 50000, rules: 41 }
   };
+  var BIZ_LICENCES = { ldn: { name: 'UK business visa', fee: 2500000, district: 'ldn_tower', where: 'Canary Wharf' }, dxb: { name: 'Dubai trade licence', fee: 1800000, district: 'dxb_downtown', where: 'Downtown Dubai' } };
   // Upgrades: what each business becomes at levels 2 and 3, and its emoji on the map.
   var BUSINESS_GROWTH = {
     pos:      { icon: '🏧', names: ['POS kiosk', 'POS and bill-pay shop', 'Agent banking hub'] },
@@ -1540,6 +1545,7 @@
     carrental: { icon: '🏎️', names: ['Luxury car rental', 'Luxury fleet', 'Chauffeur and fleet company'] },
     haulage:  { icon: '🚛', names: ['Haulage trucks', 'Haulage fleet', 'Freight company'] },
     nightclub: { icon: '🍾', names: ['Nightclub share, VI', 'Nightclub', 'Nightlife group'] },
+    startup:  { icon: '🚀', names: ['Tech startup', 'Series A startup', 'Scale-up'] },
     oilgas:   { icon: '🛢️', names: ['Oil and gas supply services', 'Oilfield services', 'Energy group'] }
   };
   var BUSINESS_LEVEL = { cost: [0, 0.8, 1.6], mult: [1, 1.6, 2.4] };
@@ -2124,7 +2130,8 @@
     ]],
     ['ldn_palace', '👑', 'Buckingham Palace', 'outdoors', 'dome', 'ldn_westminster', 19.2, 11.2, null, 'From outside the railings: the guards, the balcony and St James\'s Park.', [
       act('bkp_guard', 'Watch the Changing of the Guard', 60, 0, 0, { fun: 14 }, null, { days: [0, 2, 4, 6], from: 10, to: 12 }),
-      act('bkp_park', 'Feed the ducks in St James\'s Park', 45, 0, 0, { fun: 8, stress: -8 }, null, { from: 7, to: 19 })
+      act('bkp_park', 'Feed the ducks in St James\'s Park', 45, 0, 0, { fun: 8, stress: -8 }, null, { from: 7, to: 19 }),
+      Object.assign(act('bkp_rooms', 'Tour the State Rooms (summer opening)', 120, gbp(32), 0, { fun: 20 }, null, { months: [6, 7, 8], from: 9, to: 17 }), { minRules: 41, sight: true })
     ]],
     ['ldn_eye', '🎡', 'The London Eye', 'outdoors', 'tree', 'ldn_southbank', 17.0, 16.6, 'londoneye', 'A slow turn in a glass capsule over the Thames.', [
       act('eye_ride', 'Ride the London Eye', 45, gbp(36), 0, { fun: 24, stress: -6 }, null, { from: 10, to: 20 }),
@@ -2154,7 +2161,8 @@
     ]],
     ['ldn_museum', '🏛️', 'The British Museum', 'culture', 'frame', 'ldn_oxford', 17.6, 6.6, null, 'Free to enter: the Rosetta Stone, the Egyptian rooms and the Benin Bronzes.', [
       act('bm_tour', 'Walk the great court and the Egyptian rooms', 120, 0, 0, { fun: 16 }, { charisma: 1 }, { from: 10, to: 17 }),
-      act('bm_benin', 'See the Benin Bronzes, and wonder when they go home', 45, 0, 0, { fun: 8, stress: 4 }, null, { from: 10, to: 17 })
+      act('bm_benin', 'See the Benin Bronzes, and wonder when they go home', 45, 0, 0, { fun: 8, stress: 4 }, null, { from: 10, to: 17 }),
+      Object.assign(act('bm_treasures', 'The Rosetta Stone, the mummies and the Parthenon sculptures', 90, 0, 0, { fun: 16 }, { charisma: 1 }, { from: 10, to: 17 }), { minRules: 41, sight: true })
     ]],
     ['ldn_hydepark', '🌳', 'Hyde Park', 'outdoors', 'tree', 'ldn_notting', 13.4, 10.4, null, 'Lawns, the Serpentine lake and Speakers\' Corner on a Sunday.', [
       act('hp_walk', 'Walk round the Serpentine', 60, 0, 0, { fun: 10, stress: -10 }, null, { from: 6, to: 21 }),
@@ -2234,7 +2242,8 @@
       act('dgm_window', 'Window-shop the designer floor', 90, 0, 0, { fun: 10, stress: 4 }, null, { from: 10, to: 24 }),
       act('dgm_film', 'Catch a film in the big cinema', 150, aed(55), 0, { fun: 28, social: 6 }, null, { from: 11, to: 24 }),
       act('dgm_skate', 'Ice skating in the desert', 60, aed(90), 0, { fun: 20, energy: -8 }, { fitness: 1 }, { from: 10, to: 22 }),
-      act('dgm_food', 'Food court lunch', 30, aed(45), 0, { hunger: 32 }, null, { from: 10, to: 23 })
+      act('dgm_food', 'Food court lunch', 30, aed(45), 0, { hunger: 32 }, null, { from: 10, to: 23 }),
+      Object.assign(act('dgm_aqua', 'Walk through the aquarium tunnel (sharks overhead)', 60, aed(150), 0, { fun: 22 }, null, { from: 10, to: 23 }), { minRules: 41, sight: true })
     ]],
     ['dxb_gold', '💍', 'Deira Gold Souk', 'food', 'basket', 'dxb_deira', 25.4, 3.4, null, 'Lanes of windows full of gold: chains, bangles and wedding sets, sold by the gram.', [
       act('gs_window', 'Window-shop the gold lanes', 45, 0, 0, { fun: 10 }, null, { from: 10, to: 22 }),
@@ -2419,6 +2428,25 @@
       act('bfj_smoked', 'Buy smoked fish off the drums', 15, 3000, 0, { hunger: 20 }, null, { from: 7, to: 18 }),
       act('bfj_nets', 'Mend nets with the fishermen', 180, 0, 1800, { energy: -10, hygiene: -6 }, null, { from: 6, to: 16 }),
       act('bfj_canoe', 'Paddle a canoe round the creek', 45, 1500, 0, { fun: 12, energy: -6 }, { fitness: 1 }, { from: 7, to: 17 })
+    ]],
+    // Rules 41: more sights in London and Dubai (real landmarks keep their names; the resort is made up).
+    ['ldn_toweroflondon', '🏰', 'Tower of London', 'culture', 'dome', 'ldn_tower', 24.0, 11.6, null, 'A fortress more than 900 years old: the Crown Jewels, the White Tower and the Yeoman Warders (Beefeaters).', [
+      Object.assign(act('tol_jewels', 'See the Crown Jewels', 90, gbp(34), 0, { fun: 20 }, null, { from: 9, to: 17 }), { minRules: 41, sight: true }),
+      Object.assign(act('tol_beefeater', 'Join a Beefeater tour of the Tower', 60, 0, 0, { fun: 16, social: 4 }, { charisma: 1 }, { from: 10, to: 16 }), { minRules: 41 }),
+      Object.assign(act('tol_ravens', 'Look for the Tower ravens', 15, 0, 0, { fun: 6 }, null, { from: 9, to: 17 }), { minRules: 41 })
+    ]],
+    ['ldn_abbey', '⛪', 'Westminster Abbey', 'culture', 'dome', 'ldn_westminster', 17.0, 13.4, null, 'The Gothic church where kings and queens are crowned, next to Big Ben and Parliament.', [
+      Object.assign(act('wa_tour', 'Tour the Abbey and Poets\' Corner', 90, gbp(30), 0, { fun: 16, stress: -6 }, null, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 15 }), { minRules: 41, sight: true }),
+      Object.assign(act('wa_evensong', 'Sit in for evensong', 60, 0, 0, { fun: 8, stress: -12 }, null, { from: 17, to: 18 }), { minRules: 41 })
+    ]],
+    ['dxb_frame', '🖼️', 'Dubai Frame', 'outdoors', 'frame', 'dxb_creek', 18.6, 9.4, null, 'A giant golden picture frame: old Dubai on one side, the new towers on the other, and a glass skybridge on top.', [
+      Object.assign(act('df2_sky', 'Cross the glass skybridge', 60, aed(50), 0, { fun: 20, stress: 4 }, null, { from: 9, to: 21 }), { minRules: 41, sight: true }),
+      Object.assign(act('df2_park', 'Walk in Zabeel Park below', 45, 0, 0, { fun: 8, stress: -8 }, null, { from: 7, to: 22 }), { minRules: 41 })
+    ]],
+    ['dxb_palm_resort', '🐬', 'Crescent Grand Resort, the Palm', 'outdoors', 'wave', 'dxb_palm', 6.4, 9.8, null, 'A pink palace of a hotel at the tip of the Palm, with a huge waterpark and an aquarium.', [
+      Object.assign(act('pr_water', 'A day at the resort waterpark', 240, aed(330), 0, { fun: 40, energy: -18, stress: -10 }, { fitness: 1 }, { from: 10, to: 18 }), { minRules: 41, sight: true }),
+      Object.assign(act('pr_aqua', 'The lost-chambers aquarium', 60, aed(140), 0, { fun: 18 }, null, { from: 10, to: 22 }), { minRules: 41 }),
+      Object.assign(act('pr_beach', 'Beach club with the skyline across the water', 180, aed(250), 0, { fun: 26, social: 10, stress: -12 }, null, { from: 10, to: 19 }), { minRules: 41 })
     ]]
   ].forEach(function (q) {
     var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^cc_/.test(q[5]) ? 'capecoast' : /^ldn_/.test(q[5]) ? 'london' : /^dxb_/.test(q[5]) ? 'dubai' : 'lagos'), text: q[9] };
@@ -2805,7 +2833,7 @@
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
     NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
-    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, THEATRE_SHOWS: THEATRE_SHOWS, TH_KIND: TH_KIND, THEATRE_CREW: THEATRE_CREW, YEAR_FESTS: YEAR_FESTS, DETTY_FEST: DETTY_FEST, FEST_NIGHTS: FEST_NIGHTS, FEST_ACTS: FEST_ACTS, insideKind: insideKind
+    GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, THEATRE_SHOWS: THEATRE_SHOWS, TH_KIND: TH_KIND, THEATRE_CREW: THEATRE_CREW, YEAR_FESTS: YEAR_FESTS, BIZ_LICENCES: BIZ_LICENCES, DETTY_FEST: DETTY_FEST, FEST_NIGHTS: FEST_NIGHTS, FEST_ACTS: FEST_ACTS, insideKind: insideKind
   };
 
   // Keyed tables have no prototype, so an id like 'constructor' or '__proto__' from a save, a replay or another player's
