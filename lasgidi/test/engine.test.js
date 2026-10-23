@@ -3560,7 +3560,7 @@ test('rules 42: study paths: enrol, go to class once a day, finish for a qualifi
 
 test('rules 43: Eko Lagoon Lights: Friday and Saturday night shows off Ikoyi, a countdown, watch once a night', () => {
   const s = L.newGame({ seed: 4300, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 43);
+  assert.ok(s.rules >= 43);
   const v0 = L.lagoonShow(s); assert.ok(!v0.live); assert.ok(v0.next > 0 && v0.next <= 7 * 1440); assert.ok(D.LAGOON_SHOW.acts.includes(v0.act));
   s.loc = 'ikoyi'; for (let i = 0; i < 200 && !L.lagoonShow(s).live; i++) { L.wait(s, Math.min(240, Math.max(15, Math.floor(L.lagoonShow(s).next / 15) * 15 || 15))); while (s.pending.length) L.resolveChoice(s, 0); s.loc = 'ikoyi'; s.needs.energy = 90; s.needs.hunger = 90; }
   assert.ok(L.lagoonShow(s).live);
@@ -3569,4 +3569,31 @@ test('rules 43: Eko Lagoon Lights: Friday and Saturday night shows off Ikoyi, a 
   const again = L.availableActions(s).find(x => x.id === 'lagoon_shore'); assert.ok(again.disabled);
   const old = L.newGame({ seed: 4300, origin: 'nepo', goal: 'freestyle', rules: 42 }); old.loc = 'ikoyi';
   assert.ok(!L.availableActions(old).some(x => /^lagoon_/.test(x.id)));
+});
+
+test('rules 44: promotion exam for the top two ranks; campus life; six more careers', () => {
+  for (const [k, bank] of Object.entries(D.PROMO_EXAM)) { assert.ok(D.SKILLS[k], k); assert.ok(bank.length >= 4); for (const q of bank) assert.equal(q[1].length, 3); }
+  for (const k of ['acc_media', 'acc_fintech', 'ldn_nurse', 'ldn_chef', 'dxb_build', 'dxb_estate']) assert.equal(D.CAREERS[k].rules, 44);
+  const s = L.newGame({ seed: 4400, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 44);
+  s.job = { id: 'buka', level: 2, shifts: 50, perfSum: 50, missed: 0, lastShift: -1, since: 0 }; s.skills.cooking = 400;
+  // Promotion to rank 3 waits for the exam.
+  const why = L.promoBlock(s); assert.ok(why);
+  s.job.exam = { lvl: 3, next: 0, tries: 0 };
+  const qs = L.promoQuestions(s); assert.equal(qs.length, 3);
+  // Answer by finding the right option text in the bank.
+  const bank = D.PROMO_EXAM.cooking, ans = qs.map(q => { const b = bank.find(x => x[0] === q.q); return q.opts.indexOf(b[1][b[2]]); });
+  const wrong = ans.map(a => (a + 1) % 3);
+  const s2 = JSON.parse(JSON.stringify(s));
+  assert.ok(L.promoExam(s2, wrong).ok); assert.equal(s2.job.level, 2); assert.ok(s2.job.exam.next > 0); assert.ok(L.promoBlock(s2));
+  assert.ok(L.promoExam(s, ans).ok); assert.equal(s.job.level, 3); assert.equal(s.job.exam, undefined);
+  // Campus life: some week brings an event to a degree student; strikes stop classes only at Nigerian universities.
+  const c = L.newGame({ seed: 4401, origin: 'mid', goal: 'freestyle' }); while (c.pending.length) L.resolveChoice(c, 0);
+  c.study = { unilag_cs: { n: 0, since: 0 } }; const kinds = new Set();
+  for (let w = 0; w < 40; w++) { c.t = w * 7 * 1440 + 9 * 60; const cw = L.campusWeek(c); if (cw) kinds.add(cw.kind); }
+  assert.ok(kinds.has('strike') && kinds.has('exams'), [...kinds].join());
+  c.study = { legon_econ: { n: 0, since: 0 } };
+  for (let w = 0; w < 40; w++) { c.t = w * 7 * 1440 + 9 * 60; const cw = L.campusWeek(c); assert.ok(!cw || cw.kind !== 'strike'); }
+  const old = L.newGame({ seed: 4401, origin: 'mid', goal: 'freestyle', rules: 43 }); old.study = { unilag_cs: { n: 0, since: 0 } };
+  assert.equal(L.campusWeek(old), null);
 });

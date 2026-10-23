@@ -1324,3 +1324,5 @@ button.need:focus-visible { outline: 2px solid #2f6fd0; }
 .onb-city .onb-e { font-size: 30px; }
 .onb-city small { display: block; margin-top: 2px; }
 .onb-city .slogan { font-style: italic; opacity: .8; }
+.campus-news { border-left: 4px solid #f2b600; background: rgba(242,182,0,.08); border-radius: 10px; }
+.promo { border: 2px solid #16a34a; border-radius: 14px; }
