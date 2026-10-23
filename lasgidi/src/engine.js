@@ -495,7 +495,9 @@
     if (startHome) s.replay.home = startHome;
     if (look) s.replay.look = look;
     if (outfit) s.replay.outfit = outfit;
-    log(s, o.text, 'story');
+    // A life abroad (rules 42) gets its own opening line, not the Lagos one.
+    if (abroad) log(s, o.name + ': you land in ' + D.CITIES[abroad].name + ' with ' + naira(startCash) + ' and a ' + D.HOMES[s.home].name.charAt(0).toLowerCase() + D.HOMES[s.home].name.slice(1) + ' waiting.', 'story');
+    else log(s, o.text, 'story');
     if (startHome) log(s, 'You chose to start in ' + D.HOMES[startHome].name + '.', 'story');
     if (heir) log(s, 'You are ' + s.name + ', child of ' + heir.parent + '. Your share of the estate: ' + naira(heir.inherit) + '.' + (heir.school === 'intl' ? ' Your international school education counts as a degree.' : ''), 'story');
     if (abroad) log(s, 'A new life in ' + D.CITIES[abroad].name + '. ' + (D.LOCAL && D.LOCAL[abroad] ? D.LOCAL[abroad].slogan : ''), 'story');
