@@ -1315,3 +1315,12 @@ button.need:focus-visible { outline: 2px solid #2f6fd0; }
 .idea-k.sel { border-color: #2563eb; background: rgba(37,99,235,.08); }
 .idea-text { width: 100%; box-sizing: border-box; border-radius: 14px; border: 1px solid rgba(0,0,0,.12); padding: 12px; font: inherit; background: rgba(0,0,0,.03); resize: vertical; }
 .idea-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+.sheet.grad { position: relative; overflow: hidden; }
+.confetti { position: absolute; inset: 0; pointer-events: none; }
+.confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; opacity: .9; animation: confettiFall 2.6s linear infinite; }
+@keyframes confettiFall { to { transform: translateY(520px) rotate(540deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
+.onb-citygrid .onb-city { text-align: left; }
+.onb-city .onb-e { font-size: 30px; }
+.onb-city small { display: block; margin-top: 2px; }
+.onb-city .slogan { font-style: italic; opacity: .8; }
