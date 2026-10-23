@@ -1092,7 +1092,7 @@
         var cr = t.alert.amt > 0;
         return '<div class="toast"><b class="' + (cr ? 'cr' : 'dr') + '">' + (cr ? 'CR' : 'DR') + ' ' + N(Math.abs(t.alert.amt)) + '</b><span>' + esc(t.alert.memo) + ' · ' + (t.alert.acct === 'bank' ? 'Bank' : 'Cash') + '</span></div>';
       }
-      return '<div class="toast"><span class="msg">' + esc(t.msg) + '</span></div>';
+      return '<div class="toast"><span class="msg">' + esc(locText(t.msg)) + '</span></div>';
     }).join('');
   }
 
@@ -1128,7 +1128,7 @@
     var good = function (a) { var f = a.fx || {}; return k === 'stress' ? -(f.stress || 0) : f[k] || 0; };
     var acts = availMemo().filter(function (a) { return !a.disabled && good(a) > 0 && !a.minigame; }).sort(function (a, b) { return good(b) - good(a); }).slice(0, 3);
     return '<div class="need-tip" role="dialog" aria-label="' + esc(labels[k]) + '"><b>' + icons[k] + ' ' + esc(labels[k]) + '</b><p>' + esc(NEED_TIPS[k]) + '</p>' +
-      (acts.length ? '<div class="list">' + acts.map(function (a) { return '<div class="item"><div><h3>' + esc(a.label) + '</h3><div class="meta"><span class="gain">+' + good(a) + '</span>' + (a.price ? '<span class="cost num">' + N(a.price) + '</span>' : '') + '</div></div><button class="btn sm go" id="nt-' + esc(a.id) + '" data-act="' + esc(a.id) + '">Do</button></div>'; }).join('') + '</div>' : '<p class="note">Nothing here raises it right now. Try another district or come back later.</p>') + '</div>';
+      (acts.length ? '<div class="list">' + acts.map(function (a) { return '<div class="item"><div><h3>' + esc(locText(a.label)) + '</h3><div class="meta"><span class="gain">+' + good(a) + '</span>' + (a.price ? '<span class="cost num">' + N(a.price) + '</span>' : '') + '</div></div><button class="btn sm go" id="nt-' + esc(a.id) + '" data-act="' + esc(a.id) + '">Do</button></div>'; }).join('') + '</div>' : '<p class="note">Nothing here raises it right now. Try another district or come back later.</p>') + '</div>';
   }
   function needsView() {
     var labels = { hunger: 'Belle', energy: 'Energy', fun: 'Fun', social: 'Social', hygiene: 'Hygiene', stress: 'Calm' };
@@ -1181,6 +1181,13 @@
     return out;
   }
   var money = N;
+  // Engine text (goal titles, action labels, reasons, toasts) is written in naira. Abroad, amounts like ₦100k or ₦2,500
+  // read in the local money. Past log lines keep their naira, since they happened where they happened.
+  function locText(t) {
+    if (typeof t !== 'string' || t.indexOf('₦') < 0) return t;
+    var loc = localOf(S && L.cityOf(S)); if (!loc || loc.rate === 1) return t;
+    return t.replace(/-?₦\s?(\d[\d,]*(?:\.\d+)?)\s?(k|m)?\b/gi, function (m, num, unit) { var v = parseFloat(num.replace(/,/g, '')) * (unit ? (unit.toLowerCase() === 'k' ? 1e3 : 1e6) : 1); return (m.charAt(0) === '-' ? '-' : '') + N(v).replace(/ ≈.*/, ''); });
+  }
   // Rules 42: things only sold in some cities show up when you are there.
   function localBuy(x) { return !(x.rules && !(S.rules >= x.rules)) && (!x.city || x.city.indexOf(L.cityOf(S)) >= 0); }
   function personOf(c) { var x = localOf(c); return x ? x.person : 'Lagosian'; }
@@ -3168,7 +3175,7 @@
     var qs = L.activeQuests(S);
     if (!qs.length) return '';
     return '<div class="quests" role="group" aria-label="Quests">' + qs.map(function (q) {
-      return '<button type="button" class="quest' + (q.done ? ' done' : '') + '" id="q-' + q.id + '" data-quest="' + q.id + '" title="' + esc(q.title + ': ' + (q.done ? 'claim ' + N(q.reward) : q.hint)) + '" aria-label="' + esc(q.title + '. ' + (q.done ? 'Claim ' + N(q.reward) : q.hint)) + '"><span class="q-ic">' + q.icon + '</span><span class="q-t"><b>' + esc(q.title) + '</b><small>' +
+      return '<button type="button" class="quest' + (q.done ? ' done' : '') + '" id="q-' + q.id + '" data-quest="' + q.id + '" title="' + esc(locText(q.title) + ': ' + (q.done ? 'claim ' + N(q.reward) : q.hint)) + '" aria-label="' + esc(locText(q.title) + '. ' + (q.done ? 'Claim ' + N(q.reward) : q.hint)) + '"><span class="q-ic">' + q.icon + '</span><span class="q-t"><b>' + esc(locText(q.title)) + '</b><small>' +
         (q.done ? 'Claim ' + N(q.reward) : esc(q.hint)) + '</small></span></button>';
     }).join('') + '</div>';
   }
@@ -3176,7 +3183,7 @@
     var got = S.quests || {};
     return '<div class="section"><h3>🎯 Quests</h3><p class="note">Small goals to get you started. Each pays once.</p><div class="list">' + D.QUESTS.map(function (q) {
       var claimed = got[q.id] != null, done = L.questDone(S, q.id);
-      return '<div class="item"><div><h3>' + q.icon + ' ' + esc(q.title) + '</h3><div class="meta">' + (claimed ? '<span class="gain">Claimed</span>' : done ? '<span class="gain">Done</span>' : '<span>' + esc(q.hint) + '</span>') + '<span class="num">' + N(L.price(S, q.reward)) + '</span></div></div>' +
+      return '<div class="item"><div><h3>' + q.icon + ' ' + esc(locText(q.title)) + '</h3><div class="meta">' + (claimed ? '<span class="gain">Claimed</span>' : done ? '<span class="gain">Done</span>' : '<span>' + esc(q.hint) + '</span>') + '<span class="num">' + N(L.price(S, q.reward)) + '</span></div></div>' +
         (claimed ? '' : '<button class="btn sm' + (done ? '' : ' ghost') + '" id="qa-' + q.id + '" data-quest="' + q.id + '">' + (done ? 'Claim' : 'Go') + '</button>') + '</div>';
     }).join('') + '</div></div>';
   }
@@ -3351,8 +3358,8 @@
     if (a.whenLabel) meta.push('<span>' + esc(a.whenLabel) + '</span>');
     if (a.late) meta.push('<span class="cost">Late: 30% docked</span>');
     if (a.collapseRisk && !a.disabled) meta.push('<span class="cost">' + esc(a.collapseRisk) + '</span>');
-    return '<div class="item act' + (a.isWork ? ' work' : '') + '"><span class="act-ic" aria-hidden="true">' + actIcon(a) + '</span><div><h3>' + esc(a.label) + '</h3><div class="meta">' + meta.join('') + '</div>' +
-      (a.note ? '<div class="act-note">' + esc(a.note) + '</div>' : '') + (a.disabled ? '<div class="why">' + esc(a.disabled) + '</div>' : '') + '</div>' +
+    return '<div class="item act' + (a.isWork ? ' work' : '') + '"><span class="act-ic" aria-hidden="true">' + actIcon(a) + '</span><div><h3>' + esc(locText(a.label)) + '</h3><div class="meta">' + meta.join('') + '</div>' +
+      (a.note ? '<div class="act-note">' + esc(a.note) + '</div>' : '') + (a.disabled ? '<div class="why">' + esc(locText(a.disabled)) + '</div>' : '') + '</div>' +
       (a.minigame ? '<button class="btn go" id="act-' + a.id + '" data-minigame="' + a.minigame + '"' + (a.disabled ? ' disabled' : '') + '>▶ Play</button></div>'
         : '<button class="btn' + (a.isWork ? ' go' : '') + '" id="act-' + a.id + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled' : '') + '>' + (a.isWork ? 'Clock in' : 'Do') + '</button></div>');
   }
@@ -3448,7 +3455,7 @@
     var booked = S.stalls && Object.keys(S.stalls).some(function (k) { return k.indexOf(key + '-') === 0; });
     if (booked) return '<p class="fc-meta">🛒 Your food stall is booked for this festival.</p>';
     var a = availMemo().filter(function (x) { return x.id === 'stall_' + key; })[0];
-    if (a) return '<div class="inline"><button class="btn sm" id="stall-' + key + '-' + where + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled title="' + esc(a.disabled) + '"' : '') + '>🛒 Rent a food stall · ' + N(a.price) + '</button></div>' + (a.disabled ? '<p class="fc-meta">' + esc(a.disabled) + '</p>' : '');
+    if (a) return '<div class="inline"><button class="btn sm" id="stall-' + key + '-' + where + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled title="' + esc(locText(a.disabled)) + '"' : '') + '>🛒 Rent a food stall · ' + N(a.price) + '</button></div>' + (a.disabled ? '<p class="fc-meta">' + esc(locText(a.disabled)) + '</p>' : '');
     var food = (S.businesses || []).some(function (b) { return /^(buka|catering|smallchops)$/.test(b.id); });
     return '<p class="fc-meta">🛒 ' + (food ? 'Come to ' + esc((D.DISTRICTS[stallDistrict(key)] || {}).name || 'the festival') + ' to rent a stall for your food business.' : 'Own a buka, a small chops stand or a catering business to rent a stall here.') + '</p>';
   }
@@ -3500,7 +3507,7 @@
   function goalsCard() {
     var g = L.dailyGoals ? L.dailyGoals(S) : null; if (!g) return '';
     return '<div class="list"><div class="item"><div><h3>🎯 Today\u2019s goals' + (g.streak > 1 ? ' · 🔥 ' + g.streak + '-day streak' : '') + '</h3><div class="meta"><span>' + (g.done ? '<span class="gain">Done: ' + N(g.reward) + ' paid</span>' : 'All three pay ' + N(g.reward)) + '</span></div></div></div>' +
-      g.list.map(function (x) { var ok = x.have >= x.need; return '<div class="item"><div><h3>' + (ok ? '✅ ' : x.icon + ' ') + esc(x.label) + '</h3><div class="meta"><span>' + x.have + ' / ' + x.need + '</span></div></div></div>'; }).join('') + '</div>';
+      g.list.map(function (x) { var ok = x.have >= x.need; return '<div class="item"><div><h3>' + (ok ? '✅ ' : x.icon + ' ') + esc(locText(x.label)) + '</h3><div class="meta"><span>' + x.have + ' / ' + x.need + '</span></div></div></div>'; }).join('') + '</div>';
   }
   function doView() {
     var acts = L.availableActions(S);
@@ -3975,7 +3982,7 @@
   function rideView() {
     var here = L.availableActions(S).filter(function (a) { return a.special === 'ridehail' || /ride-hail|ride hail|drive for/i.test(a.label); });
     return '<div class="section"><h3>🚕 Ride</h3><p class="note">To go somewhere, pick a place on the map: its card shows every way to get there and the fare. With your own car you can also drive for a ride-hail app.</p>' +
-      (here.length ? '<div class="list">' + here.map(function (a) { return '<div class="item"><div><h3>' + esc(a.label) + '</h3><div class="meta"><span>' + esc(a.note || '') + '</span></div></div><button class="btn sm go" id="ride-' + a.id + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled title="' + esc(a.disabled) + '"' : '') + '>Drive</button></div>'; }).join('') + '</div>' : '<p class="note">Buy a car (Dealers) to drive for a ride-hail app.</p>') +
+      (here.length ? '<div class="list">' + here.map(function (a) { return '<div class="item"><div><h3>' + esc(locText(a.label)) + '</h3><div class="meta"><span>' + esc(a.note || '') + '</span></div></div><button class="btn sm go" id="ride-' + a.id + '" data-act="' + a.id + '"' + (a.disabled ? ' disabled title="' + esc(locText(a.disabled)) + '"' : '') + '>Drive</button></div>'; }).join('') + '</div>' : '<p class="note">Buy a car (Dealers) to drive for a ride-hail app.</p>') +
       '<div class="inline"><button class="btn sm go" id="ride-map" data-tab="map">🗺️ Open the map</button><button class="btn sm ghost" id="ride-travel" data-app="travel">✈️ Other cities</button></div></div>';
   }
   // Every festival, match and concert in every city, with when it is on.
@@ -4040,7 +4047,7 @@
       html += '<h4 class="dl-group">' + esc(area[0]) + '</h4><div class="list">' + rows.map(function (r) {
         var a = r.a, here = S.loc === r.d, open = L.inWindow(S, a.when), sameCity = L.cityOf(S) === 'lagos';
         var btn = here ? (r.pl ? '<button class="btn sm" id="sg-' + a.id + '" data-place="' + r.pl.id + '">Open</button>' : '') : sameCity ? '<button class="btn sm ghost" id="sg-go-' + a.id + '" data-tripto="' + r.d + '" data-tab="map">Go there</button>' : '<button class="btn sm ghost" id="sg-fly-' + a.id + '" data-app="travel">✈️ Lagos</button>';
-        return '<div class="item"><div><h3>' + esc(r.pl ? r.pl.icon + ' ' + r.pl.name : a.label) + (seen[a.id] ? ' <span class="gain">✓</span>' : '') + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[r.d].name) + '</span><span>' + esc(whenText(a.when)) + '</span>' + (a.cost ? '<span class="cost num">' + N(L.price(S, a.cost)) + '</span>' : '<span>Free</span>') + (here && open ? '<span class="gain">Open now</span>' : '') + '</div><div class="act-note">' + esc(a.label) + '</div></div>' + btn + '</div>';
+        return '<div class="item"><div><h3>' + esc(r.pl ? r.pl.icon + ' ' + r.pl.name : a.label) + (seen[a.id] ? ' <span class="gain">✓</span>' : '') + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[r.d].name) + '</span><span>' + esc(whenText(a.when)) + '</span>' + (a.cost ? '<span class="cost num">' + N(L.price(S, a.cost)) + '</span>' : '<span>Free</span>') + (here && open ? '<span class="gain">Open now</span>' : '') + '</div><div class="act-note">' + esc(locText(a.label)) + '</div></div>' + btn + '</div>';
       }).join('') + '</div>';
     });
     return html + '</div>';
@@ -4056,7 +4063,7 @@
       html += '<h4 class="dl-group">' + esc(g) + '</h4><div class="list">' + byGroup[g].map(function (r) {
         var a = r.a, SP = D.SPORTS[a.sport], now = L.inWindow(S, a.when), here = S.loc === r.d, sameCity = L.districtCity(r.d) === L.cityOf(S);
         var go = here ? (now ? '<span class="gain">Open now</span>' : '') : sameCity ? '<button class="btn sm ghost" id="sp-go-' + a.id + '" data-tripto="' + r.d + '" data-tab="map">Go there</button>' : '';
-        return '<div class="item"><div><h3>' + SP[1] + ' ' + esc(a.label) + (played[a.sport] ? ' <span class="gain">✓</span>' : '') + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[r.d].name) + '</span><span>' + esc(whenText(a.when)) + '</span>' + (a.cost ? '<span class="cost num">' + N(L.price(S, a.cost)) + '</span>' : '<span>Free</span>') + (a.compete ? '<span class="gain">Prize ' + N(L.price(S, a.compete.prize)) + '</span>' : '') + '</div></div>' + go + '</div>';
+        return '<div class="item"><div><h3>' + SP[1] + ' ' + esc(locText(a.label)) + (played[a.sport] ? ' <span class="gain">✓</span>' : '') + '</h3><div class="meta"><span>' + esc(D.DISTRICTS[r.d].name) + '</span><span>' + esc(whenText(a.when)) + '</span>' + (a.cost ? '<span class="cost num">' + N(L.price(S, a.cost)) + '</span>' : '<span>Free</span>') + (a.compete ? '<span class="gain">Prize ' + N(L.price(S, a.compete.prize)) + '</span>' : '') + '</div></div>' + go + '</div>';
       }).join('') + '</div>';
     });
     return html + '</div>';
@@ -4426,7 +4433,7 @@
     var acts = L.availableActions(S);
     return '<div class="section" style="padding-top:0"><h3>🎮 Mini-games</h3><p class="note">Arcade games that pay as part of your life, with capped takings, so skill helps but never prints money.</p><div class="list">' + rows.map(function (g) {
       var a = acts.filter(function (x) { return x.id === g.act; })[0], can = a && !a.disabled;
-      return '<div class="item"><div><h3>' + g.icon + ' ' + esc(g.name) + '</h3><div class="meta"><span>' + esc(g.where) + '</span><span>' + esc(g.when) + '</span></div><div class="act-note">' + esc(g.best) + '</div>' + (a && a.disabled ? '<div class="why">' + esc(a.disabled) + '</div>' : '') + '</div>' +
+      return '<div class="item"><div><h3>' + g.icon + ' ' + esc(g.name) + '</h3><div class="meta"><span>' + esc(g.where) + '</span><span>' + esc(g.when) + '</span></div><div class="act-note">' + esc(g.best) + '</div>' + (a && a.disabled ? '<div class="why">' + esc(locText(a.disabled)) + '</div>' : '') + '</div>' +
         (can ? '<button class="btn go" id="game-' + g.kind + '" data-minigame="' + g.kind + '">▶ Play</button>' : L.districtCity(g.district) !== L.cityOf(S) ? '<button class="btn ghost" id="game-go-' + g.kind + '" data-app="travel">✈️ Fly there</button>' : '<button class="btn ghost" id="game-go-' + g.kind + '" data-tripto="' + g.district + '" data-tab="map">Go there</button>') + '</div>';
     }).join('') + '</div>' + careerCard('games') + leagueCard('games') + '</div>';
   }
