@@ -99,7 +99,9 @@
   // Robben Island, Bo-Kaap, Camps Bay, Kirstenbosch, Boulders Beach). You live there with no visa: homes, jobs and
   // businesses as a resident, and you arrive with more money where life costs more. Each city sells its own clothes and cars.
   // 43 adds Eko Lagoon Lights: a floating ring stage on the lagoon off Ikoyi, shows on Friday and Saturday nights.
-  var RULES = 43;
+  // 44 adds a promotion exam for the top two ranks of every career, campus life (strikes, exam week, parties, student
+  // union elections) while you study for a degree, and six more careers in Accra, London and Dubai.
+  var RULES = 44;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -615,7 +617,8 @@
   }
   function onNewWeek(s) {
     var w = week(s);
-    if (s.rules >= 40 && s.league && w % 8 === 7) leagueTitle(s, Math.floor(w / 8)); // the table is final after 7 matchdays
+    if (s.rules >= 40 && s.league && w % 8 === 7) leagueTitle(s, Math.floor(w / 8));
+    var cwk = campusWeek(s); if (cwk) log(s, cwk.ev.icon + ' ' + cwk.ev.name + ' at ' + D.STUDY[cwk.course].where + ': ' + cwk.ev.text, 'info'); // the table is final after 7 matchdays
     var prevMonth = (START_MONTH + Math.floor((w - 1) / 4)) % 12;
     // Inflation: 0.4%–1.2% a week. Wages chase it at half speed.
     var inf = (0.004 + rand(s) * 0.008) * cbnOf(s, 'infl', 1);
@@ -1110,6 +1113,7 @@
     if (s.rules >= 40) list = list.concat(leagueActions(s));
     if (s.rules >= 42) list = list.concat(studyActions(s));
     if (s.rules >= 43) list = list.concat(lagoonActions(s));
+    if (s.rules >= 44) list = list.concat(campusActions(s));
     if (s.rules >= 41) Object.keys(D.BIZ_LICENCES).forEach(function (c) { var B0 = D.BIZ_LICENCES[c]; if (s.loc === B0.district && !(s.bizLicence && s.bizLicence[c])) list.push({ id: 'bizlic_' + c, label: 'Apply for a ' + B0.name + ' (open businesses in ' + D.CITIES[c].name + ')', mins: 120, cost: B0.fee, fx: { stress: 8 }, special: 'bizlicence', city: c, minRules: 41 }); });
     if (s.rules >= 38 && s.loc === 'vi') list.push(STAGE_ACTS.manager, STAGE_ACTS.headline); // Eko Convention Centre
     list = list.concat(npcActions(s)).concat(loveActions(s));
@@ -1201,6 +1205,7 @@
     if (s.pending.length) return 'Decide on the open event first';
     if (!inWindow(s, a.when)) return 'Only ' + windowLabel(a.when);
     if (s.rules >= 42 && a.earn && !a.permitted && s.loc && visitBar(s, s.loc)) return 'Visitors cannot work here';
+    if (a.special === 'studyclass' && D.STUDY[a.study] && D.STUDY[a.study].kind === 'degree') { var cw0 = campusWeek(s); if (cw0 && cw0.kind === 'strike' && cw0.course === a.study) return 'Lecturers\' strike: no classes this week'; }
     if (a.special === 'studyenrol' && s.study && Object.keys(s.study).length >= MAX_STUDY) return 'You are on ' + MAX_STUDY + ' courses already: finish one first'; // rules 42: paid work in a visit-only city is for residents
     if (a.req) {
       for (var k in a.req) if (skillLevel(s, k) < a.req[k]) return 'Needs ' + D.SKILLS[k] + ' ' + a.req[k];
@@ -1363,6 +1368,7 @@
     studyclass: function (s, a) {
       var P = D.STUDY[a.study], st = s.study && s.study[a.study]; if (!st) return 'Enrol first.';
       st.n++;
+      var cw1 = P.kind === 'degree' ? campusWeek(s) : null; if (cw1 && cw1.kind === 'exams' && cw1.course === a.study && st.n < P.classes) st.n++; // exam week counts double
       if (st.n < P.classes) return (P.kind === 'apprentice' ? 'Day ' : 'Class ') + st.n + ' of ' + P.classes + '.';
       delete s.study[a.study]; s.quals = s.quals || {}; s.quals[a.study] = day(s);
       if (P.kind === 'degree') { s.edu.degree = true; unlock(s, 'graduate'); }
@@ -1550,6 +1556,46 @@
   }
   // Options are rotated per question and day, so the right answer is not always first.
   function ivRot(s, cid, j) { return parseInt(fnv(s.seed + ':ivo:' + cid + ':' + day(s) + ':' + j), 16) % 3; }
+  // Rules 44: the promotion exam. Three of the field's questions, options turned by a hash so the right one moves.
+  function promoPicks(s) { var e = s.job.exam, bank = D.PROMO_EXAM[D.CAREERS[s.job.id].skill] || [], h = parseInt(fnv(s.seed + ':px:' + s.job.id + ':' + e.lvl + ':' + e.tries), 16), skip = h % bank.length; return bank.map(function (q, i) { return i; }).filter(function (i) { return i !== skip; }).slice(0, 3); }
+  function promoRot(s, j) { return parseInt(fnv(s.seed + ':pxr:' + s.job.id + ':' + s.job.exam.tries + ':' + j), 16) % 3; }
+  function promoQuestions(s) {
+    if (!s.job || !s.job.exam) return [];
+    var bank = D.PROMO_EXAM[D.CAREERS[s.job.id].skill] || [];
+    return promoPicks(s).map(function (j) { var q = bank[j], r = promoRot(s, j); return { q: q[0], opts: [0, 1, 2].map(function (k) { return q[1][(k + r) % 3]; }) }; });
+  }
+  function promoBlock(s) { if (!s.job || !s.job.exam) return 'No promotion exam waiting'; if (s.job.exam.next > day(s)) return 'You can resit in ' + (s.job.exam.next - day(s)) + ' day' + (s.job.exam.next - day(s) === 1 ? '' : 's'); if (s.pending.length) return 'Decide on the open event first'; return ''; }
+  function promoExam(s, answers) {
+    var why = promoBlock(s); if (why) return fail(why + '.');
+    var c = D.CAREERS[s.job.id], bank = D.PROMO_EXAM[c.skill] || [], picks = promoPicks(s), right = 0;
+    picks.forEach(function (j, i) { var r = promoRot(s, j), a = Array.isArray(answers) ? answers[i] | 0 : -1; if (a >= 0 && a < 3 && (a + r) % 3 === bank[j][2]) right++; });
+    advance(s, 60);
+    if (right >= 2) {
+      s.job.level = s.job.exam.lvl; s.job.shifts = 0; s.job.perfSum = 0; delete s.job.exam;
+      unlock(s, 'promoted'); if (s.job.level === 4) unlock(s, 'top');
+      log(s, '📋 Passed the promotion exam (' + right + ' of 3). Promoted to ' + c.titles[s.job.level] + '!', 'good');
+      return finish(s, ok('Passed ' + right + ' of 3. Promoted to ' + c.titles[s.job.level] + '!'));
+    }
+    s.job.exam.tries++; s.job.exam.next = day(s) + 3;
+    log(s, '📋 Promotion exam: ' + right + ' of 3. Not this time; you can resit in 3 days.', 'bad');
+    return finish(s, ok('You got ' + right + ' of 3. You need 2. Resit in 3 days.'));
+  }
+  // Rules 44: campus life this week, from the calendar (no dice), for anyone on a degree course.
+  var CAMPUS_ROLL = [null, null, 'strike', 'exams', 'party', 'election'];
+  function nigeriaDistrict(d) { var c = districtCity(d); return c === 'lagos' || c === 'abuja' || c === 'ph'; }
+  function campusWeek(s) {
+    if (!(s.rules >= 44) || !s.study) return null;
+    var deg = Object.keys(s.study).filter(function (k) { return D.STUDY[k] && D.STUDY[k].kind === 'degree'; })[0]; if (!deg) return null;
+    var k = CAMPUS_ROLL[parseInt(fnv(s.seed + ':campus:' + week(s)), 16) % CAMPUS_ROLL.length]; if (!k) return null;
+    if (k === 'strike' && !nigeriaDistrict(D.STUDY[deg].district)) k = 'exams';
+    return { kind: k, course: deg, district: D.STUDY[deg].district, ev: D.CAMPUS_EVENTS[k] };
+  }
+  function campusActions(s) {
+    var cw = campusWeek(s); if (!cw || s.loc !== cw.district) return [];
+    if (cw.kind === 'party') return [{ id: 'campus_party', label: '🎉 Campus send-forth party', mins: 180, cost: 2000, fx: { fun: 26, social: 16, energy: -12, stress: -8 }, once: true, minRules: 44, when: { from: 18, to: 24 } }];
+    if (cw.kind === 'election') return [{ id: 'campus_vote', label: '🗳️ Vote in the student union election and stay for the debate', mins: 120, fx: { social: 12, fun: 8 }, xp: { charisma: 1 }, once: true, minRules: 44, when: { from: 10, to: 18 } }];
+    return [];
+  }
   function interviewQuestions(s, cid) {
     if (!D.INTERVIEWS[cid]) return [];
     return interviewPicks(s, cid).map(function (j) { var q = D.INTERVIEWS[cid][j], r = ivRot(s, cid, j); return { q: q[0], opts: [0, 1, 2].map(function (k) { return q[1][(k + r) % 3]; }) }; });
@@ -1678,6 +1724,13 @@
     var c = D.CAREERS[s.job.id];
     var avg = s.job.perfSum / s.job.shifts;
     if (s.job.shifts >= need.shifts && skillLevel(s, c.skill) >= need.skill && avg >= need.perf) {
+      // Rules 44: the top two ranks need the promotion exam first.
+      if (s.rules >= 44 && s.job.level + 1 >= 3) {
+        if (s.job.exam) return null;
+        s.job.exam = { lvl: s.job.level + 1, next: day(s), tries: 0 };
+        log(s, '📋 You are up for promotion to ' + c.titles[s.job.level + 1] + '. Sit the promotion exam (Phone → Careers).', 'good');
+        return 'Up for promotion: sit the promotion exam (Phone → Careers).';
+      }
       s.job.level++;
       s.job.shifts = 0; s.job.perfSum = 0;
       unlock(s, 'promoted');
@@ -5579,7 +5632,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, startAbroad: startAbroad, visitBar: visitBar, studyState: studyState, lagoonShow: lagoonShow, qualFor: qualFor, golfOdds: golfOdds, leagueView: leagueView, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, startAbroad: startAbroad, visitBar: visitBar, studyState: studyState, lagoonShow: lagoonShow, campusWeek: campusWeek, promoQuestions: promoQuestions, promoBlock: promoBlock, promoExam: recorded('px', promoExam), qualFor: qualFor, golfOdds: golfOdds, leagueView: leagueView, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,
