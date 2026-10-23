@@ -44,6 +44,8 @@
     dxb: { box: [-2, 32, -2, 27], land: [[[-2, 21], [4, 16.6], [10, 12.2], [16, 7.8], [22, 3.4], [22.6, 2.96], [23.0, 5.0], [23.6, 7.6], [23.8, 10.0], [24.6, 10.2], [25.0, 8.0], [24.4, 5.0], [24.0, 1.93], [28, -1], [32, -2], [32, 27], [-2, 27]],
         [[4.6, 15.8], [6.4, 15.4], [6.6, 13.2], [7.8, 12.0], [7.4, 10.2], [5.6, 9.4], [3.6, 10.0], [3.0, 11.8], [4.4, 13.0]]],
       water: [], label: [['Arabian Gulf', 6, 4], ['Dubai Creek', 24.2, 7.4]] }, // the Creek is a notch in the coastline, so the 3D map cuts it too
+    ctn: { box: [-2, 32, -2, 28], land: [[[3, 6], [8, 1.8], [12, 1.6], [16, 1.2], [22, 1.4], [32, 0], [32, 16], [28, 16.5], [25, 18], [24, 21], [23.8, 24], [23, 26.5], [2, 26.5], [2.6, 18], [3.4, 10]]],
+      water: [], label: [['Table Bay', 14, -0.6], ['Atlantic Ocean', 0, 20], ['False Bay', 28, 22]] },
     ldn: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 27], [-2, 27]]],
       water: [[[-2, 13.6], [6, 13.8], [12, 14.4], [16, 14.0], [19, 14.6], [22, 15.6], [26, 14.4], [32, 14.2], [32, 15.6], [26, 15.8], [22, 17.0], [19, 16.0], [16, 15.4], [12, 15.8], [6, 15.2], [-2, 15.0]]], label: [['River Thames', 9, 14.6]] }
   };
@@ -117,7 +119,15 @@
     ldn_westminster:{ h: [8, 20], dens: 0.6, r: 2.8, foot: [0.6, 0.85], roof: '#7a7f86', wall: '#d9c79a', trees: 0.3 },
     ldn_southbank:{ h: [6, 22], dens: 0.6, r: 2.8, foot: [0.6, 0.85], roof: '#8a9aa4', wall: '#c4ccd2', trees: 0.2 },
     ldn_tower:    { h: [10, 40], dens: 0.6, r: 3.0, foot: [0.55, 0.8], roof: '#9fb3c2', wall: '#8aa0b2' },
-    ldn_peckham:  { h: [4, 9], dens: 0.8, r: 2.6, foot: [0.6, 0.85], roof: '#7a4a3a', wall: '#a8664a', trees: 0.15 }
+    ldn_peckham:  { h: [4, 9], dens: 0.8, r: 2.6, foot: [0.6, 0.85], roof: '#7a4a3a', wall: '#a8664a', trees: 0.15 },
+    ctn_airport:  { h: [3, 9], dens: 0.35, r: 3.0, foot: [0.55, 0.8], roof: '#c4ccd2', wall: '#9aa6b0' },
+    ctn_waterfront:{ h: [4, 12], dens: 0.6, r: 2.6, foot: [0.55, 0.8], roof: '#b8463a', wall: '#e8e0d0' },
+    ctn_citybowl: { h: [6, 22], dens: 0.75, r: 2.8, foot: [0.55, 0.8], roof: '#8a9aa8', wall: '#d8d4c8' },
+    ctn_bokaap:   { h: [2, 4], dens: 0.85, r: 2.4, foot: [0.6, 0.85], roof: '#e36aa0', wall: '#7ad0c4' },
+    ctn_campsbay: { h: [2, 6], dens: 0.5, r: 2.8, foot: [0.55, 0.8], roof: '#f2efe6', wall: '#ffffff', trees: 0.4 },
+    ctn_obs:      { h: [2, 5], dens: 0.75, r: 2.6, foot: [0.6, 0.85], roof: '#a85a3a', wall: '#d8c0a0', trees: 0.15 },
+    ctn_newlands: { h: [2, 5], dens: 0.4, r: 3.0, foot: [0.55, 0.8], roof: '#7a5a42', wall: '#e8e0d0', trees: 0.6 },
+    ctn_simonstown:{ h: [2, 4], dens: 0.35, r: 2.6, foot: [0.55, 0.8], roof: '#5a6a7a', wall: '#f2efe6', trees: 0.3 }
   };
   // Typical share of time each district has light.
   var GRID = { vi: 0.9, ikoyi: 0.95, lekki: 0.75, island: 0.6, ikeja: 0.6, yaba: 0.5, surulere: 0.55, festac: 0.55, ajah: 0.6, mushin: 0.35, oshodi: 0.4, ikorodu: 0.4,
@@ -127,7 +137,8 @@
     cc_kakum: 0.3, cc_ucc: 0.6, cc_town: 0.5, cc_elmina: 0.4,
     dxb_marina: 1, dxb_palm: 1, dxb_jumeirah: 1, dxb_downtown: 1, dxb_creek: 0.98, dxb_deira: 0.97, dxb_airport: 1, dxb_desert: 0.9,
     kum_airport: 0.65, kum_manhyia: 0.7, kum_bantama: 0.45, kum_kejetia: 0.45, kum_adum: 0.55, kum_knust: 0.6, kum_asokwa: 0.4, kum_ahodwo: 0.65, kum_bosomtwe: 0.25,
-    ldn_heathrow: 0.7, ldn_wembley: 0.55, ldn_notting: 0.5, ldn_oxford: 0.4, ldn_westminster: 0.5, ldn_southbank: 0.5, ldn_tower: 0.55, ldn_peckham: 0.45 };
+    ldn_heathrow: 0.7, ldn_wembley: 0.55, ldn_notting: 0.5, ldn_oxford: 0.4, ldn_westminster: 0.5, ldn_southbank: 0.5, ldn_tower: 0.55, ldn_peckham: 0.45,
+    ctn_airport: 0.85, ctn_waterfront: 0.9, ctn_citybowl: 0.85, ctn_bokaap: 0.8, ctn_campsbay: 0.88, ctn_obs: 0.75, ctn_newlands: 0.85, ctn_simonstown: 0.8 }; // Cape Town: load shedding now and then
   var FERRIES = [['ikorodu', 'island'], ['ikorodu', 'ikoyi'], ['island', 'lekki'], ['ikoyi', 'lekki']];
 
   function inPoly(x, y, pts) {
@@ -606,6 +617,7 @@
       if (CITY === 'dxb') drawDubai(g, s);
       if (CITY === 'capecoast') drawCapeCoast(g, s);
       if (CITY === 'ldn') drawLondon(g, s);
+      if (CITY === 'ctn') drawCapeTown(g, s);
       if (CITY === 'ph') drawPH(g, s);
 
       // Estate plots: a paved pad, lawns for duplexes and the mansion, a pool.
@@ -845,6 +857,13 @@
       [[15.6, 18.6], [6.2, 18.8]].forEach(function (c) { var q = toScreen(c[0], c[1], 0); g.fillStyle = theme.dark ? '#d8d4c8' : '#fbfaf5'; g.fillRect(q.x - 10 * s, q.y - 8 * s, 20 * s, 8 * s); g.fillRect(q.x - 12 * s, q.y - 11 * s, 5 * s, 11 * s); g.fillRect(q.x + 7 * s, q.y - 11 * s, 5 * s, 11 * s); g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = Math.max(0.5, 0.6 * s); g.strokeRect(q.x - 10 * s, q.y - 8 * s, 20 * s, 8 * s); });
       poly(g, [[10, -2], [24, -2], [23, 6], [11, 6]], theme.dark ? '#24402a' : '#5f9a52'); // Kakum forest
       g.strokeStyle = theme.road; g.lineWidth = Math.max(1.5, 2.4 * s); g.beginPath(); [[4, 17.4], [9, 17.6], [14, 16.4], [20, 14.6], [26, 12]].forEach(function (p, i) { var c = toScreen(p[0], p[1], 0); if (i) g.lineTo(c.x, c.y); else g.moveTo(c.x, c.y); }); g.stroke(); // the coast road
+    }
+    function drawCapeTown(g, s) {
+      // Table Mountain's flat top over the City Bowl, Lion's Head beside it, and the M3 down to Simon's Town.
+      poly(g, [[9.5, 12.8], [11, 10.2], [18.5, 10.2], [20, 12.8], [18, 14.6], [11.5, 14.6]], theme.dark ? '#3a4a3a' : '#7f9a6e');
+      poly(g, [[11, 10.2], [18.5, 10.2], [18.2, 10.9], [11.3, 10.9]], theme.dark ? '#56604e' : '#a9b89a');
+      poly(g, [[7.6, 9.8], [8.8, 8.2], [9.8, 9.8], [8.8, 10.8]], theme.dark ? '#3e4e3c' : '#8aa476'); // Lion's Head
+      g.strokeStyle = theme.road; g.lineWidth = Math.max(1.5, 2.4 * s); g.beginPath(); [[17, 8], [20, 12], [18.4, 17], [21, 21], [22, 23]].forEach(function (p, i) { var c = toScreen(p[0], p[1], 0); if (i) g.lineTo(c.x, c.y); else g.moveTo(c.x, c.y); }); g.stroke(); // the M3
     }
     function drawDubai(g, s) {
       // The Burj Khalifa's needle, the fronds of the Palm, a sweep of desert sand and Sheikh Zayed Road.

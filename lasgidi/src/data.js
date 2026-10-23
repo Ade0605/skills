@@ -76,6 +76,14 @@
     dxb_deira:    { city: 'dxb', name: 'Deira',        x: 26, y: 4,  side: 'mainland', blurb: 'The gold and spice souks, cheap hotels and a lot of Naija traders.' },
     dxb_airport:  { city: 'dxb', name: 'DXB Airport',  x: 28, y: 10, side: 'mainland', blurb: 'One of the busiest airports in the world, open all night.' },
     dxb_desert:   { city: 'dxb', name: 'The desert',   x: 24, y: 23, side: 'mainland', blurb: 'Red dunes past the last road: 4x4s, camels and a camp under the stars.' },
+    ctn_airport:   { city: 'ctn', name: 'Cape Town Airport', x: 28, y: 12, side: 'mainland', blurb: 'CPT: the airport out on the Flats, twenty minutes from town without traffic.' },
+    ctn_waterfront:{ city: 'ctn', name: 'V&A Waterfront', x: 14, y: 3,  side: 'mainland', blurb: 'The old harbour: shops, seals, the ferry to Robben Island and Table Mountain behind it all.' },
+    ctn_citybowl:  { city: 'ctn', name: 'City Bowl',      x: 17, y: 8,  side: 'mainland', blurb: 'Long Street, the Company\'s Garden and the cableway road up the mountain.' },
+    ctn_bokaap:    { city: 'ctn', name: 'Bo-Kaap',        x: 12, y: 7,  side: 'mainland', blurb: 'Bright painted houses on cobbled streets and the smell of Cape Malay curry.' },
+    ctn_campsbay:  { city: 'ctn', name: 'Camps Bay',      x: 5,  y: 13, side: 'mainland', blurb: 'White sand, palm trees and the Twelve Apostles over the beach.' },
+    ctn_obs:       { city: 'ctn', name: 'Observatory',    x: 22, y: 8,  side: 'mainland', blurb: 'Students, murals, cheap rooms and a few Naija kitchens.' },
+    ctn_newlands:  { city: 'ctn', name: 'Newlands',       x: 17, y: 17, side: 'mainland', blurb: 'Oak trees, the rugby ground and Kirstenbosch garden on the mountain\'s back.' },
+    ctn_simonstown:{ city: 'ctn', name: 'Simon\'s Town',  x: 22, y: 23, side: 'mainland', blurb: 'A navy town on False Bay with penguins on the beach.' },
     ldn_peckham:   { city: 'ldn', name: 'Peckham',        x: 22, y: 22, side: 'mainland', blurb: 'Rye Lane: Naija shops, jollof, salons and church on Sunday.' }
   };
 
@@ -279,6 +287,8 @@
     ldnhotel: { name: 'London hotel room', icon: '🏨', price: 240000, sleep: 1.0, gen: false, fx: { hygiene: 30 }, where: ['ldn_heathrow', 'ldn_wembley', 'ldn_notting', 'ldn_oxford', 'ldn_westminster', 'ldn_southbank', 'ldn_tower', 'ldn_peckham'] },
     dxbhotel: { name: 'Dubai hotel room', icon: '🏨', price: 170000, sleep: 1.0, gen: false, fx: { hygiene: 30 }, where: ['dxb_marina', 'dxb_palm', 'dxb_jumeirah', 'dxb_downtown', 'dxb_creek', 'dxb_deira', 'dxb_airport'] },
     dxbhostel: { name: 'Bunk in a Deira guesthouse', icon: '🛏️', price: 40000, sleep: 0.85, gen: false, fx: { hygiene: 16, social: 4 }, where: ['dxb_deira', 'dxb_creek'] },
+    ctnhotel: { name: 'Cape Town hotel room', icon: '🏨', price: 70000, sleep: 1.0, gen: false, fx: { hygiene: 30 }, where: ['ctn_airport', 'ctn_waterfront', 'ctn_citybowl', 'ctn_bokaap', 'ctn_campsbay', 'ctn_obs', 'ctn_newlands', 'ctn_simonstown'] },
+    ctnbackpack: { name: 'Bunk in a Long Street backpackers', icon: '🛏️', price: 18000, sleep: 0.85, gen: false, fx: { hygiene: 16, social: 6 }, where: ['ctn_citybowl', 'ctn_obs'] },
     ldnbnb: { name: 'Room at an aunty\'s in Peckham', icon: '🛏️', price: 60000, sleep: 0.9, gen: false, fx: { hygiene: 20, social: 6 }, where: ['ldn_peckham'] },
     guest:    { name: 'Guest house',         icon: '🛏️', price: 8000,   sleep: 0.8,  where: ['ikorodu', 'mushin', 'oshodi', 'festac', 'ajah', 'abj_nyanya', 'abj_kubwa', 'ph_borokiri', 'ph_dline', 'ph_rumuokoro', 'ph_choba'] },
     hotel:    { name: 'Hotel room',          icon: '🏨', price: 35000,  sleep: 1.0,  gen: true, fx: { hygiene: 30 }, where: ['ikeja', 'surulere', 'yaba', 'island', 'ikoyi', 'vi', 'lekki', 'abj_maitama', 'abj_wuse', 'abj_jabi', 'abj_asokoro', 'abj_garki', 'abj_airport', 'ph_airport', 'ph_gra', 'ph_transamadi', 'ph_oldgra'] },
@@ -315,6 +325,7 @@
     kumasi: { name: 'Kumasi', airport: 'kum_airport', park: 'kum_kejetia', hospital: 'kum_bantama', hospitalName: 'Komfo Anokye Teaching Hospital', rules: 25, country: 'Ghana' },
     dxb:   { name: 'Dubai', airport: 'dxb_airport', park: 'dxb_airport', hospital: 'dxb_downtown', hospitalName: 'Rashid Hospital', rules: 26, country: 'UAE', visit: true },
     capecoast: { name: 'Cape Coast', airport: 'cc_town', park: 'cc_town', hospital: 'cc_town', hospitalName: 'Cape Coast Teaching Hospital', rules: 28, country: 'Ghana', noAir: true },
+    ctn:   { name: 'Cape Town', airport: 'ctn_airport', park: 'ctn_airport', hospital: 'ctn_obs', hospitalName: 'Groote Schuur Hospital', rules: 42, country: 'South Africa', visit: true },
     ldn:   { name: 'London', airport: 'ldn_heathrow', park: 'ldn_heathrow', hospital: 'ldn_southbank', hospitalName: 'St Thomas\' Hospital', rules: 23, country: 'UK', visit: true }
   };
   // Local flavour per city (display only, never in the ledger): the money prices show in (naira per unit), what people
@@ -386,14 +397,17 @@
       ] }
   };
   CLUBS.abjgolf.acts = CLUBS.golf.acts.map(function (a) { return JSON.parse(JSON.stringify(a)); });
-  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR', dxb: 'DXB' };
+  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR', dxb: 'DXB', ctn: 'CPT' };
   // London (rules 23): prices are written in pounds and kept in naira at a fixed £1 = ₦2,000; the visa is a fee plus proof of funds.
   function gbp(p) { return Math.round(p * 2000); }
   var UK_VISA = { fee: 250000, funds: 3000000, wait: 5, days: 28, fare: 1200000, mins: 390 };
   // Rules 26: a visa per visit-only city. The UAE tourist visa: a smaller fee, a shorter wait, 30 days.
   var UAE_VISA = { name: 'UAE tourist visa', fee: 160000, funds: 1500000, wait: 3, days: 30, fare: 850000, mins: 375 };
-  var VISAS = { ldn: Object.assign({ name: 'UK visitor visa' }, UK_VISA), dxb: UAE_VISA };
+  // Rules 42: Cape Town, with a South African visitor visa.
+  var SA_VISA = { name: 'South African visitor visa', fee: 120000, funds: 1200000, wait: 4, days: 30, fare: 700000, mins: 360 };
+  var VISAS = { ldn: Object.assign({ name: 'UK visitor visa' }, UK_VISA), dxb: UAE_VISA, ctn: SA_VISA };
   function aed(p) { return Math.round(p * 420); } // a fixed ₦420 to the dirham
+  function zar(p) { return Math.round(p * 85); } // a fixed ₦85 to the rand
   var AIR = { rushFrom: 6, rushTo: 9, rush: 1.5, insure: 0.06, lostBag: 25000, lostOdds: 0.08, jetFuel: 5000000, charter: 12000000, chopperCity: 1500000, chopperIntercity: 4000000 };
   // Flight and bus times (minutes) and base fares between cities.
   var INTERCITY = {
@@ -417,6 +431,8 @@
     ['kum_airport', 'kum_manhyia'], ['kum_airport', 'kum_knust'], ['kum_manhyia', 'kum_kejetia'], ['kum_bantama', 'kum_kejetia'], ['kum_kejetia', 'kum_adum'], ['kum_kejetia', 'kum_knust'],
     ['kum_adum', 'kum_asokwa'], ['kum_adum', 'kum_ahodwo'], ['kum_bantama', 'kum_ahodwo'], ['kum_knust', 'kum_asokwa'], ['kum_asokwa', 'kum_bosomtwe'],
     ['dxb_marina', 'dxb_palm'], ['dxb_marina', 'dxb_jumeirah'], ['dxb_palm', 'dxb_jumeirah'], ['dxb_jumeirah', 'dxb_downtown'], ['dxb_downtown', 'dxb_creek'], ['dxb_creek', 'dxb_deira'],
+    ['ctn_waterfront', 'ctn_bokaap'], ['ctn_waterfront', 'ctn_citybowl'], ['ctn_bokaap', 'ctn_citybowl'], ['ctn_bokaap', 'ctn_campsbay'], ['ctn_citybowl', 'ctn_campsbay'], ['ctn_citybowl', 'ctn_obs'],
+    ['ctn_obs', 'ctn_airport'], ['ctn_obs', 'ctn_newlands'], ['ctn_newlands', 'ctn_simonstown'], ['ctn_newlands', 'ctn_airport'], ['ctn_campsbay', 'ctn_newlands'],
     ['dxb_deira', 'dxb_airport'], ['dxb_downtown', 'dxb_airport'], ['dxb_downtown', 'dxb_desert'], ['dxb_airport', 'dxb_desert'], ['dxb_marina', 'dxb_desert'],
     ['ldn_heathrow', 'ldn_wembley'], ['ldn_heathrow', 'ldn_notting'], ['ldn_wembley', 'ldn_notting'], ['ldn_notting', 'ldn_oxford'], ['ldn_oxford', 'ldn_westminster'], ['ldn_westminster', 'ldn_southbank'], ['ldn_westminster', 'ldn_tower'], ['ldn_southbank', 'ldn_peckham'], ['ldn_tower', 'ldn_peckham']
   ];
@@ -518,6 +534,15 @@
     cc_ucc_flat:       { name: 'Chamber and hall near UCC', district: 'cc_ucc', rent: 24000, power: 0.8, sleep: 1, type: 'flat2', x: 24.4, y: 11.6 },
     kum_bt_room:       { name: 'Room in a compound house, Bantama', district: 'kum_bantama', rent: 6000, power: 0.7, sleep: 0.9, type: 'room', x: 5.6, y: 10.6 },
     kum_ah_flat:       { name: '2-bed flat, Ahodwo', district: 'kum_ahodwo', rent: 34000, power: 0.85, sleep: 1, type: 'flat2', x: 9.6, y: 20.4 },
+    ldn_pk_room:       { name: 'Room in a shared house, Peckham', district: 'ldn_peckham', rent: 50000, power: 1, sleep: 0.95, type: 'room', x: 21.4, y: 21.4, rules: 42 },
+    ldn_wb_flat:       { name: '1-bed flat, Wembley', district: 'ldn_wembley', rent: 120000, power: 1, sleep: 1, type: 'miniflat', x: 8.6, y: 4.6, rules: 42 },
+    ldn_nh_house:      { name: 'Painted townhouse, Notting Hill', district: 'ldn_notting', rent: 320000, power: 1, sleep: 1.15, type: 'luxury', x: 11.4, y: 9.6, rules: 42 },
+    dxb_dr_room:       { name: 'Shared room, Deira', district: 'dxb_deira', rent: 40000, power: 1, sleep: 0.9, type: 'share', x: 26.4, y: 4.6, rules: 42 },
+    dxb_mr_studio:     { name: 'Studio in a Marina tower', district: 'dxb_marina', rent: 100000, power: 1, sleep: 1.05, type: 'selfcon', x: 3.6, y: 21.4, rules: 42 },
+    dxb_pl_villa:      { name: 'Villa on the Palm', district: 'dxb_palm', rent: 300000, power: 1, sleep: 1.2, type: 'mansion', x: 5.0, y: 13.0, rules: 42 },
+    ctn_ob_room:       { name: 'Room in a student house, Observatory', district: 'ctn_obs', rent: 10000, power: 0.8, sleep: 0.95, type: 'room', x: 22.4, y: 8.6, rules: 42 },
+    ctn_cb_flat:       { name: '2-bed flat, City Bowl', district: 'ctn_citybowl', rent: 38000, power: 0.82, sleep: 1, type: 'flat2', x: 16.6, y: 8.8, rules: 42 },
+    ctn_cb_villa:      { name: 'Villa above Camps Bay', district: 'ctn_campsbay', rent: 130000, power: 0.85, sleep: 1.15, type: 'mansion', x: 5.6, y: 12.0, rules: 42 },
     kum_ah_house:      { name: 'House in Ahodwo', district: 'kum_ahodwo', rent: 72000, power: 0.9, sleep: 1.1, type: 'duplex', x: 8.4, y: 21.0 },
     acc_el_house:      { name: 'House in East Legon', district: 'acc_eastlegon', rent: 90000, power: 0.9, sleep: 1.1, type: 'duplex', x: 26.4, y: 6.6 },
     ph_oldgra_duplex:  { name: 'Duplex, Old GRA', district: 'ph_oldgra', rent: 90000, power: 0.85, sleep: 1.1, type: 'duplex', x: 14.6, y: 16.2, daily: { stress: -3 } },
@@ -624,6 +649,27 @@
     cc_fishco:   { name: 'Canoe Fishing Company (Elmina)', district: 'cc_elmina', skill: 'fitness', start: 5, end: 13, days: [0,1,2,3,4,5],
       titles: ['Net Hand', 'Crew', 'Bosun', 'Canoe Captain', 'Fleet Owner'],
       pay: [4000, 6200, 10000, 16500, 28000], req: [0, 2, 4, 6, 9] },
+    ldn_care:    { name: 'Care Work (London)', district: 'ldn_peckham', skill: 'charisma', start: 7, end: 17, days: [0,1,2,3,4,5], rules: 42,
+      titles: ['Care Assistant', 'Senior Carer', 'Team Leader', 'Care Home Manager', 'Care Agency Owner'],
+      pay: [16000, 24000, 36000, 56000, 90000], req: [0, 2, 4, 6, 9] },
+    ldn_fintech: { name: 'Fintech (Canary Wharf)', district: 'ldn_tower', skill: 'tech', start: 9, end: 18, days: [0,1,2,3,4], rules: 42,
+      titles: ['Graduate Analyst', 'Developer', 'Senior Developer', 'Engineering Lead', 'CTO'],
+      pay: [22000, 34000, 52000, 80000, 130000], req: [0, 3, 5, 7, 9] },
+    dxb_hotel:   { name: 'Hospitality (Dubai)', district: 'dxb_downtown', skill: 'charisma', start: 8, end: 18, days: [0,1,2,3,4,5], rules: 42,
+      titles: ['Front Desk', 'Guest Relations', 'Duty Manager', 'Hotel Manager', 'Hotel Group Director'],
+      pay: [13000, 20000, 31000, 48000, 80000], req: [0, 2, 4, 6, 9] },
+    dxb_trade:   { name: 'Trading House (Deira)', district: 'dxb_deira', skill: 'hustle', start: 8, end: 19, days: [0,1,2,3,4,5], rules: 42,
+      titles: ['Runner', 'Sales Clerk', 'Buyer', 'Export Manager', 'Trading House Owner'],
+      pay: [12000, 19000, 30000, 47000, 78000], req: [0, 2, 4, 6, 9] },
+    ctn_guide:   { name: 'Tour Guiding (Cape Town)', district: 'ctn_waterfront', skill: 'charisma', start: 8, end: 17, days: [1,2,3,4,5,6], rules: 42,
+      titles: ['Trainee Guide', 'Guide', 'Senior Guide', 'Tour Lead', 'Tour Company Owner'],
+      pay: [6000, 9500, 15000, 24000, 40000], req: [0, 2, 4, 6, 9] },
+    ctn_film:    { name: 'Film Crew (Cape Town)', district: 'ctn_citybowl', skill: 'craft', start: 7, end: 18, days: [0,1,2,3,4,5], rules: 42,
+      titles: ['Runner', 'Grip', 'Camera Assistant', 'Director of Photography', 'Production House Owner'],
+      pay: [6500, 10000, 16000, 26000, 44000], req: [0, 2, 4, 6, 9] },
+    ctn_wine:    { name: 'Wine Estate (Constantia)', district: 'ctn_newlands', skill: 'cooking', start: 8, end: 17, days: [0,1,2,3,4,5], rules: 42,
+      titles: ['Picker', 'Cellar Hand', 'Tasting Room Lead', 'Winemaker', 'Estate Owner'],
+      pay: [5500, 9000, 14500, 23000, 39000], req: [0, 2, 4, 6, 9] },
     kum_kente:   { name: 'Kente Weaving (Kumasi)', district: 'kum_manhyia', skill: 'craft', start: 8, end: 17, days: [0,1,2,3,4,5],
       titles: ['Thread Winder', 'Apprentice Weaver', 'Weaver', 'Master Weaver', 'Kente House Owner'],
       pay: [4000, 6400, 10500, 17500, 30000], req: [0, 2, 4, 6, 9] },
@@ -808,6 +854,20 @@
     kum_kejetia: [
       { id: 'kum_kej_kenkey', label: 'Kenkey and fried fish at the lorry park', mins: 30, cost: 1700, fx: { hunger: 34 }, when: { from: 6, to: 21 } },
       { id: 'kum_kej_gig', label: 'Carry loads through the market (kayayo)', mins: 180, earn: 2000, fx: { energy: -18, hygiene: -10 }, xp: { fitness: 1 }, gig: true, when: { days: [0,1,2,3,4,5], from: 6, to: 17 } }
+    ],
+    ctn_waterfront: [
+      { id: 'ctn_wf_busk', label: 'Busk for the tourists by the clock tower', mins: 120, earn: 2200, fx: { energy: -8, fun: 6 }, xp: { music: 1 }, gig: true, when: { from: 10, to: 20 }, minRules: 42 },
+      { id: 'ctn_wf_seals', label: 'Watch the seals by the harbour', mins: 30, fx: { fun: 8, stress: -3 }, when: { from: 7, to: 20 }, minRules: 42 }
+    ],
+    ctn_citybowl: [
+      { id: 'ctn_cb_long', label: 'A night out on Long Street', mins: 180, cost: 6000, fx: { fun: 24, social: 14, energy: -14 }, when: { from: 19, to: 24 }, minRules: 42 },
+      { id: 'ctn_cb_garden', label: 'Walk the Company\'s Garden', mins: 45, fx: { fun: 6, stress: -6 }, when: { from: 7, to: 19 }, minRules: 42 }
+    ],
+    ctn_obs: [
+      { id: 'ctn_ob_tutor', label: 'Tutor a first-year for an afternoon', mins: 180, earn: 2400, fx: { energy: -8, social: 4 }, xp: { tech: 1 }, gig: true, when: { from: 13, to: 20 }, minRules: 42 }
+    ],
+    ctn_campsbay: [
+      { id: 'ctn_cbay_sun', label: 'Sundowners on the beach', mins: 90, cost: 3000, fx: { fun: 16, social: 8, stress: -8 }, when: { from: 16, to: 21 }, minRules: 42 }
     ],
     kum_adum: [
       { id: 'kum_adum_walk', label: 'Window-shop down the Adum streets', mins: 60, fx: { fun: 8 }, when: { from: 8, to: 19 } },
@@ -1261,6 +1321,13 @@
     beads:      { name: 'Coral beads', slot: 'acc', fabric: 'plain', color: '#e2463f', price: 150000, tags: ['owambe'], status: 3 },
     watch:      { name: 'Luxury watch', slot: 'acc', fabric: 'plain', color: '#c9a77a', price: 4000000, tags: ['office', 'club'], status: 20 },
     chain:      { name: 'Iced-out chain', slot: 'acc', fabric: 'plain', color: '#d8dce2', price: 6500000, tags: ['club'], status: 25 },
+    kente_stole: { name: 'Kente cloth (Accra)', slot: 'dress', fabric: 'asooke', color: '#e0a400', price: 180000, tags: ['owambe'], city: ['accra', 'kumasi', 'capecoast'], rules: 42 },
+    ldn_coat:    { name: 'Savile-style wool coat (London)', slot: 'top', fabric: 'plain', color: '#22314a', price: 1400000, tags: ['office', 'club'], city: ['ldn'], rules: 42 },
+    ldn_brogues: { name: 'Brogues (London)', slot: 'shoes', fabric: 'plain', color: '#5a3a22', price: 420000, tags: ['office'], city: ['ldn'], rules: 42 },
+    dxb_kandura: { name: 'White kandura (Dubai)', slot: 'dress', fabric: 'plain', color: '#f6f4ee', price: 210000, tags: ['office', 'owambe'], city: ['dxb'], rules: 42 },
+    dxb_gold:    { name: 'Gold souk chain (Dubai)', slot: 'acc', fabric: 'plain', color: '#e3b23c', price: 3200000, tags: ['club', 'owambe'], city: ['dxb'], rules: 42 },
+    ctn_madiba:  { name: 'Patterned silk shirt (Cape Town)', slot: 'top', fabric: 'ankara', color: '#2f6b8f', price: 95000, tags: ['owambe', 'office'], city: ['ctn'], rules: 42 },
+    ctn_rugby:   { name: 'Green and gold rugby jersey (Cape Town)', slot: 'top', fabric: 'plain', color: '#1d6b3a', price: 60000, tags: ['gym'], city: ['ctn'], rules: 42 },
     umbrella:   { name: 'Umbrella', slot: 'acc', fabric: 'plain', color: '#2f6fa0', price: 4500, tags: ['rain'] },
     // Issued free at NYSC camp, never sold.
     nysc_khaki: { name: 'NYSC khaki', slot: 'top', fabric: 'plain', color: '#a8976b', price: 0, tags: ['office'], gift: true }
@@ -1316,6 +1383,10 @@
     rr_autobiography: { name: 'Highlander Autograph SUV', icon: '🚙', kind: 'car', tier: 'premium', price: 350000000, speed: 35, fuel: 320, upkeep: 240000, status: 22, color: '#17181a' },
     lexus_lx: { name: 'Kyoto grand SUV', icon: '🚙', kind: 'car', tier: 'premium', price: 250000000, speed: 34, fuel: 320, upkeep: 180000, status: 16, color: '#efe9dc' },
     escalade: { name: 'Detroit full-size SUV', icon: '🚙', kind: 'car', tier: 'premium', price: 200000000, speed: 34, fuel: 330, upkeep: 140000, status: 14, color: '#17181a' },
+    ldn_hatch:    { name: 'Thames mini hatch (London)', icon: '🚗', kind: 'car', tier: 'premium', price: 60000000, speed: 30, fuel: 90, upkeep: 90000, status: 8, color: '#1f4e3d', city: ['ldn'], rules: 42 },
+    dxb_cruiser:  { name: 'Dune Cruiser 4x4 (Dubai)', icon: '🚙', kind: 'car', tier: 'premium', price: 140000000, speed: 34, fuel: 300, upkeep: 110000, status: 12, color: '#f2efe6', city: ['dxb'], rules: 42 },
+    dxb_jet:      { name: 'Gulf Falcon private jet (Dubai)', icon: '🛩️', kind: 'jet', price: 24000000000, speed: 0, fuel: 0, upkeep: 32000000, status: 170, color: '#e9e4d8', city: ['dxb'], rules: 42 },
+    ctn_bakkie:   { name: 'Cape bakkie (Cape Town)', icon: '🛻', kind: 'car', price: 22000000, speed: 31, fuel: 160, upkeep: 20000, status: 4, color: '#c94a2a', city: ['ctn'], rules: 42 },
     phenom_300: { name: 'Swift 300 light jet', icon: '🛩️', kind: 'jet', tier: 'light', price: 17000000000, speed: 0, fuel: 0, upkeep: 14000000, status: 130, color: '#e9e6df' },
     citation_latitude: { name: 'Meridian midsize jet', icon: '🛩️', kind: 'jet', tier: 'light', price: 28000000000, speed: 0, fuel: 0, upkeep: 22000000, status: 145, color: '#f4f3ec' },
     pc24: { name: 'Alpine 24 jet', icon: '🛩️', kind: 'jet', tier: 'light', price: 17000000000, speed: 0, fuel: 0, upkeep: 14000000, status: 130, color: '#e9e6df' },
@@ -1530,6 +1601,7 @@
     kum_adum: { mult: 1.05, rent: 11000 }, kum_kejetia: { mult: 1.0, rent: 8000 }, kum_ahodwo: { mult: 1.1, rent: 20000 },
     // Rules 41: London and Dubai, with a business visa or trade licence (BIZ_LICENCES).
     ldn_tower: { mult: 1.6, rent: 150000, rules: 41 }, ldn_oxford: { mult: 1.5, rent: 120000, rules: 41 }, ldn_peckham: { mult: 1.3, rent: 60000, rules: 41 },
+ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2, rent: 30000, rules: 42 }, ctn_obs: { mult: 1.05, rent: 15000, rules: 42 },
     dxb_downtown: { mult: 1.6, rent: 130000, rules: 41 }, dxb_marina: { mult: 1.5, rent: 110000, rules: 41 }, dxb_deira: { mult: 1.3, rent: 50000, rules: 41 }
   };
   var BIZ_LICENCES = { ldn: { name: 'UK business visa', fee: 2500000, district: 'ldn_tower', where: 'Canary Wharf' }, dxb: { name: 'Dubai trade licence', fee: 1800000, district: 'dxb_downtown', where: 'Downtown Dubai' } };
@@ -1834,6 +1906,40 @@
     cool: { name: 'Cool head', icon: '🧊', text: 'Go-slow, NEPA, landlord: nothing shakes you.', needs: { stress: -15 } },
     social: { name: 'Life of the party', icon: '🎉', text: 'You know somebody at every owambe.', needs: { social: 20, fun: 10 } },
     earlybird: { name: 'Early bird', icon: '🌅', text: 'Awake at 5am without an alarm, full of energy.', needs: { energy: 10, hunger: 5 } }
+  };
+  // Rules 42: study paths. Degrees at the universities, apprenticeships at workshops, short certificates in the evenings.
+  // fee: paid once to enrol (naira before inflation); classes: sessions to finish; xp per class in the path's skill;
+  // stipend: a small pay per apprenticeship day. Finishing gives a qualification on your CV and a head start in careers
+  // that use the same skill (you start one rank up). Degrees also count as a university degree. resident: only for
+  // people who live in that (visit-only) city.
+  var WKD = [0, 1, 2, 3, 4], MSA = [0, 1, 2, 3, 4, 5];
+  var STUDY = {
+    unilag_cs:   { kind: 'degree', name: 'BSc Computer Science', where: 'University of Lagos', district: 'yaba', skill: 'tech', fee: 180000, classes: 24, xp: 4, mins: 180, when: { days: WKD, from: 8, to: 16 } },
+    unilag_bus:  { kind: 'degree', name: 'BSc Business Administration', where: 'University of Lagos', district: 'yaba', skill: 'charisma', fee: 160000, classes: 24, xp: 4, mins: 180, when: { days: WKD, from: 8, to: 16 } },
+    lasu_music:  { kind: 'degree', name: 'BA Creative Arts (Music)', where: 'LASU, Ojo', district: 'festac', skill: 'music', fee: 120000, classes: 24, xp: 4, mins: 180, when: { days: WKD, from: 8, to: 16 } },
+    yabatech_hm: { kind: 'degree', name: 'HND Hospitality and Catering', where: 'Yaba College of Technology', district: 'yaba', skill: 'cooking', fee: 90000, classes: 20, xp: 4, mins: 180, when: { days: WKD, from: 8, to: 16 } },
+    uniabuja_law:{ kind: 'degree', name: 'LLB Law', where: 'University of Abuja', district: 'abj_airport', skill: 'charisma', fee: 200000, classes: 28, xp: 4, mins: 180, when: { days: WKD, from: 8, to: 16 } },
+    uniport_eng: { kind: 'degree', name: 'BEng Petroleum Engineering', where: 'University of Port Harcourt', district: 'ph_choba', skill: 'craft', fee: 220000, classes: 28, xp: 4, mins: 180, when: { days: WKD, from: 8, to: 16 } },
+    legon_econ:  { kind: 'degree', name: 'BSc Economics', where: 'University of Ghana, Legon', district: 'acc_legon', skill: 'charisma', fee: 200000, classes: 24, xp: 4, mins: 180, when: { days: WKD, from: 8, to: 16 } },
+    knust_eng:   { kind: 'degree', name: 'BSc Computer Engineering', where: 'KNUST, Kumasi', district: 'kum_knust', skill: 'tech', fee: 190000, classes: 24, xp: 4, mins: 180, when: { days: WKD, from: 8, to: 16 } },
+    ldn_msc:     { kind: 'degree', name: 'MSc Finance', where: 'a London university, Westminster', district: 'ldn_westminster', skill: 'tech', fee: 3000000, classes: 20, xp: 5, mins: 180, when: { days: WKD, from: 9, to: 17 }, resident: true },
+    ctn_film:    { kind: 'degree', name: 'BA Film and Media', where: 'a Cape Town university, Observatory', district: 'ctn_obs', skill: 'craft', fee: 600000, classes: 22, xp: 4, mins: 180, when: { days: WKD, from: 8, to: 16 }, resident: true },
+    tailor:      { kind: 'apprentice', name: 'Tailoring apprenticeship', where: "the tailor's shop, Festac", district: 'festac', skill: 'craft', fee: 15000, classes: 16, xp: 4, stipend: 1500, mins: 240, when: { days: MSA, from: 8, to: 14 } },
+    mechanic:    { kind: 'apprentice', name: 'Auto mechanic apprenticeship', where: 'a Ladipo workshop, Mushin', district: 'mushin', skill: 'craft', fee: 20000, classes: 18, xp: 4, stipend: 1500, mins: 240, when: { days: MSA, from: 8, to: 14 } },
+    phonefix:    { kind: 'apprentice', name: 'Phone repair apprenticeship', where: 'Computer Village, Ikeja', district: 'ikeja', skill: 'tech', fee: 20000, classes: 16, xp: 4, stipend: 1500, mins: 240, when: { days: MSA, from: 9, to: 15 } },
+    chef:        { kind: 'apprentice', name: 'Kitchen apprenticeship', where: 'a buka kitchen on Lagos Island', district: 'island', skill: 'cooking', fee: 10000, classes: 16, xp: 4, stipend: 1500, mins: 240, when: { days: MSA, from: 7, to: 13 } },
+    kente:       { kind: 'apprentice', name: 'Kente weaving apprenticeship', where: 'Bonwire Kente Village', district: 'kum_manhyia', skill: 'craft', fee: 12000, classes: 16, xp: 4, stipend: 1500, mins: 240, when: { days: MSA, from: 8, to: 14 } },
+    bootcamp:    { kind: 'cert', name: 'Coding bootcamp certificate', where: 'the Yaba tech hub', district: 'yaba', skill: 'tech', fee: 60000, classes: 8, xp: 5, mins: 120, when: { days: WKD, from: 17, to: 21 } },
+    marketing:   { kind: 'cert', name: 'Digital marketing certificate', where: 'Computer Village, Ikeja', district: 'ikeja', skill: 'hustle', fee: 40000, classes: 8, xp: 5, mins: 120, when: { days: WKD, from: 17, to: 21 } },
+    production:  { kind: 'cert', name: 'Music production certificate', where: 'the recording studio, Surulere', district: 'surulere', skill: 'music', fee: 50000, classes: 8, xp: 5, mins: 120, when: { days: WKD, from: 17, to: 21 } },
+    trainer:     { kind: 'cert', name: 'Personal trainer certificate', where: 'Surulere', district: 'surulere', skill: 'fitness', fee: 35000, classes: 8, xp: 5, mins: 120, when: { days: MSA, from: 6, to: 9 } }
+  };
+  var STUDY_KINDS = { degree: { name: 'University degree', icon: '🎓' }, apprentice: { name: 'Apprenticeship', icon: '🧰' }, cert: { name: 'Short certificate', icon: '📜' } };
+  var START_ABROAD = {
+    accra: { homes: { lapo: 'acc_jt_room', mid: 'acc_osu_flat', nepo: 'acc_el_house' }, cash: 1.2 },
+    ldn: { homes: { lapo: 'ldn_pk_room', mid: 'ldn_wb_flat', nepo: 'ldn_nh_house' }, cash: 5 },
+    dxb: { homes: { lapo: 'dxb_dr_room', mid: 'dxb_mr_studio', nepo: 'dxb_pl_villa' }, cash: 4 },
+    ctn: { homes: { lapo: 'ctn_ob_room', mid: 'ctn_cb_flat', nepo: 'ctn_cb_villa' }, cash: 1.6 }
   };
   var START_HOMES = { lapo: ['mushin_room', 'ikorodu_room', 'festac_room'], mid: ['yaba_selfcon', 'suru_selfcon', 'yaba_share', 'ikeja_selfcon'], nepo: ['lekki_studio', 'yaba_2bed', 'ajah_2bed'] };
   var ORIGINS = {
@@ -2453,6 +2559,51 @@
       Object.assign(act('wa_tour', 'Tour the Abbey and Poets\' Corner', 90, gbp(30), 0, { fun: 16, stress: -6 }, null, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 15 }), { minRules: 41, sight: true }),
       Object.assign(act('wa_evensong', 'Sit in for evensong', 60, 0, 0, { fun: 8, stress: -12 }, null, { from: 17, to: 18 }), { minRules: 41 })
     ]],
+    ['ctn_table', '⛰️', 'Table Mountain Cableway', 'outdoors', 'tower', 'ctn_citybowl', 14.6, 11.6, null, 'A rotating cable car up the flat-topped mountain over the city, with the whole Cape below.', [
+      Object.assign(act('tm_cable', 'Ride the cable car to the top', 120, zar(420), 0, { fun: 28, stress: -8 }, null, { from: 8, to: 19 }), { minRules: 42, sight: true }),
+      Object.assign(act('tm_hike', 'Hike up Platteklip Gorge', 180, 0, 0, { fun: 18, energy: -24, stress: -10 }, { fitness: 2 }, { from: 6, to: 15 }), { minRules: 42 }),
+      Object.assign(act('tm_sunset', 'Sunset from the top with the whole Cape below', 60, 0, 0, { fun: 12, stress: -6 }, null, { from: 16, to: 20 }), { minRules: 42 })
+    ]],
+    ['ctn_vawf', '⛵', 'V&A Waterfront', 'culture', 'film', 'ctn_waterfront', 14.6, 3.6, null, 'The working harbour turned into shops, markets, an aquarium and restaurants on the water.', [
+      Object.assign(act('vw_market', 'Eat your way round the food market', 60, zar(180), 0, { hunger: 36, fun: 8 }, null, { from: 10, to: 20 }), { minRules: 42 }),
+      Object.assign(act('vw_wheel', 'Ride the Cape Wheel', 30, zar(160), 0, { fun: 14 }, null, { from: 10, to: 22 }), { minRules: 42, sight: true }),
+      Object.assign(act('vw_aqua', 'Two Oceans Aquarium', 90, zar(250), 0, { fun: 16 }, null, { from: 9, to: 18 }), { minRules: 42 })
+    ]],
+    ['ctn_robben', '🏝️', 'Robben Island ferry', 'outdoors', 'boat', 'ctn_waterfront', 13.0, 2.4, null, 'The ferry to the island prison where Nelson Mandela was held for 18 years. Former prisoners guide the tours.', [
+      Object.assign(act('rb_tour', 'Take the ferry and the prison tour', 240, zar(600), 0, { fun: 14, stress: -2, social: 6 }, { charisma: 1 }, { from: 9, to: 15 }), { minRules: 42, sight: true }),
+      Object.assign(act('rb_cell', 'Stand in front of Mandela\'s cell', 15, 0, 0, { stress: -2, social: 2 }, null, { from: 9, to: 17 }), { minRules: 42 }),
+      Object.assign(act('rb_view', 'Look back at Table Mountain from the island', 15, 0, 0, { fun: 6 }, null, { from: 9, to: 17 }), { minRules: 42 })
+    ]],
+    ['ctn_bokaap_st', '🏘️', 'Bo-Kaap streets', 'culture', 'house', 'ctn_bokaap', 12.0, 7.4, null, 'Cobbled lanes of pink, lime and blue houses, a museum and a Cape Malay cooking class.', [
+      Object.assign(act('bo_photo', 'Photos on the painted streets', 30, 0, 0, { fun: 8 }, null, { from: 8, to: 18 }), { minRules: 42, sight: true }),
+      Object.assign(act('bo_cook', 'Cape Malay cooking class', 150, zar(450), 0, { hunger: 40, fun: 12 }, { cooking: 2 }, { from: 10, to: 17 }), { minRules: 42 }),
+      Object.assign(act('bo_koesister', 'Koesisters from a corner shop', 15, zar(30), 0, { hunger: 14, fun: 3 }, null, { from: 7, to: 18 }), { minRules: 42 })
+    ]],
+    ['ctn_campsbay_beach', '🏖️', 'Camps Bay Beach', 'outdoors', 'wave', 'ctn_campsbay', 4.6, 13.8, null, 'White sand under the Twelve Apostles, and the coldest swimming water you will ever love.', [
+      Object.assign(act('cb_swim', 'A very cold swim', 45, 0, 0, { fun: 14, hygiene: 6, stress: -6, energy: -6 }, { fitness: 1 }, { from: 7, to: 19 }), { minRules: 42 }),
+      Object.assign(act('cb_sunset', 'Watch the sun drop into the Atlantic', 45, 0, 0, { fun: 10, stress: -6 }, null, { from: 17, to: 21 }), { minRules: 42 }),
+      Object.assign(act('cb_volley', 'Beach volleyball with strangers', 60, 0, 0, { fun: 12, social: 8, energy: -8 }, { fitness: 1 }, { from: 9, to: 18 }), { minRules: 42 })
+    ]],
+    ['ctn_kirsten', '🌿', 'Kirstenbosch Garden', 'outdoors', 'tree', 'ctn_newlands', 16.4, 16.4, null, 'A botanical garden on the mountain\'s eastern slope, with a treetop walkway and summer concerts.', [
+      Object.assign(act('kb_boom', 'Walk the treetop boomslang walkway', 90, zar(220), 0, { fun: 16, stress: -10 }, null, { from: 8, to: 18 }), { minRules: 42, sight: true }),
+      Object.assign(act('kb_picnic', 'Picnic on the lawns', 90, zar(150), 0, { hunger: 24, fun: 10, social: 6 }, null, { from: 9, to: 18 }), { minRules: 42 }),
+      Object.assign(act('kb_concert', 'A summer sunset concert', 150, zar(280), 0, { fun: 24, social: 10 }, null, { from: 17, to: 21, months: [11, 0, 1, 2] }), { minRules: 42 })
+    ]],
+    ['ctn_boulders', '🐧', 'Boulders Beach penguins', 'outdoors', 'wave', 'ctn_simonstown', 22.6, 23.4, null, 'A colony of African penguins waddling between granite boulders.', [
+      Object.assign(act('bp_penguins', 'Watch the penguins from the boardwalk', 60, zar(190), 0, { fun: 18, stress: -6 }, null, { from: 8, to: 18 }), { minRules: 42, sight: true }),
+      Object.assign(act('bp_swim', 'Swim in the sheltered cove', 45, 0, 0, { fun: 10, hygiene: 4, energy: -6 }, { fitness: 1 }, { from: 8, to: 18 }), { minRules: 42 }),
+      Object.assign(act('bp_fish', 'Fish and chips by the harbour', 30, zar(140), 0, { hunger: 34 }, null, { from: 11, to: 21 }), { minRules: 42 })
+    ]],
+    ['ctn_kitchen', '🍲', 'Mama Bisi\'s Kitchen, Observatory', 'food', 'bowl', 'ctn_obs', 22.8, 8.0, null, 'Jollof, pounded yam and egusi for the Naija students and anyone homesick.', [
+      Object.assign(act('mb_jollof', 'Jollof and chicken', 30, zar(110), 0, { hunger: 40, fun: 4, social: 4 }, null, { from: 10, to: 22 }), { minRules: 42 }),
+      Object.assign(act('mb_egusi', 'Pounded yam and egusi', 45, zar(140), 0, { hunger: 46, social: 4 }, null, { from: 11, to: 22 }), { minRules: 42 }),
+      Object.assign(act('mb_gist', 'Naija gist with the students', 45, 0, 0, { social: 14, fun: 6 }, null, { from: 12, to: 22 }), { minRules: 42 })
+    ]],
+    ['ctn_cpt', '✈️', 'Cape Town International Airport', 'transport', 'plane', 'ctn_airport', 28.4, 11.6, null, 'Flights home to Lagos through Johannesburg or straight up the coast.', [
+      Object.assign(act('cpt_coffee', 'Coffee at the gate', 30, zar(45), 0, { fun: 2, energy: 4 }, null, { from: 0, to: 24 }), { minRules: 42 }),
+      Object.assign(act('cpt_duty', 'Browse the curio and wine shops', 45, 0, 0, { fun: 6 }, null, { from: 5, to: 23 }), { minRules: 42 }),
+      Object.assign(act('cpt_lounge', 'Rest in the waiting lounge', 60, 0, 0, { energy: 8, stress: -3 }, null, { from: 0, to: 24 }), { minRules: 42 })
+    ]],
     ['dxb_frame', '🖼️', 'Dubai Frame', 'outdoors', 'frame', 'dxb_creek', 18.6, 9.4, null, 'A giant golden picture frame: old Dubai on one side, the new towers on the other, and a glass skybridge on top.', [
       Object.assign(act('df2_sky', 'Cross the glass skybridge', 60, aed(50), 0, { fun: 20, stress: 4 }, null, { from: 9, to: 21 }), { minRules: 41, sight: true }),
       Object.assign(act('df2_park', 'Walk in Zabeel Park below', 45, 0, 0, { fun: 8, stress: -8 }, null, { from: 7, to: 22 }), { minRules: 41 })
@@ -2463,7 +2614,7 @@
       Object.assign(act('pr_beach', 'Beach club with the skyline across the water', 180, aed(250), 0, { fun: 26, social: 10, stress: -12 }, null, { from: 10, to: 19 }), { minRules: 41 })
     ]]
   ].forEach(function (q) {
-    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^cc_/.test(q[5]) ? 'capecoast' : /^ldn_/.test(q[5]) ? 'london' : /^dxb_/.test(q[5]) ? 'dubai' : 'lagos'), text: q[9] };
+    var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^cc_/.test(q[5]) ? 'capecoast' : /^ldn_/.test(q[5]) ? 'london' : /^dxb_/.test(q[5]) ? 'dubai' : /^ctn_/.test(q[5]) ? 'capetown' : 'lagos'), text: q[9] };
     if (q[8]) p.inside = q[8];
     CIVIC_PLACES.push(p);
     if (typeof q[10] === 'string') CAMPUS_CLONES.push([q[0], q[10]]); else CIVIC_ACTS[q[0]] = q[10];
@@ -2846,7 +2997,7 @@
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,
     ESTATE: ESTATE, SEA: SEA, ROAD_NAMES: ROAD_NAMES, MAJOR_ROADS: MAJOR_ROADS, STREETS: STREETS, AREA_LABELS: AREA_LABELS,
-    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, LOCAL: LOCAL, USD_RATE: USD_RATE, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
+    NYSC_PPAS: NYSC_PPAS, NYSC: NYSC, NYSC_RETAIN: NYSC_RETAIN, SKIT_THEMES: SKIT_THEMES, SPORTS: SPORTS, SLANG: SLANG, INTERVIEWS: INTERVIEWS, KID_NAMES: KID_NAMES, LODGING: LODGING, PLACES: PLACES, PLACE_TYPES: PLACE_TYPES, BILLBOARDS: BILLBOARDS, AD_EMOJI: AD_EMOJI, AD_SLOGANS: AD_SLOGANS, AD_COLORS: AD_COLORS, PSAS: PSAS, BILLBOARD_RENT: BILLBOARD_RENT, AD_PLANS: AD_PLANS, BUSINESSES: BUSINESSES, BUSINESS_TIERS: BUSINESS_TIERS, BUSINESS_SITES: BUSINESS_SITES, BUSINESS_GROWTH: BUSINESS_GROWTH, BUSINESS_LEVEL: BUSINESS_LEVEL, TRAITS: TRAITS, START_HOMES: START_HOMES, START_ABROAD: START_ABROAD, STUDY: STUDY, STUDY_KINDS: STUDY_KINDS, WHITE_WEDDING: WHITE_WEDDING, CRUISE: CRUISE, FISHING: FISHING, ROOMS: ROOMS, ROOM_NIGHTS: ROOM_NIGHTS, ROOM_NPCS: ROOM_NPCS, LOCALS: LOCALS, PROPERTIES: PROPERTIES, BUILD: BUILD, HYDE_PARK: HYDE_PARK, CAR: CAR, POLICIES: POLICIES, CBN: CBN, CITIES: CITIES, LOCAL: LOCAL, USD_RATE: USD_RATE, INTERCITY: INTERCITY, CLUBS: CLUBS, CABINS: CABINS, CITY_CODES: CITY_CODES, AIR: AIR, GIFTS: GIFTS, QUESTS: QUESTS, STOCKS: STOCKS, PARTIES: PARTIES, PARTY_ACTS: PARTY_ACTS, PLANNER_FACTOR: PLANNER_FACTOR, STAFF: STAFF, STAFF_ROOM: STAFF_ROOM, PETS: PETS, YARD_HOMES: YARD_HOMES, HMO: HMO, SHOP_NICHES: SHOP_NICHES, SHOP_ADS: SHOP_ADS, PHONES: PHONES, TITLES: TITLES, JAPA_DESTS: JAPA_DESTS, TOWNHALL: TOWNHALL, GOV_MOTTOS: GOV_MOTTOS, GOV_MIN_STATUS: GOV_MIN_STATUS, WEATHER_MONTHS: WEATHER_MONTHS, HARMATTAN_MONTHS: HARMATTAN_MONTHS,
     GOALS: GOALS, ORIGINS: ORIGINS, MONTHS: MONTHS, DAYS: DAYS, INSIDE: INSIDE, FESTIVALS: FESTIVALS, HUNTS: HUNTS, BRANCH_ACTS: BRANCH_ACTS, CIVIC_ACTS: CIVIC_ACTS, TOPUP_PACKS: TOPUP_PACKS, UK_VISA: UK_VISA, UAE_VISA: UAE_VISA, VISAS: VISAS, KID_FUTURES: KID_FUTURES, CHIEF_DUTIES: CHIEF_DUTIES, DAILY_GOALS: DAILY_GOALS, GOAL_REWARD: GOAL_REWARD, EVENT_ACTS: EVENT_ACTS, THEATRE_SHOWS: THEATRE_SHOWS, TH_KIND: TH_KIND, THEATRE_CREW: THEATRE_CREW, YEAR_FESTS: YEAR_FESTS, BIZ_LICENCES: BIZ_LICENCES, DETTY_FEST: DETTY_FEST, FEST_NIGHTS: FEST_NIGHTS, FEST_ACTS: FEST_ACTS, insideKind: insideKind
   };
 

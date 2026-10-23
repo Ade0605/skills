@@ -95,7 +95,10 @@
   // 41 makes money 50% easier: wages, gigs, business takings, tenant rent, prizes and fees pay 1.5x (sales, loans and
   // refunds do not). Businesses, including a new tech startup, can open in London and Dubai with a UK business visa or
   // a Dubai trade licence. More sights in London and Dubai.
-  var RULES = 41;
+  // 42 lets a life start in another city: Accra, London, Dubai or the new Cape Town (Table Mountain, the Waterfront,
+  // Robben Island, Bo-Kaap, Camps Bay, Kirstenbosch, Boulders Beach). You live there with no visa: homes, jobs and
+  // businesses as a resident, and you arrive with more money where life costs more. Each city sells its own clothes and cars.
+  var RULES = 42;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -153,6 +156,9 @@
     show_stopper: 'Show-stopper: 90% on the beat as an opening act at Eko Detty Fest',
     headliner:   'Headliner: topped the bill at Eko Convention Centre',
     league_champ: 'Sunday league champions: won the Eko Sunday League',
+    qualified: 'Qualified: finished a degree, an apprenticeship or a certificate',
+    master_trade: 'Master of a trade: finished an apprenticeship',
+    lifelong: 'Lifelong learner: three qualifications',
     cup_winner:  'Cup winners: won the Eko Sunday League cup final',
     quiz:        'Quiz champion: 10 out of 10',
     vendor:      'Online vendor: sold 100 items',
@@ -447,11 +453,14 @@
     s.rentRate = D.HOMES[o.home].rent;
     s.loc = D.HOMES[o.home].district;
     // Optional setup choices (newer starts only): a first home your origin allows, exactly two traits, and a look.
-    var startHome = !heir && opts.startHome && (D.START_HOMES[originId] || []).indexOf(opts.startHome) >= 0 ? opts.startHome : null;
+    var abroad = !heir && opts.startHome && s.rules >= 42 ? startAbroad(originId, opts.startHome) : null;
+    var startHome = !heir && opts.startHome && ((D.START_HOMES[originId] || []).indexOf(opts.startHome) >= 0 || abroad) ? opts.startHome : null;
     if (startHome) { s.home = startHome; s.rentRate = D.HOMES[startHome].rent; s.loc = D.HOMES[startHome].district; }
+    // Rules 42: you live in a visit-only city (London, Dubai, Cape Town) as a resident, so its visa never applies to you.
+    if (abroad && D.CITIES[abroad].visit) s.residence = abroad;
     var traits = cleanTraits(opts.traits);
     // Opening balance is the one deposit that is not an in-game action.
-    var startCash = heir ? heir.inherit : o.cash;
+    var startCash = heir ? heir.inherit : abroad ? Math.round(o.cash * D.START_ABROAD[abroad].cash / 1000) * 1000 : o.cash;
     s.bank = startCash; s.opening.bank = startCash;
     if (heir) {
       s.heir = heir; s.name = opts.name || heir.name; if (heir.boosted) s.boosted = true;
@@ -485,7 +494,8 @@
     log(s, o.text, 'story');
     if (startHome) log(s, 'You chose to start in ' + D.HOMES[startHome].name + '.', 'story');
     if (heir) log(s, 'You are ' + s.name + ', child of ' + heir.parent + '. Your share of the estate: ' + naira(heir.inherit) + '.' + (heir.school === 'intl' ? ' Your international school education counts as a degree.' : ''), 'story');
-    log(s, 'Rent is due every Saturday at noon. Lagos no dey carry last.', 'info');
+    if (abroad) log(s, 'A new life in ' + D.CITIES[abroad].name + '. ' + (D.LOCAL && D.LOCAL[abroad] ? D.LOCAL[abroad].slogan : ''), 'story');
+    log(s, abroad ? 'Rent is due every Saturday at noon.' : 'Rent is due every Saturday at noon. Lagos no dey carry last.', 'info');
     return s;
   }
 
@@ -560,15 +570,17 @@
       if (f.lvl > 0 && f.seen >= 0 && d - f.seen > 3) f.lvl = Math.max(0, f.lvl - 1);
     });
     if (s.rules >= 23 && !s.transit && cityOf(s) === 'ldn' && visaState(s).status === 'expired') { // rules 24: not while you are already flying out
-      var home = D.CITIES.lagos, fare = price(s, D.UK_VISA.fare); payPartial(s, fare, 'Flight home: UK visa ran out');
+      var hk = s.rules >= 42 ? districtCity(homeDistrict(s)) : 'lagos'; if (!D.CITIES[hk] || hk === 'ldn') hk = 'lagos';
+      var home = D.CITIES[hk], fare = price(s, D.UK_VISA.fare); payPartial(s, fare, 'Flight home: UK visa ran out');
       s.loc = home.airport; s.t += D.UK_VISA.mins; applyFx(s, { energy: -15, stress: 10 });
-      log(s, '🛂 Your UK visa ran out, so you flew home to Lagos. Plan the next trip better.', 'bad');
+      log(s, '🛂 Your UK visa ran out, so you flew home to ' + home.name + '. Plan the next trip better.', 'bad');
     }
     var vc = cityOf(s);
     if (s.rules >= 26 && !s.transit && vc !== 'ldn' && D.CITIES[vc].visit && visaState(s, vc).status === 'expired') {
       var VV = visaOf(vc); payPartial(s, price(s, VV.fare), 'Flight home: ' + VV.name + ' ran out');
-      s.loc = D.CITIES.lagos.airport; s.t += VV.mins; applyFx(s, { energy: -15, stress: 10 });
-      log(s, '🛂 Your ' + VV.name + ' ran out, so you flew home to Lagos. Plan the next trip better.', 'bad');
+      var hc = s.rules >= 42 ? districtCity(homeDistrict(s)) : 'lagos'; if (!D.CITIES[hc] || hc === vc) hc = 'lagos';
+      s.loc = D.CITIES[hc].airport; s.t += VV.mins; applyFx(s, { energy: -15, stress: 10 });
+      log(s, '🛂 Your ' + VV.name + ' ran out, so you flew home to ' + D.CITIES[hc].name + '. Plan the next trip better.', 'bad');
     }
     if (dow(s) === 0) onNewWeek(s);
     if (s.rules >= 32) festNews(s);
@@ -728,8 +740,9 @@
 
   function moveHouse(s, homeId) {
     var h = D.HOMES[homeId];
-    if (!h || h.hidden || !districtOpen(s, h.district) || visitOnly(h.district)) return fail('That place is not on the market.');
+    if (!h || h.hidden || !districtOpen(s, h.district) || (h.rules && !(s.rules >= h.rules)) || (s.rules >= 42 ? visitBar(s, h.district) : visitOnly(h.district))) return fail('That place is not on the market.');
     if (homeId === s.home) return fail('You already live here.');
+    if (s.rules >= 42 && districtCity(h.district) !== cityOf(s)) return fail('Go to ' + D.CITIES[districtCity(h.district)].name + ' to rent or move in there.'); // rules 42: deals happen where you are
     if (h.owned && !ownsHome(s, homeId)) return fail(h.ownedBy ? 'Build your house first.' : 'Buy a plot in ' + D.ESTATE.name + ' first.');
     if (s.arrears) return fail('Clear your rent arrears first. No landlord will take you with debt.');
     var c = moveInCost(s, homeId);
@@ -1030,6 +1043,34 @@
     if (s.loc === 'surulere' && L0 && k === 7) { var v = leagueView(s); if (v.final && v.final.youIn && !(L0.cupPlayed === S)) out.push({ id: 'league_final', label: 'Cup final at the National Stadium: ' + v.final.a + ' v ' + v.final.b, mins: 150, fx: { energy: -28, fun: 35, social: 25, stress: 6 }, xp: { fitness: 2 }, special: 'leaguefinal', sport: 'football', minRules: 40, when: { days: [6], from: 16, to: 18 } }); }
     return out;
   }
+  // Rules 42: study paths (D.STUDY). Enrol where the course is taught, then go to class; finishing gives a qualification.
+  var MAX_STUDY = 2;
+  function studyState(s, id) {
+    var P = D.STUDY[id]; if (!P) return null;
+    var q = s.quals && s.quals[id], st = s.study && s.study[id];
+    return { id: id, P: P, done: q != null, at: q, enrolled: !!st, classes: st ? st.n : q != null ? P.classes : 0, total: P.classes, residentOnly: !!P.resident && visitBar(s, P.district) };
+  }
+  function studyActions(s) {
+    var out = [];
+    Object.keys(D.STUDY).forEach(function (id) {
+      var P = D.STUDY[id]; if (P.district !== s.loc) return;
+      var st = studyState(s, id); if (st.done || st.residentOnly) return;
+      if (!st.enrolled) out.push({ id: 'study_enrol_' + id, label: (D.STUDY_KINDS[P.kind].icon) + ' Enrol: ' + P.name, mins: 60, cost: P.fee, fx: { stress: 2 }, special: 'studyenrol', study: id, minRules: 42 });
+      else {
+        var a = { id: 'study_class_' + id, label: (P.kind === 'apprentice' ? 'Apprentice day: ' : 'Class: ') + P.name + ' (' + (st.classes + 1) + ' of ' + P.classes + ')', mins: P.mins, fx: { energy: P.kind === 'apprentice' ? -16 : -12, fun: -3, hunger: -8 }, xp: {}, special: 'studyclass', study: id, once: true, when: P.when, minRules: 42 };
+        a.xp[P.skill] = P.xp;
+        if (P.stipend) { a.earn = P.stipend; a.gig = true; }
+        out.push(a);
+      }
+    });
+    return out;
+  }
+  // Rules 42: a qualification in a career's skill lets you apply without the skill (like a connect) and start one rank up.
+  function qualFor(s, cid) {
+    var c = D.CAREERS[cid]; if (!(s.rules >= 42) || !c || !s.quals) return null;
+    var hit = null; Object.keys(s.quals).forEach(function (q) { if (!hit && D.STUDY[q] && D.STUDY[q].skill === c.skill) hit = q; });
+    return hit;
+  }
   // retired actions are hidden from players but still run, so lives that used them replay.
   function availableActions(s, withRetired) {
     var list = [];
@@ -1050,6 +1091,7 @@
     if (s.rules >= 35) list = list.concat(yearFestActions(s));
     if (s.rules >= 36) list = list.concat(stallActions(s));
     if (s.rules >= 40) list = list.concat(leagueActions(s));
+    if (s.rules >= 42) list = list.concat(studyActions(s));
     if (s.rules >= 41) Object.keys(D.BIZ_LICENCES).forEach(function (c) { var B0 = D.BIZ_LICENCES[c]; if (s.loc === B0.district && !(s.bizLicence && s.bizLicence[c])) list.push({ id: 'bizlic_' + c, label: 'Apply for a ' + B0.name + ' (open businesses in ' + D.CITIES[c].name + ')', mins: 120, cost: B0.fee, fx: { stress: 8 }, special: 'bizlicence', city: c, minRules: 41 }); });
     if (s.rules >= 38 && s.loc === 'vi') list.push(STAGE_ACTS.manager, STAGE_ACTS.headline); // Eko Convention Centre
     list = list.concat(npcActions(s)).concat(loveActions(s));
@@ -1140,6 +1182,8 @@
     if (s.japa) return 'You have japa-ed. Start a new life to play again';
     if (s.pending.length) return 'Decide on the open event first';
     if (!inWindow(s, a.when)) return 'Only ' + windowLabel(a.when);
+    if (s.rules >= 42 && a.earn && !a.permitted && s.loc && visitBar(s, s.loc)) return 'Visitors cannot work here';
+    if (a.special === 'studyenrol' && s.study && Object.keys(s.study).length >= MAX_STUDY) return 'You are on ' + MAX_STUDY + ' courses already: finish one first'; // rules 42: paid work in a visit-only city is for residents
     if (a.req) {
       for (var k in a.req) if (skillLevel(s, k) < a.req[k]) return 'Needs ' + D.SKILLS[k] + ' ' + a.req[k];
     }
@@ -1290,6 +1334,23 @@
     cook: function (s) { s.pantry--; return 'Home-cooked. ' + s.pantry + ' meals of foodstuff left.'; },
     pantry7: function (s) { s.pantry += 7; return 'Foodstuff for 7 meals is in the kitchen.'; },
     enrol: function (s) { s.edu.enrolled = true; log(s, 'You are now a part-time UNILAG student. 30 lectures to graduate.', 'good'); return 'Enrolled. Lectures run on weekdays.'; },
+    studyenrol: function (s, a) {
+      var P = D.STUDY[a.study]; s.study = s.study || {};
+      if (Object.keys(s.study).length >= MAX_STUDY) return 'You are already on ' + MAX_STUDY + ' courses. Finish one first.';
+      s.study[a.study] = { n: 0, since: day(s) };
+      log(s, D.STUDY_KINDS[P.kind].icon + ' Enrolled: ' + P.name + ' at ' + P.where + '. ' + P.classes + (P.kind === 'apprentice' ? ' working days' : ' classes') + ' to finish.', 'good');
+      return 'Enrolled in ' + P.name + '.';
+    },
+    studyclass: function (s, a) {
+      var P = D.STUDY[a.study], st = s.study && s.study[a.study]; if (!st) return 'Enrol first.';
+      st.n++;
+      if (st.n < P.classes) return (P.kind === 'apprentice' ? 'Day ' : 'Class ') + st.n + ' of ' + P.classes + '.';
+      delete s.study[a.study]; s.quals = s.quals || {}; s.quals[a.study] = day(s);
+      if (P.kind === 'degree') { s.edu.degree = true; unlock(s, 'graduate'); }
+      unlock(s, 'qualified'); if (P.kind === 'apprentice') unlock(s, 'master_trade'); if (Object.keys(s.quals).length >= 3) unlock(s, 'lifelong');
+      log(s, '🎉 ' + (P.kind === 'degree' ? 'Convocation! ' : P.kind === 'apprentice' ? 'Freedom day! ' : 'Certificate in hand! ') + 'You finished ' + P.name + '. Careers that use ' + D.SKILLS[P.skill] + ' now take you one rank up.', 'good');
+      return 'You finished ' + P.name + '!';
+    },
     lecture: function (s) {
       s.edu.lectures++;
       if (s.edu.lectures >= 30) {
@@ -1450,10 +1511,10 @@
 
   function jobEligibility(s, cid) {
     var c = D.CAREERS[cid];
-    if (!c || !districtOpen(s, c.district) || visitOnly(c.district)) return { ok: false, reason: 'No such job' };
+    if (!c || !districtOpen(s, c.district) || (c.rules && !(s.rules >= c.rules)) || (s.rules >= 42 ? visitBar(s, c.district) : visitOnly(c.district))) return { ok: false, reason: c && c.rules && s.rules >= c.rules ? 'Only for people who live in ' + D.CITIES[districtCity(c.district)].name : 'No such job' };
     var connect = connectFor(s, cid);
     if (s.job && s.job.id === cid) return { ok: false, reason: 'This is your job' };
-    if (skillLevel(s, c.skill) < c.req[0] && !connect) return { ok: false, reason: 'Needs ' + D.SKILLS[c.skill] + ' ' + c.req[0] + ' or a connect' };
+    if (skillLevel(s, c.skill) < c.req[0] && !connect && !qualFor(s, cid)) return { ok: false, reason: 'Needs ' + D.SKILLS[c.skill] + ' ' + c.req[0] + (s.rules >= 42 ? ', a connect or a qualification (Phone → Courses)' : ' or a connect') };
     if (c.degree && !s.edu.degree && !connect) return { ok: false, reason: 'Needs a degree or a connect' };
     if (s.loc !== c.district) return { ok: false, reason: 'Apply in person at ' + D.DISTRICTS[c.district].name };
     return { ok: true, connect: connect };
@@ -1513,9 +1574,10 @@
     if (s.job) { log(s, 'You resigned as ' + D.CAREERS[s.job.id].titles[s.job.level] + '.', 'info'); endJob(s, 'resigned'); }
     var keep = s.rules >= 16 && s.jobMarks ? s.jobMarks : null;
     s.job = { id: cid, level: 0, shifts: 0, perfSum: 0, missed: keep && keep.d >= day(s) - 14 ? keep.missed : 0, lastShift: keep ? keep.lastShift : -1, since: s.t };
-    var via = e.connect ? ' ' + D.NPCS[e.connect].name + ' put in a word for you.' : '';
-    log(s, 'Hired: ' + c.titles[0] + ' (' + c.name + ').' + via, 'good');
-    return finish(s, ok('You start as ' + c.titles[0] + '. Shifts ' + String(c.start).padStart(2, '0') + ':00–' + String(c.end).padStart(2, '0') + ':00, ' + c.days.map(function (d) { return D.DAYS[d]; }).join(' ') + '.'));
+    var qf = qualFor(s, cid); if (qf && c.titles.length > 1) s.job.level = 1; // rules 42: your qualification starts you one rank up
+    var via = (e.connect ? ' ' + D.NPCS[e.connect].name + ' put in a word for you.' : '') + (qf ? ' Your ' + D.STUDY[qf].name + ' starts you as ' + c.titles[1] + '.' : '');
+    log(s, 'Hired: ' + c.titles[s.job.level] + ' (' + c.name + ').' + via, 'good');
+    return finish(s, ok('You start as ' + c.titles[s.job.level] + '. Shifts ' + String(c.start).padStart(2, '0') + ':00–' + String(c.end).padStart(2, '0') + ':00, ' + c.days.map(function (d) { return D.DAYS[d]; }).join(' ') + '.'));
   }
 
   // The CV keeps past jobs (state only, never money, so it changes no seal).
@@ -1532,7 +1594,11 @@
     if (s.job) { var c = D.CAREERS[s.job.id]; work.push({ id: s.job.id, level: s.job.level, title: c.titles[s.job.level], org: c.name, icon: c.icon || '💼', from: s.job.since, to: null, shifts: s.job.shifts, current: true }); }
     (s.jobHistory || []).slice().reverse().forEach(function (j) { var c = D.CAREERS[j.id]; if (c) work.push({ id: j.id, level: j.level, title: c.titles[j.level] || c.titles[0], org: c.name, icon: c.icon || '💼', from: j.from, to: j.to, shifts: j.shifts, why: j.why }); });
     var edu = [];
-    if (s.edu.degree) edu.push({ code: 'degree', icon: '🎓', title: s.heir && s.heir.school === 'intl' ? 'International school diploma (counts as a degree)' : 'Degree, University of Lagos' });
+    var qd = Object.keys(s.quals || {}).filter(function (q) { return D.STUDY[q]; });
+    qd.forEach(function (q) { var P = D.STUDY[q]; edu.push({ code: 'q:' + q, icon: D.STUDY_KINDS[P.kind].icon, title: P.name + ', ' + P.where }); });
+    Object.keys(s.study || {}).forEach(function (q) { var P = D.STUDY[q]; if (P) edu.push({ code: 'qs:' + q, icon: '📚', title: 'Studying ' + P.name + ', ' + P.where, note: s.study[q].n + ' of ' + P.classes + ' done' }); });
+    var ownDegree = s.edu.lectures >= 30 || (s.heir && s.heir.school === 'intl') || !qd.some(function (q) { return D.STUDY[q].kind === 'degree'; });
+    if (s.edu.degree && ownDegree) edu.push({ code: 'degree', icon: '🎓', title: s.heir && s.heir.school === 'intl' ? 'International school diploma (counts as a degree)' : 'Degree, University of Lagos' });
     else if (s.edu.enrolled) edu.push({ code: 'studying', icon: '📚', title: 'Studying at the University of Lagos', note: s.edu.lectures + ' lectures so far' });
     if (s.nysc && s.nysc.stage === 'done') edu.push({ code: 'nysc', icon: '🎖️', title: 'NYSC service year completed' });
     else if (s.nysc) edu.push({ code: 'serving', icon: '🎖️', title: 'Serving NYSC' });
@@ -1607,14 +1673,22 @@
 
   /* ---------- cities ---------- */
   // A city added in a later rules version (Accra, rules 22) is closed to older lives: no trips, homes, jobs or shops there.
+  // Rules 42: a start home in another city for this origin, or null. Returns the city.
+  function startAbroad(origin, home) {
+    var A = D.START_ABROAD || {}, hit = null;
+    Object.keys(A).forEach(function (c) { if (A[c].homes[origin] === home) hit = c; });
+    return hit;
+  }
+  // Rules 42: a visit-only city is closed to you for homes, jobs and businesses unless you live there.
+  function visitBar(s, d) { return visitOnly(d) && !(s.residence && s.residence === districtCity(d)); }
   function cityOpen(s, city) { var C = D.CITIES[city]; return !!C && (!C.rules || s.rules >= C.rules); }
   function visitOnly(d) { var C = D.CITIES[districtCity(d)]; return !!(C && C.visit); }
   // Rules 23: the UK visitor visa. Ready after a wait, good for a set number of days.
   // Rules 26: a visa per visit-only city (London's UK visa, Dubai's UAE visa). London is the default, as in rules 23.
   function visaOf(city) { return (D.VISAS && D.VISAS[city]) || D.UK_VISA; }
-  function visaState(s, city) { var v = s.visa && s.visa[city || 'ldn']; if (!v) return { status: 'none' }; var d = day(s); return d < v.ready ? { status: 'pending', ready: v.ready, until: v.until } : d <= v.until ? { status: 'valid', ready: v.ready, until: v.until } : { status: 'expired', until: v.until }; }
+  function visaState(s, city) { if (s.residence && s.residence === (city || 'ldn')) return { status: 'valid', ready: 0, until: 1e9, resident: true }; var v = s.visa && s.visa[city || 'ldn']; if (!v) return { status: 'none' }; var d = day(s); return d < v.ready ? { status: 'pending', ready: v.ready, until: v.until } : d <= v.until ? { status: 'valid', ready: v.ready, until: v.until } : { status: 'expired', until: v.until }; }
   // Rules 24: you must land in London with a day of visa left, or you would arrive already overstaying.
-  function visaLasts(s, mins, city) { var v = s.visa && s.visa[city || 'ldn']; return !(s.rules >= 24) || (!!v && Math.floor((s.t + mins) / 1440) <= v.until); }
+  function visaLasts(s, mins, city) { if (s.residence && s.residence === (city || 'ldn')) return true; var v = s.visa && s.visa[city || 'ldn']; return !(s.rules >= 24) || (!!v && Math.floor((s.t + mins) / 1440) <= v.until); }
   function visaQuote(s, city) {
     city = city || 'ldn';
     var V = visaOf(city), st = visaState(s, city), q = { city: city, name: V.name || 'UK visitor visa', fee: price(s, V.fee), funds: price(s, V.funds), wait: V.wait, days: V.days, state: st };
@@ -2557,7 +2631,9 @@
     if (b.minRules && !(s.rules >= b.minRules)) return fail('Unknown business.');
     var SI = site != null ? D.BUSINESS_SITES[site] : null, abroad = SI && visitOnly(site);
     if (SI && SI.rules && !(s.rules >= SI.rules)) return fail('Pick a district for your business.');
-    if (abroad && s.rules >= 41 && !(s.bizLicence && s.bizLicence[districtCity(site)])) return fail('You need a ' + D.BIZ_LICENCES[districtCity(site)].name + ' first (get it in ' + D.BIZ_LICENCES[districtCity(site)].where + ').');
+    if (SI && s.rules >= 42 && districtCity(site) !== cityOf(s)) return fail('Go to ' + D.CITIES[districtCity(site)].name + ' to open a business there.');
+    if (abroad && s.rules >= 42 && !D.BIZ_LICENCES[districtCity(site)] && s.residence !== districtCity(site)) return fail('Only people who live in ' + D.CITIES[districtCity(site)].name + ' can open a business there.');
+    if (abroad && s.rules >= 41 && !(s.rules >= 42 && s.residence === districtCity(site)) && !(s.bizLicence && s.bizLicence[districtCity(site)])) return fail('You need a ' + D.BIZ_LICENCES[districtCity(site)].name + ' first (get it in ' + D.BIZ_LICENCES[districtCity(site)].where + ').');
     if (site != null && (!SI || !districtOpen(s, site) || (abroad && !(s.rules >= 41)))) return fail('Pick a district for your business.');
     if (s.rules >= 20 && site == null) return fail('Pick a district for your business.');
     if ((site != null || s.rules >= 20) && s.businesses.length >= 12) return fail('You run 12 businesses already.');
@@ -2681,6 +2757,7 @@
   function buyProperty(s, id) {
     var p = D.PROPERTIES[id];
     if (!p || p.hidden) return fail('Unknown property.');
+    if (s.rules >= 42 && cityOf(s) !== 'lagos') return fail('This is Lagos property. Buy it when you are in Lagos.');
     // Lekki Hyde Park: one home per zone, whether bought ready-built or built on its plot.
     var hz = p.hpZone || (p.hydepark && Object.keys(D.HYDE_PARK.zones).filter(function (z) { return D.HYDE_PARK.zones[z].house === id; })[0]);
     if (hz) {
@@ -2720,6 +2797,7 @@
   }
   function buildStage(s) {
     var why = buildBlock(s); if (why) return fail(why + '.');
+    if (s.rules >= 42 && cityOf(s) !== 'lagos') return fail('Your plot is in Lagos. Build when you are in Lagos.');
     var B = D.BUILD, first = !s.build;
     s.alerts = [];
     if (first) {
@@ -2766,6 +2844,7 @@
   function hpBuild(s, zone) {
     var q = hpInfo(s, zone);
     if (q.why) return fail(q.why + '.');
+    if (s.rules >= 42 && cityOf(s) !== 'lagos') return fail('Lekki Hyde Park is in Lagos. Build when you are in Lagos.');
     var H = D.HYDE_PARK, Z = H.zones[zone];
     s.alerts = [];
     s.hpBuild = s.hpBuild || {};
@@ -3491,7 +3570,8 @@
   }
   function buyClothes(s, id) {
     var c = D.CLOTHES[id];
-    if (!c || c.gift) return fail('No such item.');
+    if (!c || c.gift || (c.rules && !(s.rules >= c.rules))) return fail('No such item.');
+    if (c.city && c.city.indexOf(cityOf(s)) < 0) return fail('Sold only in ' + c.city.map(function (k) { return D.CITIES[k].name; }).join(' or ') + '.');
     if (s.pending.length) return fail('Decide on the open event first.');
     if (s.wardrobe.some(function (w) { return w.id === id; })) return fail('You already own this.');
     var cost = price(s, c.price);
@@ -3579,7 +3659,8 @@
   }
   function buyVehicle(s, id) {
     var V = D.VEHICLES[id];
-    if (!V) return fail('No such vehicle.');
+    if (!V || (V.rules && !(s.rules >= V.rules))) return fail('No such vehicle.');
+    if (V.city && V.city.indexOf(cityOf(s)) < 0) return fail('Sold only in ' + V.city.map(function (k) { return D.CITIES[k].name; }).join(' or ') + '.');
     if (s.pending.length) return fail('Decide on the open event first.');
     if ((s.vehicles || []).length >= 12) return fail('Your garage is full.');
     var cost = price(s, V.price);
@@ -3629,6 +3710,7 @@
   // plots and a second plot, and takes the money (a recorded, replayable debit).
   function buyPlot(s, n) {
     n = n | 0;
+    if (s.rules >= 42 && cityOf(s) !== 'lagos') return fail('This is Lagos property. Buy it when you are in Lagos.');
     if (n < 0 || n >= plotCount()) return fail('No such plot.');
     if (plotTakenByNpc(n)) return fail('Someone already lives on this plot.');
     if (myPlot(s) != null) return fail('You already own a house in ' + D.ESTATE.name + '.');
@@ -3965,6 +4047,7 @@
     Object.keys(D.CAREERS).forEach(function (cid) {
       var c = D.CAREERS[cid], connect = connectFor(s, cid);
       if (districtCity(c.district) !== cityOf(s)) return;
+      if ((c.rules && !(s.rules >= c.rules)) || visitBar(s, c.district)) return; // rules 42: careers for residents only
       if (nearHome && ((s.job && s.job.id === cid) || distance(homeDistrict(s), c.district) > 6)) return;
       // Never talk someone out of a better-paid career just to shorten the commute.
       if (nearHome && s.job && c.pay[0] < D.CAREERS[s.job.id].pay[s.job.level] * 0.6) return;
@@ -4029,7 +4112,7 @@
     if (s.job && s.rentRate) {
       var jc = D.CAREERS[s.job.id], weekly = jc.pay[s.job.level] * s.econ.wage * jc.days.length;
       if (s.rentRate > weekly * 0.45 && s.cash + s.bank < s.rentRate * 6) {
-        var near = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && districtCity(D.HOMES[k].district) === districtCity(jc.district) && D.HOMES[k].rent * s.econ.infl <= weekly * 0.3; })
+        var near = Object.keys(D.HOMES).filter(function (k) { return !D.HOMES[k].hidden && !(D.HOMES[k].rules && !(s.rules >= D.HOMES[k].rules)) && !visitBar(s, D.HOMES[k].district) && districtCity(D.HOMES[k].district) === districtCity(jc.district) && D.HOMES[k].rent * s.econ.infl <= weekly * 0.3; })
           .sort(function (x, y) { return distance(D.HOMES[x].district, jc.district) - distance(D.HOMES[y].district, jc.district); })[0];
         if (near && near !== s.home) {
           var mc = moveInCost(s, near).total, canMove = !s.arrears && canAfford(s, mc);
@@ -5477,7 +5560,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, golfOdds: golfOdds, leagueView: leagueView, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, startAbroad: startAbroad, visitBar: visitBar, studyState: studyState, qualFor: qualFor, golfOdds: golfOdds, leagueView: leagueView, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,
