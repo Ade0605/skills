@@ -116,7 +116,7 @@
     function orbitFacing() { return 0; }
     function liveKey() { return JSON.stringify([city, sc.rules, sc.board, sc.sel, sc.home, (sc.gems || []).map(function (g) { return g.place + g.n; }), (sc.biz || []).map(function (b) { return b.district + b.icon; }), (sc.players || []).map(function (p) { return p.by + p.d + (p.unread || 0); }), sc.layers && sc.layers.boards, Object.keys(sc.boards || {}).map(function (k) { return (sc.boards[k] || []).length; })]); }
     function buildLive() {
-      wipe(LIVE); LV = { boards: [], gems: [], players: [], ring: null, key: liveKey(), imgs: LV.imgs || {} };
+      wipe(LIVE); LV = { boards: [], gems: [], players: [], ring: null, show: null, key: liveKey(), imgs: LV.imgs || {} };
       var post = mat('bpost', { color: 0x4b4f55, metalness: 0.5 }), frameMat = mat('bframe2', { color: 0x202226 });
       // Rail lines on raised track: Lagos's Blue and Red lines, and (rules 26) the London Tube. One mesh per line, stations instanced.
       var RL = D.RAIL_LINES || {}, stops = [];
@@ -137,6 +137,7 @@
       var hd = D.DISTRICTS[sc.home]; if (hd) { var hg = new T.Group(); hg.position.set(hd.x * K - 3, 0, hd.y * K + 2); hg.add(mesh(new T.BoxGeometry(2.4, 1.6, 2), mat('homeW', { color: 0xf4f1ea }), 0, 0.8, 0)); var rf = mesh(new T.ConeGeometry(2, 1.2, 4), mat('homeR', { color: 0xc0392b }), 0, 2.2, 0); rf.rotation.y = Math.PI / 4; hg.add(rf); var ht = sprite(labelTex('🏠 Home', '#ffffff', '#17181a', 38), 6); ht.position.y = 4.2; hg.add(ht); LIVE.add(hg); }
       (sc.biz || []).forEach(function (bz, i) { var d = D.DISTRICTS[bz.district]; if (!d) return; var s = sprite(labelTex(bz.icon || '🏪', 'rgba(255,255,255,.95)', '#17181a', 44), 3.4); s.position.set(d.x * K + 3 + (i % 3) * 1.6, 6, d.y * K - 2); LIVE.add(s); });
       (sc.players || []).forEach(function (pl, i) { if (pl.me) return; var d = D.DISTRICTS[pl.d]; if (!d) return; var g = new T.Group(), a = i * 1.3; g.position.set(d.x * K + Math.cos(a) * 4, 0, d.y * K + Math.sin(a) * 4); g.add(mesh(new T.CapsuleGeometry(0.45, 1.1, 4, 8), mat('pl' + i % 5, { color: [0x2fa36b, 0x8e44ad, 0xe67e22, 0xc0392b, 0xf2b600][i % 5] }), 0, 1.2, 0)); var tag = sprite(labelTex((pl.unread ? '🔴 ' : '') + pl.label, 'rgba(23,24,26,.8)', '#ffffff', 36), 6); tag.position.y = 3.4; g.add(tag); g.traverse(function (o) { o.userData.player = pl.by; }); LIVE.add(g); LV.players.push(g); });
+      if (city === 'lagos' && sc.show && D.LAGOON_SHOW) buildShow();
       var sd = D.DISTRICTS[sc.sel]; if (sd && sc.sel !== sc.loc) { var ring = new T.Mesh(new T.RingGeometry(5, 6, 48).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.8, side: T.DoubleSide, depthWrite: false })); ring.position.set(sd.x * K, 0.3, sd.y * K); LIVE.add(ring); LV.ring = ring; }
     }
     // Your trip: the ride you took goes from one district to the next while the camera follows.
@@ -148,11 +149,67 @@
       else { g.add(mesh(new T.BoxGeometry(mode === 'okada' ? 1.4 : 2.6, mode === 'okada' ? 0.8 : 1.2, mode === 'okada' ? 0.4 : 1.1), mat('tripV' + mode, { color: col, roughness: 0.4 }), 0, 0.7, 0)); }
       var tag = sprite(labelTex('You', '#2f6fd0', '#ffffff', 40), 5); tag.position.y = 3.4; g.add(tag); LIVE.add(g); return g;
     }
+    // Eko Lagoon Lights (rules 43): a floating ring stage on the lagoon. A dotted LED ring with this week's act, twin light
+    // pillars, sweeping beams, speaker towers on pontoons and a countdown that hangs over it.
+    function ledTex(text, live) {
+      return canvasTex(512, 512, function (g, w, h) {
+        g.fillStyle = '#120406'; g.beginPath(); g.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2); g.fill();
+        g.save(); g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 8, 0, Math.PI * 2); g.clip();
+        var lines = text.split(' '), big = lines.length > 2 ? [lines.slice(0, Math.ceil(lines.length / 2)).join(' '), lines.slice(Math.ceil(lines.length / 2)).join(' ')] : lines.length === 2 && text.length > 9 ? lines : [text];
+        g.fillStyle = live ? '#ff3b3b' : '#c22a2a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        var fs = 170; g.font = '900 ' + fs + 'px Impact, "Arial Black", sans-serif'; var widest = Math.max.apply(null, big.map(function (l) { return g.measureText(l).width; })), room = big.length > 1 ? 440 : 470; if (widest > room) { fs = Math.floor(fs * room / widest); g.font = '900 ' + fs + 'px Impact, "Arial Black", sans-serif'; }
+        big.forEach(function (l, i) { g.fillText(l, w / 2, h / 2 + (i - (big.length - 1) / 2) * fs * 1.05); });
+        // LED dots: punch a grid of dark gaps through everything
+        g.fillStyle = 'rgba(18,4,6,.55)'; for (var y = 0; y < h; y += 8) g.fillRect(0, y, w, 2); for (var x = 0; x < w; x += 8) g.fillRect(x, 0, 2, h);
+        g.restore();
+      });
+    }
+    function cdTex(lines) {
+      return canvasTex(512, 200, function (g, w, h) { g.clearRect(0, 0, w, h); g.fillStyle = 'rgba(10,6,8,.55)'; g.fillRect(40, 10, w - 80, h - 20); g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '800 40px system-ui, sans-serif'; g.fillText(lines[0], w / 2, 58); g.font = '900 78px system-ui, sans-serif'; g.fillText(lines[1], w / 2, 138); });
+    }
+    function showLines(v) {
+      if (!v) return ['', ''];
+      if (v.live) return ['LIVE NOW · ' + D.LAGOON_SHOW.name.toUpperCase(), v.act];
+      var m = v.next || 0, d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
+      return ['NEXT SHOW IN', (d ? d + 'd ' : '') + hh + 'h ' + mm + 'm'];
+    }
+    function buildShow() {
+      var Sh = D.LAGOON_SHOW, v = sc.show, g = new T.Group(); g.position.set(Sh.x * K, 0, Sh.y * K);
+      var dark = mat('shBase', { color: 0x141416, roughness: 0.5, metalness: 0.4 });
+      g.add(mesh(new T.BoxGeometry(16, 1.4, 10), dark, 0, 0.5, 0));
+      g.add(mesh(new T.BoxGeometry(12, 0.6, 7), mat('shTop', { color: 0x2a0d10, emissive: 0x3a0000, roughness: 0.6 }), 0, 1.5, 0));
+      var ringM = new T.MeshBasicMaterial({ color: 0xff3030 }), ring = new T.Mesh(new T.TorusGeometry(8.6, 0.45, 10, 72), ringM); ring.position.set(0, 11, 0); g.add(ring);
+      var dots = new T.Mesh(new T.TorusGeometry(9.6, 0.12, 4, 120), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 })); dots.position.copy(ring.position); g.add(dots);
+      var faceM = new T.MeshBasicMaterial({ map: ledTex(v.act, v.live), transparent: true }); var face = new T.Mesh(new T.CircleGeometry(8.3, 64), faceM); face.position.set(0, 11, 0.05); g.add(face);
+      var back = face.clone(); back.material = faceM; back.rotation.y = Math.PI; back.position.z = -0.05; g.add(back);
+      [-1, 1].forEach(function (sx) { g.add(mesh(new T.BoxGeometry(0.6, 9, 0.6), dark, sx * 7.4, 6, 0)); });
+      var pilM = new T.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.32, blending: T.AdditiveBlending, depthWrite: false }), pillars = [];
+      [-2.6, 2.6].forEach(function (x) { var pl = new T.Mesh(new T.CylinderGeometry(1.5, 1.5, 160, 16, 1, true), pilM); pl.position.set(x, 80, -1.2); pl.castShadow = false; g.add(pl); pillars.push(pl); });
+      var beamM = new T.MeshBasicMaterial({ color: 0xffd0d0, transparent: true, opacity: 0.14, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }), beams = [];
+      for (var i = 0; i < (LITE ? 4 : 8); i++) { var cone = new T.ConeGeometry(3, 70, 12, 1, true); cone.translate(0, -35, 0); cone.rotateX(Math.PI); var bm = new T.Mesh(cone, beamM); bm.position.set((i % 2 ? 1 : -1) * (2 + (i >> 1)), 2, 1); bm.castShadow = false; g.add(bm); beams.push(bm); }
+      [-1, 1].forEach(function (sx) { var tw = new T.Group(); tw.position.set(sx * 15, 0, 3); tw.add(mesh(new T.BoxGeometry(4, 0.8, 4), dark, 0, 0.3, 0)); tw.add(mesh(new T.BoxGeometry(0.4, 9, 0.4), dark, 0, 4.8, 0)); tw.add(mesh(new T.BoxGeometry(1.8, 2.4, 1.4), mat('shSpk', { color: 0x0c0c0e }), 0, 9.5, 0)); tw.add(mesh(new T.BoxGeometry(1.6, 1.8, 1.2), mat('shSpk', { color: 0x0c0c0e }), 0, 2, 0)); g.add(tw); });
+      var glow = new T.Mesh(new T.CircleGeometry(14, 40).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 0xff2a6a, transparent: true, opacity: 0.25, blending: T.AdditiveBlending, depthWrite: false })); glow.position.y = 0.15; g.add(glow);
+      var cdM = new T.SpriteMaterial({ map: cdTex(showLines(v)), depthTest: false, transparent: true }), cd = new T.Sprite(cdM); cd.scale.set(26, 10, 1); cd.position.set(0, 26, 0); cd.renderOrder = 10; g.add(cd);
+      g.traverse(function (o) { o.userData.show = 1; }); LIVE.add(g);
+      LV.show = { g: g, ring: ringM, dots: dots, face: faceM, act: v.act, live: v.live, pillars: pillars, pil: pilM, beams: beams, beamM: beamM, glow: glow, cd: cdM, cdKey: showLines(v).join('|') };
+    }
+    function flyShow() { var Sh = D.LAGOON_SHOW; if (Sh) fly = { tx: Sh.x * K, tz: Sh.y * K + 4, r: 62 }; }
+    function showFrame(t) {
+      var X = LV.show, v = sc.show; if (!X || !v) return;
+      if (v.act !== X.act || v.live !== X.live) { X.face.map.dispose(); X.face.map = ledTex(v.act, v.live); X.face.needsUpdate = true; X.act = v.act; X.live = v.live; }
+      var key = showLines(v).join('|'); if (key !== X.cdKey) { X.cd.map.dispose(); X.cd.map = cdTex(showLines(v)); X.cd.needsUpdate = true; X.cdKey = key; }
+      var hr = sc.hour == null ? 12 : sc.hour, night = hr >= 18 || hr < 6, k = (v.live ? 1 : 0.45) * (night ? 1 : 0.6);
+      X.pil.opacity = (0.18 + 0.14 * Math.sin(t * 2)) * k; X.beamM.opacity = (v.live ? 0.18 : 0.07) * (night ? 1 : 0.5);
+      X.beams.forEach(function (b, i) { var sp = v.live ? 0.9 : 0.25; b.rotation.z = Math.sin(t * sp + i * 0.9) * 0.6; b.rotation.x = 0.3 + Math.cos(t * sp * 0.7 + i) * 0.25; b.visible = night || v.live; });
+      X.ring.color.setHSL(0, 1, v.live ? 0.45 + 0.1 * Math.sin(t * 6) : 0.42); X.dots.rotation.z = t * (v.live ? 0.8 : 0.2);
+      X.glow.material.opacity = (v.live ? 0.35 : 0.18) * (0.8 + 0.2 * Math.sin(t * 3));
+    }
     function liveFrame(t, now) {
       if (liveKey() !== LV.key) buildLive();
       var slot = Math.floor(now / 6000); LV.boards.forEach(function (b, bi) { var k = (slot + bi) % b.ads.length; if (k !== b.at) { b.at = k; if (b.face.map) b.face.map.dispose(); b.face.map = adFace(b.ads[k], sc.board === b.id); b.face.needsUpdate = true; } });
       LV.gems.forEach(function (g, i) { g.rotation.y = t * 1.6 + i; g.position.y = 8.5 + Math.sin(t * 2 + i) * 0.5; });
       if (LV.ring) { var s = 1 + Math.sin(t * 3) * 0.08; LV.ring.scale.set(s, 1, s); }
+      if (LV.show) showFrame(t);
       var tr = sc.trip; if (tr && (!TRIP || TRIP.at !== tr.at)) { if (TRIP && TRIP.v) { LIVE.remove(TRIP.v); wipe(TRIP.v); } var a = D.DISTRICTS[tr.from], b2 = D.DISTRICTS[tr.to]; TRIP = a && b2 ? { at: tr.at, a: a, b: b2, mode: tr.mode, v: tripVehicle(tr.mode), t0: now } : null; }
       if (TRIP && TRIP.v) { var u = Math.min(1, (now - TRIP.t0) / 2600), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, x = (TRIP.a.x + (TRIP.b.x - TRIP.a.x) * e) * K, z = (TRIP.a.y + (TRIP.b.y - TRIP.a.y) * e) * K, air = TRIP.mode === 'heli' || TRIP.mode === 'jet' ? Math.sin(u * Math.PI) * 30 + 2 : 0, ang = Math.atan2((TRIP.b.y - TRIP.a.y), (TRIP.b.x - TRIP.a.x));
         TRIP.v.position.set(x, air + (TRIP.mode === 'ferry' || TRIP.mode === 'boat' ? 0 : 0.2), z); TRIP.v.rotation.y = -ang; fly = { tx: x, tz: z, r: Math.min(orbit.r, 140) };
@@ -185,7 +242,8 @@
     var ray = new T.Raycaster(), ndc = new T.Vector2(), ground = new T.Plane(new T.Vector3(0, 1, 0), 0);
     function tap(e) {
       var r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam);
-      var lh = ray.intersectObjects(LIVE.children, true).filter(function (h) { var u = h.object.userData; return u.board || u.player || u.place; })[0];
+      var lh = ray.intersectObjects(LIVE.children, true).filter(function (h) { var u = h.object.userData; return u.board || u.player || u.place || u.show; })[0];
+      if (lh && lh.object.userData.show) { flyShow(); if (opts.onShow) opts.onShow(); return; }
       if (lh) { var ud = lh.object.userData; if (ud.board && opts.onSelectBoard) { opts.onSelectBoard(ud.board); return; } if (ud.player && opts.onSelectPlayer) { opts.onSelectPlayer(ud.player); return; } if (ud.place && opts.onSelectPlace) { opts.onSelectPlace(ud.place); return; } }
       var objs = []; DYN.pins.forEach(function (pn) { objs.push(pn.pin); if (pn.name.visible) objs.push(pn.name); });
       var hit = ray.intersectObjects(objs, false)[0]; if (hit && opts.onSelectPlace) { opts.onSelectPlace(hit.object.userData.place); return; }
@@ -228,6 +286,7 @@
     return {
       el: el, canvas: cv, is3d: true, flyTo: flyTo,
       update: function (next) { sc = next || sc; var c2 = sc.city || 'lagos'; if (c2 !== city) build(c2); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
+      focusShow: function () { flyShow(); if (!raf && el.isConnected) raf = root.requestAnimationFrame(frame); },
       start: function () { if (!raf) raf = root.requestAnimationFrame(frame); },
       stop: function () { if (raf) root.cancelAnimationFrame(raf); raf = 0; }
     };

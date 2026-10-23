@@ -3557,3 +3557,16 @@ test('rules 42: study paths: enrol, go to class once a day, finish for a qualifi
   const old = L.newGame({ seed: 4202, origin: 'mid', goal: 'freestyle', rules: 41 }); old.loc = 'festac';
   assert.ok(!L.availableActions(old).some(a => /^study_/.test(a.id)));
 });
+
+test('rules 43: Eko Lagoon Lights: Friday and Saturday night shows off Ikoyi, a countdown, watch once a night', () => {
+  const s = L.newGame({ seed: 4300, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 43);
+  const v0 = L.lagoonShow(s); assert.ok(!v0.live); assert.ok(v0.next > 0 && v0.next <= 7 * 1440); assert.ok(D.LAGOON_SHOW.acts.includes(v0.act));
+  s.loc = 'ikoyi'; for (let i = 0; i < 200 && !L.lagoonShow(s).live; i++) { L.wait(s, Math.min(240, Math.max(15, Math.floor(L.lagoonShow(s).next / 15) * 15 || 15))); while (s.pending.length) L.resolveChoice(s, 0); s.loc = 'ikoyi'; s.needs.energy = 90; s.needs.hunger = 90; }
+  assert.ok(L.lagoonShow(s).live);
+  const a = L.availableActions(s).find(x => x.id === 'lagoon_shore'); assert.ok(a && !a.disabled, a && a.disabled);
+  assert.ok(L.doAction(s, a.id).ok); assert.ok(s.ach.lagoon_lights);
+  const again = L.availableActions(s).find(x => x.id === 'lagoon_shore'); assert.ok(again.disabled);
+  const old = L.newGame({ seed: 4300, origin: 'nepo', goal: 'freestyle', rules: 42 }); old.loc = 'ikoyi';
+  assert.ok(!L.availableActions(old).some(x => /^lagoon_/.test(x.id)));
+});
