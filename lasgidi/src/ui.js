@@ -318,6 +318,7 @@
     mountVisit();
     mountCruise();
     mountAirport();
+    drawStory();
     mountRoom();
     mountVenue();
     mountHalls();
@@ -1886,6 +1887,52 @@
       '<div class="pv-bar"><button class="btn go big-go" id="photo-save" data-photosave="1">⬇ Save to phone</button><div class="inline" style="justify-content:space-between"><button class="btn sm ghost" id="photo-retake" data-photoretake="1">↺ Retake</button><span class="note" id="photo-status"></span></div></div>';
     document.body.appendChild(el);
     var b = document.getElementById('photo-save'); if (b) b.focus();
+  }
+  // The story of my week: a picture card from the last weekly report (net worth, the change, where money came from and
+  // went, three moments from the week) that a player can save or share.
+  function storyData() {
+    var r = S.report; if (!r) return null;
+    var top = function (o) { var k = Object.keys(o || {}).sort(function (a, b) { return o[b] - o[a]; })[0]; return k ? (L.CATEGORY_NAMES[k] || k) : null; };
+    var since = S.t - 7 * 1440, moments = S.log.filter(function (l) { return l.t >= since && (l.kind === 'good' || l.kind === 'ach' || l.kind === 'bad' || l.kind === 'story'); }).map(function (l) { return l.text.replace(/^Achievement: /, '🏅 ').slice(0, 80); }).filter(function (t, i, all) { return all.indexOf(t) === i; }).slice(0, 3);
+    var c = L.cityOf(S), x = localOf(homeCityOf());
+    return { w: r.w, worth: r.worth, delta: r.delta, inc: top(r.inc), out: top(r.out), moments: moments, name: S.name, who: x ? x.person : 'Lagosian', city: D.CITIES[c].name, slogan: (localOf(c) || {}).slogan || '' };
+  }
+  function storyCard() {
+    if (!storyData()) return '';
+    return '<div class="story"><canvas id="story-canvas" width="540" height="720" role="img" aria-label="Story of my week, week ' + S.report.w + '"></canvas><div class="inline"><button type="button" class="btn sm" id="story-save" data-storysave="1">📸 Save picture</button>' +
+      (navigator.share ? '<button type="button" class="btn sm ghost" id="story-share" data-storyshare="1">Share</button>' : '') + '<span class="muted" id="story-status"></span></div></div>';
+  }
+  function drawStory() {
+    var cv = document.getElementById('story-canvas'), d = cv && storyData(); if (!d) return;
+    var g = cv.getContext('2d'), W = cv.width, H = cv.height, wrap = function (t, x, y, w, lh) { var words = t.split(' '), line = ''; words.forEach(function (wd) { var test = line ? line + ' ' + wd : wd; if (g.measureText(test).width > w && line) { g.fillText(line, x, y); y += lh; line = wd; } else line = test; }); if (line) g.fillText(line, x, y); return y + lh; };
+    var gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#f2b600'); gr.addColorStop(1, '#e0701c'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(0,0,0,.82)'; g.fillRect(24, 24, W - 48, H - 48);
+    g.fillStyle = '#f2b600'; g.font = '800 30px Bungee, sans-serif'; g.fillText('LASGIDI', 52, 80);
+    g.fillStyle = '#fff'; g.font = '700 20px sans-serif'; g.fillText('Story of my week · Week ' + d.w, 52, 114);
+    g.font = '800 34px sans-serif'; g.fillText(d.name.slice(0, 22), 52, 170);
+    g.fillStyle = '#ccc'; g.font = '600 18px sans-serif'; g.fillText(d.who + ' · now in ' + d.city, 52, 198);
+    g.fillStyle = '#fff'; g.font = '600 18px sans-serif'; g.fillText('Net worth', 52, 252); g.font = '800 40px sans-serif'; g.fillText(N(d.worth).replace(/ ≈.*/, ''), 52, 296);
+    g.fillStyle = d.delta >= 0 ? '#4ade80' : '#f87171'; g.font = '800 24px sans-serif'; g.fillText((d.delta >= 0 ? '▲ +' : '▼ ') + N(Math.abs(d.delta)).replace(/ ≈.*/, '') + ' this week', 52, 334);
+    g.fillStyle = '#ddd'; g.font = '600 18px sans-serif'; var y = 380;
+    if (d.inc) { g.fillText('💰 Most money from: ' + d.inc, 52, y); y += 30; }
+    if (d.out) { g.fillText('💸 Most money on: ' + d.out, 52, y); y += 30; }
+    y += 14; g.fillStyle = '#f2b600'; g.font = '800 18px sans-serif'; g.fillText('THIS WEEK', 52, y); y += 30; g.fillStyle = '#fff'; g.font = '500 18px sans-serif';
+    (d.moments.length ? d.moments : ['A quiet week. Next one na my own.']).forEach(function (m) { y = wrap('• ' + m, 52, y, W - 104, 24) + 6; });
+    g.fillStyle = '#f2b600'; g.font = 'italic 600 16px sans-serif'; wrap('“' + (d.slogan || 'If you can make it in Lagos, you can make it anywhere.') + '”', 52, H - 76, W - 104, 22);
+  }
+  function storyBlob(cb) { var cv = document.getElementById('story-canvas'); if (!cv) return cb(null); drawStory(); cv.toBlob(cb, 'image/png'); }
+  function saveStory(share) {
+    var st = document.getElementById('story-status'), say = function (m) { if (st) st.textContent = m; }, name = 'lasgidi-week-' + (S.report ? S.report.w : 0) + '.png';
+    storyBlob(function (blob) {
+      if (!blob) { say('Could not make the picture.'); return; }
+      if (share && navigator.share) { try { var f = new File([blob], name, { type: 'image/png' }); var data = navigator.canShare && navigator.canShare({ files: [f] }) ? { files: [f], text: L.shareText(S) } : { text: L.shareText(S) }; navigator.share(data).then(function () { say('Shared.'); }, function () { say(''); }); } catch (e) { say('Sharing is not available here.'); } return; }
+      var viaAnchor = function () { try { var a = document.createElement('a'); a.href = document.getElementById('story-canvas').toDataURL('image/png'); a.download = name; document.body.appendChild(a); a.click(); a.remove(); say('Downloading…'); } catch (e) { say('Long-press the picture to save it.'); } };
+      if (!window.claude || typeof window.claude.use !== 'function') { viaAnchor(); return; }
+      window.claude.use('downloads').then(function (dl) {
+        if (!dl) { viaAnchor(); return; }
+        dl.save({ filename: name, data: blob }).then(function () { say('Saved.'); }, function (e) { say(e && e.code === 'declined' ? 'Not saved.' : 'Long-press the picture to save it.'); });
+      }, viaAnchor);
+    });
   }
   function savePhoto() {
     var st = document.getElementById('photo-status'), name = 'lasgidi-' + (ui.photo.caption || 'photo').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '.png';
@@ -4060,6 +4107,7 @@
   // The owner's dashboard (view only): how people sign in, who is playing, the richest lives, who governs, the parties,
   // and the safety queues. It only reads what the game already loads; nothing here can change anyone's game.
   function ownerView() {
+    var q0 = function (a) { return (a || []).length; };
     var stat = function (n, label) { return '<div class="od-stat"><b class="num">' + n + '</b><span>' + esc(label) + '</span></div>'; };
     var cityOfD = function (d) { return d && own(D.DISTRICTS, d) ? L.districtCity(d) : null; };
     var homeCity = function (h) { var x = h && D.HOMES[h]; return x ? cityOfD(x.district) : null; };
@@ -4098,6 +4146,15 @@
       '<tr><td>Executive Council</td><td>' + (g ? g.cabinet.length + ' posts filled' : '<span class="muted">None</span>') + '</td></tr>' +
       '<tr><td>This week</td><td>' + esc(PHASE_LABEL[govPhase()]) + ' · ' + cands + ' declared · ' + ballots + ' ballots</td></tr></tbody></table>' +
       '<div class="od-parties">' + Object.keys(G.PARTIES).map(function (k) { return '<span>' + partyChip(k) + ' <b class="num">' + (pc[k] || 0) + '</b> member' + ((pc[k] || 0) === 1 ? '' : 's') + '</span>'; }).join('') + '</div></details>';
+    // Advertising: what is on the boards, the sea and the radio right now (in-game money only)
+    var now = Date.now(), liveAds = (online.ads || []).map(function (d) { return L.checkAd(d.raw, now); }).filter(Boolean);
+    var boardsUsed = {}; liveAds.forEach(function (a) { boardsUsed[a.board] = 1; });
+    var seaLive = (online.sea || []).filter(function (d) { return d.raw && !seaExpired(d.raw); }).length, picLive = Object.keys(online.adpaid || {}).filter(function (k) { var v = online.adpaid[k]; return v && typeof v.until === 'number' && v.until > now; }).length;
+    var radioNext = 0; try { radioNext = radioAll().length; } catch (e) {}
+    html += '<details class="od-box" open><summary>📣 Advertising</summary><div class="od-stats">' + stat(liveAds.length, 'billboard ads live') + stat(Object.keys(boardsUsed).length + ' / ' + D.BILLBOARDS.length, 'boards in use') + stat(picLive, 'picture ads live') +
+      stat(seaLive, 'sea plots held') + stat((online.sponsored || []).length, 'sponsored posts') + stat(radioNext, 'radio slots booked') + stat(q0(online.adreview), 'ads to review') + '</div>' +
+      '<p class="note">Billboards rent from ' + L.naira(D.BILLBOARD_RENT) + ' a day in game money (3 days ×' + D.AD_PLANS.three.mult + ', a week ×' + D.AD_PLANS.week.mult + '). Every picture ad is reviewed by you first and labelled Sponsored. Real brands can be posted as sponsored from Creator.</p>' +
+      (liveAds.length ? '<table class="stmt od-t"><thead><tr><th>Board</th><th>Ad</th><th class="n">Ends</th></tr></thead><tbody>' + liveAds.slice(0, 12).map(function (a) { var B = D.BILLBOARDS.filter(function (b) { return b.id === a.board; })[0]; return '<tr><td>' + esc(B ? B.name || B.id : a.board) + '</td><td>' + esc(a.emoji + ' ' + a.text) + '</td><td class="n">' + esc(new Date(a.until).toLocaleDateString()) + '</td></tr>'; }).join('') + '</tbody></table>' : '') + '</details>';
     // Safety
     var q = function (a) { return (a || []).length; };
     html += '<details class="od-box" open><summary>🛟 Safety</summary><div class="od-stats">' + stat(q(online.reports), 'player reports') + stat(q(online.photoreview), 'photos to review') + stat(q(online.adreview), 'ads to review') + stat(q(online.seareview), 'sea plots to review') + '</div>' +
@@ -4377,7 +4434,7 @@
       else if (app === 'guide') body = '<div class="panel-b">' + guideView() + '</div>';
       else if (app === 'games') body = '<div class="panel-b">' + gamesView() + '</div>';
       else if (app === 'creator') body = '<div class="panel-b">' + creatorView() + '</div>';
-      else if (app === 'story') body = '<div class="panel-b">' + storyView() + '</div>';
+      else if (app === 'story') body = '<div class="panel-b">' + (S.report ? '<div class="section"><h3>📸 Story of my week</h3>' + storyCard() + '</div>' : '') + storyView() + '</div>';
       else if (app === 'weather') body = '<div class="panel-b">' + weatherView() + '</div>';
       else if (app === 'shop') body = '<div class="panel-b">' + shopView() + '</div>';
       else if (app === 'stocks') body = '<div class="panel-b">' + stocksView() + '</div>';
@@ -4496,7 +4553,7 @@
       return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="rep-title"><div class="sheet"><span class="label">Weekly report card</span><h2 id="rep-title">Week ' + r.w + '</h2>' +
         '<dl class="kv"><dt>Net worth</dt><dd class="num">' + N(r.worth) + '</dd><dt>Change</dt><dd class="num ' + (r.delta >= 0 ? 'gain' : 'cost') + '">' + (r.delta >= 0 ? '+' : '') + N(r.delta) + '</dd><dt>Money in</dt><dd class="num">' + N(made) + '</dd><dt>Money out</dt><dd class="num">' + N(spent) + '</dd></dl>' +
         '<h3>Where it came from</h3>' + catBars(r.inc, 'in') + '<h3>Where it went</h3>' + catBars(r.out, 'out') +
-        '<h3>Net worth by week</h3>' + sparkline(S.history, 'rep-spark') + shareBlock() +
+        '<h3>Net worth by week</h3>' + sparkline(S.history, 'rep-spark') + storyCard() + shareBlock() +
         '<div class="opts"><button class="btn go" id="rep-ok" data-repok="1">On to week ' + (r.w + 1) + '</button></div></div></div>';
     }
     if (S.won && !S.wonSeen) {
@@ -4611,7 +4668,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -5071,6 +5128,8 @@
       render(); return;
     }
     if (ds.sound) { prefs.sound = !prefs.sound; writeJSON(PREF_KEY, prefs); if (prefs.sound) { ctx(); play('credit'); } render(); return; }
+    if (ds.storysave) { saveStory(false); return; }
+    if (ds.storyshare) { saveStory(true); return; }
     if (ds.repok) { S.reportSeen = S.report.w; save(); render(); return; }
     if (ds.copyshare) {
       var txt = L.shareText(S);
