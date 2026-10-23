@@ -2191,6 +2191,9 @@
         var a = avail.filter(function (x) { return x.id === r[0]; })[0]; out.push({ id: r[0], def: r[1], a: a || null, icon: r[2], short: r[3], off: !a || a.disabled });
       });
     }
+    if (S.rules >= 40) avail.filter(function (x) { return pl.id === 'pitch' ? /^league_(train|match)$/.test(x.id) : pl.id === 'stadium' && x.id === 'league_final'; }).forEach(function (a) { // rules 40: the league's training, matches and the cup final
+      out.push({ id: a.id, def: a, a: a, icon: '⚽', short: a.id === 'league_train' ? 'Training' : a.id === 'league_final' ? 'Cup final' : 'Matchday', off: !!a.disabled });
+    });
     if (S.rules >= 38) avail.filter(function (x) { return pl.id === 'eko_convention' ? /^stage_(manager|headline)$/.test(x.id) : pl.id === 'theatre' && x.id === 'stage_rehearse'; }).forEach(function (a) { // rules 38: the stage career's acts
       out.push({ id: a.id, def: a, a: a, icon: a.minigame ? '🎮' : a.id === 'stage_manager' ? '✍️' : '🎼', short: a.id === 'stage_manager' ? 'Sign a manager' : a.id === 'stage_headline' ? 'Headline' : 'Rehearse', off: !!a.disabled });
     });
@@ -2289,11 +2292,25 @@
     return '<div class="ap-head"><b>' + esc(pl.icon || '📍') + ' ' + esc(pl.name) + '</b><span class="muted">' + esc(D.DISTRICTS[pl.district].name) + ' · ' + crowd + ' here · ' + esc(L.clockLabel(S)) + '</span><button class="btn sm ghost" id="venue-fold" data-venuefold="1" aria-expanded="' + !ui.venueFold + '" aria-label="' + (ui.venueFold ? 'Show the panel' : 'Fold the panel away') + '">' + (ui.venueFold ? '▴' : '▾') + '</button><button class="btn sm ghost" id="venue-close" data-venueclose="1" aria-label="Leave the scene">✕</button></div>' +
       (huntLetterAt(pl) ? '<div class="hunt-here" style="--hc:' + huntNow().color + '">✨ Something is glowing here! ' + (here ? 'Walk into it or tap it to catch it.' : 'Come here to catch it.') + '</div>' : '') +
       (function () { var gm = gemsLeft().filter(function (x) { return x.place === pl.id; })[0]; return gm ? '<div class="gem-here"><span>💎 A gem is hidden in this yard. Tap it' + (here ? '' : ' once you are here') + '.</span>' + (here ? '<button class="btn sm" id="vgem-' + gm.n + '" data-gem="' + gm.n + '">Pick it up · ' + N(L.nextGemPrize(S, gemToday())) + '</button>' : '') + '</div>' : ''; })() +
-      playbill(pl) + (pl.id === 'theatre' || pl.id === 'eko_convention' ? careerCard('venue') : '') + (pl.id === 'harbour_live' ? festCard('venue') : '') + yearFestCards('venue', pl.id) + (venueNamed(pl).length ? '<p class="note">Here: ' + venueNamed(pl).map(function (n) { return '<b>' + esc(n.name) + '</b> (' + esc(n.role) + ')'; }).join(', ') + '. Tap them in the yard.</p>' : '') +
+      playbill(pl) + (pl.id === 'theatre' || pl.id === 'eko_convention' ? careerCard('venue') : '') + (pl.id === 'pitch' || pl.id === 'stadium' ? leagueCard('venue') : '') + (pl.id === 'harbour_live' ? festCard('venue') : '') + yearFestCards('venue', pl.id) + (venueNamed(pl).length ? '<p class="note">Here: ' + venueNamed(pl).map(function (n) { return '<b>' + esc(n.name) + '</b> (' + esc(n.role) + ')'; }).join(', ') + '. Tap them in the yard.</p>' : '') +
       (pl.shop ? shopPanel(pl) : '') + (pl.shop ? (here ? '' : rideRow(pl.district)) : here ? venueTabs(pl, acts) : '<p class="note">You are in ' + esc(D.DISTRICTS[S.loc].name) + '. Take a ride to ' + esc(D.DISTRICTS[pl.district].name) + ': it pulls up at the gate and you walk in.</p>' + rideRow(pl.district) + venueExtras(pl)) +
       (S.loc === pl.district ? venueChatView(pl) : '');
   }
   // Rules 31: the National Theatre's billboard as a card: now showing, coming soon, past shows (✓ the ones you saw).
+  // Rules 40: the Eko Sunday League card: sign for a team, next fixture, recent results, the table, the cup final.
+  function leagueCard(where) {
+    var V = L.leagueView ? L.leagueView(S) : null; if (!V) return '';
+    var av = availMemo(), here = S.loc === 'mushin';
+    var head = '<div class="league-card"><div class="fc-lab">⚽ EKO SUNDAY LEAGUE · SEASON ' + V.season + (V.finalWeek ? ' · CUP FINAL WEEK' : ' · MATCHDAY ' + V.round + ' OF 7') + '</div>';
+    if (!V.joined) return head + '<h3>Sign for a team</h3><p class="fc-meta">Eight neighbourhood teams, matches on Sundays at 16:00 at the Mushin pitch, training on Wednesday evenings. League champions share ' + N(V.prize) + '; the cup final pays ' + N(V.cupPrize) + '.</p>' +
+      (here ? '<div class="lg-teams">' + V.teams.map(function (t, i) { var a = av.filter(function (x) { return x.id === 'league_join_' + i; })[0]; return '<button class="btn sm" id="lg-join-' + i + '-' + where + '" data-act="league_join_' + i + '"' + (a && !a.disabled ? '' : ' disabled') + '>' + esc(t) + '</button>'; }).join('') + '</div>' : '<p class="fc-meta">Come to the street football pitch in Mushin to sign.</p>') + '</div>';
+    var mine = function (x) { return x.you ? ' class="you"' : ''; };
+    return head + '<h3>' + esc(V.team) + (V.titles ? ' · 🏆×' + V.titles : '') + (V.cups ? ' · 🥇×' + V.cups : '') + '</h3>' +
+      (V.next ? '<p class="fc-head">Next: <b>' + (V.next.home ? 'v ' : 'away at ') + esc(V.next.opp) + '</b>, Sunday 16:00 at the Mushin pitch' + (V.form ? ' · training form ' + V.form : '') + '</p>' : '') +
+      (V.final ? '<p class="fc-head">Cup final, Sunday 16:00 at the National Stadium: <b>' + esc(V.final.a) + ' v ' + esc(V.final.b) + '</b>' + (V.final.youIn ? ' (you are in it!)' : '') + '</p>' : '') +
+      (V.results.length ? '<p class="fc-meta">' + V.results.map(function (r) { return 'R' + r.round + ' ' + (r.gf > r.ga ? 'W' : r.gf === r.ga ? 'D' : 'L') + ' ' + r.gf + '–' + r.ga + ' v ' + esc(r.opp) + (r.you ? '' : ' (you sat out)'); }).join(' · ') + '</p>' : '') +
+      '<table class="lg-table"><thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>' + V.table.map(function (x) { return '<tr' + mine(x) + '><td>' + x.pos + '</td><td>' + esc(x.name) + '</td><td>' + x.p + '</td><td>' + x.w + '</td><td>' + x.d + '</td><td>' + x.l + '</td><td>' + (x.gd > 0 ? '+' : '') + x.gd + '</td><td><b>' + x.pts + '</b></td></tr>'; }).join('') + '</tbody></table></div>';
+  }
   // Rules 38: the stage career card: level, rep, practice, manager, what unlocks next, and this week's Top 10.
   function careerCard(where) {
     var C = L.stageCareer ? L.stageCareer(S) : null; if (!C) return ''; var ch = L.stageChart(S), pct = C.next ? Math.round((C.rep - (C.rep >= 60 ? 60 : C.rep >= 30 ? 30 : 0)) / ((C.next.at - (C.rep >= 60 ? 60 : C.rep >= 30 ? 30 : 0)) || 1) * 100) : 100;
@@ -4171,7 +4188,7 @@
       var a = acts.filter(function (x) { return x.id === g.act; })[0], can = a && !a.disabled;
       return '<div class="item"><div><h3>' + g.icon + ' ' + esc(g.name) + '</h3><div class="meta"><span>' + esc(g.where) + '</span><span>' + esc(g.when) + '</span></div><div class="act-note">' + esc(g.best) + '</div>' + (a && a.disabled ? '<div class="why">' + esc(a.disabled) + '</div>' : '') + '</div>' +
         (can ? '<button class="btn go" id="game-' + g.kind + '" data-minigame="' + g.kind + '">▶ Play</button>' : L.districtCity(g.district) !== L.cityOf(S) ? '<button class="btn ghost" id="game-go-' + g.kind + '" data-app="travel">✈️ Fly there</button>' : '<button class="btn ghost" id="game-go-' + g.kind + '" data-tripto="' + g.district + '" data-tab="map">Go there</button>') + '</div>';
-    }).join('') + '</div>' + careerCard('games') + '</div>';
+    }).join('') + '</div>' + careerCard('games') + leagueCard('games') + '</div>';
   }
   // When a room night next starts (game minutes), or 0 while it is on.
   function nightNext(id) {
