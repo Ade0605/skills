@@ -5616,6 +5616,11 @@
   if (hot && hot.ready) hot.ready(start); else start(hot && hot.data ? hot.data : {});
 
   if ('serviceWorker' in navigator && /^https:|^http:\/\/localhost/.test(location.href) && !hot) {
-    try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) { /* not available */ }
+    try {
+      var hadSW = !!navigator.serviceWorker.controller, reloaded = false;
+      navigator.serviceWorker.register('sw.js').then(function (reg) { try { reg.update(); } catch (e) {} }).catch(function () {});
+      // A new version took over: reload once so the page runs the new code (your game is saved on this device).
+      navigator.serviceWorker.addEventListener('controllerchange', function () { if (!hadSW || reloaded) return; reloaded = true; try { save(); } catch (e) {} location.reload(); });
+    } catch (e) { /* not available */ }
   }
 })();
