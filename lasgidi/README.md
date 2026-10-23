@@ -625,6 +625,9 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Eko Lagoon Lights (rules 43):** a floating ring stage on the Lagos Lagoon off Ikoyi, with a dotted LED ring showing this week's made-up headline act, twin light pillars, sweeping beams, speaker towers on pontoons and a countdown over it on the 3D map. Shows are on Friday and Saturday nights, 20:00 to 23:00. Watch free from the Ikoyi shore or from a front-row boat (once a night each). Tap the stage or the 🎆 chip and the camera flies in.
   - **Player counter:** the top bar shows how many people have played online and how many are in the game now.
   - **Suggestion box:** Phone → Suggestions: a new idea, something broken, make it easier, or something else, filtered like chat. Each player's last five go to the owner, who reads them on the dashboard.
+  - **Cape Town in 3D:** the 3D map shows Table Mountain with its flat top and the cableway, Lion's Head, Signal Hill, the Twelve Apostles above Camps Bay, the Cape Wheel at the Waterfront and the stadium at Green Point.
+  - **Graduation day:** finishing a degree, apprenticeship or certificate opens a ceremony card (confetti, convocation or freedom day) with the careers it now opens one rank up, and a button to the careers list.
+  - **Where you start:** a step of its own on the start screen, before the birth lottery: a card for each city (Lagos, Accra, London, Dubai, Cape Town) with what life is like there, what people are called, the money, how much more money you start with, and the slogan. The home step shows your city with a Change city button.
   - **Easier money, business abroad and more sights (rules 41):**
     - **Income pays 1.5×:** wages, gigs, business takings, rent from tenants, prizes and performance fees. Sales, loans, refunds and transfers are not boosted, so buying and reselling cannot make money.
     - **A tech startup** (seed round, ₦5m, risky, grows into a scale-up) joins the business list.

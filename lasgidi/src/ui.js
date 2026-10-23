@@ -198,7 +198,7 @@
 
   /* ---------- run an engine call, then render ---------- */
   function run(fn, kind) {
-    var c0 = S ? L.cityOf(S) : null, res = fn(), c1 = S ? L.cityOf(S) : null, lx = c1 !== c0 && localOf(c1);
+    var q0 = S && S.quals ? Object.keys(S.quals).length : 0, c0 = S ? L.cityOf(S) : null, res = fn(), c1 = S ? L.cityOf(S) : null, lx = c1 !== c0 && localOf(c1);
     if (res && res.ok && kind === 'travel') play('horn');
     else if (res && res.collapsed) play('bad');
     else if (res && (res.won || /Promoted/.test(res.msg || ''))) play('good');
@@ -207,6 +207,7 @@
       if (net > 0) play('credit'); else if (net < 0) play('debit');
     }
     if (res && res.msg) ui.toasts.push({ msg: res.msg, ok: res.ok });
+    if (S && S.quals && Object.keys(S.quals).length > q0) { var qk = Object.keys(S.quals).sort(function (a, b) { return S.quals[b] - S.quals[a]; })[0]; ui.gradCard = qk; play('good'); }
     if (c0 && lx) ui.toasts.push({ msg: 'Welcome to ' + D.CITIES[c1].name + ': “' + lx.slogan + '” Prices here are in ' + lx.cur + '.', ok: true });
     (S.alerts || []).forEach(function (a) { ui.toasts.push({ alert: a }); });
     S.alerts = []; nightReminders();
@@ -4574,7 +4575,20 @@
   }
 
   /* ---------- modal for choice events ---------- */
+  // Rules 42: the day you finish a course. A ceremony card with what it opens up next.
+  function gradView() {
+    var P = D.STUDY && D.STUDY[ui.gradCard]; if (!P) return '';
+    var K = D.STUDY_KINDS[P.kind], title = P.kind === 'degree' ? 'Convocation day!' : P.kind === 'apprentice' ? 'Freedom day!' : 'Certificate day!';
+    var jobs = Object.keys(D.CAREERS).filter(function (k) { var c = D.CAREERS[k]; return c.skill === P.skill && !(c.rules && !(S.rules >= c.rules)) && !L.visitBar(S, c.district); }).sort(function (a, b) { var h = L.cityOf(S); return (L.districtCity(D.CAREERS[b].district) === h) - (L.districtCity(D.CAREERS[a].district) === h); }).slice(0, 4);
+    var conf = ''; for (var i = 0; i < 24; i++) conf += '<i style="left:' + ((i * 37) % 100) + '%;animation-delay:' + ((i * 0.13) % 1.6).toFixed(2) + 's;background:' + ['#f2b600', '#16a34a', '#e0701c', '#2563eb', '#db2777'][i % 5] + '"></i>';
+    return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="grad-title"><div class="sheet grad"><div class="confetti" aria-hidden="true">' + conf + '</div><span class="label">' + K.icon + ' ' + esc(K.name) + '</span><h2 id="grad-title">' + title + '</h2>' +
+      '<p><b>' + esc(S.name) + '</b>, you finished <b>' + esc(P.name) + '</b> at ' + esc(P.where) + '.' + (P.kind === 'degree' ? ' Family came, cameras flashed, and the gown is going on the wall.' : P.kind === 'apprentice' ? ' Your master prayed for you, handed over your tools and the whole shop danced.' : ' Framed and on your CV.') + '</p>' +
+      '<p class="note">It is on your CV now. Careers that use ' + esc(D.SKILLS[P.skill]) + ' take you without the skill level and start you one rank up' + (P.kind === 'degree' ? ', and it counts as a university degree' : '') + '.</p>' +
+      (jobs.length ? '<div class="pg-chips" style="padding:0">' + jobs.map(function (k) { var c = D.CAREERS[k]; return '<span class="act-chip">💼 ' + esc(c.titles[1]) + ' · ' + esc(c.name) + '</span>'; }).join('') + '</div>' : '') +
+      '<div class="opts"><button class="btn go" id="grad-jobs" data-gradok="jobs">See careers</button><button class="btn ghost" id="grad-ok" data-gradok="1">Celebrate</button></div></div></div>';
+  }
   function modal() {
+    if (ui.gradCard && D.STUDY && D.STUDY[ui.gradCard]) return gradView();
     if (S.japa && !S.japaSeen) {
       var J = D.JAPA_DESTS[S.japa.dest];
       return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="japa-title"><div class="sheet"><span class="label">Life complete · week ' + (L.week(S) + 1) + '</span><h2 id="japa-title">' + J.icon + ' You japa-ed to ' + esc(J.name) + '!</h2>' +
@@ -4647,14 +4661,15 @@
 
   /* ---------- new-player setup: Profile, Look, Personality, Dream, Birth lottery, Home ---------- */
   // Your identity is your claude.ai account: there is no password or email field anywhere in the game.
-  var ONB_STEPS = ['Profile', 'Look', 'Personality', 'Dream', 'Birth lottery', 'Home'];
+  var ONB_STEPS = ['Profile', 'Look', 'Personality', 'Dream', 'Where you start', 'Birth lottery', 'Home'];
   function onb() { return ui.onb || (ui.onb = { step: 0, name: ui.draftName || 'Ade', adult: false, look: { skin: 2, hair: 0, shape: 1 }, outfit: { top: 'st_tee', bottom: 'st_jeans' }, traits: [], goal: null, home: null }); }
   function onbValid(o, step) {
     if (step === 0) return o.name.trim().length > 0 && (o.adult || familyOn()); // under 18: Family mode
     if (step === 2) return o.traits.length === 2;
     if (step === 3) return !!o.goal;
-    if (step === 4) return !!ui.draftOrigin;
-    if (step === 5) return !!o.home;
+    if (step === 4) return true; // Lagos unless you pick another city
+    if (step === 5) return !!ui.draftOrigin;
+    if (step === 6) return !!o.home;
     return true;
   }
   function onboardView(orig) {
@@ -4678,16 +4693,23 @@
       var G = D.GOALS[k], on = o.goal === k;
       return '<button type="button" class="onb-card' + (on ? ' sel' : '') + '" id="onb-goal-' + k + '" data-onbgoal="' + k + '" aria-pressed="' + on + '"><b>' + esc(G.name) + '</b><small>' + esc(G.text) + '</small></button>';
     }).join('') + '</div>';
-    else if (st === 4) body = '<h2>The birth lottery</h2><div class="lottery">' + (orig ? '<b>' + esc(orig.name) + '</b><p style="margin:0">' + esc(orig.text) + '</p>' : '<p style="margin:0">Lagos decides where you start. The roll is random and happens once per life.</p>') +
+    else if (st === 4) {
+      // Where you start: Lagos, or a life in Accra, London, Dubai or Cape Town (you live there with no visa).
+      var cs = ['lagos'].concat(Object.keys(D.START_ABROAD || {})), cur = cs.indexOf(o.city) >= 0 ? o.city : 'lagos';
+      var CITY_LINE = { lagos: 'Danfo, owambe and the hustle. Eko o ni baje.', accra: 'Trotro, jollof wars and Labadi beach.', ldn: 'The Tube, rain and big money. Life costs more, pay is higher.', dxb: 'Towers, souks and the desert. Life costs more, pay is higher.', ctn: 'Table Mountain, the Waterfront and the Atlantic.' };
+      body = '<h2>Where you start</h2><p class="note">Pick the city you live in. You live there with no visa, with homes, jobs and businesses there. Every other city is a trip. You can travel any time.</p><div class="onb-grid onb-citygrid">' + cs.map(function (c) {
+        var on = c === cur, x = localOf(c), AB0 = D.START_ABROAD[c];
+        return '<button type="button" class="onb-card onb-city' + (on ? ' sel' : '') + '" id="onb-city-' + c + '" data-onbcity="' + c + '" aria-pressed="' + on + '"><span class="onb-e">' + (CITY_ICON[c] || '📍') + '</span><b>' + esc(D.CITIES[c].name) + '</b><small>' + esc(CITY_LINE[c] || '') + '</small><small class="muted">' + (x ? esc(x.person) + ' · ' + esc(x.cur) + (AB0 && AB0.cash !== 1 ? ' · ' + AB0.cash + '× starting money' : '') : '') + '</small><small class="slogan">“' + esc(x ? x.slogan : '') + '”</small></button>';
+      }).join('') + '</div>';
+    }
+    else if (st === 5) body = '<h2>The birth lottery</h2><div class="lottery">' + (orig ? '<b>' + esc(orig.name) + '</b><p style="margin:0">' + esc(orig.text) + '</p>' : '<p style="margin:0">Lagos decides where you start. The roll is random and happens once per life.</p>') +
       '<div class="odds"><span>LAPO Baby 50%</span><span>Ajepako 35%</span><span>Nepo Baby 15%</span></div>' + (orig ? '' : '<div class="inline"><button class="btn go" id="roll" data-roll="1">Roll the birth lottery</button></div>') + '</div>';
     else {
       // Rules 42: pick the city you live in. Lagos, or start a life in Accra, London, Dubai or Cape Town.
       var cities = ['lagos'].concat(Object.keys(D.START_ABROAD || {})), city = cities.indexOf(o.city) >= 0 ? o.city : 'lagos', AB = city !== 'lagos' && D.START_ABROAD[city];
       var homes = !orig ? [] : AB ? [AB.homes[ui.draftOrigin]].filter(Boolean) : (D.START_HOMES[ui.draftOrigin] || []);
       var lx = localOf(city), cm = function (n) { return lx && lx.rate !== 1 ? fmtCur(n / lx.rate, lx.sym, lx.dp) + ' (' + L.naira(n) + ')' : L.naira(n); };
-      body = '<h2>Where you live</h2><div class="pg-chips onb-cities" role="group" aria-label="City">' + cities.map(function (c) {
-        var on = c === city; return '<button type="button" class="pg-chip' + (on ? ' sel' : '') + '" id="onb-city-' + c + '" data-onbcity="' + c + '" aria-pressed="' + on + '">' + (CITY_ICON[c] || '📍') + ' ' + esc(D.CITIES[c].name) + '</button>';
-      }).join('') + '</div>' + (lx ? '<p class="note">You will be a <b>' + esc(lx.person) + '</b>. “' + esc(lx.slogan) + '”' + (AB ? ' You live here with no visa, and arrive with ' + cm(Math.round(orig ? orig.cash * AB.cash / 1000 : 0) * 1000) + '. Other cities are trips.' : '') + '</p>' : '') +
+      body = '<p class="note">' + (CITY_ICON[city] || '📍') + ' Starting in <b>' + esc(D.CITIES[city].name) + '</b> <button type="button" class="btn sm ghost" id="onb-city-change" data-onb="back2">Change city</button></p>' + (lx ? '<p class="note">You will be ' + (/^[AEIOU]/.test(lx.person) ? 'an' : 'a') + ' <b>' + esc(lx.person) + '</b>. “' + esc(lx.slogan) + '”' + (AB ? ' You live here with no visa, and arrive with ' + cm(Math.round(orig ? orig.cash * AB.cash / 1000 : 0) * 1000) + '. Other cities are trips.' : '') + '</p>' : '') +
         '<h2>Your first home</h2><p class="note">' + (orig ? esc(orig.name) + ': these are the homes your start can pay for.' : 'Roll the birth lottery first.') + ' Rent is due every Saturday at noon.</p><div class="onb-grid">' + homes.map(function (k) {
         var H = D.HOMES[k], on = o.home === k;
         return '<button type="button" class="onb-card' + (on ? ' sel' : '') + '" id="onb-home-' + k + '" data-onbhome="' + k + '" aria-pressed="' + on + '">' + (icon3d('h_' + (H.type === 'flat2' || H.type === 'flat3' ? 'flat' : H.type)) || '<span class="onb-e">🏠</span>') + '<b>' + esc(H.name) + '</b><small>' + esc(D.DISTRICTS[H.district].name) + ' · ' + cm(H.rent) + ' a week · light ' + Math.round(H.power * 100) + '%</small></button>';
@@ -4719,7 +4741,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -4731,6 +4753,7 @@
       var o0 = onb(); introState();
       if (ds.onb === 'next' && onbValid(o0, o0.step)) o0.step = Math.min(ONB_STEPS.length - 1, o0.step + 1);
       else if (ds.onb === 'back') o0.step = Math.max(0, o0.step - 1);
+      else if (ds.onb === 'back2') o0.step = 4; // back to Where you start
       else if (ds.onb === 'shuffle') { var rr = function (n) { return Math.floor(Math.random() * n); }; o0.look = { skin: rr(D.LOOKS.skin.length), hair: rr(D.LOOKS.hair.length), shape: rr(D.LOOKS.shape.length) }; var sts = function (sl) { return Object.keys(D.CLOTHES).filter(function (k) { return D.CLOTHES[k].starter && D.CLOTHES[k].slot === sl; }); }, tp = sts('top'), bt = sts('bottom'); o0.outfit = { top: tp[rr(tp.length)], bottom: bt[rr(bt.length)] }; }
       render(); var nx = document.getElementById(ds.onb === 'back' ? 'onb-back' : 'onb-next') || document.getElementById('start'); if (nx && ds.onb !== 'shuffle') nx.focus(); return;
     }
@@ -5182,6 +5205,7 @@
     if (ds.lagoon) { if (city3d && city3d.focusShow) city3d.focusShow(); lagoonPick(); return; }
     if (ds.ideakind) { var it = document.getElementById('idea-text'); if (it) ui.ideaDraft = it.value; ui.ideaKind = ds.ideakind; render(); return; }
     if (ds.ideasend) { sendIdea(); return; }
+    if (ds.gradok) { var gj = ds.gradok === 'jobs'; ui.gradCard = null; if (gj) { ui.tab = 'phone'; ui.app = 'jobs'; } render(); return; }
     if (ds.storysave) { saveStory(false); return; }
     if (ds.storyshare) { saveStory(true); return; }
     if (ds.repok) { S.reportSeen = S.report.w; save(); render(); return; }
