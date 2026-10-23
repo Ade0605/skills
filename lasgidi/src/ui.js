@@ -147,6 +147,18 @@
     } catch (e) {}
   }
   function streetCall() { var list = STREET_CALLS[S ? L.cityOf(S) : 'lagos'] || STREET_CALLS.lagos; say(list[Math.floor(Math.random() * list.length)]); }
+  // Voices for what you just did: the touts you listened to, the hawker you bought from, the stadium, the church.
+  function sayLines(lines, gap) { lines.forEach(function (l, i) { setTimeout(function () { say(l, { force: true, pitch: 0.75 + ((i * 37) % 10) / 20 }); }, i * (gap || 1600)); }); }
+  function actVoice(label) {
+    if (!voicesOn() || !label) return; var t = label.toLowerCase(), c = S ? L.cityOf(S) : 'lagos', calls = STREET_CALLS[c] || STREET_CALLS.lagos, pick = function () { return calls[Math.floor(Math.random() * calls.length)]; };
+    if (/tout|preacher/.test(t)) sayLines([pick(), pick(), 'Brethren! The end is near o! Repent!']);
+    else if (/gala|pure water|sachet|water to the queue|sell water/.test(t)) sayLines(c === 'accra' ? ['Ice water! Ice water!', 'Pure water!'] : ['Pure water! Pure water!', 'Gala! Buy your Gala!']);
+    else if (/suya|kelewele|bole/.test(t)) sayLines([/kelewele/.test(t) ? 'Kelewele! Hot kelewele!' : /bole/.test(t) ? 'Bole and fish! Hot bole!' : 'Suya! Hot suya! Who wan chop suya?']);
+    else if (/match|stadium|npfl|super eagles/.test(t)) { noise(0, 2.2, 700, 0.6, 0.12); sayLines(['Goal!', 'Goooal!'], 900); }
+    else if (/church|service|worship|choir/.test(t)) sayLines(['Praise the Lord!', 'Halleluyah!'], 1400);
+    else if (/owambe/.test(t)) sayLines(['Spray am! Spray am!', 'Omo, this party is sweet!']);
+    else if (/load bags|park boy|hawk in/.test(t)) sayLines([pick(), 'Oya, move, move!']);
+  }
   function conductorCall(dest, mode) {
     var d = D.DISTRICTS[dest]; if (!d) return; var c = L.districtCity(dest), nm = d.name.split(/[ ,(]/)[0];
     var line = c === 'accra' || c === 'kumasi' || c === 'capecoast' ? nm + '! ' + nm + '! Enter, enter!' : c === 'ctn' ? nm + '! ' + nm + '! Get in, two more!' : c === 'ldn' ? 'This bus goes to ' + d.name + '.' : nm + '! ' + nm + '! Enter with your change o!';
@@ -5167,7 +5179,7 @@
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
     if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { if (/^(danfo|brt|keke|bus|trotro|ferry)$/.test(mode0 || '')) conductorCall(S.loc, mode0); ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
-    if (ds.act) { var aid0 = ds.act; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { clubMoment(aid0); ui.activity = activityFor(aid0); ui.activityAt = Date.now(); if (aid0 === 'work_shift' && ui.venueOpen) ui.venueBubble = { place: ui.venueOpen, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; }); return; }
+    if (ds.act) { var aid0 = ds.act, alab0 = ((availMemo().filter(function (x) { return x.id === aid0; })[0]) || {}).label; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { try { actVoice(alab0); } catch (e) {} clubMoment(aid0); ui.activity = activityFor(aid0); ui.activityAt = Date.now(); if (aid0 === 'work_shift' && ui.venueOpen) ui.venueBubble = { place: ui.venueOpen, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
     if (ds.interview !== undefined) { ui.interview = ds.interview || null; render(); return; }
