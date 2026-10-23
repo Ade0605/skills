@@ -2191,6 +2191,9 @@
         var a = avail.filter(function (x) { return x.id === r[0]; })[0]; out.push({ id: r[0], def: r[1], a: a || null, icon: r[2], short: r[3], off: !a || a.disabled });
       });
     }
+    if (S.rules >= 41 && (pl.id === 'ldn_canary' || pl.id === 'dxb_mall')) avail.filter(function (x) { return /^bizlic_/.test(x.id); }).forEach(function (a) { // rules 41: the business visa or trade licence
+      out.push({ id: a.id, def: a, a: a, icon: '📝', short: 'Business licence', off: !!a.disabled });
+    });
     if (S.rules >= 40) avail.filter(function (x) { return pl.id === 'pitch' ? /^league_(train|match)$/.test(x.id) : pl.id === 'stadium' && x.id === 'league_final'; }).forEach(function (a) { // rules 40: the league's training, matches and the cup final
       out.push({ id: a.id, def: a, a: a, icon: '⚽', short: a.id === 'league_train' ? 'Training' : a.id === 'league_final' ? 'Cup final' : 'Matchday', off: !!a.disabled });
     });
@@ -3477,10 +3480,11 @@
     }).join('') + '</div>' + (S.businesses.some(function (b) { return !b.manager; }) ? '<div class="inline"><button class="btn sm" id="visit" data-visit="1">Check on businesses (2h)</button></div>' : '');
     var site = ui.bizSite || (D.BUSINESS_SITES[S.loc] ? S.loc : 'surulere'), sd = D.BUSINESS_SITES[site];
     html += '<details' + (S.businesses.length && !ui.bizOpen ? '' : ' open') + '><summary>Build a business</summary>' +
-      '<div class="inline"><label class="label" for="biz-site">Site</label><select id="biz-site">' + Object.keys(D.BUSINESS_SITES).map(function (k) {
-        return '<option value="' + k + '"' + (k === site ? ' selected' : '') + '>' + esc(D.DISTRICTS[k].name) + (L.districtCity(k) !== 'lagos' ? ', ' + esc(D.CITIES[L.districtCity(k)].name) : '') + ' · ×' + D.BUSINESS_SITES[k].mult.toFixed(2) + ' · rent ' + N(L.price(S, D.BUSINESS_SITES[k].rent)) + '/wk</option>';
-      }).join('') + '</select></div>' + ['high', 'mid', 'low'].map(function (tier) {
-        var keys = Object.keys(D.BUSINESSES).filter(function (k) { return D.BUSINESSES[k].tier === tier; });
+      '<div class="inline"><label class="label" for="biz-site">Site</label><select id="biz-site">' + Object.keys(D.BUSINESS_SITES).filter(function (k) { var R = D.BUSINESS_SITES[k].rules; return !R || S.rules >= R; }).map(function (k) {
+        var ct = L.districtCity(k), lic = D.BIZ_LICENCES && D.BIZ_LICENCES[ct], need = lic && !(S.bizLicence && S.bizLicence[ct]);
+        return '<option value="' + k + '"' + (k === site ? ' selected' : '') + '>' + esc(D.DISTRICTS[k].name) + (ct !== 'lagos' ? ', ' + esc(D.CITIES[ct].name) : '') + ' · ×' + D.BUSINESS_SITES[k].mult.toFixed(2) + ' · rent ' + N(L.price(S, D.BUSINESS_SITES[k].rent)) + '/wk' + (need ? ' · needs ' + esc(lic.name) : '') + '</option>';
+      }).join('') + '</select></div>' + (S.rules >= 41 ? '<p class="note">London and Dubai: get a UK business visa at Canary Wharf (' + N(L.price(S, D.BIZ_LICENCES.ldn.fee)) + ') or a Dubai trade licence in Downtown Dubai (' + N(L.price(S, D.BIZ_LICENCES.dxb.fee)) + '), then build there. Income in this life pays 1.5×.</p>' : '') + ['high', 'mid', 'low'].map(function (tier) {
+        var keys = Object.keys(D.BUSINESSES).filter(function (k) { return D.BUSINESSES[k].tier === tier && (!D.BUSINESSES[k].minRules || S.rules >= D.BUSINESSES[k].minRules); });
         return '<h4 class="dl-group">' + esc(D.BUSINESS_TIERS[tier]) + '</h4><div class="list">' + keys.map(function (k) {
         var bz = D.BUSINESSES[k], p = L.price(S, bz.price), g = D.BUSINESS_GROWTH[k];
         return '<div class="item biz">' + pic('biz:' + k, bz.name, '<div class="dl-ic">' + g.icon + '</div>', 'dl-pic') + '<div><h3>' + esc(bz.name) + '</h3><div class="meta"><span class="cost num">' + N(p) + '</span><span class="gain num">~' + N(Math.round(bz.daily * S.econ.infl * sd.mult / 50) * 50) + '/day here</span><span>Grows into ' + esc(g.names[2]) + '</span>' + (bz.power ? '<span>Needs light</span>' : '') + (bz.weekend ? '<span>Busy Fri–Sun</span>' : '') + (bz.december ? '<span>Booms in December (×' + bz.december + ')</span>' : '') + (bz.weekdays ? '<span>Term days only</span>' : '') + (bz.risky ? '<span class="cost">Risky: dues and losses</span>' : '') + '</div></div>' +

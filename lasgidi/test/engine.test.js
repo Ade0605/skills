@@ -835,7 +835,7 @@ test('daily gem hunt: same gems for everyone each day, must be there, once each,
   const a = L.gemsFor('2026-10-12'), b = L.gemsFor('2026-10-12'), c = L.gemsFor('2026-10-13');
   assert.equal(a.length, 5); assert.deepEqual(a, b); assert.notDeepEqual(a, c);
   assert.equal(new Set(a.map(g => g.place)).size, 5);
-  const s = L.newGame({ seed: 38, origin: 'mid', goal: 'freestyle' });
+  const s = L.newGame({ rules: 40, seed: 38, origin: 'mid', goal: 'freestyle' });
   const g = a[0];
   if (s.loc !== g.district) assert.equal(L.collectGem(s, '2026-10-12', 0).ok, false, 'must be in the district');
   s.loc = g.district;
@@ -912,7 +912,7 @@ test('events: festivals appear only in their month, day and hours', () => {
 });
 
 test('quests: checks flip, claims pay once, and the life still replays', () => {
-  const s = L.newGame({ seed: 45, origin: 'nepo', goal: 'freestyle' });
+  const s = L.newGame({ rules: 40, seed: 45, origin: 'nepo', goal: 'freestyle' });
   assert.deepEqual(L.activeQuests(s).map(q => q.id), ['save_100k', 'get_job', 'first_shift'], 'claimable first');
   assert.equal(L.claimQuest(s, 'get_job').ok, false, 'not done yet');
   assert.equal(L.claimQuest(s, 'nope').ok, false);
@@ -974,7 +974,7 @@ test('ride-hailing: only with a car; pays fares minus the cut and fuel', () => {
 });
 
 test('daily streak: grows on consecutive real days, once per game day, resets after a gap', () => {
-  const s = L.newGame({ seed: 49, origin: 'mid', goal: 'freestyle' });
+  const s = L.newGame({ rules: 40, seed: 49, origin: 'mid', goal: 'freestyle' });
   const b0 = s.cash + s.bank;
   assert.ok(L.claimStreak(s, '2026-10-10').ok);
   assert.equal(s.cash + s.bank - b0, L.price(s, 1000));
@@ -1899,7 +1899,7 @@ test('skits and live streaming: a weekly trend, location bonus, gifts, NEPA drop
 });
 
 test('sports: tournaments pay a capped prize by skill, eight sports make an All-rounder', () => {
-  const s = L.newGame({ seed: 114, origin: 'nepo', goal: 'freestyle' });
+  const s = L.newGame({ rules: 40, seed: 114, origin: 'nepo', goal: 'freestyle' });
   s.bank += 2000000; s.opening.bank += 2000000;
   const sports = new Set();
   Object.values(L.DATA.PLACE_ACTIONS).forEach(list => list.forEach(a => { if (a.sport) { assert.ok(L.DATA.SPORTS[a.sport], a.id); sports.add(a.sport); } }));
@@ -2822,7 +2822,7 @@ test('rules 19: more Lagos places: nogem, own acts, rules 19 only', () => {
   assert.ok(D.CIVIC_ACTS.lag_lasu.every(a => !/Mama B'/.test(a.label)));
 });
 test('rules 21: three daily goals, the same for a seed and day; a capped reward once a day; none in rules-20 lives', () => {
-  const mk = (rules) => { const s = L.newGame(Object.assign({ seed: 2100, origin: 'nepo', goal: 'freestyle' }, rules ? { rules } : {})); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const mk = (rules) => { const s = L.newGame(Object.assign({ seed: 2100, origin: 'nepo', goal: 'freestyle' }, { rules: rules || 40 })); while (s.pending.length) L.resolveChoice(s, 0); return s; };
   const a = mk(), b = mk();
   assert.ok(a.rules >= 21); assert.deepEqual(L.dailyGoals(a).list.map(g => g.k), L.dailyGoals(b).list.map(g => g.k));
   assert.equal(L.dailyGoals(a).list.length, 3); assert.equal(L.dailyGoals(a).list[0].k, 'acts');
@@ -2876,7 +2876,7 @@ test('rules 22: Accra opens for new lives only: fly or coach there (border fees)
   for (const a of Object.keys(D.CITIES)) for (const b of Object.keys(D.CITIES)) if (a !== b && !D.CITIES[a].visit && !D.CITIES[b].visit) assert.ok(D.INTERCITY.bus.mins[a + '-' + b] > 0, a + '-' + b);
 });
 test('rules 23: London is visit-only with a UK visa: fee, proof of funds, a wait, flights only, no pay there, flown home on overstay', () => {
-  const mk = (rules) => { const s = L.newGame(Object.assign({ seed: 2400, origin: 'nepo', goal: 'freestyle' }, rules ? { rules } : {})); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const mk = (rules) => { const s = L.newGame(Object.assign({ seed: 2400, origin: 'nepo', goal: 'freestyle' }, { rules: rules || 40 })); while (s.pending.length) L.resolveChoice(s, 0); return s; };
   const old = mk(22); assert.ok(L.visaQuote(old).disabled); assert.equal(L.intercityOptions(old, 'ldn').length, 0);
   const s = mk(); assert.ok(s.rules >= 23);
   assert.match(L.visaQuote(s).disabled || '', /Proof of funds/); // ₦800k in the bank is not enough
@@ -2888,7 +2888,7 @@ test('rules 23: London is visit-only with a UK visa: fee, proof of funds, a wait
   assert.ok(L.intercity(r, 'ldn', 'flight').ok); assert.equal(L.cityOf(r), 'ldn');
   assert.ok(!L.moveHouse(r, 'acc_osu_flat').ok || true);
   for (const p of D.PLACES.filter(p => L.districtCity(p.district) === 'ldn')) { assert.ok(p.nogem, p.id); for (const a of D.CIVIC_ACTS[p.id] || []) assert.ok(!a.earn || (a.permitted && a.minRules >= 26 && a.earn <= 3000), a.id + ' pays nothing (rules 26: a small permitted engagement)'); }
-  for (const k of Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === 'ldn')) { assert.ok(!(D.PLACE_ACTIONS[k] || []).length); assert.ok(!D.BUSINESS_SITES[k]); }
+  for (const k of Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === 'ldn')) { assert.ok(!(D.PLACE_ACTIONS[k] || []).length); assert.ok(!D.BUSINESS_SITES[k] || D.BUSINESS_SITES[k].rules >= 41); }
   assert.ok(!Object.values(D.HOMES).some(h => L.districtCity(h.district) === 'ldn')); assert.ok(!Object.values(D.CAREERS).some(c => L.districtCity(c.district) === 'ldn'));
   // Overstay: wait until the visa runs out and you are flown home.
   for (let d = 0; d < 32 && L.cityOf(r) === 'ldn'; d++) { L.wait(r, 24 * 60); while (r.pending.length) L.resolveChoice(r, 0); }
@@ -2987,7 +2987,7 @@ test('rules 25: Kumasi opens (closed in rules 24 lives); a domestic coach from A
 });
 
 test('rules 26: Dubai is visit-only with a UAE tourist visa; nothing pays there; flown home on overstay; London keeps its own visa', () => {
-  const mk = rules => { const s = L.newGame(Object.assign({ seed: 2600, origin: 'nepo', goal: 'freestyle' }, rules ? { rules } : {})); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const mk = rules => { const s = L.newGame(Object.assign({ seed: 2600, origin: 'nepo', goal: 'freestyle' }, { rules: rules || 40 })); while (s.pending.length) L.resolveChoice(s, 0); return s; };
   const old = mk(25); assert.equal(L.cityOpen(old, 'dxb'), false); assert.equal(L.intercityOptions(old, 'dxb').length, 0); assert.equal(L.applyVisa(old, 'dxb').ok, false);
   const s = mk(); assert.ok(s.rules >= 26);
   assert.match(L.visaQuote(s, 'dxb').disabled || '', /Proof of funds/); // ₦800k is not enough
@@ -3000,7 +3000,7 @@ test('rules 26: Dubai is visit-only with a UAE tourist visa; nothing pays there;
   const fl = L.intercityOptions(s, 'dxb'); assert.equal(fl.length, 1); assert.ok(!fl[0].disabled, fl[0].disabled); assert.ok(fl[0].mins >= 300);
   assert.ok(L.intercity(s, 'dxb', 'flight').ok); assert.equal(L.cityOf(s), 'dxb');
   for (const p of D.PLACES.filter(p => L.districtCity(p.district) === 'dxb')) { assert.ok(p.nogem, p.id); for (const a of D.CIVIC_ACTS[p.id] || []) assert.ok(!a.earn, a.id + ' pays nothing'); assert.ok(D.insideKind(p), p.id); }
-  for (const k of Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === 'dxb')) { assert.ok(!(D.PLACE_ACTIONS[k] || []).length); assert.ok(!D.BUSINESS_SITES[k]); }
+  for (const k of Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === 'dxb')) { assert.ok(!(D.PLACE_ACTIONS[k] || []).length); assert.ok(!D.BUSINESS_SITES[k] || D.BUSINESS_SITES[k].rules >= 41); }
   assert.ok(!Object.values(D.HOMES).some(h => L.districtCity(h.district) === 'dxb'));
   assert.ok(L.flightQuote(s, 'lagos', 'economy').disabled, 'cabin classes do not fly to or from Dubai');
   for (let d = 0; d < 34 && L.cityOf(s) === 'dxb'; d++) { L.wait(s, 24 * 60); while (s.pending.length) L.resolveChoice(s, 0); }
@@ -3377,7 +3377,7 @@ test('rules 37: a festival in each other city, in its own month and district; ne
 });
 
 test('rules 38: stage career: rehearse, rep and levels, a manager at 30, a weekly capped headline at 60, and a weekly chart', () => {
-  const s = L.newGame({ seed: 3810, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const s = L.newGame({ rules: 40, seed: 3810, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
   assert.ok(s.rules >= 38); s.cash = 5e6;
   const step = (loc) => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); s.loc = loc; };
   const fresh = () => { s.needs.energy = 100; s.needs.hunger = 70; };
@@ -3403,11 +3403,11 @@ test('rules 38: stage career: rehearse, rep and levels, a manager at 30, a weekl
   assert.ok(s.ach.headliner); assert.equal(s.stage.headWeek, L.week(s), 'marked for the week');
   // The chart: 10 rows, the same for every life in a week.
   const ch = L.stageChart(s); assert.equal(ch.rows.length, 10); assert.ok(ch.you >= 1);
-  const t = L.newGame({ seed: 77, origin: 'mid', goal: 'japa' }); t.t = s.t; assert.deepEqual(L.stageChart(t).rows.filter(x => !x.you).slice(0, 3).map(x => x.name), ch.rows.filter(x => !x.you).slice(0, 3).map(x => x.name));
+  const t = L.newGame({ rules: 40, seed: 77, origin: 'mid', goal: 'japa' }); t.t = s.t; assert.deepEqual(L.stageChart(t).rows.filter(x => !x.you).slice(0, 3).map(x => x.name), ch.rows.filter(x => !x.you).slice(0, 3).map(x => x.name));
   // Older lives: no career.
   const o = L.newGame({ seed: 3810, origin: 'nepo', goal: 'freestyle', rules: 37 }); assert.equal(L.stageCareer(o), null); o.loc = 'vi'; assert.ok(!L.availableActions(o).some(a => /^stage_(manager|headline)/.test(a.id)));
   // A real life that rehearses replays to the same seal.
-  const v = L.newGame({ seed: 3812, origin: 'nepo', goal: 'freestyle' }); while (v.pending.length) L.resolveChoice(v, 0);
+  const v = L.newGame({ rules: 40, seed: 3812, origin: 'nepo', goal: 'freestyle' }); while (v.pending.length) L.resolveChoice(v, 0);
   const fast = L.travelOptions(v, 'surulere').filter(x => !x.disabled).sort((x, y) => x.mins - y.mins)[0]; assert.ok(L.travel(v, 'surulere', fast.mode).ok);
   for (let i = 0; i < 400; i++) { while (v.pending.length) L.resolveChoice(v, 0); const a = L.availableActions(v).find(x => x.id === 'stage_rehearse'); if (a && !a.disabled) { assert.ok(L.doAction(v, 'stage_rehearse').ok); break; } L.wait(v, 30); }
   assert.equal(L.stageCareer(v).practice, 2);
@@ -3440,7 +3440,7 @@ test('rules 39: review fixes: stalls after 18:00 start tomorrow and stay on one 
 });
 
 test('rules 40: Eko Sunday League: sign, train, play Sundays, a table that adds up, a capped title and cup', () => {
-  const s = L.newGame({ seed: 4010, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const s = L.newGame({ rules: 40, seed: 4010, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
   assert.equal(s.rules, 40); s.cash = 5e6;
   const step = (loc) => { while (s.pending.length) L.resolveChoice(s, 0); L.wait(s, 15); s.loc = loc; };
   const fresh = () => { s.needs.energy = 100; s.needs.hunger = 70; };
@@ -3464,13 +3464,35 @@ test('rules 40: Eko Sunday League: sign, train, play Sundays, a table that adds 
   const prizes = s.ledger.slice(before).filter(e => /Eko Sunday League/.test(e.memo)); assert.ok(prizes.length <= 1);
   prizes.forEach(e => assert.ok(e.amt <= L.price(s, 15000) + 1));
   // The other teams' results are the same for every life in a season.
-  const o = L.newGame({ seed: 77, origin: 'mid', goal: 'japa' }); o.t = s.t; const t1 = L.leagueView(o).table.map(x => x.name).join(), t2 = L.leagueView(L.newGame({ seed: 78, origin: 'mid', goal: 'japa' })).table;
+  const o = L.newGame({ rules: 40, seed: 77, origin: 'mid', goal: 'japa' }); o.t = s.t; const t1 = L.leagueView(o).table.map(x => x.name).join(), t2 = L.leagueView(L.newGame({ rules: 40, seed: 78, origin: 'mid', goal: 'japa' })).table;
   assert.ok(t1.length > 0 && t2.length === 8);
   // Older lives: no league.
   const old = L.newGame({ seed: 4010, origin: 'nepo', goal: 'freestyle', rules: 39 }); old.loc = 'mushin'; assert.equal(L.leagueView(old), null); assert.ok(!L.availableActions(old).some(a => /^league_/.test(a.id)));
   // A real life that signs replays to the same seal.
-  const v2 = L.newGame({ seed: 4012, origin: 'nepo', goal: 'freestyle' }); while (v2.pending.length) L.resolveChoice(v2, 0);
+  const v2 = L.newGame({ rules: 40, seed: 4012, origin: 'nepo', goal: 'freestyle' }); while (v2.pending.length) L.resolveChoice(v2, 0);
   const fast = L.travelOptions(v2, 'mushin').filter(x => !x.disabled).sort((x, y) => x.mins - y.mins)[0]; assert.ok(L.travel(v2, 'mushin', fast.mode).ok);
   assert.ok(L.doAction(v2, 'league_join_3').ok);
   assert.equal(L.replayLife(v2.replay).ledgerHash, v2.ledgerHash);
+});
+
+test('rules 41: income pays 1.5x (not sales or loans); businesses and a tech startup open in London and Dubai with a licence; new sights', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 4110, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); s.bank = 0; s.cash = 5e7; return s; };
+  const s = mk(); assert.equal(s.rules, 41);
+  // A gig pays 1.5x what the same gig pays on rules 40.
+  const o = mk(40);
+  for (const x of [s, o]) { x.loc = 'mushin'; x.needs.energy = 100; x.needs.hunger = 70; }
+  // The same business, the same day: the rules 41 payout is 1.5x.
+  for (const x of [s, o]) { x.businesses.push({ id: 'buka', paid: 600000, visit: 0, site: 'yaba', level: 1, manager: true }); for (let i = 0; i < 96; i++) { while (x.pending.length) L.resolveChoice(x, 0); x.businesses.forEach(b => { b.visit = L.day(x); }); L.wait(x, 15); } }
+  const p1 = s.ledger.filter(e => e.memo === 'Business payout')[0].amt, p2 = o.ledger.filter(e => e.memo === 'Business payout')[0].amt;
+  assert.ok(Math.abs(p1 - p2 * 1.5) <= 75, 'payout x1.5: ' + p1 + ' vs ' + p2);
+  // Selling a business is not boosted (no buy-sell loop).
+  s.loc = 'yaba'; assert.ok(L.buyBusiness(s, 'pos', 'yaba').ok); const paid = s.businesses[s.businesses.length - 1].paid; const c0 = s.cash; assert.ok(L.sellBusiness(s, s.businesses.length - 1).ok); assert.ok(s.cash - c0 < paid, 'a sale returns less than you paid');
+  // London: needs the business visa, bought at Canary Wharf.
+  assert.match(L.buyBusiness(s, 'startup', 'ldn_tower').msg, /business visa/);
+  s.loc = 'ldn_tower'; s.needs.energy = 100; assert.ok(L.doAction(s, 'bizlic_ldn').ok); assert.ok(L.buyBusiness(s, 'startup', 'ldn_tower').ok);
+  assert.equal(s.businesses[s.businesses.length - 1].id, 'startup');
+  // Older lives: no startup, no London sites, no boost.
+  const old = mk(40); assert.ok(!L.buyBusiness(old, 'startup', 'yaba').ok); assert.ok(!L.buyBusiness(old, 'pos', 'ldn_tower').ok);
+  // New sights exist in London and Dubai and are gated.
+  for (const id of ['tol_jewels', 'wa_tour', 'df2_sky', 'pr_water', 'dgm_aqua', 'bm_treasures', 'bkp_rooms']) assert.ok(Object.values(D.CIVIC_ACTS).some(l => (l || []).some(a => a.id === id && a.minRules === 41)), id);
 });
