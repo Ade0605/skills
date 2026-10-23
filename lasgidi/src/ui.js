@@ -78,13 +78,68 @@
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
     o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + len + 0.02);
   }
+  // A burst of filtered noise: the rattle of coins, the thud of a box, the click of a cash drawer.
+  function noise(start, len, freq, q, vol, type) {
+    var a = ctx(); if (!a) return;
+    var n = Math.max(1, Math.floor(a.sampleRate * len)), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+    var src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(), t = a.currentTime + start;
+    src.buffer = buf; f.type = type || 'bandpass'; f.frequency.value = freq; f.Q.value = q || 1; g.gain.value = vol || 0.1;
+    src.connect(f); f.connect(g); g.connect(a.destination); src.start(t);
+  }
+  // A metal coin: a bright tone with an off-key partial that rings out fast.
+  function clink(start, pitch, vol) { tone(pitch, start, 0.09, 'sine', vol); tone(pitch * 2.76, start, 0.05, 'sine', vol * 0.5); noise(start, 0.03, pitch * 1.5, 3, vol * 0.6); }
   var sounds = {
     credit: function () { tone(988, 0, 0.14); tone(1319, 0.13, 0.22); },
+    // Cash in hand: coins dropping into a money box, a rattle, then the box settles.
+    cashIn: function () {
+      [[0, 2600], [0.07, 3100], [0.12, 2300], [0.19, 2900], [0.24, 3400], [0.31, 2500]].forEach(function (c, i) { clink(c[0], c[1], 0.07 - i * 0.006); });
+      noise(0.05, 0.32, 4200, 1.4, 0.05);
+      tone(150, 0.36, 0.16, 'triangle', 0.12); noise(0.36, 0.12, 260, 0.9, 0.12, 'lowpass');
+    },
+    // Into the bank: a soft, bright two-note ping like a banking app's "money in" notification (a mallet tone:
+    // a quick attack, a warm body and a little shimmer on top).
+    bankIn: function () {
+      var mallet = function (f, t, v) { tone(f, t, 0.32, 'sine', v); tone(f * 2, t, 0.12, 'sine', v * 0.35); tone(f * 3.01, t, 0.05, 'sine', v * 0.15); noise(t, 0.015, f * 4, 4, v * 0.25); };
+      mallet(1047, 0, 0.11); mallet(1568, 0.09, 0.12); tone(2093, 0.2, 0.25, 'sine', 0.025);
+    },
     debit: function () { tone(440, 0, 0.18, 'triangle', 0.08); },
     horn: function () { tone(370, 0, 0.12, 'square', 0.05); tone(370, 0.17, 0.2, 'square', 0.05); },
     bad: function () { tone(330, 0, 0.2, 'triangle', 0.1); tone(247, 0.18, 0.35, 'triangle', 0.1); },
     good: function () { tone(784, 0, 0.12); tone(988, 0.1, 0.12); tone(1175, 0.2, 0.25); }
   };
+  // Street voices: touts, bus conductors and hawkers calling out, spoken by the browser's own voice (no audio files).
+  // Each city has its own calls; the conductor shouts your stop when you board a danfo, bus or keke.
+  var STREET_CALLS = {
+    lagos: ['Oshodi! Oshodi! Oshodi!', 'C M S! Obalende! Enter with your change o!', 'Two more! Two more! Oya wole!', 'Ojota! Ojota! Na straight!', 'Pure water! Pure water!', 'Gala! Buy your Gala!', 'Ikeja along! Ikeja along!', 'Owa! Owa! Shift for her!'],
+    abuja: ['Wuse! Berger! Enter!', 'Nyanya! Nyanya! One more!', 'Area One! Garki! Oya!', 'Suya! Hot suya!'],
+    ph: ['Rumuokoro! Waterlines! Enter!', 'Choba! Choba! Two more!', 'Mile One! Mile One!', 'Bole and fish! Hot bole!'],
+    accra: ['Circle! Circle! Circle!', 'Kaneshie! Kaneshie! Enter!', 'Madina! Madina! One more!', 'Pure water! Ice water!', 'Kelewele! Hot kelewele!'],
+    kumasi: ['Kejetia! Kejetia!', 'Adum! Adum! Enter!', 'Ahodwo! One more!'],
+    capecoast: ['Elmina! Elmina! Enter!', 'Accra! Accra! One more!'],
+    ldn: ['Mind the gap, please.', 'Big Issue! Get your Big Issue!', 'Next stop, Oxford Circus.', 'Hot chestnuts!'],
+    dxb: ['Taxi, sir? Taxi?', 'Abra! Abra to Deira! One dirham!', 'Gold, gold, best price, my friend!'],
+    ctn: ['Wynberg! Mowbray! Cape Town!', 'Bellville! Bellville! Get in!', 'Two more seats, two more!', 'Koeksisters! Fresh koeksisters!']
+  };
+  var lastSay = 0;
+  function voicesOn() { return prefs.sound && prefs.voices !== false && typeof window !== 'undefined' && window.speechSynthesis && window.SpeechSynthesisUtterance; }
+  function say(text, opts) {
+    if (!voicesOn() || document.hidden || !text) return; opts = opts || {};
+    var now = Date.now(); if (!opts.force && now - lastSay < 4000) return; lastSay = now;
+    try {
+      var u = new SpeechSynthesisUtterance(text), vs = speechSynthesis.getVoices() || [], city = S ? L.cityOf(S) : 'lagos';
+      var want = city === 'ldn' ? /en-GB/ : city === 'accra' || city === 'kumasi' || city === 'capecoast' ? /en-GH|en-NG|en-ZA/ : city === 'ctn' ? /en-ZA/ : /en-NG|en-GH|en-ZA/;
+      var v = vs.filter(function (x) { return want.test(x.lang); })[0] || vs.filter(function (x) { return /^en/.test(x.lang); })[0]; if (v) u.voice = v;
+      u.rate = opts.rate || 1.15 + Math.random() * 0.15; u.pitch = opts.pitch || 0.8 + Math.random() * 0.5; u.volume = opts.volume || 0.7;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function streetCall() { var list = STREET_CALLS[S ? L.cityOf(S) : 'lagos'] || STREET_CALLS.lagos; say(list[Math.floor(Math.random() * list.length)]); }
+  function conductorCall(dest, mode) {
+    var d = D.DISTRICTS[dest]; if (!d) return; var c = L.districtCity(dest), nm = d.name.split(/[ ,(]/)[0];
+    var line = c === 'accra' || c === 'kumasi' || c === 'capecoast' ? nm + '! ' + nm + '! Enter, enter!' : c === 'ctn' ? nm + '! ' + nm + '! Get in, two more!' : c === 'ldn' ? 'This bus goes to ' + d.name + '.' : nm + '! ' + nm + '! Enter with your change o!';
+    say(line, { force: true });
+  }
   function play(name) { if (prefs.sound && sounds[name]) { try { sounds[name](); } catch (e) { /* audio blocked */ } } }
   // Ambience for walk-in scenes: quiet looping noise shaped per kind of place, made in WebAudio (no files).
   var AMBIENCE_OF = { beach: 'surf', jetty: 'surf', food: 'crowd', mall: 'crowd', stadium: 'crowd', transport: 'motor', nightlife: 'pulse', music: 'pulse', refinery: 'hum', workshop: 'hum', airport: 'hum' };
@@ -108,8 +163,9 @@
       if (kind === 'hum') { var o = a.createOscillator(), og = a.createGain(); o.type = 'sawtooth'; o.frequency.value = 55; og.gain.value = 0.006; o.connect(og); og.connect(a.destination); o.start(); parts.push(o); var og0 = og; }
       src.start();
       // Now and then: a distant danfo horn at motor parks and on the street, gulls at the beach and the jetty.
-      var timers = [], extra = function () { if (amb.kind !== kind || !prefs.sound) return; try { if (kind === 'surf') { tone(1900 + Math.random() * 500, 0, 0.09, 'sine', 0.018); tone(2500 + Math.random() * 400, 0.11, 0.12, 'sine', 0.014); } else { var hz = 330 + Math.random() * 80; tone(hz, 0, 0.14, 'square', 0.012); if (Math.random() < 0.6) tone(hz, 0.2, 0.22, 'square', 0.012); } } catch (e) {} timers.push(setTimeout(extra, 6000 + Math.random() * 8000)); };
-      if (kind === 'surf' || kind === 'motor' || kind === 'street') timers.push(setTimeout(extra, 2500));
+      var timers = [], extra = function () { if (amb.kind !== kind || !prefs.sound) return; try { if (kind === 'surf') { tone(1900 + Math.random() * 500, 0, 0.09, 'sine', 0.018); tone(2500 + Math.random() * 400, 0.11, 0.12, 'sine', 0.014); } else { var hz = 330 + Math.random() * 80; tone(hz, 0, 0.14, 'square', 0.012); if (Math.random() < 0.6) tone(hz, 0.2, 0.22, 'square', 0.012); if (Math.random() < 0.55) setTimeout(streetCall, 900); } } catch (e) {} timers.push(setTimeout(extra, 6000 + Math.random() * 8000)); };
+      if (kind === 'surf' || kind === 'motor' || kind === 'street' || kind === 'crowd') timers.push(setTimeout(extra, 2500));
+      if (kind === 'motor' || kind === 'crowd') timers.push(setTimeout(streetCall, 1500)); // a tout greets you on the way in
       amb = { kind: kind, stop: function () { timers.forEach(clearTimeout); var t = a.currentTime; gn.gain.cancelScheduledValues(t); gn.gain.setValueAtTime(gn.gain.value, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.4); if (og0) og0.gain.setValueAtTime(0, t + 0.4); parts.forEach(function (p) { try { p.stop(t + 0.45); } catch (e) {} }); } };
     } catch (e) { amb = { kind: null, stop: null }; }
   }
@@ -204,7 +260,9 @@
     else if (res && (res.won || /Promoted/.test(res.msg || ''))) play('good');
     else if (S && S.alerts && S.alerts.length) {
       var net = S.alerts.reduce(function (a, x) { return a + (x.memo === 'Transfer' ? 0 : x.amt); }, 0);
-      if (net > 0) play('credit'); else if (net < 0) play('debit');
+      var inBank = S.alerts.reduce(function (a, x) { return a + (x.memo !== 'Transfer' && x.amt > 0 && x.acct === 'bank' ? x.amt : 0); }, 0), inCash = S.alerts.reduce(function (a, x) { return a + (x.memo !== 'Transfer' && x.amt > 0 && x.acct !== 'bank' ? x.amt : 0); }, 0);
+      // Money in: coins in the box for cash, the bank alert for the bank (whichever was bigger).
+      if (net > 0) play(inBank > inCash ? 'bankIn' : inCash > 0 ? 'cashIn' : 'credit'); else if (net < 0) play('debit');
     }
     if (res && res.msg) ui.toasts.push({ msg: res.msg, ok: res.ok });
     if (S && S.quals && Object.keys(S.quals).length > q0) { var qk = Object.keys(S.quals).sort(function (a, b) { return S.quals[b] - S.quals[a]; })[0]; ui.gradCard = qk; play('good'); }
@@ -328,6 +386,8 @@
       opt('big', '🔠 Large text', prefs.big, 'Bigger text everywhere.') +
       opt('family', '👨‍👩‍👧 Family mode', prefs.family, 'For all ages: hides nightlife, casinos, drinking and adult shop items, and turns off chat with other players. Everything else stays.') +
       opt('usd', '💵 Show dollars too', prefs.usd, 'Every price also shows about how much it is in US dollars (≈ $). Each city still uses its own money.') +
+      '<div class="item"><div><h3>🪙 Money sounds</h3><div class="act-note">Coins drop into the box when cash comes in; the bank alert rings when money lands in your bank. Turn sound on at the top.</div></div><span class="inline"><button class="btn sm ghost" id="sfx-cash" data-sfx="cashIn">Cash</button><button class="btn sm ghost" id="sfx-bank" data-sfx="bankIn">Bank</button></span></div>' +
+      opt('voices', '🗣️ Street voices', prefs.sound && prefs.voices !== false, 'Touts, bus conductors and hawkers call out at motor parks, markets and when you board a danfo, in each city\'s own words (needs Sound on).') +
       opt('lite', '🪶 Lite mode', liteOn(), 'Fewer animations and no moving traffic on the map, for cheap phones and low data. The page reloads.') +
       '</div></div>';
   }
@@ -4783,7 +4843,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -5074,7 +5134,7 @@
       return;
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
-    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
+    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { if (/^(danfo|brt|keke|bus|trotro|ferry)$/.test(mode0 || '')) conductorCall(S.loc, mode0); ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
     if (ds.act) { var aid0 = ds.act; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { clubMoment(aid0); ui.activity = activityFor(aid0); ui.activityAt = Date.now(); if (aid0 === 'work_shift' && ui.venueOpen) ui.venueBubble = { place: ui.venueOpen, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
@@ -5239,12 +5299,12 @@
     }
     if (ds.setpref) {
       var k = ds.setpref;
-      if (k === 'lang') prefs.lang = prefs.lang === 'pcm' ? 'en' : 'pcm'; else if (k === 'lite') prefs.lite = !liteOn(); else prefs[k] = !prefs[k];
+      if (k === 'lang') prefs.lang = prefs.lang === 'pcm' ? 'en' : 'pcm'; else if (k === 'lite') prefs.lite = !liteOn(); else if (k === 'voices') { var von = !(prefs.sound && prefs.voices !== false); prefs.voices = von; if (von) { prefs.sound = true; setTimeout(function () { streetCall(); }, 50); } } else prefs[k] = !prefs[k];
       writeJSON(PREF_KEY, prefs); applyPrefs();
       if (k === 'lite') { location.reload(); return; }
       render(); return;
     }
-    if (ds.sound) { prefs.sound = !prefs.sound; writeJSON(PREF_KEY, prefs); if (prefs.sound) { ctx(); play('credit'); } render(); return; }
+    if (ds.sound) { prefs.sound = !prefs.sound; writeJSON(PREF_KEY, prefs); if (prefs.sound) { ctx(); play('cashIn'); } render(); return; }
     if (ds.lagoon) { if (city3d && city3d.focusShow) city3d.focusShow(); lagoonPick(); return; }
     if (ds.ideakind) { var it = document.getElementById('idea-text'); if (it) ui.ideaDraft = it.value; ui.ideaKind = ds.ideakind; render(); return; }
     if (ds.ideasend) { sendIdea(); return; }
@@ -5252,6 +5312,7 @@
     if (ds.ajocnew) { var an = (document.getElementById('ajoc-name') || {}).value || ''; var anc = CH.clean(an.trim().slice(0, 24) || 'Ajo circle'); if (!anc.ok) { ui.ajocWhy = anc.why; render(); return; } writeCircle({ code: circleCode(), name: anc.text, at: Date.now(), round: S.ajo ? S.ajo.round : 0, contrib: S.ajo ? S.ajo.contrib : 0 }); return; }
     if (ds.ajocjoin) { var ac = ((document.getElementById('ajoc-code') || {}).value || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!/^[A-Z0-9]{6}$/.test(ac)) { ui.ajocWhy = 'Codes are 6 letters and numbers.'; render(); return; } var cm = circleMembers(ac); if (!cm.length) { ui.ajocWhy = 'No circle with that code yet.'; render(); return; } if (cm.length >= 12) { ui.ajocWhy = 'That circle is full (12).'; render(); return; } writeCircle({ code: ac, at: Date.now(), round: S.ajo ? S.ajo.round : 0, contrib: S.ajo ? S.ajo.contrib : 0 }); return; }
     if (ds.ajocleave) { writeCircle({ code: '', at: Date.now() }); return; }
+    if (ds.sfx) { if (!prefs.sound) { prefs.sound = true; writeJSON(PREF_KEY, prefs); render(); } ctx(); play(ds.sfx === 'bankIn' ? 'bankIn' : 'cashIn'); return; }
     if (ds.storysave) { saveStory(false); return; }
     if (ds.storyshare) { saveStory(true); return; }
     if (ds.repok) { S.reportSeen = S.report.w; save(); render(); return; }
