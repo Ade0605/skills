@@ -3029,6 +3029,31 @@
   var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, kumasi: { danfo: 'Tro-tro', cab: 'Taxi' }, capecoast: { danfo: 'Tro-tro', cab: 'Taxi' }, dxb: { danfo: 'Metro and bus', cab: 'Taxi', okada: 'Scooter', keke: 'Scooter' }, ctn: { danfo: 'MyCiTi bus', cab: 'Taxi', okada: 'Scooter', keke: 'Minibus taxi' }, ldn: { danfo: 'Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike', rail: 'Tube' } };
   function modeName(o) { var m = CITY_MODE_NAMES[L.cityOf(S)]; return (m && own(m, o.mode)) ? m[o.mode] : o.name; }
   var RIDE_NAMES = { coach: 'Savanna Line coach', danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
+  // The ride's sound: an engine that rumbles (a big danfo or coach, a buzzing keke or okada, a smooth car), horns now and
+  // then, the ferry's water, a helicopter's chop. Returns a stop function.
+  function rideSound(mode) {
+    var a = prefs.sound && ctx(); if (!a) return function () {};
+    try {
+      var t = a.currentTime, out = a.createGain(); out.gain.value = 0.0001; out.gain.exponentialRampToValueAtTime(1, t + 0.6); out.connect(a.destination);
+      var parts = [], timers = [], water = mode === 'ferry' || mode === 'boat', heli = mode === 'heli', air = heli || mode === 'flight' || mode === 'jet';
+      var base = { danfo: 52, brt: 48, coach: 45, keke: 95, okada: 110, cab: 70, car: 68, trek: 0 }[mode];
+      if (base) {
+        var o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain(), lfo = a.createOscillator(), lg = a.createGain();
+        o.type = 'sawtooth'; o.frequency.value = base; f.type = 'lowpass'; f.frequency.value = base * 6; g.gain.value = mode === 'cab' || mode === 'car' ? 0.02 : 0.035;
+        lfo.frequency.value = mode === 'keke' || mode === 'okada' ? 9 : 4; lg.gain.value = base * 0.08; lfo.connect(lg); lg.connect(o.frequency);
+        o.connect(f); f.connect(g); g.connect(out); o.start(); lfo.start(); parts.push(o, lfo);
+      }
+      if (water || air || base) {
+        var len = a.sampleRate * 2, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0), last = 0; for (var i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = water || air ? last * 3.5 : Math.random() * 2 - 1; }
+        var src = a.createBufferSource(), nf = a.createBiquadFilter(), ng = a.createGain(); src.buffer = buf; src.loop = true; nf.type = water || air ? 'lowpass' : 'bandpass'; nf.frequency.value = water ? 500 : air ? 900 : 1600; ng.gain.value = water ? 0.06 : air ? 0.05 : 0.008;
+        src.connect(nf); nf.connect(ng); ng.connect(out); src.start(); parts.push(src);
+        if (heli) { var ch = a.createOscillator(), cg = a.createGain(); ch.frequency.value = 18; cg.gain.value = 0.04; ch.connect(cg); cg.connect(ng.gain); ch.start(); parts.push(ch); }
+      }
+      var honk = function () { if (!out) return; var hz = mode === 'keke' || mode === 'okada' ? 520 : 370; tone(hz, 0, 0.12, 'square', 0.03); if (Math.random() < 0.6) tone(hz, 0.18, 0.2, 'square', 0.03); timers.push(setTimeout(honk, 1800 + Math.random() * 2600)); };
+      if (/^(danfo|brt|keke|okada|cab|coach)$/.test(mode)) timers.push(setTimeout(honk, 900));
+      return function () { timers.forEach(clearTimeout); var t2 = a.currentTime; out.gain.cancelScheduledValues(t2); out.gain.setValueAtTime(out.gain.value, t2); out.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.5); setTimeout(function () { parts.forEach(function (x) { try { x.stop(); } catch (e) {} }); out = null; }, 600); };
+    } catch (e) { return function () {}; }
+  }
   function showRide(from, to, mode, t0) {
     var old = document.getElementById('ride-view'); if (old) old.remove();
     if (!D.DISTRICTS[from] || !D.DISTRICTS[to] || from === to) return;
@@ -3058,7 +3083,9 @@
       '<div class="rv-veh' + (chauffeur ? ' vip' : '') + '">' + veh + '</div></div>' +
       '<div class="rv-bar"><i></i></div>' +
       '<div class="rv-foot"><span>' + (sights.length ? '📍 ' + esc(sights.join(' · ')) : '☁️ Above the city') + '</span><button class="btn go" id="rv-arrive" type="button">Arrive</button></div></div>';
-    var done = function () { if (el.parentNode) { el.remove(); if (ui.venueOpen) mountVenue(); } }; // a walk-in scene behind the ride starts its arrival now
+    var stopSound = rideSound(mode), shout = /^(danfo|brt|keke|coach|trotro)$/.test(mode), tc = L.districtCity(to), dn = (D.DISTRICTS[to].name || '').split(/[ ,(]/)[0];
+    if (shout) setTimeout(function () { say(tc === 'accra' || tc === 'kumasi' ? 'Enter, enter! We dey go ' + dn + '!' : tc === 'ctn' ? 'Get in! ' + dn + '! Two more seats!' : tc === 'ldn' ? 'Next stop, ' + dn + '.' : 'Oya enter! ' + dn + '! Shift for her, shift!', { force: true }); }, 300);
+    var arrived = false, done = function () { if (el.parentNode) { el.remove(); stopSound(); if (shout && !arrived) { arrived = true; say(tc === 'ldn' ? 'This is ' + dn + '.' : dn + '! Last stop! Come down, come down!', { force: true }); } if (ui.venueOpen) mountVenue(); } }; // a walk-in scene behind the ride starts its arrival now
     el.addEventListener('click', function (e) { var cb = e.target.closest && e.target.closest('[data-rvcam]'); if (cb) { var sc0 = el.querySelector('.rv-scene'); if (sc0) sc0.dataset.cam = cb.getAttribute('data-rvcam'); e.stopPropagation(); return; } if (e.target === el || (e.target.closest && e.target.closest('#rv-arrive'))) done(); });
     el.addEventListener('keydown', function (e) { if (e.key === 'Escape') done(); });
     document.body.appendChild(el);
@@ -5212,7 +5239,7 @@
       return;
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
-    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { if (/^(danfo|brt|keke|bus|trotro|ferry)$/.test(mode0 || '')) conductorCall(S.loc, mode0); ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
+    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
     if (ds.act) { var aid0 = ds.act, alab0 = ((availMemo().filter(function (x) { return x.id === aid0; })[0]) || {}).label; run(function () { var r = L.doAction(S, aid0); if (r && r.ok) { try { actVoice(alab0); } catch (e) {} clubMoment(aid0); ui.activity = activityFor(aid0); ui.activityAt = Date.now(); if (aid0 === 'work_shift' && ui.venueOpen) ui.venueBubble = { place: ui.venueOpen, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
