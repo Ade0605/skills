@@ -626,6 +626,7 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Player counter:** the top bar shows how many people have played online and how many are in the game now.
   - **Suggestion box:** Phone → Suggestions: a new idea, something broken, make it easier, or something else, filtered like chat. Each player's last five go to the owner, who reads them on the dashboard.
   - **Cape Town in 3D:** the 3D map shows Table Mountain with its flat top and the cableway, Lion's Head, Signal Hill, the Twelve Apostles above Camps Bay, the Cape Wheel at the Waterfront and the stadium at Green Point.
+  - **More 3D landmarks:** London has Big Ben, the London Eye, Tower Bridge over the Thames and the Shard; Dubai has the Burj Khalifa, the sail-shaped hotel on its island and the golden Dubai Frame; Accra has the Black Star Gate and the Nkrumah Memorial.
   - **Graduation day:** finishing a degree, apprenticeship or certificate opens a ceremony card (confetti, convocation or freedom day) with the careers it now opens one rank up, and a button to the careers list.
   - **Where you start:** a step of its own on the start screen, before the birth lottery: a card for each city (Lagos, Accra, London, Dubai, Cape Town) with what life is like there, what people are called, the money, how much more money you start with, and the slogan. The home step shows your city with a Change city button.
   - **Easier money, business abroad and more sights (rules 41):**

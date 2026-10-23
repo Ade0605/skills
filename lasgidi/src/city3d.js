@@ -87,6 +87,37 @@
       (Wd.HARBOUR_BRIDGES || []).forEach(function (b2) { if (name !== 'lagos') return; var a = b2[0], e2 = b2[1], ax = a[0] * K, az = a[1] * K, ex = e2[0] * K, ez = e2[1] * K, L = Math.hypot(ex - ax, ez - az), ang = Math.atan2(ez - az, ex - ax); var dk = mesh(new T.BoxGeometry(L, 0.5, 1.8), deckM, (ax + ex) / 2, 1.6, (az + ez) / 2); dk.rotation.y = -ang; world.add(dk); var px = ax + (ex - ax) * 0.32, pz = az + (ez - az) * 0.32; world.add(mesh(new T.BoxGeometry(0.6, 9, 0.6), mat('pylon', { color: 0xeef1f3 }), px, 4.5, pz)); for (var cb = 1; cb <= 5; cb++) [-1, 1].forEach(function (sd) { var pts = [new T.Vector3(px, 8.5 - cb * 0.9, pz), new T.Vector3(px + sd * Math.cos(ang) * cb * L * 0.06, 1.9, pz + sd * Math.sin(ang) * cb * L * 0.06)]; var ln = new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0xffffff })); world.add(ln); DYN.cables.push({ l: ln, k: cb }); }); });
       if (name === 'lagos') { var ref = D.PLACES.filter(function (p) { return p.id === 'refinery_site'; })[0]; if (ref) { for (var tk = 0; tk < 4; tk++) world.add(mesh(new T.CylinderGeometry(1.2, 1.2, 1.6, 16), mat('tank', { color: 0xe9ecef, metalness: 0.4 }), ref.x * K - 3 + (tk % 2) * 3, 0.8, ref.y * K - 2 + Math.floor(tk / 2) * 3)); world.add(mesh(new T.CylinderGeometry(0.15, 0.2, 8, 6), mat('flare', { color: 0x5a6068 }), ref.x * K + 4, 4, ref.y * K)); var ff = new T.Mesh(new T.ConeGeometry(0.5, 1.6, 8, 1, true).translate(0, 0.8, 0), new T.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.9, blending: T.AdditiveBlending, depthWrite: false })); ff.position.set(ref.x * K + 4, 8, ref.y * K); world.add(ff); DYN.flare = ff; } }
       if (name === 'abuja') { ['abj_aso', 'abj_zuma_pl'].forEach(function (id, i) { var p = D.PLACES.filter(function (q2) { return q2.id === id; })[0]; if (!p) return; var rk = mesh(new T.IcosahedronGeometry(i ? 9 : 7, 2), mat('rock', { color: 0x8a7a68, roughness: 0.95, flatShading: true }), p.x * K + 6, 2, p.y * K + 6); rk.scale.y = 0.8; world.add(rk); }); }
+      // London: Big Ben, the London Eye on the South Bank, Tower Bridge over the Thames and the Shard.
+      if (name === 'ldn') {
+        var stone = mat('ldnStone', { color: 0xc9b98f, roughness: 0.8 }), dk = mat('ldnDark', { color: 0x3a3f47, roughness: 0.6 }), gold = mat('ldnGold', { color: 0xd8b04a, metalness: 0.6, roughness: 0.4 });
+        var bbx = 18.4 * K, bbz = 13.0 * K; world.add(mesh(new T.BoxGeometry(2.2, 18, 2.2), stone, bbx, 9, bbz)); world.add(mesh(new T.BoxGeometry(2.6, 3, 2.6), stone, bbx, 19.5, bbz));
+        [0, 1, 2, 3].forEach(function (f) { var face = mesh(new T.CircleGeometry(0.9, 20), mat('clock', { color: 0xf4efe0, emissive: 0x403520 }), bbx + Math.sin(f * Math.PI / 2) * 1.32, 19.5, bbz + Math.cos(f * Math.PI / 2) * 1.32); face.rotation.y = f * Math.PI / 2; world.add(face); });
+        world.add(mesh(new T.ConeGeometry(1.8, 5, 4).rotateY(Math.PI / 4), gold, bbx, 23.5, bbz)); world.add(mesh(new T.BoxGeometry(12, 5, 3), stone, bbx - 6, 2.5, bbz + 0.6));
+        var eye = new T.Mesh(new T.TorusGeometry(6, 0.25, 6, 40), mat('eye', { color: 0xf4f6f8, metalness: 0.5 })); eye.position.set(16.0 * K, 7, 16.2 * K); eye.rotation.y = 0.5; world.add(eye);
+        for (var e2 = 0; e2 < 16; e2++) { var pod = mesh(new T.SphereGeometry(0.4, 6, 4), mat('pod', { color: 0x9fd3ef }), 0, 0, 0); pod.position.set(16.0 * K + Math.cos(e2 / 16 * Math.PI * 2) * 6 * Math.cos(0.5), 7 + Math.sin(e2 / 16 * Math.PI * 2) * 6, 16.2 * K - Math.cos(e2 / 16 * Math.PI * 2) * 6 * Math.sin(0.5)); world.add(pod); }
+        [-1, 1].forEach(function (sx) { var lg = mesh(new T.BoxGeometry(0.3, 7.5, 0.3), dk, 16.0 * K + sx * 1.6, 3.2, 16.2 * K + 0.6); lg.rotation.z = sx * 0.22; world.add(lg); });
+        var tbx = 24.6 * K; [13.9, 15.5].forEach(function (zz) { world.add(mesh(new T.BoxGeometry(2.2, 9, 2.2), stone, tbx, 4.5, zz * K)); [-0.8, 0.8].forEach(function (ox) { [-0.8, 0.8].forEach(function (oz) { world.add(mesh(new T.ConeGeometry(0.4, 1.6, 4), mat('ldnRoof', { color: 0x4a5a6a }), tbx + ox, 9.8, zz * K + oz)); }); }); });
+        world.add(mesh(new T.BoxGeometry(3, 0.6, 26), mat('tbDeck', { color: 0x6f8fb0 }), tbx, 1.6, 14.7 * K)); world.add(mesh(new T.BoxGeometry(1.2, 0.5, 14), mat('tbWalk', { color: 0x9fc0dc }), tbx, 7.6, 14.7 * K));
+        var shard = mesh(new T.ConeGeometry(2.6, 30, 4).rotateY(Math.PI / 4), mat('shard', { color: 0xcfdde8, metalness: 0.25, roughness: 0.3, emissive: 0x1a2630 }), 22.2 * K, 15, 16.6 * K); world.add(shard);
+      }
+      // Dubai: the Burj Khalifa's stepped needle, the sail-shaped hotel on its island, and the golden Dubai Frame.
+      if (name === 'dxb') {
+        var glass = mat('dxbGlass', { color: 0xcfdde6, metalness: 0.25, roughness: 0.3, emissive: 0x1a2630 }), goldF = mat('dxbGold', { color: 0xd9a93a, metalness: 0.8, roughness: 0.3 });
+        var bx = 18.6 * K, bz = 15.8 * K; [[4.2, 14], [3.2, 12], [2.3, 11], [1.5, 9], [0.8, 8]].reduce(function (y, st2) { world.add(mesh(new T.CylinderGeometry(st2[0] * 0.8, st2[0], st2[1], 6), glass, bx, y + st2[1] / 2, bz)); return y + st2[1]; }, 0);
+        world.add(mesh(new T.CylinderGeometry(0.05, 0.4, 12, 6), glass, bx, 60, bz));
+        world.add(mesh(new T.CylinderGeometry(3, 3, 0.8, 16), mat('baIsle', { color: 0xe8d8b0 }), 9.4 * K, 0.4, 11.0 * K));
+        var sail = new T.Shape(); sail.moveTo(0, 0); sail.quadraticCurveTo(5, 9, 0.6, 20); sail.lineTo(0, 20); sail.lineTo(0, 0); var sg = new T.ExtrudeGeometry(sail, { depth: 2.4, bevelEnabled: false }); sg.translate(-1, 0, -1.2);
+        var sl = new T.Mesh(sg, mat('sail', { color: 0xf6f8fa, roughness: 0.4 })); sl.position.set(9.4 * K, 0.8, 11.0 * K); sl.rotation.y = -0.6; world.add(sl);
+        var fx2 = 18.6 * K + 2, fz2 = 9.4 * K + 2; [-3, 3].forEach(function (ox) { world.add(mesh(new T.BoxGeometry(1, 16, 1.4), goldF, fx2 + ox, 8, fz2)); }); world.add(mesh(new T.BoxGeometry(7, 1.2, 1.4), goldF, fx2, 16.4, fz2));
+      }
+      // Accra: the Black Star Gate at Independence Square and the Nkrumah Memorial.
+      if (name === 'accra') {
+        var white = mat('accWhite', { color: 0xf3efe6, roughness: 0.7 }), bxs = 14.6 * K, bzs = 21.8 * K;
+        [-3, 3].forEach(function (ox) { world.add(mesh(new T.BoxGeometry(1.4, 7, 1.4), white, bxs + ox, 3.5, bzs)); }); world.add(mesh(new T.BoxGeometry(8.4, 1.6, 1.6), white, bxs, 7.8, bzs));
+        var star = new T.Shape(); for (var si = 0; si < 10; si++) { var rr = si % 2 ? 0.55 : 1.4, aa = si / 10 * Math.PI * 2 - Math.PI / 2; if (si) star.lineTo(Math.cos(aa) * rr, -Math.sin(aa) * rr); else star.moveTo(Math.cos(aa) * rr, -Math.sin(aa) * rr); }
+        var stm = new T.Mesh(new T.ExtrudeGeometry(star, { depth: 0.4, bevelEnabled: false }), new T.MeshStandardMaterial({ color: 0x111111 })); stm.position.set(bxs, 10, bzs - 0.2); world.add(stm);
+        world.add(mesh(new T.ConeGeometry(2.4, 5, 4).rotateY(Math.PI / 4), mat('nkr', { color: 0xe9e2d0 }), 12.0 * K, 2.5, 20.0 * K));
+      }
       // Cape Town (rules 42): Table Mountain's flat top with the cableway, Lion's Head, Signal Hill, the Twelve Apostles,
       // the Cape Wheel at the Waterfront and the stadium at Green Point.
       if (name === 'ctn') {
