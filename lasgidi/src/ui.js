@@ -273,6 +273,31 @@
     });
     return html + '</div>';
   }
+  // The suggestion box: what should we add, fix or change? Your last five ideas go to the owner with your player id
+  // (in your row of the reports store, read only by the owner and editors). Filtered like chat.
+  var IDEA_KINDS = { idea: ['💡', 'New idea'], broken: ['🐞', 'Something\'s broken'], easier: ['🕶️', 'Make it easier'], other: ['💭', 'Something else'] }, IDEAS_KEY = 'lasgidi.ideas.v1';
+  function myIdeas() { try { var v = JSON.parse(localStorage.getItem(IDEAS_KEY) || '[]'); return Array.isArray(v) ? v.slice(-5) : []; } catch (e) { return []; } }
+  function ideasView() {
+    var kind = ui.ideaKind || 'idea', mine = myIdeas();
+    return '<div class="section idea-box"><div class="idea-h"><span class="idea-ic">💡</span><div><h3>Suggestion box</h3><small>Help us make Lasgidi better</small></div></div>' +
+      '<p class="note">What should we add, fix or change? Tell us straight. The owner reads every suggestion.</p>' +
+      '<div class="idea-kinds" role="group" aria-label="Kind of suggestion">' + Object.keys(IDEA_KINDS).map(function (k) { var on = k === kind; return '<button type="button" class="idea-k' + (on ? ' sel' : '') + '" id="idea-k-' + k + '" data-ideakind="' + k + '" aria-pressed="' + on + '">' + IDEA_KINDS[k][0] + ' ' + esc(IDEA_KINDS[k][1]) + '</button>'; }).join('') + '</div>' +
+      '<textarea id="idea-text" class="idea-text" maxlength="280" rows="4" placeholder="Your idea…" aria-label="Your suggestion">' + esc(ui.ideaDraft || '') + '</textarea>' +
+      (ui.ideaWhy ? '<p class="why">' + esc(ui.ideaWhy) + '</p>' : '') + (ui.ideaOk ? '<p class="gain">' + esc(ui.ideaOk) + '</p>' : '') +
+      '<div class="idea-nav"><button type="button" class="btn ghost" id="idea-later" data-app="">Not now</button><button type="button" class="btn go" id="idea-send" data-ideasend="1">Send</button></div>' +
+      (mine.length ? '<details><summary>Your last ' + mine.length + ' suggestion' + (mine.length === 1 ? '' : 's') + '</summary><ul class="note">' + mine.slice().reverse().map(function (m) { return '<li>' + (IDEA_KINDS[m.k] || IDEA_KINDS.other)[0] + ' ' + esc(m.t) + '</li>'; }).join('') + '</ul></details>' : '') +
+      '<p class="note">' + (online.db && online.me ? 'Sent with your player id, so the owner can follow up in the game.' : 'Suggestions are sent when you play online (on claude.ai).') + ' Please no personal details.</p></div>';
+  }
+  function sendIdea() {
+    var el = document.getElementById('idea-text'), text = (el ? el.value : ui.ideaDraft || '').replace(/\s+/g, ' ').trim().slice(0, 280);
+    ui.ideaOk = ''; ui.ideaWhy = '';
+    if (text.length < 4) { ui.ideaWhy = 'Write a few words first.'; render(); return; }
+    for (var i = 0; i < text.length; i += 140) { var r = CH.clean(text.slice(i, i + 140)); if (!r.ok) { ui.ideaWhy = r.why; ui.ideaDraft = text; render(); return; } }
+    if (!online.db || !online.me) { ui.ideaWhy = 'Suggestions need the online game (open it on claude.ai).'; ui.ideaDraft = text; render(); return; }
+    var list = myIdeas().concat([{ k: IDEA_KINDS[ui.ideaKind] ? ui.ideaKind : 'idea', t: text, at: Date.now() }]).slice(-5);
+    var ref = online.db.doc('reports/' + online.me), done = function () { try { localStorage.setItem(IDEAS_KEY, JSON.stringify(list)); } catch (e) {} ui.ideaDraft = ''; ui.ideaOk = 'Thank you! Your suggestion was sent.'; render(); }, bad = function () { ui.ideaWhy = 'Could not send it. Try again later.'; ui.ideaDraft = text; render(); };
+    ref.update({ ideas: list }).then(done, function () { ref.set({ who: '', reason: '', at: Date.now(), ideas: list }).then(done, bad); });
+  }
   function settingsView() {
     var opt = function (id, label, on, desc) { return '<div class="item"><div><h3>' + label + '</h3><div class="act-note">' + desc + '</div></div><button class="btn sm' + (on ? ' go' : ' ghost') + '" id="set-' + id + '" data-setpref="' + id + '" aria-pressed="' + !!on + '">' + (on ? 'On' : 'Off') + '</button></div>'; };
     return '<div class="section"><h3>Settings</h3><div class="list">' +
@@ -774,11 +799,12 @@
     if (!REPORT_REASONS[reason]) return;
     online.muted[by] = 1; try { localStorage.setItem('lasgidi.muted.v1', JSON.stringify(online.muted)); } catch (e) {}
     if (!online.db || !online.me) { online.reportStatus = 'Blocked. Reports send when the game is opened on claude.ai.'; render(); return; }
-    online.db.doc('reports/' + online.me).set({ who: String(by).slice(0, 80), reason: reason, at: Date.now() }).then(function () { online.reportStatus = 'Thanks. Reported and blocked.'; render(); }, function () { online.reportStatus = 'Blocked. The report could not be sent.'; render(); });
+    online.db.doc('reports/' + online.me).set(Object.assign({ who: String(by).slice(0, 80), reason: reason, at: Date.now() }, myIdeas().length ? { ideas: myIdeas() } : {})).then(function () { online.reportStatus = 'Thanks. Reported and blocked.'; render(); }, function () { online.reportStatus = 'Blocked. The report could not be sent.'; render(); });
   }
   function reportsAdmin() {
-    if (!online.canEdit || !online.reports || !online.reports.length) return '';
-    return '<div class="section"><h3>🚩 Reports for editors</h3><div class="list">' + online.reports.slice(0, 30).map(function (r) {
+    var reps = (online.reports || []).filter(function (r) { return r.raw.who && REPORT_REASONS[r.raw.reason]; }); // ideas-only rows are not reports
+    if (!online.canEdit || !reps.length) return '';
+    return '<div class="section"><h3>🚩 Reports for editors</h3><div class="list">' + reps.slice(0, 30).map(function (r) {
       return '<div class="item"><div><h3>' + esc(nameOf(r.raw.who)) + ' <span class="pc-handle">' + esc(handleOf(r.raw.who)) + '</span></h3><div class="meta"><span>' + esc(REPORT_REASONS[r.raw.reason] || 'Other') + '</span><span>by ' + esc(nameOf(r.id)) + '</span><span>' + new Date(r.raw.at).toLocaleString() + '</span></div></div></div>';
     }).join('') + '</div></div>';
   }
@@ -818,6 +844,14 @@
   }
   // The chat filter for what you send. Refused messages are counted, and three in ten minutes pause your chat.
   // Family mode (all ages): no player chat, no nightlife, casinos or drinking. A per-device setting; the game itself is unchanged.
+  // The player count: everyone who has a home, a posted life or a CV online (counted once), and who is in the game now.
+  function playerCount() {
+    var ids = {}; (online.residents || []).forEach(function (r) { ids[r.id] = 1; }); (rawFame || []).forEach(function (r) { ids[r.id] = 1; });
+    Object.keys(online.cvs || {}).forEach(function (k) { ids[k] = 1; }); Object.keys(online.homes || {}).forEach(function (k) { ids[k] = 1; });
+    var now = online.room ? (online.others || 0) + 1 : 0; if (online.me) ids[online.me] = 1;
+    return { total: Math.max(Object.keys(ids).length, now), now: now };
+  }
+  function fmtCount(n) { return n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k' : n.toLocaleString('en'); }
   function familyOn() { return !!(prefs && prefs.family); }
   var ADULT_ACT = /casino|\bbet|poker|roulette|blackjack|slot machine|beer|\bbar\b|shisha|club|pole|bottle|rave|lounge|strip|money rain|cocktail|champagne|sundowner|wine|night out|nightclub|vip/i;
   function familyPlace(p) { return !familyOn() || !(p.type === 'nightlife' || /casino/.test(p.id)); }
@@ -1075,7 +1109,7 @@
       chips.push('<span class="chip' + (short && due <= 2880 ? ' off' : '') + '">Rent ' + N(S.rentRate) + ' in ' + dur(due) + '</span>');
     }
     chips.push('<span class="chip">Prices ×' + e.infl.toFixed(2) + '</span>');
-    if (online.others) chips.push('<span class="chip">' + online.others + (online.others === 1 ? ' other Lagosian' : ' other Lagosians') + ' online</span>');
+    var pc = playerCount(); if (pc.total || online.room) chips.push('<span class="chip players" title="Players who have played online, and people in the game right now">👥 ' + fmtCount(pc.total) + ' player' + (pc.total === 1 ? '' : 's') + ' <i class="dot-live"></i> ' + fmtCount(pc.now) + ' online now</span>');
     return '<header class="strip"><div class="strip-in">' +
       '<div class="brand">LASGIDI</div>' +
       '<div class="clock"><b>' + L.clockLabel(S) + '</b><span>' + L.dateLabel(S) + '</span></div>' +
@@ -1178,7 +1212,7 @@
       city: L.cityOf(S), loc: S.loc, sel: ui.sel, home: L.homeDef(S).district, work: S.job ? D.CAREERS[S.job.id].district : null,
       hour: L.hour(S), minute: S.t % 60, t: S.t, power: S.power, gridDown: S.econ.gridDown > 0, levy: S.econ.policy === 'power',
       flood: S.econ.flood > 0, fuel: S.econ.fuelDays > 0, peers: online.peers, others: online.others, faces: mapFaces(), players: mapPlayers(), layers: mapLayers(), showBoards: ui.placeCat === 'boards', weather: L.weatherNow(S), sea: { claims: seaClaims(), mine: online.me || 'me', sel: ui.seaOpen ? seaSel() : null }, trip: ui.trip && Date.now() - ui.trip.at < 2600 ? ui.trip : null,
-      clock: L.clockLabel(S), banner: banner,
+      clock: L.clockLabel(S), banner: banner, show: S.rules >= 43 && L.cityOf(S) === 'lagos' && L.lagoonShow ? L.lagoonShow(S) : null,
       places: ui.placeCat === 'boards' || ui.placeCat === 'homes' || ui.placeCat === 'cities' ? [] : D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && (!ui.placeCat || p.type === ui.placeCat) && familyPlace(p); }), place: ui.place,
       homeId: S.home, homePaint: myPaint(), homeSel: ui.homeSel, showHomes: ui.placeCat === 'homes', residents: residentCounts(),
       myPlot: L.myPlot(S), plotSel: ui.plotSel, plotOwners: plotOwners(),
@@ -3014,6 +3048,7 @@
         onSelect: function (k) { ui.sel = k === S.loc ? null : k; ui.place = null; ui.board = null; render(); },
         onSelectPlace: function (id) { clearPicks(); ui.mapPop = null; ui.place = id; render(); },
         onSelectBoard: function (id) { clearPicks(); ui.board = id; render(); },
+        onShow: function () { lagoonPick(); },
         onSelectPlayer: function (by) { clearPicks(); ui.chatWith = by; online.unread[by] = 0; render(); },
         onToggle: function () { prefs.map3d = false; writeJSON(PREF_KEY, prefs); render(); }
       });
@@ -3887,7 +3922,7 @@
   var APPS = [
     ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['home', '🏠', 'Home'], ['people', '👥', 'People'], ['jobs', '💼', 'Careers'], ['money', '💰', 'Money'], ['assets', '📊', 'Assets'], ['houses', '🏡', 'Houses'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
     ['gems', '💎', 'Gem hunt'], ['hunt', '🔤', 'Letter hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe'], ['style', '🎨', 'Style shop'],
-    ['news', '📰', 'News'], ['music', '🎧', 'Music'], ['calendar', '📅', 'Calendar'], ['courses', '🎓', 'Courses'], ['health', '🩺', 'Health'], ['ride', '🚕', 'Ride'], ['radio', '📻', 'Club radio'], ['settings', '⚙️', 'Settings'], ['owner', '🛡️', 'Dashboard']
+    ['news', '📰', 'News'], ['music', '🎧', 'Music'], ['calendar', '📅', 'Calendar'], ['courses', '🎓', 'Courses'], ['health', '🩺', 'Health'], ['ride', '🚕', 'Ride'], ['radio', '📻', 'Club radio'], ['ideas', '💡', 'Suggestions'], ['settings', '⚙️', 'Settings'], ['owner', '🛡️', 'Dashboard']
   ];
   var NEW_APPS = { radio: 1, hunt: 1, news: 1, music: 1, calendar: 1, courses: 1, health: 1, ride: 1 };
   var APPS_SEEN = 'lasgidi.appsseen.v1';
@@ -4093,13 +4128,24 @@
   function governor() { var g = government(); return g ? { id: g.gov, motto: g.ticket.motto } : null; }
   function partyChip(p) { var P = G.PARTIES[p]; return P ? '<span class="party-chip" style="--pc:' + P.color + '">' + P.icon + ' ' + esc(P.short) + '</span>' : ''; }
   var PHASE_LABEL = { primaries: '🗳️ Party primaries (Mon–Tue)', campaign: '📣 Campaign season (Wed–Fri)', election: '🗳️ Election weekend (Sat–Sun)' };
+  // Rules 43: Eko Lagoon Lights on the lagoon off Ikoyi. The chip flies the 3D map to the stage and picks Ikoyi.
+  function lagoonLabel(v) { if (!v) return ''; if (v.live) return 'LIVE now: ' + v.act; var m = v.next || 0, d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return 'Next show in ' + (d ? d + 'd ' : '') + h + 'h ' + (m % 60) + 'm'; }
+  function lagoonChip() {
+    if (!(S.rules >= 43) || L.cityOf(S) !== 'lagos') return '';
+    var v = L.lagoonShow(S); return '<button type="button" class="gov-chip lagoon' + (v.live ? ' live' : '') + '" id="lagoon-chip" data-lagoon="1">🎆 ' + esc(D.LAGOON_SHOW.name) + ' · ' + esc(lagoonLabel(v)) + '</button>';
+  }
+  function lagoonPick() {
+    var v = L.lagoonShow(S); clearPicks(); ui.sel = S.loc === D.LAGOON_SHOW.district ? null : D.LAGOON_SHOW.district;
+    ui.toasts.push({ msg: '🎆 ' + D.LAGOON_SHOW.name + ': ' + (v.live ? v.act + ' is on now! Watch from the Ikoyi shore (free) or a front-row boat.' : 'Friday and Saturday nights, 20:00 to 23:00, on the lagoon off Ikoyi. This week: ' + v.act + '. ' + lagoonLabel(v) + '.'), ok: true });
+    render();
+  }
   function govChips() {
     if (L.cityOf(S) !== 'lagos') return '';
     var g = government(), homes = Object.keys(online.homes || {}).length;
     return '<div class="gov-row">' + (online.room ? '<span class="gov-chip live"><i class="pg-live"></i> ' + (online.others + 1) + ' online</span>' : '') +
       '<button type="button" class="gov-chip" id="gov-chip" data-app="govt">🏛️ ' + (g ? 'Gov ' + esc(nameOf(g.gov)) : 'Seat open') + '</button>' +
       '<button type="button" class="gov-chip" id="gov-phase" data-app="govt">' + PHASE_LABEL[govPhase()] + '</button>' +
-      '<button type="button" class="gov-chip" id="gov-sea" data-seaopen="1">🌊 Sea Plots</button>' +
+      '<button type="button" class="gov-chip" id="gov-sea" data-seaopen="1">🌊 Sea Plots</button>' + lagoonChip() +
       '<button type="button" class="gov-chip" id="gov-homes" data-placecat="homes">🏘️ ' + homes + ' home' + (homes === 1 ? '' : 's') + '</button></div>' +
       '<button type="button" class="gov-banner" id="gov-banner" data-app="govt">🏛️ ' + (g ? 'Gov ' + esc(nameOf(g.gov)) + ' & Deputy ' + esc(nameOf(g.deputy)) + ': ' + esc(G.MOTTOS[g.ticket.motto]) : 'No governor yet. Join a party and run in the primaries') + '</button>';
   }
@@ -4155,9 +4201,13 @@
       stat(seaLive, 'sea plots held') + stat((online.sponsored || []).length, 'sponsored posts') + stat(radioNext, 'radio slots booked') + stat(q0(online.adreview), 'ads to review') + '</div>' +
       '<p class="note">Billboards rent from ' + L.naira(D.BILLBOARD_RENT) + ' a day in game money (3 days ×' + D.AD_PLANS.three.mult + ', a week ×' + D.AD_PLANS.week.mult + '). Every picture ad is reviewed by you first and labelled Sponsored. Real brands can be posted as sponsored from Creator.</p>' +
       (liveAds.length ? '<table class="stmt od-t"><thead><tr><th>Board</th><th>Ad</th><th class="n">Ends</th></tr></thead><tbody>' + liveAds.slice(0, 12).map(function (a) { var B = D.BILLBOARDS.filter(function (b) { return b.id === a.board; })[0]; return '<tr><td>' + esc(B ? B.name || B.id : a.board) + '</td><td>' + esc(a.emoji + ' ' + a.text) + '</td><td class="n">' + esc(new Date(a.until).toLocaleDateString()) + '</td></tr>'; }).join('') + '</tbody></table>' : '') + '</details>';
+    // Suggestions from players
+    var ideas = []; (online.reports || []).forEach(function (r) { (Array.isArray(r.raw.ideas) ? r.raw.ideas : []).slice(-5).forEach(function (m) { if (m && typeof m.t === 'string' && typeof m.at === 'number') { var c = CH.clean(m.t.slice(0, 140)); ideas.push({ by: r.id, k: IDEA_KINDS[m.k] ? m.k : 'other', t: m.t.slice(0, 280), ok: c.ok, at: m.at }); } }); });
+    ideas.sort(function (a, b) { return b.at - a.at; });
+    html += '<details class="od-box" open><summary>💡 Suggestions · ' + ideas.length + '</summary>' + (ideas.length ? '<div class="od-stats">' + Object.keys(IDEA_KINDS).map(function (k) { return stat(ideas.filter(function (x) { return x.k === k; }).length, IDEA_KINDS[k][1]); }).join('') + '</div><ul class="od-list">' + ideas.slice(0, 40).map(function (m) { return '<li>' + IDEA_KINDS[m.k][0] + ' <b>' + esc(nameOf(m.by)) + '</b> · ' + esc(new Date(m.at).toLocaleDateString()) + ': ' + (m.ok ? esc(m.t) : '<span class="muted">(hidden by the filter)</span>') + '</li>'; }).join('') + '</ul>' : '<p class="note">No suggestions yet. Players send them from Phone → Suggestions.</p>') + '</details>';
     // Safety
     var q = function (a) { return (a || []).length; };
-    html += '<details class="od-box" open><summary>🛟 Safety</summary><div class="od-stats">' + stat(q(online.reports), 'player reports') + stat(q(online.photoreview), 'photos to review') + stat(q(online.adreview), 'ads to review') + stat(q(online.seareview), 'sea plots to review') + '</div>' +
+    html += '<details class="od-box" open><summary>🛟 Safety</summary><div class="od-stats">' + stat((online.reports || []).filter(function (r) { return r.raw.who; }).length, 'player reports') + stat(q(online.photoreview), 'photos to review') + stat(q(online.adreview), 'ads to review') + stat(q(online.seareview), 'sea plots to review') + '</div>' +
       '<ul class="od-list"><li>Every chat line, name, song title and ad caption goes through the filter (no sexual content, abuse, threats, scams, links, phone numbers, or asking for age, photos or where someone lives), on the sender\'s phone and again on every phone that receives it.</li>' +
       '<li>Three refused messages in ten minutes pause that player\'s chat for ten minutes. Players can mute and report anyone from their player card.</li>' +
       '<li>Every picture is reviewed before anyone else sees it. Review them, and read reports, in Creator and on player cards.</li></ul></details>';
@@ -4450,6 +4500,7 @@
       else if (app === 'courses') body = '<div class="panel-b">' + studyView() + actsApp('🎓 Courses', 'Learning in Lagos: enrol, lectures, exams and short courses. Go to the place to do it.', function (a) { return /enrol|lecture|ielts|course|class|lesson|exam|study|tutor/i.test((a.special || '') + ' ' + a.label); }) + '</div>';
       else if (app === 'health') body = '<div class="panel-b">' + healthView() + '</div>';
       else if (app === 'ride') body = '<div class="panel-b">' + rideView() + '</div>';
+      else if (app === 'ideas') body = '<div class="panel-b">' + ideasView() + '</div>';
       else if (app === 'settings') body = '<div class="panel-b">' + settingsView() + '</div>';
       else if (app === 'events') body = '<div class="panel-b">' + festCard('ev') + yearFestCards('ev') + eventsView() + '</div>';
       else if (app === 'travel') body = '<div class="panel-b">' + citiesView() + '</div>';
@@ -4668,7 +4719,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -5128,6 +5179,9 @@
       render(); return;
     }
     if (ds.sound) { prefs.sound = !prefs.sound; writeJSON(PREF_KEY, prefs); if (prefs.sound) { ctx(); play('credit'); } render(); return; }
+    if (ds.lagoon) { if (city3d && city3d.focusShow) city3d.focusShow(); lagoonPick(); return; }
+    if (ds.ideakind) { var it = document.getElementById('idea-text'); if (it) ui.ideaDraft = it.value; ui.ideaKind = ds.ideakind; render(); return; }
+    if (ds.ideasend) { sendIdea(); return; }
     if (ds.storysave) { saveStory(false); return; }
     if (ds.storyshare) { saveStory(true); return; }
     if (ds.repok) { S.reportSeen = S.report.w; save(); render(); return; }

@@ -1301,3 +1301,17 @@ button.need:focus-visible { outline: 2px solid #2f6fd0; }
 .study-bar i { display: block; height: 100%; background: #16a34a; }
 .story { margin: 12px 0; }
 .story canvas { width: 100%; max-width: 360px; height: auto; display: block; border-radius: 14px; margin: 0 auto 8px; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+.gov-chip.lagoon { background: #2a0d10; color: #ffd0d0; border-color: #ff3b3b; }
+.gov-chip.lagoon.live { background: #ff3b3b; color: #fff; animation: lagoonPulse 1.4s ease-in-out infinite; }
+@keyframes lagoonPulse { 50% { box-shadow: 0 0 0 6px rgba(255, 59, 59, .25); } }
+@media (prefers-reduced-motion: reduce) { .gov-chip.lagoon.live { animation: none; } }
+.chip.players { display: inline-flex; align-items: center; gap: 6px; }
+.dot-live { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; display: inline-block; box-shadow: 0 0 0 3px rgba(22,163,74,.2); }
+.idea-box .idea-h { display: flex; gap: 12px; align-items: center; }
+.idea-ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(242,182,0,.18); font-size: 22px; }
+.idea-h h3 { margin: 0; } .idea-h small { opacity: .7; }
+.idea-kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+.idea-k { border: 1px solid transparent; border-radius: 14px; padding: 10px 12px; background: rgba(0,0,0,.05); text-align: left; font: inherit; cursor: pointer; }
+.idea-k.sel { border-color: #2563eb; background: rgba(37,99,235,.08); }
+.idea-text { width: 100%; box-sizing: border-box; border-radius: 14px; border: 1px solid rgba(0,0,0,.12); padding: 12px; font: inherit; background: rgba(0,0,0,.03); resize: vertical; }
+.idea-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }

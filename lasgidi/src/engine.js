@@ -98,7 +98,8 @@
   // 42 lets a life start in another city: Accra, London, Dubai or the new Cape Town (Table Mountain, the Waterfront,
   // Robben Island, Bo-Kaap, Camps Bay, Kirstenbosch, Boulders Beach). You live there with no visa: homes, jobs and
   // businesses as a resident, and you arrive with more money where life costs more. Each city sells its own clothes and cars.
-  var RULES = 42;
+  // 43 adds Eko Lagoon Lights: a floating ring stage on the lagoon off Ikoyi, shows on Friday and Saturday nights.
+  var RULES = 43;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -156,6 +157,7 @@
     show_stopper: 'Show-stopper: 90% on the beat as an opening act at Eko Detty Fest',
     headliner:   'Headliner: topped the bill at Eko Convention Centre',
     league_champ: 'Sunday league champions: won the Eko Sunday League',
+    lagoon_lights: 'Lagoon Lights: watched a show on the lagoon',
     qualified: 'Qualified: finished a degree, an apprenticeship or a certificate',
     master_trade: 'Master of a trade: finished an apprenticeship',
     lifelong: 'Lifelong learner: three qualifications',
@@ -1043,6 +1045,21 @@
     if (s.loc === 'surulere' && L0 && k === 7) { var v = leagueView(s); if (v.final && v.final.youIn && !(L0.cupPlayed === S)) out.push({ id: 'league_final', label: 'Cup final at the National Stadium: ' + v.final.a + ' v ' + v.final.b, mins: 150, fx: { energy: -28, fun: 35, social: 25, stress: 6 }, xp: { fitness: 2 }, special: 'leaguefinal', sport: 'football', minRules: 40, when: { days: [6], from: 16, to: 18 } }); }
     return out;
   }
+  // Rules 43: Eko Lagoon Lights. live: a show is on now; next: minutes to the next start; act: this week's headliner.
+  function lagoonShow(s) {
+    var Sh = D.LAGOON_SHOW, m = minuteOfDay(s), d = day(s), live = Sh.days.indexOf(d % 7) >= 0 && m >= Sh.from * 60 && m < Sh.to * 60, next = null;
+    for (var k = 0; k < 8 && next == null; k++) { var dd = d + k; if (Sh.days.indexOf(dd % 7) < 0) continue; var start = dd * 1440 + Sh.from * 60; if (start > s.t) next = start - s.t; }
+    var act = Sh.acts[Math.floor(d / 7) % Sh.acts.length];
+    return { name: Sh.name, live: live, next: next, act: act, ends: live ? d * 1440 + Sh.to * 60 - s.t : null };
+  }
+  function lagoonActions(s) {
+    var Sh = D.LAGOON_SHOW; if (s.loc !== Sh.district) return [];
+    var v = lagoonShow(s), w = { days: Sh.days, from: Sh.from, to: Sh.to };
+    return [
+      { id: 'lagoon_shore', label: '🎆 Watch ' + Sh.name + ' from the Ikoyi shore: ' + v.act, mins: 90, fx: { fun: 24, social: 10, stress: -8, energy: -6 }, special: 'lagoonwatch', once: true, when: w, minRules: 43 },
+      { id: 'lagoon_boat', label: '🛥️ Front-row boat for ' + Sh.name + ': ' + v.act, mins: 120, cost: Sh.boat, fx: { fun: 36, social: 16, stress: -12, energy: -8 }, special: 'lagoonwatch', once: true, when: w, minRules: 43 }
+    ];
+  }
   // Rules 42: study paths (D.STUDY). Enrol where the course is taught, then go to class; finishing gives a qualification.
   var MAX_STUDY = 2;
   function studyState(s, id) {
@@ -1092,6 +1109,7 @@
     if (s.rules >= 36) list = list.concat(stallActions(s));
     if (s.rules >= 40) list = list.concat(leagueActions(s));
     if (s.rules >= 42) list = list.concat(studyActions(s));
+    if (s.rules >= 43) list = list.concat(lagoonActions(s));
     if (s.rules >= 41) Object.keys(D.BIZ_LICENCES).forEach(function (c) { var B0 = D.BIZ_LICENCES[c]; if (s.loc === B0.district && !(s.bizLicence && s.bizLicence[c])) list.push({ id: 'bizlic_' + c, label: 'Apply for a ' + B0.name + ' (open businesses in ' + D.CITIES[c].name + ')', mins: 120, cost: B0.fee, fx: { stress: 8 }, special: 'bizlicence', city: c, minRules: 41 }); });
     if (s.rules >= 38 && s.loc === 'vi') list.push(STAGE_ACTS.manager, STAGE_ACTS.headline); // Eko Convention Centre
     list = list.concat(npcActions(s)).concat(loveActions(s));
@@ -1334,6 +1352,7 @@
     cook: function (s) { s.pantry--; return 'Home-cooked. ' + s.pantry + ' meals of foodstuff left.'; },
     pantry7: function (s) { s.pantry += 7; return 'Foodstuff for 7 meals is in the kitchen.'; },
     enrol: function (s) { s.edu.enrolled = true; log(s, 'You are now a part-time UNILAG student. 30 lectures to graduate.', 'good'); return 'Enrolled. Lectures run on weekdays.'; },
+    lagoonwatch: function (s, a) { unlock(s, 'lagoon_lights'); return 'The ring lit up the water and ' + lagoonShow(s).act + ' tore the stage apart. The whole lagoon was singing.'; },
     studyenrol: function (s, a) {
       var P = D.STUDY[a.study]; s.study = s.study || {};
       if (Object.keys(s.study).length >= MAX_STUDY) return 'You are already on ' + MAX_STUDY + ' courses. Finish one first.';
@@ -5560,7 +5579,7 @@
     payArrears: recorded('pa', payArrears), moveHouse: recorded('m', moveHouse), moveInCost: moveInCost,
     buyBusiness: recorded('bb', buyBusiness), sellBusiness: recorded('sb', sellBusiness), visitBusinesses: recorded('vb', visitBusinesses),
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
-    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, startAbroad: startAbroad, visitBar: visitBar, studyState: studyState, qualFor: qualFor, golfOdds: golfOdds, leagueView: leagueView, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
+    dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, startAbroad: startAbroad, visitBar: visitBar, studyState: studyState, lagoonShow: lagoonShow, qualFor: qualFor, golfOdds: golfOdds, leagueView: leagueView, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
     netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,

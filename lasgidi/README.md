@@ -622,6 +622,9 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Family mode:** for all ages, from the start screen or Settings: hides nightlife, casinos and drinking, and turns off chat with other players. Players under 18 can start in Family mode.
   - **Story of my week:** the weekly report card (and Phone → My story) draws a picture of your week: net worth and the change, where most money came from and went, and three moments from the week, with your city's slogan. Save the picture or share it.
   - **Advertising on the owner dashboard:** live billboard ads and boards in use, picture ads, sea plots held, sponsored posts, booked radio slots and ads waiting for review, with a list of what is on each board.
+  - **Eko Lagoon Lights (rules 43):** a floating ring stage on the Lagos Lagoon off Ikoyi, with a dotted LED ring showing this week's made-up headline act, twin light pillars, sweeping beams, speaker towers on pontoons and a countdown over it on the 3D map. Shows are on Friday and Saturday nights, 20:00 to 23:00. Watch free from the Ikoyi shore or from a front-row boat (once a night each). Tap the stage or the 🎆 chip and the camera flies in.
+  - **Player counter:** the top bar shows how many people have played online and how many are in the game now.
+  - **Suggestion box:** Phone → Suggestions: a new idea, something broken, make it easier, or something else, filtered like chat. Each player's last five go to the owner, who reads them on the dashboard.
   - **Easier money, business abroad and more sights (rules 41):**
     - **Income pays 1.5×:** wages, gigs, business takings, rent from tenants, prizes and performance fees. Sales, loans, refunds and transfers are not boosted, so buying and reselling cannot make money.
     - **A tech startup** (seed round, ₦5m, risky, grows into a scale-up) joins the business list.
