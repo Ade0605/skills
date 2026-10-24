@@ -1844,7 +1844,8 @@
     /* ---------- camera: a terrace view toward the sea; drag to orbit, wheel or pinch to zoom ---------- */
     // The view starts from a villa's upper terrace, looking down over its pool to the sea.
     var orbit = { az: 0.08, pol: 1.17, r: 40, tx: -12, ty: 0, tz: -6 }, ptrs = {}, drag = null, pinch0 = 0, moved = false;
-    function place() { orbit.pol = Math.max(0.55, Math.min(1.42, orbit.pol)); orbit.r = Math.max(CLUB || GAL ? 6 : 10, Math.min(GAL ? (DOLL ? 100 : 22) : CLUB ? (ROOF ? 60 : DOLL ? 120 : 30) : 140, orbit.r)); if ((CLUB && !ROOF && !DOLL) || (GAL && !DOLL)) orbit.pol = Math.max(0.95, orbit.pol); else if (DOLL) orbit.pol = Math.max(0.6, orbit.pol); var s = Math.sin(orbit.pol); cam.position.set(orbit.tx + orbit.r * s * Math.sin(orbit.az), orbit.ty + orbit.r * Math.cos(orbit.pol), orbit.tz - orbit.r * s * Math.cos(orbit.az)); cam.lookAt(orbit.tx, orbit.ty + 2, orbit.tz); }
+    var EYE = false;
+    function place() { orbit.pol = Math.max(0.55, Math.min(EYE ? 1.52 : 1.42, orbit.pol)); orbit.r = Math.max(CLUB || GAL ? 6 : 10, Math.min(GAL ? (DOLL ? 100 : 22) : CLUB ? (ROOF ? 60 : DOLL ? 120 : 30) : 140, orbit.r)); if ((CLUB && !ROOF && !DOLL) || (GAL && !DOLL)) orbit.pol = Math.max(0.95, orbit.pol); else if (DOLL) orbit.pol = Math.max(0.6, orbit.pol); var s = Math.sin(orbit.pol); cam.position.set(orbit.tx + orbit.r * s * Math.sin(orbit.az), orbit.ty + orbit.r * Math.cos(orbit.pol), orbit.tz - orbit.r * s * Math.cos(orbit.az)); cam.lookAt(orbit.tx, orbit.ty + 2, orbit.tz); }
     place();
     cv.addEventListener('pointerdown', function (e) { ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; drag = { x: e.clientX, y: e.clientY }; moved = false; var a = Object.values(ptrs); if (a.length === 2) pinch0 = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); try { cv.setPointerCapture(e.pointerId); } catch (x) {} });
     cv.addEventListener('pointermove', function (e) { if (!ptrs[e.pointerId]) return; ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; var a = Object.values(ptrs); if (a.length === 2 && pinch0) { var d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); orbit.r *= pinch0 / Math.max(1, d); pinch0 = d; moved = true; place(); return; } if (!drag) return; var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; orbit.az -= dx * 0.005; orbit.pol -= dy * 0.004; drag = { x: e.clientX, y: e.clientY }; place(); });
@@ -1863,6 +1864,18 @@
     var bar = document.createElement('div'); bar.className = 'iv-spin';
     bar.innerHTML = '<button type="button" class="pg-zbtn" data-b3="photo" aria-label="Take a photo">📷</button><button type="button" class="pg-zbtn" data-b3="in" aria-label="Zoom in">+</button><button type="button" class="pg-zbtn" data-b3="out" aria-label="Zoom out">−</button><button type="button" class="pg-zbtn" data-b3="l" aria-label="Turn left">⟲</button><button type="button" class="pg-zbtn" data-b3="r" aria-label="Turn right">⟳</button><button type="button" class="pg-zbtn b3-walk" data-b3="walk" aria-label="Walk around" aria-pressed="true">🚶</button>';
     el.appendChild(bar);
+    // Three views of every place: Above (the aerial overview), Inside (in among the people) and Eye (eye level, as if you stood there).
+    var views = document.createElement('div'); views.className = 'b3-views'; views.setAttribute('role', 'group'); views.setAttribute('aria-label', 'View');
+    views.innerHTML = [['above', 'Above'], ['inside', 'Inside'], ['eye', 'Eye']].map(function (v) { return '<button type="button" data-b3="v:' + v[0] + '" aria-pressed="false">' + v[1] + '</button>'; }).join('');
+    el.appendChild(views);
+    function setView(v) {
+      if (WK.on) setWalk(false);
+      EYE = v === 'eye';
+      if (v === 'above') { orbit.pol = 0.66; orbit.r = CLUB || GAL ? 60 : 95; } else if (v === 'inside') { orbit.pol = 1.25; orbit.r = CLUB || GAL ? 16 : 34; } else { orbit.pol = 1.52; orbit.r = CLUB || GAL ? 14 : 30; }
+      place();
+      [].forEach.call(views.children, function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-b3') === 'v:' + v)); });
+    }
+    views.addEventListener('click', function (e) { var b = e.target.closest('[data-b3]'); if (b) setView(b.getAttribute('data-b3').slice(2)); });
     bar.addEventListener('click', function (e) { var b = e.target.closest('[data-b3]'); if (!b) return; var a = b.getAttribute('data-b3'); if (a === 'photo') { if (opts.onPhoto) opts.onPhoto(cv); return; } if (a === 'walk') { setWalk(!WK.on); if (opts.onWalk) opts.onWalk(WK.on); return; } if (a === 'in') orbit.r *= 0.8; else if (a === 'out') orbit.r *= 1.25; else orbit.az += (a === 'l' ? 1 : -1) * Math.PI / 6; place(); });
 
     /* ---------- the season: a Christmas tree, Sallah rams, the marathon arch, the New Yam pile, Style Week's runway ---------- */

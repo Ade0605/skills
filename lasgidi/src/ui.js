@@ -352,8 +352,32 @@
   }
   // Lite mode: the player's choice, or on by default for low-end phones (4 or fewer cores, or 4GB or less memory).
   function liteOn() { return prefs.lite != null ? !!prefs.lite : !!(window.LasgidiGL && window.LasgidiGL.lowEnd()); }
+  // Phones and iPads (a finger is the main pointer) get drop-downs to save screen; computers keep the full layout.
+  function isTouch() { return !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches); }
+  // Fold each panel section under its heading on touch screens. The first stays open; your choice is remembered.
+  var FOLD_KEY = 'lasgidi.folds.v1', folds = null;
+  function applyFolds() {
+    if (!isTouch()) return;
+    if (!folds) folds = readJSON(FOLD_KEY, {}) || {};
+    var where = (ui.tab || '') + '/' + (ui.app || '');
+    var root = document.querySelector('.tab-body') || document.querySelector('.panel-b'); if (!root) return;
+    // Every heading that sits directly in a panel or section starts a group that runs to the next heading.
+    var heads = [].slice.call(root.querySelectorAll('.panel-b > h3, .section > h3, .panel-b > .section > h3')).filter(function (h, i, a) { return a.indexOf(h) === i && !h.closest('.btq,.arc-ov,.scrim,.fm-love,.nf-hero,.sp-room,.course-card') && h.nextElementSibling; });
+    if (heads.length < 2) return;
+    heads.forEach(function (h, i) {
+      var grp = document.createElement('div'), body = document.createElement('div'), n = h.nextElementSibling;
+      grp.className = 'fold-grp'; body.className = 'fold-body'; h.parentNode.insertBefore(grp, h); grp.appendChild(h); grp.appendChild(body);
+      while (n && n.tagName !== 'H3') { var nx = n.nextElementSibling; body.appendChild(n); n = nx; }
+      var key = where + ':' + h.textContent.replace(/\s+/g, ' ').trim().slice(0, 40), open = key in folds ? folds[key] : i === 0;
+      grp.classList.toggle('closed', !open); h.classList.add('fold-h');
+      h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0'); h.setAttribute('aria-expanded', String(open));
+      h.onclick = function (e) { if (e.target.closest('button,a,select,input')) return; var c = grp.classList.toggle('closed'); folds[key] = !c; h.setAttribute('aria-expanded', String(!c)); writeJSON(FOLD_KEY, folds); };
+      h.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); h.onclick(e); } };
+    });
+  }
   function applyPrefs() {
     var h = document.documentElement;
+    h.classList.toggle('touch', isTouch());
     h.classList.toggle('big-text', !!prefs.big);
     h.classList.toggle('lite', liteOn());
     h.setAttribute('lang', prefs.lang === 'pcm' ? 'pcm' : 'en');
@@ -460,17 +484,32 @@
       '<p class="note">Price: ' + L.naira(SPONSOR_PRICE) + ' a month, paid to you outside the game. Approve only after you have agreed payment with the brand.</p>' + (ui.spAdminWhy ? '<p class="why">' + esc(ui.spAdminWhy) + '</p>' : '') + '</details>';
   }
   function settingsView() {
-    var opt = function (id, label, on, desc) { return '<div class="item"><div><h3>' + label + '</h3><div class="act-note">' + desc + '</div></div><button class="btn sm' + (on ? ' go' : ' ghost') + '" id="set-' + id + '" data-setpref="' + id + '" aria-pressed="' + !!on + '">' + (on ? 'On' : 'Off') + '</button></div>'; };
-    return '<div class="section"><h3>Settings</h3><div class="list">' +
-      opt('lang', '🗣️ Naija Pidgin', prefs.lang === 'pcm', 'Tabs, app names, headings and buttons in Pidgin. Story text stays in English.') +
-      opt('big', '🔠 Large text', prefs.big, 'Bigger text everywhere.') +
-      opt('family', '👨‍👩‍👧 Family mode', prefs.family, 'For all ages: hides nightlife, casinos, drinking and adult shop items, and turns off chat with other players. Everything else stays.') +
-      opt('usd', '💵 Show dollars too', prefs.usd, 'Every price also shows about how much it is in US dollars (≈ $). Each city still uses its own money.') +
-      '<div class="item"><div><h3>🪙 Money sounds</h3><div class="act-note">Coins drop into the box when cash comes in; the bank alert rings when money lands in your bank. Turn sound on at the top.</div></div><span class="inline"><button class="btn sm ghost" id="sfx-cash" data-sfx="cashIn">Cash</button><button class="btn sm ghost" id="sfx-bank" data-sfx="bankIn">Bank</button></span></div>' +
-      opt('voices', '🗣️ Street voices', prefs.sound && prefs.voices !== false, 'Touts, bus conductors and hawkers call out at motor parks, markets and when you board a danfo, in each city\'s own words (needs Sound on).') +
-      opt('lite', '🪶 Lite mode', liteOn(), 'Fewer animations and no moving traffic on the map, for cheap phones and low data. The page reloads.') +
-      '</div></div>';
+    var sw = function (id, label, on, desc) { return '<div class="st-row"><div><b>' + label + '</b>' + (desc ? '<small>' + desc + '</small>' : '') + '</div><button type="button" class="st-sw' + (on ? ' on' : '') + '" id="set-' + id + '" data-setpref="' + id + '" role="switch" aria-checked="' + !!on + '" aria-label="' + label.replace(/<[^>]+>/g, '') + '"><i></i></button></div>'; };
+    var seg = function (id, label, desc, opts, cur, note) { return '<div class="st-block"><b>' + label + '</b>' + (desc ? '<small>' + desc + '</small>' : '') + '<div class="st-seg" role="group" aria-label="' + label.replace(/<[^>]+>/g, '') + '">' + opts.map(function (o) { return '<button type="button" class="' + (o[0] === cur ? 'on' : '') + '" id="seg-' + id + '-' + o[0] + '" data-seg="' + id + ':' + o[0] + '" aria-pressed="' + (o[0] === cur) + '">' + o[1] + '</button>'; }).join('') + '</div>' + (note ? '<small class="st-note">' + note + '</small>' : '') + '</div>'; };
+    var n = S.needs, low = ['hunger', 'energy', 'fun', 'social', 'hygiene'].filter(function (k) { return n[k] < 25; }).length, mood = S.sick ? 'Sick' : low >= 3 ? 'Miserable' : low ? 'Getting by' : 'Doing well';
+    var tabs = [['wardrobe', '✏️ Profile'], ['health', 'Needs'], ['quests', 'Goals'], ['courses', 'Skills'], ['people', 'People'], ['jobs', 'Career'], ['settings', '⚙️']];
+    return '<div class="section st-sheet"><div class="st-head"><canvas id="me-face2" width="96" height="96" class="st-face" aria-hidden="true"></canvas><div><b>' + esc(S.name) + '</b><small>' + mood + (S.sick ? ' · ' + esc(S.sick.kind) : '') + ' · Lagos level ' + (L.lagosLevel ? L.lagosLevel(S) : 1) + '</small></div></div>' +
+      '<div class="st-tabs">' + tabs.map(function (t) { return '<button type="button" class="' + (t[0] === 'settings' ? 'on' : '') + '" data-app="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>' +
+      '<button type="button" class="st-link" data-app="wardrobe"><span>✏️ Edit profile<small>Your look, face and body, and your clothes</small></span><i>›</i></button>' +
+      '<h4 class="st-h">Display</h4>' +
+      seg('night', '🌙 Night mode', 'Darker screens for the evening, easier on your eyes.', [['off', 'Off'], ['on', 'On'], ['auto', 'Auto']], prefs.theme === 'dark' ? 'on' : prefs.theme === 'light' ? 'off' : 'auto', 'Auto follows your phone\'s dark mode.') +
+      seg('layout', '📐 Layout', 'Comfortable makes text and buttons bigger.', [['compact', 'Compact'], ['comfortable', 'Comfortable']], prefs.big ? 'comfortable' : 'compact') +
+      seg('lite', '🪶 Lite graphics', 'Skips the 3D extras so Lagos loads fast on a slow network. Your house, the map and every button stay.', [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], prefs.lite == null ? 'auto' : prefs.lite ? 'on' : 'off', 'Auto: turns on for small or slow phones. The page reloads.') +
+      seg('lang', '🗣️ Language', 'Tabs, app names, headings and buttons. Story text stays in English.', [['en', 'English'], ['pcm', 'Naija Pidgin']], prefs.lang === 'pcm' ? 'pcm' : 'en') +
+      seg('money', '💵 Money', 'Each city uses its own money. Add a dollar guide to every price.', [['local', 'Local only'], ['usd', '+ US dollars']], prefs.usd ? 'usd' : 'local') +
+      '<div class="st-group">' + sw('sound', 'Sound effects', prefs.sound, 'Coins, bank alerts, NEPA, fanfare and the city.') + sw('voices', 'Street voices', prefs.sound && prefs.voices !== false, 'Touts, conductors and hawkers call out (needs sound).') + sw('family', '👨‍👩‍👧 Family mode', prefs.family, 'For all ages: hides nightlife, casinos and drinking, and turns off player chat.') + '</div>' +
+      '<button type="button" class="st-link" data-fullscreen="1"><span>⛶ Full screen<small>Hide the browser\'s address bar while you play</small></span><i>›</i></button>' +
+      '<div class="st-block"><b>🪙 Money sounds</b><small>Coins drop into the box for cash; the bank alert rings for your bank.</small><div class="st-seg"><button type="button" data-sfx="cashIn">▶ Cash</button><button type="button" data-sfx="bankIn">▶ Bank</button></div></div>' +
+      '<h4 class="st-h">Privacy</h4>' +
+      seg('dm', '💬 Who can message me', prefs.dm === 'circle' ? 'Only your baes and family can open a chat with you.' : 'Everyone online can chat with you. Chat is always filtered.', [['all', 'Everyone'], ['circle', 'Only baes & family']], prefs.dm === 'circle' ? 'circle' : 'all') +
+      '<h4 class="st-h">Help</h4><div class="st-group">' +
+      '<button type="button" class="st-link" data-app="guide"><span>💡 Help & guide</span><i>›</i></button>' +
+      '<button type="button" class="st-link" data-tourreplay="1"><span>🧭 Replay the walkthrough</span><i>›</i></button>' +
+      '<button type="button" class="st-link" data-app="support"><span>🎧 Support</span><i>›</i></button></div>' +
+      '<p class="note st-foot">Lasgidi has no passwords or emails: your life lives on this device (and in the shared boards you post to).</p>' +
+      '<button type="button" class="st-new" data-newconfirm="1">' + (ui.newConfirm ? 'Tap again to start a new life (this one ends)' : 'Start a new life…') + '</button>' + (ui.newConfirm ? '<button type="button" class="btn sm" data-new="1" id="st-new-yes">Yes, start a new life</button>' : '') + '</div>';
   }
+  function drawSettingsFace() { var c = document.getElementById('me-face2'); if (!c || !S) return; try { var fc = faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit); if (fc) { var g = c.getContext('2d'); g.clearRect(0, 0, 96, 96); g.drawImage(fc, 0, 0, 96, 96); } } catch (e) {} }
 
   // A one-time toast when a room night starts in your city and you are not in that room.
   function nightReminders() {
@@ -484,6 +523,41 @@
       ui.toasts.push({ msg: I.n.icon + ' ' + I.n.name + ' is on at ' + R.name + '.', ok: true });
     });
   }
+  // Talk: a floating bar when other live players are in your district. Tap Talk and speak (or type): it goes to
+  // everyone here, filtered, and is read aloud on their phones when their sound is on.
+  function talkBar() {
+    if (!online.room || familyOn() || !S || ui.boutique) return '';
+    var here = (online.peerList || []).filter(function (p) { return p.d === S.loc && !online.muted[p.by]; });
+    if (!here.length) return '';
+    var lines = (online.talk || []).slice(-5);
+    var last = (online.talk || []).slice(-1)[0], speaking = last && Date.now() - last.at < 12000 ? last : null;
+    var vp = ui.venueOpen ? D.PLACES.filter(function (x) { return x.id === ui.venueOpen; })[0] : null, where = vp ? vp.name : D.DISTRICTS[S.loc].name;
+    var face = function (b) { return b === 'me' ? (photoImg(online.me) || '🙂') : (photoImg(b) || '🙂'); };
+    var voice = '<div class="vv"><div class="vv-h"><b>Venue voice</b><small>📍 ' + esc(where) + ' · ' + (here.length + 1) + ' here · filtered</small></div>' +
+      '<div class="vv-stage">' + (ui.listening ? '<span class="vv-ring live">' + face('me') + '</span><b>You</b><small>Listening… speak now</small>' : speaking ? '<span class="vv-label">NOW SPEAKING</span><span class="vv-ring">' + face(speaking.by) + '</span><b>' + esc(speaking.by === 'me' ? 'You' : nameOf(speaking.by)) + '</b><small>“' + esc(speaking.text) + '”</small>' : '<span class="vv-mic">🎙</span><small>Floor\'s open</small>') + '</div>' +
+      '<div class="vv-listen"><small>Listening · ' + here.length + '</small><div>' + here.slice(0, 10).map(function (p) { return '<span>' + face(p.by) + '<i>' + esc(nameOf(p.by)) + '</i></span>'; }).join('') + '</div></div>' +
+      '<div class="talk-log">' + (lines.length ? lines.map(function (l) { return '<p><b>' + esc(l.by === 'me' ? 'You' : nameOf(l.by)) + ':</b> ' + esc(l.text) + '</p>'; }).join('') : '<p class="muted">Nobody has spoken yet.</p>') + '</div>' +
+      '<div class="talk-type"><input id="talk-in" maxlength="140" placeholder="Speak with 🎤 Talk, or type it…"><button type="button" class="btn sm go" data-talksend="1">Send</button></div></div>';
+    return '<div class="talk-bar' + (ui.talkOpen ? ' open' : '') + '">' + (ui.talkOpen ? voice : '') +
+      '<div class="talk-row"><span class="talk-mic">' + (ui.listening ? '🔴' : '🎙') + '</span><div class="talk-t"><b>' + (ui.listening ? 'Listening…' : 'Floor\'s open') + '</b><small>' + (here.length + 1) + ' here · tap Talk</small></div><button type="button" class="talk-btn" id="talk" data-talk="1">🎤 Talk</button><button type="button" class="talk-peace" data-peace="1" aria-label="Send peace to everyone here">✌️</button><button type="button" class="talk-more" data-talkopen="1" aria-label="Show what people said">' + (ui.talkOpen ? '⌄' : '⌃') + '</button></div></div>';
+  }
+  function sendTalk(text) {
+    var r = CH.clean(String(text || '').slice(0, 140)); if (!text || !r.ok) { if (text) ui.toasts.push({ msg: r.why || 'Not sent.', ok: false }); render(); return; }
+    var wt = CH.canSend(online.sentTimes, Date.now(), online.blocked); if (wt) { ui.toasts.push({ msg: wt, ok: false }); render(); return; }
+    online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
+    online.talk = (online.talk || []).concat([{ by: 'me', text: r.text, at: Date.now() }]).slice(-20);
+    if (online.room) online.room.emit('deck', { here: S.loc, text: r.text }).catch(function () {});
+    ui.talkOpen = true; render();
+  }
+  function startTalk() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    ui.talkOpen = true;
+    if (!SR) { ui.talkOpen = true; render(); setTimeout(function () { var i = document.getElementById('talk-in'); if (i) i.focus(); }, 30); return; }
+    try { var rec = new SR(); rec.lang = 'en-NG'; rec.interimResults = false; rec.maxAlternatives = 1; ui.listening = true; render(); setTimeout(function () { if (ui.listening) { ui.listening = false; render(); } }, 9000);
+      rec.onresult = function (e) { ui.listening = false; sendTalk(e.results[0][0].transcript); };
+      rec.onerror = rec.onend = function () { if (ui.listening) { ui.listening = false; ui.talkOpen = true; render(); } };
+      rec.start(); } catch (e) { ui.listening = false; ui.talkOpen = true; render(); }
+  }
   function render() {
     // Live updates re-render at any moment, so keep what the viewer is typing.
     var kept = {};
@@ -494,7 +568,7 @@
     var focusId = document.activeElement && document.activeElement.id;
     if (!S) { app.innerHTML = introView(); bindIntro(); }
     else {
-      app.innerHTML = strip() + '<main class="wrap">' + needsView() + board() + '</main>' + modal() + '<div class="toasts" id="toasts" aria-live="polite"></div>';
+      app.innerHTML = strip() + '<main class="wrap">' + needsView() + board() + '</main>' + talkBar() + modal() + '<div class="toasts" id="toasts" aria-live="polite"></div>';
       renderToasts();
     }
     Object.keys(kept).forEach(function (id) {
@@ -515,6 +589,7 @@
     mountWelcome();
     mountHuntFound();
     mountInterior();
+    try { applyFolds(); } catch (e) {}
     drawAvatar();
     syncResidence();
     if (focusId) { var f = document.getElementById(focusId); if (f) f.focus(); }
@@ -712,7 +787,7 @@
     window.claude.use('db').then(function (db) {
       if (!db) return;
       db.collection('residents').limit(500).onSnapshot(function (snap) {
-        online.residents = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, home: r && typeof r.home === 'string' ? r.home : null }; });
+        online.residents = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, home: r && typeof r.home === 'string' ? r.home : null, links: cleanLinks(r && r.links) }; });
         var ids = online.residents.map(function (r) { return r.id; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
@@ -745,7 +820,14 @@
         online.peers = counts; online.others = others;
         var seen = {};
         online.peerList = ch.peers.filter(function (p) { return !p.isMe && p.kind === 'viewer' && p.by && p.presence && own(D.DISTRICTS, p.presence.d); })
-          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look), party: cleanParty(p.presence.party), at: typeof p.presence.at === 'string' && p.presence.at.length < 80 ? p.presence.at : null, act: typeof p.presence.a === 'string' && Object.prototype.hasOwnProperty.call(ACTIVITIES, p.presence.a) ? p.presence.a : null , biz: cleanBiz(p.presence.biz) }; });
+          .filter(function (p) { if (seen[p.by]) return false; seen[p.by] = true; return true; }).map(function (p) { return { by: p.by, d: p.presence.d, look: cleanLook(p.presence.look), party: cleanParty(p.presence.party), at: typeof p.presence.at === 'string' && p.presence.at.length < 80 ? p.presence.at : null, act: typeof p.presence.a === 'string' && Object.prototype.hasOwnProperty.call(ACTIVITIES, p.presence.a) ? p.presence.a : null , biz: cleanBiz(p.presence.biz), lv: typeof p.presence.lv === 'number' && p.presence.lv >= 1 && p.presence.lv < 100 ? Math.floor(p.presence.lv) : null, st: typeof p.presence.st === 'number' && p.presence.st >= 0 && p.presence.st < 10000 ? Math.floor(p.presence.st) : 0 }; });
+        // Spaces: a player hosting one puts {id, t} in their presence; listeners put the id in sin.
+        var spaces = {}, seenSp = {};
+        ch.peers.forEach(function (p) { if (p.isMe || p.kind !== 'viewer' || !p.by || seenSp[p.by] || online.muted[p.by]) return; seenSp[p.by] = 1; var sp = p.presence && p.presence.sp; if (!sp || typeof sp.id !== 'string' || !/^[a-z0-9]{8}$/.test(sp.id) || typeof sp.t !== 'string') return; var tc = CH.clean(sp.t.slice(0, 60)); if (!tc.ok) return; spaces[sp.id] = { id: sp.id, t: tc.text, host: p.by, d: own(D.DISTRICTS, p.presence.d) ? p.presence.d : null, at: typeof sp.at === 'number' ? sp.at : 0, who: [] }; });
+        ch.peers.forEach(function (p) { var si = p.presence && p.presence.sin; if (!p.isMe && p.by && typeof si === 'string' && spaces[si] && spaces[si].who.indexOf(p.by) < 0) spaces[si].who.push(p.by); });
+        online.spaces = Object.keys(spaces).map(function (k) { return spaces[k]; });
+        online.myListeners = ui.mySpace ? ch.peers.filter(function (p) { return !p.isMe && p.by && p.presence && p.presence.sin === ui.mySpace.id; }).map(function (p) { return p.by; }).filter(function (b, i, a) { return a.indexOf(b) === i; }) : [];
+        if (ui.inSpace && !(ui.mySpace && ui.mySpace.id === ui.inSpace) && !spaces[ui.inSpace]) { ui.inSpace = null; ui.toasts.push({ msg: 'That Space has ended.', ok: true }); }
         var ids = online.peerList.map(function (p) { return p.by; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
@@ -754,7 +836,14 @@
         room.on('wave', function (msg) {
           if (!msg || !msg.by || !msg.data || msg.data.to !== online.me) return;
           var nm = (online.names[msg.by] && online.names[msg.by].name) || 'A Lagosian';
-          ui.toasts.push({ msg: msg.data.bell ? '🔔 ' + nm + ' rang your bell. They are at your party!' : '👋 ' + nm + ' waved at you.', ok: true }); scheduleRender();
+          if (msg.data.invite || (msg.data.money && typeof msg.data.ref === 'string')) {
+            var lg2 = online.chats[msg.by] = online.chats[msg.by] || [];
+            if (msg.data.invite) { lg2.push({ sys: 'invited', at: Date.now() }); ui.toasts.push({ msg: '🏠 ' + nm + ' invited you over. Open your chat with them to visit.', ok: true }); }
+            else { var amt = Math.round(+msg.data.money); if (amt >= 100 && amt <= L.GIFT_MAX && /^[a-z0-9]{6,16}$/.test(msg.data.ref) && !lg2.some(function (m) { return m.ref === msg.data.ref; })) { lg2.push({ sys: 'money', amt: amt, ref: msg.data.ref, at: Date.now() }); ui.toasts.push({ msg: '💸 ' + nm + ' sent you ' + N(amt) + '. Open your chat to accept.', ok: true }); play('bankIn'); } }
+            markDuo(msg.by, 'them'); if (ui.chatWith !== msg.by) online.unread[msg.by] = (online.unread[msg.by] || 0) + 1; scheduleRender(); return;
+          }
+          var KN = { hello: '👋 ' + nm + ' said hello.', gist: '🗣️ ' + nm + ' wants to gist with you.', joke: '😂 ' + nm + ' cracked a joke at you.', shade: '😏 ' + nm + ' threw shade at you!' };
+          ui.toasts.push({ msg: msg.data.bell ? '🔔 ' + nm + ' rang your bell. They are at your party!' : typeof msg.data.kind === 'string' && KN[msg.data.kind] ? KN[msg.data.kind] : '👋 ' + nm + ' waved at you.', ok: true }); scheduleRender();
         });
         room.on('deck', function (msg) {
           if (familyOn()) return; // Family mode: no player chat
@@ -764,6 +853,21 @@
             var vr = CH.clean(msg.data.text); if (!vr.ok) return;
             online.venueChat = (online.venueChat || []).concat([{ venue: vp.id, by: msg.by, text: vr.text, at: Date.now() }]).slice(-40);
             if (ui.venueOpen === vp.id) { mountVenue(); setTimeout(mountVenue, 7200); } return;
+          }
+          if (msg && msg.data && typeof msg.data.here === 'string') { // Talk: someone in your district spoke (read aloud when sound is on)
+            if (!S || msg.data.here !== S.loc || msg.by === online.me || online.muted[msg.by] || !(online.peerList || []).some(function (p) { return p.by === msg.by && p.d === S.loc; })) return;
+            if (msg.data.peace) { ui.toasts.push({ msg: '✌️ ' + nameOf(msg.by) + ' sends peace to everyone here.', ok: true }); scheduleRender(); return; }
+            var tr = CH.clean(String(msg.data.text || '').slice(0, 140)); if (!tr.ok) return;
+            online.talk = (online.talk || []).concat([{ by: msg.by, text: tr.text, at: Date.now() }]).slice(-20);
+            ui.toasts.push({ msg: '🎙 ' + nameOf(msg.by) + ': ' + tr.text, ok: true }); if (prefs.sound && prefs.voices !== false) say(tr.text, { queue: true });
+            scheduleRender(); return;
+          }
+          if (msg && msg.data && typeof msg.data.space === 'string') { // a Space's chat: only from people in that Space, only if you are in it too
+            var sid = msg.data.space, spc = spaceById(sid);
+            if (!spc || ui.inSpace !== sid || msg.by === online.me || online.muted[msg.by] || !(spc.host === msg.by || spc.who.indexOf(msg.by) >= 0)) return;
+            var sr = CH.clean(msg.data.text); if (!sr.ok) return;
+            online.spaceChat = (online.spaceChat || []).concat([{ space: sid, by: msg.by, text: sr.text, at: Date.now() }]).slice(-40);
+            scheduleRender(); return;
           }
           if (msg && msg.data && typeof msg.data.room === 'string') { // a live room's chat: only from people in that same room
             var rid = msg.data.room;
@@ -780,10 +884,11 @@
         });
         room.on('chat', function (msg) {
           if (familyOn() || !msg || !msg.by || !msg.data || msg.data.to !== online.me || online.muted[msg.by] || msg.by === online.me) return;
+          if (prefs.dm === 'circle' && !inCircle(msg.by)) return; // Settings → Who can message me: only baes and family
           var r = CH.clean(msg.data.text); if (!r.ok) return; // the sender's filter is not trusted
           var log0 = online.chats[msg.by] = online.chats[msg.by] || [];
           if (log0.filter(function (m) { return !m.me && Date.now() - m.at < 60000; }).length >= 15) return;
-          log0.push({ me: false, text: r.text, at: Date.now() }); if (log0.length > 60) log0.shift();
+          log0.push({ me: false, text: r.text, at: Date.now() }); if (log0.length > 60) log0.shift(); markDuo(msg.by, 'them');
           play('ping');
           if (ui.chatWith !== msg.by) { online.unread[msg.by] = (online.unread[msg.by] || 0) + 1; ui.toasts.push({ msg: '💬 ' + handleOf(msg.by) + ': ' + r.text, ok: true }); }
           scheduleRender();
@@ -840,7 +945,8 @@
     if (online.user && typeof online.user.setName === 'function' && S && S.name && online.sentName !== S.name) { online.sentName = S.name; online.user.setName(CH.clean ? CH.clean(S.name) : S.name); } // own-site online: your game name is your profile name
     if (!online.room) return;
     var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null, pt = myParty();
-    var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : S && S.room && L.roomIn(S, S.room.id) ? 'room:' + S.room.id + ':' + S.room.spot : ui.visit || null, a: S ? myActivity() : null, biz: S ? myBiz() : null };
+    var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : S && S.room && L.roomIn(S, S.room.id) ? 'room:' + S.room.id + ':' + S.room.spot : ui.visit || null, a: S ? myActivity() : null, biz: S ? myBiz() : null, lv: S && L.lagosLevel ? L.lagosLevel(S) : null, st: S && S.streak ? S.streak.n : 0 };
+    if (ui.mySpace && !familyOn()) pres.sp = ui.mySpace; if (ui.inSpace && !familyOn()) pres.sin = ui.inSpace;
     var key = JSON.stringify(pres);
     if (key === online.sentLoc) return;
     online.sentLoc = key;
@@ -940,6 +1046,15 @@
     });
     return out;
   }
+  // A streak with another player: both of you do something together (chat, invite, gift) on the same day.
+  var DUO_KEY = 'lasgidi.duo.v1';
+  function duoToday() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function duoInfo(by) { var all = readJSON(DUO_KEY, {}) || {}, x = all[by] || { n: 0 }, t = duoToday(), y = new Date(Date.now() - 864e5), yd = y.getFullYear() + '-' + (y.getMonth() + 1) + '-' + y.getDate(); return { n: x.last === t || x.last === yd ? x.n || 0 : 0, today: x.last === t, me: x.me === t, them: x.them === t }; }
+  function markDuo(by, who) {
+    var all = readJSON(DUO_KEY, {}) || {}, x = all[by] || { n: 0 }, t = duoToday(), y = new Date(Date.now() - 864e5), yd = y.getFullYear() + '-' + (y.getMonth() + 1) + '-' + y.getDate();
+    x[who] = t; if (x.me === t && x.them === t && x.last !== t) { x.n = x.last === yd ? (x.n || 0) + 1 : 1; x.last = t; }
+    all[by] = x; var keys = Object.keys(all); if (keys.length > 80) delete all[keys[0]]; writeJSON(DUO_KEY, all);
+  }
   // The player card: who they are, where they are, wave, visit, and a filtered chat.
   function chatView(by) {
     var p = (online.peerList || []).filter(function (x) { return x.by === by; })[0];
@@ -954,8 +1069,17 @@
         '<button class="btn sm ghost" id="pmute-' + esc(by) + '" data-chatmute="' + esc(by) + '">' + (muted ? '🔈 Unblock' : '🚫 Block') + '</button>' +
         '<button class="btn sm ghost" id="preport-' + esc(by) + '" data-reportopen="' + esc(by) + '">🚩 Report</button>' +
         (online.cvs && checkCv(online.cvs[by]) ? '<button class="btn sm ghost" id="pcv-' + esc(by) + '" data-cvfor="' + esc(by) + '">📄 CV</button>' : '') + '</div>' + reportBox(by) +
+      (function () { var du = duoInfo(by); return '<p class="duo-priv">🔒 Private · only you and ' + esc(handleOf(by)) + ' can see this</p><div class="duo"><span class="duo-n">🔥 ' + du.n + '</span><div><b>' + (du.n ? du.n + '-day streak' : 'Start a streak') + '</b><small>' + (du.today ? 'Done for today. Come back tomorrow!' : 'Both of you do something together on the same day: chat, invite or send a gift.' + (du.me ? ' Waiting for them.' : du.them ? ' Your turn!' : '')) + '</small></div></div>'; })() +
+      '<div class="duo-acts"><button type="button" class="duo-a inv" id="pinv-' + esc(by) + '" data-pinvite="' + esc(by) + '">🏠 Invite</button>' + (home ? '<button type="button" class="duo-a vis" data-visit2="' + esc(by) + '">🚪 Visit</button>' : '<button type="button" class="duo-a vis" disabled title="They have not shared a home yet">🚪 Visit</button>') + (S.rules >= 47 ? '<button type="button" class="duo-a pay" id="ppay-' + esc(by) + '" data-paybox="' + esc(by) + '">💸 Send money</button>' : '') + '</div>' +
+      (ui.payBox === by ? '<div class="duo-pay"><input id="pay-amt" type="number" min="100" max="' + L.GIFT_MAX + '" step="100" placeholder="Amount (₦100 – ' + N(L.GIFT_MAX) + ')"><button type="button" class="btn sm go" data-paysend="' + esc(by) + '">Send</button><small>They can take up to ' + N(L.GIFT_DAY) + ' a day in gifts. Lives that take gifts stay off the boards.</small></div>' : '') +
+      '<div class="pc-badges">' + (p.lv ? '<span class="pc-lv">Lv ' + p.lv + ' · ' + (p.lv >= 10 ? 'Gold' : p.lv >= 5 ? 'Silver' : 'Bronze') + '</span>' : '') + (p.st ? '<span class="pc-st">🔥 ' + p.st + '</span>' : '') + (theirLinks(by).bae.length && !familyOn() ? '<span>💞 ' + theirLinks(by).bae.length + ' bae' + (theirLinks(by).bae.length === 1 ? '' : 's') + '</span>' : '') + '</div>' +
+      '<div class="inline pc-links">' + linkButtons(by) + '</div>' +
+      (S.rules >= 47 ? '<div class="pc-social">' + [['hello', '👋', 'Say hello', '+Social'], ['gist', '💬', 'Gist', '+Fun · +Social'], ['joke', '😂', 'Crack a joke', '44% · +Fun · +Social'], ['shade', '😏', 'Throw shade', '+Fun · +Social']].map(function (x) { return '<button type="button" class="pc-soc" id="psoc-' + x[0] + '" data-psoc="' + x[0] + ':' + esc(by) + '"><span>' + x[1] + '</span><b>' + x[2] + '</b><small>' + x[3] + '</small><i>›</i></button>'; }).join('') + '</div>' : '') +
         (ui.cvFor === by && online.cvs && checkCv(online.cvs[by]) ? cvHtml(checkCv(online.cvs[by]), by) : '') +
-      '<div class="chat-log" id="chat-log" aria-live="polite">' + (msgs.length ? msgs.slice(-30).map(function (m) { return '<div class="chat-msg' + (m.me ? ' me' : '') + '"><span>' + esc(m.text) + '</span></div>'; }).join('') : '<p class="muted">Say hello. Messages are not saved and vanish when you close the game.</p>') + '</div>' +
+      '<div class="chat-log" id="chat-log" aria-live="polite">' + (msgs.length ? msgs.slice(-30).map(function (m) { var tm = new Date(m.at || Date.now()), hm = String(tm.getHours()).padStart(2, '0') + ':' + String(tm.getMinutes()).padStart(2, '0');
+        if (m.sys === 'invited') return '<div class="chat-sys">' + (m.me ? 'You invited them over 🏠' : esc(nameOf(by)) + ' invited you over 🏠') + ' · ' + hm + (!m.me && home ? ' <button type="button" class="link-btn" data-visit2="' + esc(by) + '">Visit now</button>' : '') + '</div>';
+        if (m.sys === 'money') return '<div class="chat-sys money">' + (m.me ? 'You sent ' + N(m.amt) + ' 💸' : esc(nameOf(by)) + ' sent you ' + N(m.amt) + ' 💸') + ' · ' + hm + (!m.me && !m.took ? ' <button type="button" class="btn sm go" data-giftok="' + esc(by) + ':' + m.ref + '">Accept</button>' : m.took ? ' · accepted' : '') + '</div>';
+        return '<div class="chat-msg' + (m.me ? ' me' : '') + '"><span>' + esc(m.text) + '</span></div>'; }).join('') : '<p class="muted">Say hello. Messages are not saved and vanish when you close the game.</p>') + '</div>' +
       '<div class="chat-quick">' + CH.QUICK.map(function (q, i) { return '<button type="button" class="act-chip" id="cq-' + i + '" data-chatq="' + i + '">' + esc(q) + '</button>'; }).join('') + '</div>' +
       '<div class="chat-send"><input id="chat-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Message ' + esc(handleOf(by)) + '" aria-label="Message" value="' + esc(ui.chatDraft || '') + '"><button class="btn" id="chat-send" data-chatsend="' + esc(by) + '">Send</button></div>' +
       (ui.chatWhy ? '<p class="why">' + esc(ui.chatWhy) + '</p>' : '') +
@@ -1012,7 +1136,7 @@
     return roomsHtml + '<div class="section"><h3>👥 People online <span class="muted">· ' + list.length + '</span></h3>' + (list.length ? '<div class="list">' + list.slice(0, 60).map(function (p) {
       var city = D.CITIES[L.districtCity(p.d)].name, act = p.act ? ACTIVITIES[p.act] : '', rid = p.at && p.at.indexOf('room:') === 0 ? p.at.split(':')[1] : null, where = deckPeers().indexOf(p) >= 0 ? 'on the Lagoon Boat Cruise' : rid && D.ROOMS[rid] && roomPeers(rid).indexOf(p) >= 0 ? 'at ' + D.ROOMS[rid].name : act;
       return '<div class="item person">' + (photoImg(p.by) || '<span class="pc-photo pc-ph" style="width:40px;height:40px;font-size:20px">🙂</span>') + '<div><h3>' + esc(nameOf(p.by)) + ' <span class="pc-handle">' + esc(handleOf(p.by)) + '</span></h3><div class="meta"><span>📍 ' + esc(D.DISTRICTS[p.d].name) + ', ' + esc(city) + '</span>' + (where ? '<span>' + esc(where) + '</span>' : '') + '</div></div>' +
-        '<div class="inline"><button class="btn sm" id="ppl-chat-' + esc(p.by) + '" data-chatopen="' + esc(p.by) + '">💬 Chat' + (online.unread[p.by] ? ' · ' + online.unread[p.by] : '') + '</button></div></div>';
+        '<div class="inline"><button class="btn sm" id="ppl-chat-' + esc(p.by) + '" data-chatopen="' + esc(p.by) + '">💬 Chat' + (online.unread[p.by] ? ' · ' + online.unread[p.by] : '') + '</button>' + linkButtons(p.by) + '</div></div>';
     }).join('') + '</div>' : '<p class="note">Nobody else is online right now.</p>') + (blocked ? '<p class="note">' + blocked + ' blocked player' + (blocked === 1 ? '' : 's') + ' hidden. Unblock from their player card.</p>' : '') + '</div>';
   }
   // The chat filter for what you send. Refused messages are counted, and three in ten minutes pause your chat.
@@ -1043,7 +1167,7 @@
     if (!online.room) { ui.chatWhy = 'Chat is not open here.'; render(); return; }
     online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
     online.room.emit('chat', { to: by, text: r.text }).then(function () {
-      (online.chats[by] = online.chats[by] || []).push({ me: true, text: r.text, at: Date.now() });
+      (online.chats[by] = online.chats[by] || []).push({ me: true, text: r.text, at: Date.now() }); markDuo(by, 'me');
       ui.chatDraft = ''; ui.chatWhy = ''; var ci0 = document.getElementById('chat-in'); if (ci0) ci0.value = ''; render();
       var lg = document.getElementById('chat-log'); if (lg) lg.scrollTop = lg.scrollHeight;
     }, function () { ui.chatWhy = 'Chat is not open here yet.'; render(); });
@@ -1131,6 +1255,7 @@
     if (!online.db || !online.me) return Promise.resolve(quiet ? null : 'The Hall of Fame is not available here.');
     if (S && S.tampered) return Promise.resolve('Edited saves cannot go on the Hall of Fame.');
     if (S && S.boosted) return Promise.resolve(quiet ? null : 'This life took a wallet top-up, so it is Boosted and stays off the Hall of Fame.');
+    if (S && S.gifted) return Promise.resolve(quiet ? null : 'This life accepted money from other players, so it is Gifted and stays off the Hall of Fame.');
     if (!entry.replay) return Promise.resolve(quiet ? null : 'This life began before verified scores, so it cannot be checked. Start a new life to get on the board.');
     var mine = myFame();
     if (mine && mine.score >= entry.score) return Promise.resolve(quiet ? null : 'Your best on the board (' + mine.score + ') is higher. It stays.');
@@ -1180,7 +1305,32 @@
       '<div class="pg-chips" style="padding:0">' + [0.6, 0.7, 0.8, 0.9].map(function (f) { var v = Math.round(list * f / 50) * 50; return '<button type="button" class="pg-chip" id="hago-' + Math.round(f * 100) + '" data-hagoffer="' + v + '">' + N(v) + '</button>'; }).join('') +
       (h.counter ? '<button type="button" class="pg-chip sel" id="hago-counter" data-hagoffer="' + h.counter + '">Take ' + N(h.counter) + '</button>' : '') + '</div></div>';
   }
+  // The Boutique: a full-screen dressing room. Try clothes on in the mirror, fill a basket, then buy the look.
+  var SLOT_ICON = { top: '👕', bottom: '👖', dress: '👗', shoes: '👟', head: '🧢', acc: '👜' };
+  function btqOutfit() { var o = Object.assign({}, S.outfit || {}), t = (ui.boutique && ui.boutique.tryOn) || {}; Object.keys(t).forEach(function (sl) { var c = D.CLOTHES[t[sl]]; if (!c) return; if (sl === 'dress') { delete o.top; delete o.bottom; } if (sl === 'top' || sl === 'bottom') delete o.dress; o[sl] = t[sl]; }); return o; }
+  function boutiqueView() {
+    var B = ui.boutique, tab = B.tab || 'shop', owned = {}; (S.wardrobe || []).forEach(function (w) { owned[w.id] = 1; });
+    var ids = Object.keys(D.CLOTHES).filter(function (k) { var c = D.CLOTHES[k]; if (tab === 'wardrobe') return owned[k]; if (c.gift || owned[k] || !localBuy(c)) return false; return tab === 'market' ? c.price <= 20000 : c.price > 20000 || !c.price; });
+    if (B.slot) ids = ids.filter(function (k) { return D.CLOTHES[k].slot === B.slot; });
+    ids.sort(function (a, b) { return D.CLOTHES[a].price - D.CLOTHES[b].price; });
+    var wearing = btqOutfit(), total = B.basket.reduce(function (a, k) { return a + L.price(S, D.CLOTHES[k].price); }, 0);
+    var card = function (k) { var c = D.CLOTHES[k], on = wearing[c.slot] === k, inB = B.basket.indexOf(k) >= 0, stars = Math.min(3, Math.ceil((c.status || 0) / 3));
+      return '<button type="button" class="btq-c' + (on ? ' on' : '') + (inB ? ' inb' : '') + '" id="btq-' + k + '" data-btq="' + k + '"><span class="btq-tag">' + ({ top: 'Top', bottom: 'Bottom', dress: 'Dress', shoes: 'Shoes', head: 'Headwear', acc: 'Accessory' })[c.slot] + '</span>' + (stars ? '<span class="btq-st">' + '★★★'.slice(0, stars) + '</span>' : '') +
+        '<span class="btq-th" style="--c1:' + c.color + ';--c2:' + (c.alt || c.color) + '">' + SLOT_ICON[c.slot] + '</span><b>' + esc(c.name) + '</b><small>' + (tab === 'wardrobe' ? (on ? '✓ Wearing' : 'Tap to wear') : N(L.price(S, c.price))) + '</small></button>'; };
+    return '<div class="btq" role="dialog" aria-modal="true" aria-label="Boutique"><div class="btq-mirror"><div class="btq-arch"><canvas id="btq-cv" width="360" height="520" aria-label="You in the mirror"></canvas></div><span class="btq-now">' + (Object.keys(B.tryOn).length ? '👀 Trying on' : '✓ Wearing now') + '</span></div>' +
+      '<div class="btq-panel"><div class="btq-tabs">' + [['wardrobe', 'Wardrobe'], ['shop', 'Boutique'], ['market', 'Market']].map(function (t) { return '<button type="button" class="' + (tab === t[0] ? 'on' : '') + '" id="btq-t-' + t[0] + '" data-btqtab="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '<button type="button" class="btq-x" id="btq-close" data-btqclose="1" aria-label="Close">✕</button></div>' +
+      '<select class="btq-slot" id="btq-slot" aria-label="Kind of clothes"><option value="">All clothes</option>' + Object.keys(SLOT_NAMES).map(function (k) { return '<option value="' + k + '"' + (B.slot === k ? ' selected' : '') + '>' + SLOT_ICON[k] + ' ' + SLOT_NAMES[k] + '</option>'; }).join('') + '</select>' +
+      '<div class="btq-grid">' + (ids.length ? ids.map(card).join('') : '<p class="note">' + (tab === 'wardrobe' ? 'Nothing here yet. Buy something in the Boutique or the Market.' : 'Nothing like that sold in this city.') + '</p>') + '</div>' +
+      (tab === 'wardrobe' ? '<div class="btq-bar"><span>' + (S.wardrobe || []).length + ' items in your wardrobe</span></div>' : '<div class="btq-bar"><span>' + (B.basket.length ? '🧺 ' + B.basket.length + ' item' + (B.basket.length === 1 ? '' : 's') + ' · ' + N(total) : 'Basket empty') + '</span>' + (B.basket.length ? '<button type="button" class="btn sm ghost" id="btq-clear" data-btqclear="1">Clear</button>' : '') + '<button type="button" class="btn sm go" id="btq-buy" data-btqbuy="1"' + (B.basket.length && S.cash + S.bank >= total ? '' : ' disabled') + '>Buy look</button></div>') +
+      (B.msg ? '<p class="btq-msg">' + esc(B.msg) + '</p>' : '') + '</div></div>';
+  }
+  function drawBoutique() {
+    var cv = document.getElementById('btq-cv'); if (!cv || !S) return;
+    var o = btqOutfit(), A3 = window.LasgidiAvatar3D;
+    try { if (A3 && window.THREE) A3.draw(cv, S.look, o, myExtra()); else if (window.LasgidiAvatar) window.LasgidiAvatar.draw(cv, S.look, o, myExtra()); } catch (e) { if (window.LasgidiAvatar) window.LasgidiAvatar.draw(cv, S.look, o, myExtra()); }
+  }
   function drawAvatar() {
+    drawBoutique(); drawSettingsFace();
     var cv = document.getElementById('avatar-canvas');
     if (cv && window.LasgidiAvatar && S) window.LasgidiAvatar.draw(cv, S.look, S.outfit, myExtra());
     var mf = document.getElementById('me-face'); if (mf && S) { try { var fc = faceCanvas(S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit); if (fc) { var mg = mf.getContext('2d'); mg.clearRect(0, 0, 96, 96); mg.drawImage(fc, 0, 0, 96, 96); } } catch (e) {} } // the profile header face
@@ -1281,12 +1431,14 @@
       var due = L.minutesUntilRent(S), short = S.cash + S.bank < S.rentRate;
       chips.push('<span class="chip' + (short && due <= 2880 ? ' off' : '') + '">Rent ' + N(S.rentRate) + ' in ' + dur(due) + '</span>');
     }
-    chips.push('<span class="chip">Prices ×' + e.infl.toFixed(2) + '</span>');
-    var pc = playerCount(); if (pc.total || online.room) chips.push('<span class="chip players" title="Players who have played online, and people in the game right now">👥 ' + fmtCount(pc.total) + ' player' + (pc.total === 1 ? '' : 's') + ' <i class="dot-live"></i> ' + fmtCount(pc.now) + ' online now</span>');
+    var pc = playerCount();
     return '<header class="strip"><div class="strip-in">' +
       '<div class="brand">LASGIDI</div>' +
       '<div class="clock"><b>' + L.clockLabel(S) + '</b><span>' + L.dateLabel(S) + '</span></div>' +
-      '<div class="chips">' + chips.join('') + '</div>' +
+      '<div class="live-users" title="Players to date, and people in the game right now"><span>👥 <b>' + fmtCount(Math.max(1, pc.total)) + '</b> player' + (Math.max(1, pc.total) === 1 ? '' : 's') + ' to date</span><span><i class="dot-live"></i> <b>' + fmtCount(Math.max(1, pc.now)) + '</b> live now</span></div>' +
+      (S.challenge ? '' : '<button type="button" class="chip chip-btn wk-btn" id="wk-btn" data-wplay="1" title="Weekly Lagos: everyone plays the same week">🏁 Weekly Lagos</button>') +
+      (isTouch() ? '<div class="chips-dd' + (ui.chipsOpen ? ' open' : '') + '"><button type="button" class="chip chip-btn" id="chips-dd" data-chipsdd="1" aria-expanded="' + !!ui.chipsOpen + '">' + (S.power ? '💡' : '🕯️') + ' ' + (S.rentRate ? 'Rent ' + dur(L.minutesUntilRent(S)) : 'Status') + ' ' + (ui.chipsOpen ? '▴' : '▾') + '</button><div class="chips">' + chips.join('') + '</div></div>' : '<div class="chips">' + chips.join('') + '</div>') +
+      '<button class="chip chip-btn feed-btn" id="feed-btn" data-tab="phone" data-app="feed" aria-label="Lasgidi feed: what is happening now" title="Lasgidi feed">🌍 Feed' + ((online.spaces || []).length ? ' <i class="dot-live"></i>' : '') + '</button>' +
       '<button class="chip chip-btn" id="sound" data-sound="1" aria-pressed="' + !!prefs.sound + '">' + (prefs.sound ? 'Sound on' : 'Sound off') + '</button>' +
       '<div class="wallet"><div><small>Cash</small><b>' + N(S.cash) + '</b></div><div><small>Bank</small><b>' + N(S.bank) + '</b></div></div>' +
       '</div></header>';
@@ -2013,10 +2165,10 @@
   }
   function syncResidence() {
     if (!online.db || !online.me || !S || S.challenge) return;
-    var key = S.home + ':' + L.myPlot(S);
+    var key = S.home + ':' + L.myPlot(S) + ':' + JSON.stringify(myLinks());
     if (online.sentHome === key) return;
     online.sentHome = key;
-    online.db.doc('residents/' + online.me).set({ home: S.home, at: Date.now() }).catch(function () {});
+    online.db.doc('residents/' + online.me).set({ home: S.home, at: Date.now(), links: myLinks() }).catch(function () {});
   }
 
   /* ---------- places ---------- */
@@ -3881,7 +4033,9 @@
   /* ---------- Money tab ---------- */
   function moneyView() {
     var h = L.homeDef(S);
-    var html = '<div class="panel-h"><h2>Money</h2><span class="muted">Net worth <b class="num">' + N(L.netWorth(S)) + '</b></span></div><div class="panel-b">';
+    var inf = S.econ.infl;
+    var html = '<div class="panel-h"><h2>Money</h2><span class="muted">Net worth <b class="num">' + N(L.netWorth(S)) + '</b></span></div><div class="panel-b">' +
+      '<p class="price-level" title="How much prices have risen since your life began">🏷️ Prices <b>×' + inf.toFixed(2) + '</b> · ' + (inf <= 1.005 ? 'same as when you started' : 'up ' + Math.round((inf - 1) * 100) + '% since you started') + (L.isDecember(S) ? ' · Detty December +15%' : '') + '</p>';
 
     html += bankView();
 
@@ -4160,10 +4314,125 @@
   var MORE_APPS = [['support', '🎧', 'Support'], ['tickets', '🎫', 'TixLagos'], ['fixam', '🛠️', 'FixAm'], ['dokita', '🩹', 'Dokita'], ['linkup', '💞', 'LinkUp'], ['payindex', '💹', 'Pay Index'],
     ['flix', '🎬', 'NaijaFlix'], ['glow', '💄', 'Glow Beauty'], ['spaces', '🎙️', 'Spaces'], ['hangout', '🧺', 'Hangout'], ['contacts', '📞', 'Contacts'], ['chop', '🛵', 'ChopDash'],
     ['boutique', '👠', 'Boutique'], ['gadgets', '📱', 'Gadgets'], ['richlist', '👑', 'Rich List'], ['invite', '🔗', 'Invite'], ['invest', '💼', 'Invest'], ['assurance', '🛡️', 'Assurance'],
-    ['family', '👨‍👩‍👧', 'Family'], ['staff', '🧹', 'Staff'], ['hustle', '🧰', 'Hustle'], ['busco', '🚌', 'Bus Co.'], ['company', '🏢', 'Company'], ['give', '🤲', 'Give'], ['police', '🚓', 'Police'], ['court', '⚖️', 'Court']];
+    ['family', '👨‍👩‍👧', 'Family'], ['staff', '🧹', 'Staff'], ['hustle', '🧰', 'Hustle'], ['busco', '🚌', 'Bus Co.'], ['company', '🏢', 'Company'], ['give', '🤲', 'Give'], ['police', '🚓', 'Police'], ['court', '⚖️', 'Court'], ['ads', '📣', 'My Ads'], ['feed', '🌍', 'Feed']];
   APPS.splice.apply(APPS, [APPS.length - 2, 0].concat(MORE_APPS));
   var NEW_APPS = { radio: 1, hunt: 1, news: 1, music: 1, calendar: 1, courses: 1, health: 1, ride: 1 };
   MORE_APPS.forEach(function (a) { NEW_APPS[a[0]] = 1; });
+  /* ---------- Spaces: live talk rooms players start (presence only: nothing is stored) ---------- */
+  function spaceById(id) { if (ui.mySpace && ui.mySpace.id === id) return { id: id, t: ui.mySpace.t, host: online.me, d: S.loc, who: online.myListeners || [] }; return (online.spaces || []).filter(function (x) { return x.id === id; })[0] || null; }
+  function spacesView() {
+    if (familyOn()) return '<div class="section"><h3>🎙️ Spaces</h3><p class="note">Spaces are off in Family mode.</p></div>';
+    if (!online.room) return '<div class="section"><h3>🎙️ Spaces</h3><p class="note">Spaces need other players: they work when the game is opened on claude.ai.</p></div>';
+    if (ui.inSpace) return spaceRoomView();
+    var tab = ui.spaceTab || 'live', all = (online.spaces || []).slice().sort(function (a, b) { return b.who.length - a.who.length; });
+    var list = tab === 'here' ? all.filter(function (x) { return x.d && L.districtCity(x.d) === L.cityOf(S); }) : tab === 'mine' ? [] : all;
+    var row = function (x) { return '<div class="sp-card" role="button" tabindex="0" id="sp-' + x.id + '" data-spacejoin="' + x.id + '"><div class="sp-live">● LIVE</div><b>' + esc(x.t) + '</b><div class="sp-meta"><span>' + esc(nameOf(x.host)) + ' · ' + esc(x.d ? D.DISTRICTS[x.d].name : '') + '</span><span>🎙 1 · 🎧 ' + x.who.length + '</span></div><button type="button" class="sp-flag" data-chatmute="' + esc(x.host) + '" aria-label="Hide this host">⚑</button></div>'; };
+    return '<div class="section sp-wrap">' + (ui.spaceForm ? '<div class="sp-form"><input id="space-title" maxlength="60" placeholder="What is your Space about?" value="' + esc(ui.spaceDraft || '') + '"><div class="inline"><button type="button" class="btn sm ghost" data-spaceform="0">Cancel</button><button type="button" class="btn sm go" id="space-go" data-spacego="1">Go live</button></div>' + (ui.spaceWhy ? '<p class="why">' + esc(ui.spaceWhy) + '</p>' : '') + '</div>'
+        : '<button type="button" class="btn go big-go" id="space-start" data-spaceform="1">＋ Start a Space</button>') +
+      '<div class="sp-tabs">' + [['live', 'Live'], ['upcoming', 'Upcoming'], ['mine', 'Mine'], ['here', 'Here']].map(function (t) { return '<button type="button" class="' + (tab === t[0] ? 'on' : '') + '" data-spacetab="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>' +
+      (tab === 'upcoming' ? roomNightsView() : tab === 'mine' ? (ui.mySpace ? '<p class="note">You are hosting “' + esc(ui.mySpace.t) + '”.</p><button type="button" class="btn sm go" data-spacejoin="' + ui.mySpace.id + '">Open my Space</button>' : '<p class="note">You are not hosting a Space. Start one above: everyone online can see it and drop in.</p>')
+        : list.length ? list.map(row).join('') : '<p class="note">' + (tab === 'here' ? 'No Spaces from people in ' + esc(D.CITIES[L.cityOf(S)].name) + ' right now.' : 'No live Spaces right now. Start one!') + '</p>') +
+      '<p class="note">Spaces are live text rooms: they last while the host is online. Chat is filtered; tap ⚑ to hide a host.</p></div>';
+  }
+  function spaceRoomView() {
+    var id = ui.inSpace, mine = ui.mySpace && ui.mySpace.id === id, sp = spaceById(id);
+    if (!sp) return '';
+    var chat = (online.spaceChat || []).filter(function (m) { return m.space === id; });
+    return '<div class="section sp-room"><div class="sp-live">● LIVE</div><h3>' + esc(sp.t) + '</h3><p class="note">Host: ' + esc(mine ? 'you' : nameOf(sp.host)) + ' · 🎧 ' + (sp.who || []).length + ' listening</p>' +
+      '<div class="sp-people">' + [sp.host].concat(sp.who || []).slice(0, 12).map(function (b) { return '<span>' + (photoImg(b) || '🙂') + '<small>' + esc(b === online.me ? 'You' : nameOf(b)) + '</small></span>'; }).join('') + '</div>' +
+      '<div class="sp-chat">' + (chat.length ? chat.map(function (m) { return '<p><b>' + esc(m.by === online.me ? 'You' : nameOf(m.by)) + ':</b> ' + esc(m.text) + '</p>'; }).join('') : '<p class="note">Say something to start the gist.</p>') + '</div>' +
+      '<div class="sp-send"><input id="space-in" maxlength="140" placeholder="Say something…"><button type="button" class="btn sm go" data-spacesend="1">Send</button></div>' + (ui.spaceWhy ? '<p class="why">' + esc(ui.spaceWhy) + '</p>' : '') +
+      '<div class="inline"><button type="button" class="btn sm ghost" data-spaceleave="1">Leave quietly</button>' + (mine ? '<button type="button" class="btn sm" data-spaceend="1">End Space</button>' : '') + '</div></div>';
+  }
+
+  /* ---------- Family: baes and relatives with other players (both must add each other), and adoption ---------- */
+  var LINKS_KEY = 'lasgidi.links.v1', REL = { sibling: 'Sibling', cousin: 'Cousin', uncle: 'Uncle', aunty: 'Aunty', nephew: 'Nephew', niece: 'Niece', inlaw: 'In-law' };
+  function cleanLinks(x) { var o = { bae: [], fam: {} }; if (!x || typeof x !== 'object') return o; if (Array.isArray(x.bae)) o.bae = x.bae.filter(function (i) { return typeof i === 'string' && i.length < 80; }).slice(0, 4); if (x.fam && typeof x.fam === 'object') Object.keys(x.fam).slice(0, 30).forEach(function (k) { if (k.length < 80 && REL[x.fam[k]]) o.fam[k] = x.fam[k]; }); return o; }
+  function myLinks() { return cleanLinks(readJSON(LINKS_KEY, null)); }
+  function setLinks(l) { writeJSON(LINKS_KEY, cleanLinks(l)); try { syncResidence(); } catch (e) {} }
+  function theirLinks(id) { var r = (online.residents || []).filter(function (x) { return x.id === id; })[0]; return r ? r.links : { bae: [], fam: {} }; }
+  function familyAppView() {
+    var me = online.me, mine = myLinks(), noRomance = familyOn();
+    var baes = mine.bae.filter(function (id) { return theirLinks(id).bae.indexOf(me) >= 0; }), waiting = mine.bae.filter(function (id) { return baes.indexOf(id) < 0; });
+    var asks = (online.residents || []).filter(function (r) { return r.id !== me && r.links.bae.indexOf(me) >= 0 && mine.bae.indexOf(r.id) < 0; });
+    var rel = Object.keys(mine.fam).filter(function (id) { return theirLinks(id).fam[me]; }), relWait = Object.keys(mine.fam).filter(function (id) { return rel.indexOf(id) < 0; });
+    var relAsks = (online.residents || []).filter(function (r) { return r.id !== me && r.links.fam[me] && !mine.fam[r.id]; });
+    var who = function (id) { return '<span class="fm-who">' + (photoImg(id) || '🙂') + ' ' + esc(nameOf(id)) + '</span>'; };
+    var A = L.adoptInfo ? L.adoptInfo(S) : null, P = S.partner;
+    var html = '<div class="section">' + (noRomance ? '' : '<div class="fm-love"><div class="fm-ic">💌</div><h3>' + (baes.length ? '💞 ' + baes.length + (baes.length === 1 ? ' bae' : ' baes') : P && /married|engaged|dating|introduced/.test(P.stage || '') ? '💞 With ' + esc(P.name) : 'You\'re single') + '</h3>' +
+        (baes.length ? '<div class="fm-list">' + baes.map(function (id) { return '<div class="fm-row">' + who(id) + '<button type="button" class="btn sm ghost" data-unbae="' + esc(id) + '">Break up</button></div>'; }).join('') + '</div>' : '') +
+        (P && P.stage ? '<p class="note">In your life: ' + esc(P.name) + ' (' + esc(P.stage) + '). Plan dates and the wedding from the Me tab.</p>' : '') +
+        '<p>Get close to another player (gist, hang out, visit their house), then open <b>People</b> and tap <b>💘 Ask to be my Bae</b> on them. You can have up to 4 baes; they have to say yes.</p>' +
+        (asks.length ? '<div class="fm-list"><b>💘 Asking you</b>' + asks.map(function (r) { return '<div class="fm-row">' + who(r.id) + '<span class="inline"><button type="button" class="btn sm go" data-bae="' + esc(r.id) + '">Say yes</button><button type="button" class="btn sm ghost" data-chatmute="' + esc(r.id) + '">Ignore</button></span></div>'; }).join('') + '</div>' : '') +
+        (waiting.length ? '<p class="note">Waiting for: ' + waiting.map(function (id) { return esc(nameOf(id)); }).join(', ') + ' <button type="button" class="link-btn" data-unbae="' + esc(waiting[0]) + '">cancel</button></p>' : '') + '</div>') +
+      '<div class="fm-card"><span class="fm-ic2">🏡</span><div><b>Adopt a baby</b><small>Give a baby a home. ' + (A && A.together ? 'Together with ' + esc(P.name) + '.' : 'On your own or together.') + ' Fees ' + N(A ? A.fee : 0) + '.</small>' + (A && A.why ? '<small class="why">' + esc(A.why) + '.</small>' : '') + '</div><button type="button" class="btn sm go" id="adopt" data-adopt="1"' + (!A || A.why || S.cash + S.bank < A.fee ? ' disabled' : '') + '>Adopt</button></div>' +
+      (S.kids.length ? '<p class="note">👶 Your children: ' + S.kids.length + '. See them on the Home tab.</p>' : '') +
+      '<h3 class="fm-h">Your relatives</h3>' + (rel.length ? '<div class="fm-list">' + rel.map(function (id) { return '<div class="fm-row">' + who(id) + '<span class="muted">' + esc(REL[mine.fam[id]]) + '</span></div>'; }).join('') + '</div>' : '') +
+      (relAsks.length ? '<div class="fm-list"><b>👪 Want to add you as family</b>' + relAsks.map(function (r) { return '<div class="fm-row">' + who(r.id) + '<span class="inline"><select id="rel-' + esc(r.id) + '">' + Object.keys(REL).map(function (k) { return '<option value="' + k + '"' + (k === r.links.fam[me] ? ' selected' : '') + '>' + REL[k] + '</option>'; }).join('') + '</select><button type="button" class="btn sm go" data-relok="' + esc(r.id) + '">Add</button></span></div>'; }).join('') + '</div>' : '') +
+      (relWait.length ? '<p class="note">Waiting for: ' + relWait.map(function (id) { return esc(nameOf(id)) + ' (' + REL[mine.fam[id]] + ')'; }).join(', ') + '</p>' : '') +
+      '<p class="note fm-help">Open <b>People</b>, tap another player and choose <b>👪 Add as family</b>: siblings, cousins, uncles and aunties. They have to agree.</p>' + (online.db ? '' : '<p class="note">Baes and relatives work when the game is opened on claude.ai.</p>') + '</div>';
+    return html;
+  }
+  function inCircle(by) { var m = myLinks(), t = theirLinks(by), me = online.me; return (m.bae.indexOf(by) >= 0 && t.bae.indexOf(me) >= 0) || (!!m.fam[by] && !!t.fam[me]); }
+  function linkButtons(by) {
+    if (!online.db || !online.me || by === online.me) return '';
+    var m = myLinks(), out = '';
+    if (!familyOn()) out += m.bae.indexOf(by) >= 0 ? '<button class="btn sm ghost" data-unbae="' + esc(by) + '">💔 Unbae</button>' : m.bae.length < 4 ? '<button class="btn sm ghost" data-bae="' + esc(by) + '">💘 Ask to be my Bae</button>' : '';
+    out += m.fam[by] ? '' : '<select class="rel-pick" id="rel-' + esc(by) + '" aria-label="Relation">' + Object.keys(REL).map(function (k) { return '<option value="' + k + '">' + REL[k] + '</option>'; }).join('') + '</select><button class="btn sm ghost" data-relok="' + esc(by) + '">👪 Add as family</button>';
+    return out;
+  }
+
+  /* ---------- NaijaFlix: made-up Nollywood films, stars and news ---------- */
+  var FILMS = [
+    { t: 'Lagoon Queen', y: 2026, g: 'Drama', r: 4.6, c: ['#7c3aed', '#f472b6'], cast: ['Adaeze Okoro', 'Tobi Bankole'], dir: 'Kemi Adewale', s: 'A Makoko girl builds a fishing empire and falls for the man who wants her waterfront.' },
+    { t: 'Midnight in Surulere', y: 2025, g: 'Thriller', r: 4.3, c: ['#111827', '#dc2626'], cast: ['Femi Ajayi', 'Ngozi Eze'], dir: 'Chidi Nwosu', s: 'A blackout, a missing bride and one night to find her before the owambe starts.' },
+    { t: 'Roomie', y: 2026, g: 'Comedy', r: 4.1, c: ['#f59e0b', '#b91c1c'], cast: ['Bisi Lawal', 'Kunle Ade'], dir: 'Funmi Ojo', s: 'Two best friends, one Lekki apartment and a landlord who will not leave.' },
+    { t: 'Danfo Kings', y: 2024, g: 'Action', r: 3.9, c: ['#facc15', '#111827'], cast: ['Segun Ola', 'Halima Musa'], dir: 'Tunde Alabi', s: 'Rival conductors race across Lagos for the last passenger of the night.' },
+    { t: 'Aso-Ebi', y: 2025, g: 'Romance', r: 4.4, c: ['#16a34a', '#fde68a'], cast: ['Ngozi Eze', 'Tobi Bankole'], dir: 'Kemi Adewale', s: 'A tailor sews her ex\'s wedding outfit and falls in love with the best man.' },
+    { t: 'Japa', y: 2026, g: 'Drama', r: 4.5, c: ['#1d4ed8', '#93c5fd'], cast: ['Adaeze Okoro', 'Segun Ola'], dir: 'Chidi Nwosu', s: 'Three friends, two visas, one decision that will change all their lives.' },
+    { t: 'Owambe Wars', y: 2023, g: 'Comedy', r: 3.8, c: ['#db2777', '#fbcfe8'], cast: ['Bisi Lawal', 'Halima Musa'], dir: 'Funmi Ojo', s: 'Two aunties book the same hall on the same Saturday.' },
+    { t: 'Third Mainland', y: 2024, g: 'Thriller', r: 4.0, c: ['#0f766e', '#99f6e4'], cast: ['Femi Ajayi', 'Kunle Ade'], dir: 'Tunde Alabi', s: 'Stuck in go-slow on the bridge, a banker has ninety minutes to stop a fraud.' }
+  ];
+  function poster(f) { return '<div class="nf-poster" style="--p1:' + f.c[0] + ';--p2:' + f.c[1] + '"><b>' + esc(f.t) + '</b><small>' + f.y + '</small></div>'; }
+  function naijaFlixView() {
+    var tab = ui.flixTab || 'movies', body = '', stars = function (r) { return '⭐ ' + r.toFixed(1); };
+    var actors = {}; FILMS.forEach(function (f) { f.cast.forEach(function (a) { (actors[a] = actors[a] || []).push(f.t); }); });
+    if (tab === 'movies') body = FILMS.map(function (f) { return '<div class="nf-row">' + poster(f) + '<div><b>' + esc(f.t) + '</b><small>' + f.y + ' · ' + f.g + ' · ' + stars(f.r) + '</small><p>' + esc(f.s) + '</p></div></div>'; }).join('');
+    else if (tab === 'actors') body = Object.keys(actors).map(function (a) { return '<div class="nf-row"><span class="nf-av">' + a.split(' ').map(function (w) { return w[0]; }).join('') + '</span><div><b>' + esc(a) + '</b><small>' + actors[a].map(esc).join(' · ') + '</small></div></div>'; }).join('');
+    else if (tab === 'ratings') body = FILMS.slice().sort(function (a, b) { return b.r - a.r; }).map(function (f, i) { return '<div class="nf-row"><span class="nf-rank">' + (i + 1) + '</span><div><b>' + esc(f.t) + '</b><small>' + stars(f.r) + ' · ' + f.g + '</small></div></div>'; }).join('');
+    else if (tab === 'cast') body = FILMS.map(function (f) { return '<div class="nf-row"><div><b>' + esc(f.t) + '</b><small>Director: ' + esc(f.dir) + ' · Starring ' + f.cast.map(esc).join(' and ') + '</small></div></div>'; }).join('');
+    else if (tab === 'collections') { var by = {}; FILMS.forEach(function (f) { (by[f.g] = by[f.g] || []).push(f); }); body = Object.keys(by).map(function (g) { return '<b class="nf-col">' + esc(g) + '</b><div class="nf-strip">' + by[g].map(poster).join('') + '</div>'; }).join(''); }
+    else body = ['🎬 “Lagoon Queen” tops the box office for a third week.', '🏆 Adaeze Okoro wins Best Actress at the Eko Screen Awards.', '📽️ “Japa” opens this Friday in cinemas across Lagos, Abuja and Accra.', '🎟️ Student nights: half price tickets every Tuesday.'].map(function (n) { return '<div class="nf-row"><div><b>' + n + '</b></div></div>'; }).join('');
+    return '<div class="section"><div class="nf-hero"><div class="nf-top"><span class="nf-logo">N</span><b>Nollywood in your pocket</b></div><p>Discover Nollywood: films, stars, stories and more. All in one place.</p><div class="nf-strip">' + FILMS.slice(0, 3).map(poster).join('') + '</div></div>' +
+      '<div class="nf-tabs">' + [['movies', '🎬 Movies'], ['actors', '🕺 Actors'], ['ratings', '⭐ Ratings'], ['cast', '🍿 Cast & Crew'], ['collections', '📚 Collections'], ['news', '📰 News']].map(function (t) { return '<button type="button" class="' + (tab === t[0] ? 'on' : '') + '" data-flix="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div><div class="nf-body">' + body + '</div>' +
+      '<p class="note">All films and stars are made up. Watch at a cinema in your city:</p></div>' +
+      actsApp('🎟️ Showing near you', 'Cinemas and screenings in this city.', function (a) { return /cinema|film|movie|screening/i.test(a.label); });
+  }
+
+  /* ---------- My Ads: billboards and Sea Plots in one place ---------- */
+  function myAdsView() {
+    var wk = L.price(S, D.BILLBOARD_RENT) * D.AD_PLANS.week.mult, mp = online.db ? myPicture() : { approved: null, live: null };
+    var mine = '';
+    if (mp.live) mine += '<div class="fm-row"><span>📢 On air at ' + esc(boardName(mp.live.board)) + '</span><span class="gain">' + Math.max(1, Math.round((mp.live.until - Date.now()) / 3600e3)) + 'h left</span></div>';
+    else if (mp.approved) mine += '<div class="fm-row"><span>✅ Picture approved for ' + esc(boardName(mp.approved.board)) + '</span></div>';
+    return '<div class="section"><div class="ads-hero"><b>Promote your business</b><small>Every player sees it, and tapping it opens your link.</small><div class="ads-pick">' +
+      '<button type="button" class="ads-c" id="ads-board" data-adsboard="1"><span>📢</span><b>Book a billboard</b><small>' + N(Math.round(wk / 1000) * 1000) + ' for 7 days</small></button>' +
+      '<button type="button" class="ads-c" id="ads-sea" data-tab="map" data-seaopen="1"><span>🌊</span><b>Rent a Sea Plot</b><small>' + N(D.SEA.rent) + ' a plot, 7 days</small></button></div></div>' +
+      '<h3 class="fm-h">Your ads</h3>' + (mine ? '<div class="fm-list">' + mine + '</div>' : '<p class="note ads-empty">You don\'t have any ads yet. Book one above and it shows up here, where you can change its picture any time.</p>') + '</div>';
+  }
+
+  /* ---------- the global feed: what is happening across Lasgidi right now ---------- */
+  function feedView() {
+    var items = [];
+    (online.spaces || []).forEach(function (x) { items.push({ i: '🎙️', t: nameOf(x.host) + ' is live in a Space: “' + x.t + '” · ' + x.who.length + ' listening', a: 'data-spacejoin="' + x.id + '"' }); });
+    (online.peerList || []).slice(0, 30).forEach(function (p) { var where = D.DISTRICTS[p.d] ? D.DISTRICTS[p.d].name : ''; if (p.party) items.push({ i: '🎉', t: nameOf(p.by) + ' is throwing a party in ' + where }); else if (p.act && ACTIVITIES[p.act]) items.push({ i: '📍', t: nameOf(p.by) + ' is ' + ACTIVITIES[p.act] + ' in ' + where }); else items.push({ i: '📍', t: nameOf(p.by) + ' is in ' + where }); });
+    (rawFame || []).slice(-8).reverse().forEach(function (r) { var raw = r.raw || {}; if (typeof raw.name === 'string') { var c = CH.clean(raw.name.slice(0, 30)); if (c.ok) items.push({ i: '🏆', t: c.text + ' posted a life to the Hall of Fame' }); } });
+    S.log.filter(function (l) { return l.kind !== 'info'; }).slice(0, 6).forEach(function (l) { items.push({ i: '🗞️', t: l.text, mine: true }); });
+    var ev = L.lagoonShow ? L.lagoonShow(S) : null; if (ev && ev.live) items.unshift({ i: '🎆', t: 'Eko Lagoon Lights is on now: ' + ev.act });
+    return '<div class="section"><h3>🌍 Lasgidi feed</h3><p class="note">Live from every player and city. ' + (online.room ? (online.others || 0) + ' other players online.' : 'Other players show here when the game is opened on claude.ai.') + '</p><div class="feed">' +
+      (items.length ? items.map(function (x) { return '<div class="feed-i' + (x.mine ? ' mine' : '') + '"' + (x.a ? ' role="button" tabindex="0" ' + x.a : '') + '><span>' + x.i + '</span><p>' + esc(x.t) + '</p></div>'; }).join('') : '<p class="note">Quiet right now.</p>') + '</div></div>' + newsView();
+  }
+
   // Pay Index: what every job pays at each rank, in your city first.
   function payIndexView() {
     var here = L.cityOf(S), rows = Object.keys(D.CAREERS).map(function (k) { return { k: k, C: D.CAREERS[k], c: L.districtCity(D.CAREERS[k].district) }; }).filter(function (r) { return !(r.C.rules > S.rules); })
@@ -4177,13 +4446,16 @@
     switch (app) {
       case 'support': return P(guideView() + ideasView());
       case 'tickets': return P(festCard('ev') + eventsView());
-      case 'fixam': case 'assurance': case 'family': case 'staff': return houseTab();
+      case 'family': return P(familyAppView());
+      case 'fixam': case 'assurance': case 'staff': return houseTab();
       case 'dokita': return P(healthView());
       case 'linkup': case 'contacts': case 'give': return P(peopleView());
       case 'payindex': return P(payIndexView());
-      case 'flix': return P(actsApp('🎬 NaijaFlix', 'Films and shows in this city: cinemas, the theatre and screenings.', function (a) { return /cinema|film|movie|screening|theatre|show/i.test(a.label); }));
+      case 'flix': return P(naijaFlixView());
       case 'glow': return P(actsApp('💄 Glow Beauty', 'Salons, barbers, nails and spa days near you.', function (a) { return /salon|hair|barb|nail|makeup|spa|braid|glam|beauty/i.test(a.label + ' ' + (a.special || '')); }));
-      case 'spaces': return P(radioView() + roomNightsView());
+      case 'spaces': return P(spacesView());
+      case 'ads': return P(myAdsView());
+      case 'feed': return P(feedView());
       case 'hangout': return P(roomNightsView() + actsApp('🧺 Hangout', 'Places to chill with people in this city.', function (a) { return a.fx && a.fx.social > 0 && !a.gig; }));
       case 'chop': return P(actsApp('🛵 ChopDash', 'Food spots in this city. Go there to eat.', function (a) { return a.fx && a.fx.hunger > 0 && !a.gig; }));
       case 'boutique': return P(lagosianView());
@@ -4686,6 +4958,14 @@
     return html + '<div class="section"><button class="btn go" id="town-govt" data-app="govt">🏛️ Open the State Government</button></div>';
   }
 
+  // The Arcade: ten offline games, just for fun (no money, no effect on your life). Best scores stay on this phone.
+  function arcadeCard() {
+    var A = window.LasgidiArcade; if (!A) return '';
+    var B = A.bests();
+    return '<div class="section arc-card"><div class="arc-hero"><span class="arc-pad-ic" aria-hidden="true">🎮</span><div><b>10 games. One phone.</b><small>Lasgidi Arcade · plays offline</small></div></div>' +
+      '<p>Ten games for every mood: Whot, Chess, Snake and more. No data needed, just for fun.</p><div class="arc-tags"><span>Free</span><span>Plays offline</span><span>Rated 3+</span></div>' +
+      '<div class="arc-grid">' + Object.keys(A.GAMES).map(function (k) { var G = A.GAMES[k]; return '<button type="button" class="arc-g" id="arc-' + k + '" data-arcade="' + k + '"><span>' + G.icon + '</span>' + esc(G.name) + (B[k] ? '<small>' + (G.kind === 'win' ? B[k] + ' won' : 'best ' + B[k]) + '</small>' : '') + '</button>'; }).join('') + '</div></div>';
+  }
   function gamesView() {
     var rows = [
       { icon: '🚐', name: 'Danfo Run', where: 'Ojuelegba danfo park, Surulere', when: 'Every day, 06:00–21:00', best: S.stats.danfoBest ? 'Best fares ' + N(S.stats.danfoBest) + ' · ' + (S.stats.danfoPax || 0) + ' passengers in all' : 'Not played yet', act: 'suru_danfo', kind: 'danfo', place: 'ojuelegba_park', district: 'surulere' },
@@ -4697,7 +4977,7 @@
     if (S.rules >= 38 && S.stage && S.stage.manager) rows.push({ icon: '🌟', name: 'Headline show', where: 'Eko Convention Centre, Victoria Island', when: 'Saturdays, 20:00–23:00, once a week', best: 'Stage rep ' + (S.stage.rep || 0) + (S.stage.rep >= 60 ? '' : ' · headliners need 60'), act: 'stage_headline', kind: 'stage', place: 'eko_convention', district: 'vi' });
     if (S.rules >= 33) rows.push({ icon: '🎤', name: 'On stage', where: 'National Theatre, Surulere (and Eko Detty Fest in December)', when: 'Wednesdays, 18:00–22:00 · fest days 16:00–18:00', best: S.stats.stageBest ? 'Best ' + S.stats.stageBest + '% on the beat' + (S.stats.stageBest >= 70 ? ' · fest-ready' : '') : 'Not played yet', act: 'stage_open', kind: 'stage', place: 'theatre', district: 'surulere' });
     var acts = L.availableActions(S);
-    return '<div class="section" style="padding-top:0"><h3>🎮 Mini-games</h3><p class="note">Arcade games that pay as part of your life, with capped takings, so skill helps but never prints money.</p><div class="list">' + rows.map(function (g) {
+    return arcadeCard() + '<div class="section" style="padding-top:0"><h3>🎮 Mini-games</h3><p class="note">Arcade games that pay as part of your life, with capped takings, so skill helps but never prints money.</p><div class="list">' + rows.map(function (g) {
       var a = acts.filter(function (x) { return x.id === g.act; })[0], can = a && !a.disabled;
       return '<div class="item"><div><h3>' + g.icon + ' ' + esc(g.name) + '</h3><div class="meta"><span>' + esc(g.where) + '</span><span>' + esc(g.when) + '</span></div><div class="act-note">' + esc(g.best) + '</div>' + (a && a.disabled ? '<div class="why">' + esc(locText(a.disabled)) + '</div>' : '') + '</div>' +
         (can ? '<button class="btn go" id="game-' + g.kind + '" data-minigame="' + g.kind + '">▶ Play</button>' : L.districtCity(g.district) !== L.cityOf(S) ? '<button class="btn ghost" id="game-go-' + g.kind + '" data-app="travel">✈️ Fly there</button>' : '<button class="btn ghost" id="game-go-' + g.kind + '" data-tripto="' + g.district + '" data-tab="map">Go there</button>') + '</div>';
@@ -4872,6 +5152,7 @@
       '<div class="opts"><button class="btn go" id="cel-ok" data-celebok="1">Nice!</button></div></div></div>';
   }
   function modal() {
+    if (ui.boutique) return boutiqueView();
     if (ui.celebrate) return celebView();
     if (ui.gradCard && D.STUDY && D.STUDY[ui.gradCard]) return gradView();
     if (S.japa && !S.japaSeen) {
@@ -5028,7 +5309,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -5144,6 +5425,7 @@
     if (ds.tripto) { ui.sel = ds.tripto; render(); focusMap(ds.tripto); return; }
     if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
+    if (ds.app === 'boutique' && t.hasAttribute('data-app')) { ui.boutique = { tab: 'shop', basket: [], tryOn: {}, slot: '' }; render(); if (typeof loadThree === 'function' && threeState !== 'ready') loadThree(function () { if (ui.boutique) drawBoutique(); }); return; }
     if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; if (ui.app && NEW_APPS[ui.app]) { var asn = appsSeen(); asn[ui.app] = 1; writeJSON(APPS_SEEN, asn); } render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
     if (ds.tour) { setTour(+ds.tour); render(); return; }
     if (ds.quest) { goQuest(ds.quest); return; }
@@ -5248,6 +5530,59 @@
     }
     if (ds.streak) { var sid = gemToday(); run(function () { var r = L.claimStreak(S, sid); if (r && r.ok) { var si = L.streakInfo(S, sid); ui.celebrate = r.streak || { n: si.n, prize: si.prize }; ui.toasts = ui.toasts || []; setTimeout(function () { play('fanfare'); }, 120); } return r; }); return; }
     if (ds.course && t.hasAttribute('data-course')) { if (e.target.closest('.course-card')) return; ui.course = ui.course === ds.course ? null : ds.course; render(); return; }
+    if (ds.arcade) { if (window.LasgidiArcade) { play('tap'); window.LasgidiArcade.open(ds.arcade, function () { render(); }); } return; }
+    if (ds.btqtab) { ui.boutique.tab = ds.btqtab; ui.boutique.msg = ''; render(); return; }
+    if (ds.btqclose) { ui.boutique = null; render(); return; }
+    if (ds.btqclear) { ui.boutique.basket = []; ui.boutique.tryOn = {}; render(); return; }
+    if (ds.btq) { var Bq = ui.boutique, Cq = D.CLOTHES[ds.btq]; if (!Cq) return; Bq.msg = '';
+      if (Bq.tab === 'wardrobe') { run(function () { return L.wear(S, ds.btq); }); return; }
+      var bi = Bq.basket.indexOf(ds.btq); if (bi >= 0) { Bq.basket.splice(bi, 1); if (Bq.tryOn[Cq.slot] === ds.btq) delete Bq.tryOn[Cq.slot]; } else { Bq.basket = Bq.basket.filter(function (k) { return D.CLOTHES[k].slot !== Cq.slot; }); Bq.basket.push(ds.btq); Bq.tryOn[Cq.slot] = ds.btq; }
+      render(); return; }
+    if (ds.btqbuy) { var Bb = ui.boutique, got = 0, fail = ''; run(function () { var last = null; Bb.basket.slice().forEach(function (k) { var r = L.buyClothes(S, k); if (r.ok) got++; else if (!fail) fail = r.msg; last = r; }); return last ? { ok: got > 0, msg: got ? 'You bought ' + got + ' item' + (got === 1 ? '' : 's') + ' and put the look on.' + (fail ? ' ' + fail : '') : fail } : null; });
+      if (got) { Bb.basket = []; Bb.tryOn = {}; Bb.msg = '🛍️ New look bought and on!'; play('cashIn'); } else Bb.msg = fail; render(); return; }
+    if (ds.flix) { ui.flixTab = ds.flix; render(); return; }
+    if (ds.adsboard) { var bq = D.BILLBOARDS.filter(function (x) { return L.districtCity(x.district) === L.cityOf(S); })[0] || D.BILLBOARDS[0]; ui.tab = 'map'; ui.app = null; clearPicks(); ui.board = bq.id; render(); return; }
+    if (ds.adopt) { run(function () { return L.adoptBaby(S); }); return; }
+    if (ds.bae) { var lb = myLinks(); if (lb.bae.indexOf(ds.bae) < 0 && lb.bae.length < 4) lb.bae.push(ds.bae); setLinks(lb); ui.toasts.push({ msg: theirLinks(ds.bae).bae.indexOf(online.me) >= 0 ? '💞 You and ' + nameOf(ds.bae) + ' are now baes!' : '💘 Asked ' + nameOf(ds.bae) + '. They have to say yes.', ok: true }); render(); return; }
+    if (ds.unbae) { var lu = myLinks(); lu.bae = lu.bae.filter(function (x) { return x !== ds.unbae; }); setLinks(lu); render(); return; }
+    if (ds.relok) { var lr = myLinks(), sel = document.getElementById('rel-' + ds.relok); lr.fam[ds.relok] = sel && REL[sel.value] ? sel.value : 'cousin'; setLinks(lr); ui.toasts.push({ msg: theirLinks(ds.relok).fam[online.me] ? '👪 ' + nameOf(ds.relok) + ' is now family!' : '👪 Asked ' + nameOf(ds.relok) + ' to add you as family.', ok: true }); render(); return; }
+    if (ds.spacetab) { ui.spaceTab = ds.spacetab; render(); return; }
+    if (ds.spaceform != null && t.hasAttribute('data-spaceform')) { ui.spaceForm = ds.spaceform === '1'; ui.spaceWhy = ''; render(); return; }
+    if (ds.spacego) { var ti2 = document.getElementById('space-title'), tt = (ti2 ? ti2.value : '').trim(), cl = CH.clean(tt.slice(0, 60)); if (!tt || !cl.ok) { ui.spaceWhy = tt ? cl.why : 'Give your Space a title.'; ui.spaceDraft = tt; render(); return; }
+      var sid2 = ''; for (var q = 0; q < 8; q++) sid2 += 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)];
+      ui.mySpace = { id: sid2, t: cl.text, at: Date.now() }; ui.inSpace = sid2; ui.spaceForm = false; ui.spaceDraft = ''; syncPresence(); play('ping'); render(); return; }
+    if (ds.spacejoin) { ui.inSpace = ds.spacejoin; ui.tab = 'phone'; ui.app = 'spaces'; syncPresence(); render(); return; }
+    if (ds.spaceleave) { ui.inSpace = null; syncPresence(); render(); return; }
+    if (ds.spaceend) { ui.mySpace = null; ui.inSpace = null; syncPresence(); render(); return; }
+    if (ds.spacesend) { var si3 = document.getElementById('space-in'), tx = (si3 ? si3.value : '').trim(), cr = CH.clean(tx.slice(0, 140)); if (!tx) return; if (!cr.ok) { ui.spaceWhy = cr.why; render(); return; }
+      var wt = CH.canSend(online.sentTimes, Date.now(), online.blocked); if (wt) { ui.spaceWhy = wt; render(); return; } ui.spaceWhy = ''; online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
+      online.spaceChat = (online.spaceChat || []).concat([{ space: ui.inSpace, by: online.me || 'me', text: cr.text, at: Date.now() }]).slice(-40);
+      if (online.room) online.room.emit('deck', { space: ui.inSpace, text: cr.text }).catch(function () {}); render(); return; }
+    if (ds.psoc) { var pk = ds.psoc.split(':'), pkind = pk[0], pby = pk.slice(1).join(':'); run(function () { return L.playerSocial(S, pkind); }); if (online.room) online.room.emit('wave', { to: pby, kind: pkind }).catch(function () {}); return; }
+    if (ds.talk) { startTalk(); return; }
+    if (ds.talkopen) { ui.talkOpen = !ui.talkOpen; render(); return; }
+    if (ds.talksend) { var ti3 = document.getElementById('talk-in'); sendTalk(ti3 ? ti3.value.trim() : ''); return; }
+    if (ds.peace) { if (online.room) online.room.emit('deck', { here: S.loc, peace: true }).catch(function () {}); ui.toasts.push({ msg: '✌️ Peace sent to everyone here.', ok: true }); render(); return; }
+    if (ds.seg) { var sp2 = ds.seg.split(':'), sk = sp2[0], sv = sp2[1];
+      if (sk === 'night') prefs.theme = sv === 'on' ? 'dark' : sv === 'off' ? 'light' : undefined;
+      else if (sk === 'layout') prefs.big = sv === 'comfortable';
+      else if (sk === 'lite') { prefs.lite = sv === 'auto' ? null : sv === 'on'; writeJSON(PREF_KEY, prefs); location.reload(); return; }
+      else if (sk === 'lang') prefs.lang = sv;
+      else if (sk === 'money') prefs.usd = sv === 'usd';
+      else if (sk === 'dm') prefs.dm = sv;
+      writeJSON(PREF_KEY, prefs); applyPrefs(); render(); return; }
+    if (ds.fullscreen) { var de = document.documentElement; try { if (document.fullscreenElement) document.exitFullscreen(); else if (de.requestFullscreen) de.requestFullscreen(); else if (de.webkitRequestFullscreen) de.webkitRequestFullscreen(); } catch (e) {} return; }
+    if (ds.tourreplay) { setTour(0); ui.tab = 'home'; ui.app = null; render(); return; }
+    if (ds.newconfirm) { ui.newConfirm = !ui.newConfirm; render(); return; }
+    if (ds.pinvite) { var ib = ds.pinvite; if (!online.room) return; online.room.emit('wave', { to: ib, invite: true }).then(function () { (online.chats[ib] = online.chats[ib] || []).push({ sys: 'invited', me: true, at: Date.now() }); markDuo(ib, 'me'); ui.toasts.push({ msg: '🏠 You invited ' + nameOf(ib) + ' over.', ok: true }); render(); }, function () {}); return; }
+    if (ds.paybox) { ui.payBox = ui.payBox === ds.paybox ? null : ds.paybox; render(); return; }
+    if (ds.paysend) { var pb = ds.paysend, pa = document.getElementById('pay-amt'), amt2 = Math.round(+(pa ? pa.value : 0)); if (!online.room) return; var res2 = null;
+      run(function () { res2 = L.giftOut(S, amt2); return res2; });
+      if (res2 && res2.ok) { var ref = ''; for (var q2 = 0; q2 < 12; q2++) ref += 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]; online.room.emit('wave', { to: pb, money: res2.amount, ref: ref }).catch(function () {}); (online.chats[pb] = online.chats[pb] || []).push({ sys: 'money', me: true, amt: res2.amount, at: Date.now() }); markDuo(pb, 'me'); ui.payBox = null; render(); }
+      return; }
+    if (ds.giftok) { var gp = ds.giftok.split(':'), gref = gp.pop(), gby = gp.join(':'), gm = (online.chats[gby] || []).filter(function (m) { return m.ref === gref && !m.me; })[0]; if (!gm || gm.took) return;
+      run(function () { var r3 = L.giftIn(S, gm.amt, gref); if (r3.ok) gm.took = true; return r3; }); return; }
+    if (ds.chipsdd) { ui.chipsOpen = !ui.chipsOpen; render(); return; }
     if (ds.nightmode) { prefs.theme = themeDark() ? 'light' : 'dark'; writeJSON(PREF_KEY, prefs); applyPrefs(); render(); return; }
     if (ds.celebok) { ui.celebrate = null; render(); return; }
     if (ds.stock) { ui.stock = ui.stock === ds.stock ? null : ds.stock; render(); return; }
@@ -5588,6 +5923,7 @@
     }
   });
   document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'btq-slot' && ui.boutique) { ui.boutique.slot = e.target.value; render(); return; }
     if (e.target && e.target.id === 'onb-adult') { onb().adult = e.target.checked; render(); return; }
     if (e.target && e.target.id === 'onb-family') { prefs.family = e.target.checked; writeJSON(PREF_KEY, prefs); render(); return; }
     if (e.target && e.target.id === 'dep-insure') { ui.depInsure = e.target.checked; render(); return; }
