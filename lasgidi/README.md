@@ -676,6 +676,14 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Passers-by:** tap people on your street for a quick chat: ask the way, or the area gist.
   - **Street football:** an open plot on your street has goalposts and a ball. Run into the ball to kick it (Run kicks harder); two boys from the area play against you and the score shows at the top.
   - **Where to?:** from the street, search any place in your city and go straight to it on the map.
+  - **No limits (rules 49):** Gidi Bet takes stakes up to ₦500,000 with no daily cap; Send money goes up to ₦1,000,000 with no daily cap (a life that accepts gifts is still marked Gifted and stays off the boards).
+  - **Live shift (rules 49 UI):** a work shift plays out live with a timer and quick tasks to tap (or skip to the end), then the Back from work card.
+  - **Transaction PIN:** set a 4-digit PIN in Settings and the game asks for it before money leaves your account (sending money, bets, big buys). It is stored only on your device.
+  - **Talk with your voice:** hold to talk in rooms and walk-ins. Clips are sent only when what you said passes the chat filter.
+  - **Hunt ranking:** a finished letter hunt posts your time to a shared ranking.
+  - **Birth lottery in local money (rules 49):** a LAPO Baby starts with ₦500,000 in Lagos, or 1,000 of the local money abroad: £1,000 in London, ₵1,000 in Accra, R1,000 in Cape Town and AED 1,000 in Dubai. An Ajepako gets 2.5 times that and a Nepo Baby 10 times.
+  - **Busy road journeys:** every road and water trip plays out in full (about 12 seconds) through traffic in both directions (danfos, cars, black SUVs, BRT buses, big trucks, okadas and kekes), with people walking on the pavements, bus stops with people waiting, market umbrellas, palms in the median, tall towers and low shops.
+  - **Place panel in rooms:** live rooms like Elegushi Beach show today's mood line, share, map and home buttons, "Spots here" with how many are at each, and "Players here" faces (tap one to chat).
   - **Full-screen walk-ins:** walk-ins, the cruise deck, rooms and the airport fill the whole screen on phones and tablets in any orientation; the panel floats over the bottom of the scene.
   - **Updates arrive by themselves:** the website fetches the game's own files fresh whenever you are online (the offline copy is only used offline), and when a new version is installed the page reloads once by itself, keeping your saved game.
   - **Graduation day:** finishing a degree, apprenticeship or certificate opens a ceremony card (confetti, convocation or freedom day) with the careers it now opens one rank up, and a button to the careers list.
