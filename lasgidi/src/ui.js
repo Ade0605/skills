@@ -4613,12 +4613,17 @@
     if (q) { var pool = {}; ids.forEach(function (i) { pool[i] = 1; }); (online.residents || []).forEach(function (r) { pool[r.id] = 1; }); Object.keys(online0).forEach(function (i) { pool[i] = 1; }); ids = Object.keys(pool).filter(function (id) { return id !== online.me && (handleOf(id) + ' ' + nameOf(id)).toLowerCase().indexOf(q) >= 0; }); }
     ids.sort(function (a, b) { return (online0[b] ? 1 : 0) - (online0[a] ? 1 : 0) || (met[b] || 0) - (met[a] || 0); });
     var rel = function (id) { var m = myLinks(), t = theirLinks(id); if (m.bae.indexOf(id) >= 0 && t.bae.indexOf(online.me) >= 0) return '💞 Bae'; if (m.fam[id] && t.fam[online.me]) return '👪 ' + REL[m.fam[id]]; return (online.chats[id] || []).length ? 'Friend' : 'Stranger'; };
+    var row = function (id) { var on = !!online0[id]; return '<div class="ct-row"><span class="ct-av">' + (photoImg(id) || '🙂') + (on ? '<i class="dot-live"></i>' : '') + '</span><div><b>' + esc(handleOf(id)) + '</b><small>' + rel(id) + (on && D.DISTRICTS[online0[id].d] ? ' · in ' + esc(D.DISTRICTS[online0[id].d].name) : ' · offline') + '</small></div>' + (on ? '<button type="button" class="ct-chat" data-chatopen="' + esc(id) + '" aria-label="Chat with ' + esc(handleOf(id)) + '">💬</button>' : '<span class="muted ct-off">offline</span>') + '</div>'; };
+    // Everyone online right now, wherever they are in the game (not just people you've met).
+    var liveIds = Object.keys(online0).filter(function (id) { return id !== online.me && !online.muted[id]; }).sort(function (a, b) { return handleOf(a).localeCompare(handleOf(b)); });
+    var liveBox = q ? '' : '<h4 class="st-h">🟢 Live now · ' + (liveIds.length + (online.me ? 1 : 0)) + '</h4>' + (liveIds.length ? liveIds.slice(0, 100).map(row).join('') + (liveIds.length > 100 ? '<p class="note">and ' + (liveIds.length - 100) + ' more</p>' : '') : '<p class="note">' + (online.room ? 'Only you are online right now.' : 'Live players show here when online play is on.') + '</p>');
+    if (!q) ids = ids.filter(function (id) { return !online0[id]; });
     return '<div class="section ct">' +
       '<div class="ct-row ct-mum"><span class="ct-av">👵🏾</span><div><b>Mummy</b><small>' + (ui.mumSaid ? '“' + esc(ui.mumSaid) + '”' : 'Always picks up') + '</small></div><button type="button" class="ct-call" data-callmum="1" aria-label="Call Mummy">📞</button></div>' +
       '<h4 class="st-h">Find a player</h4><input id="contact-q" class="ct-q" placeholder="Search by username, e.g. @tobi" value="' + esc(ui.contactQ || '') + '" autocomplete="off">' +
-      '<h4 class="st-h">' + (q ? 'Results' : 'Players you\'ve met') + '</h4>' +
-      (ids.length ? ids.slice(0, 80).map(function (id) { var on = !!online0[id]; return '<div class="ct-row"><span class="ct-av">' + (photoImg(id) || '🙂') + (on ? '<i class="dot-live"></i>' : '') + '</span><div><b>' + esc(handleOf(id)) + '</b><small>' + rel(id) + (on && D.DISTRICTS[online0[id].d] ? ' · in ' + esc(D.DISTRICTS[online0[id].d].name) : ' · offline') + '</small></div>' + (on ? '<button type="button" class="ct-chat" data-chatopen="' + esc(id) + '" aria-label="Chat with ' + esc(handleOf(id)) + '">💬</button>' : '<span class="muted ct-off">offline</span>') + '</div>'; }).join('')
-        : '<p class="note">' + (q ? 'No player called that. They show here once they have played online.' : online.room ? 'Players you meet in your area, and anyone you chat with, show up here.' : 'Players show here when the game is opened on claude.ai.') + '</p>') + '</div>';
+      liveBox + '<h4 class="st-h">' + (q ? 'Results' : 'Players you\'ve met') + '</h4>' +
+      (ids.length ? ids.slice(0, 80).map(row).join('')
+        : '<p class="note">' + (q ? 'No player called that. They show here once they have played online.' : online.room ? 'Players you meet in your area, and anyone you chat with, show up here.' : 'Players show here when online play is on.') + '</p>') + '</div>';
   }
 
   /* ---------- Gidi Bet: made-up leagues every 4 game hours, High-Low, and the casino's roulette (18+, game money only) ---------- */
