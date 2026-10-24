@@ -104,7 +104,8 @@
   // 45 keeps lives outside Lagos local: no Lagos governorship vote, no Lagos floods or Nigerian fuel queues abroad, power
   // cuts that match the city (dumsor, load shedding, none in London or Dubai), and eviction to a friend's sofa in your city.
   // 46 makes money 70% easier: work, gigs, takings and prizes pay 2.55x (was 1.5x since rules 41).
-  var RULES = 46;
+  // 47 adds adoption: give a baby a home from the phone's Family app, on your own or with your partner.
+  var RULES = 47;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -4402,6 +4403,7 @@
     var s = replayLife(raw.replay);
     if (!s) return { ok: false, entry: e, reason: 'replay failed' };
     if (s.boosted) return { ok: false, entry: e, reason: 'boosted' }; // bought money never ranks
+    if (s.gifted) return { ok: false, entry: e, reason: 'gifted' }; // money from other players never ranks either
     var got = fameEntry(s);
     var same = got.seal === raw.seal && got.lines === raw.lines && got.score === e.score && got.weeks === e.weeks && got.worth === e.worth && got.career === e.career && got.home === e.home && got.origin === e.origin && got.level === e.level;
     return { ok: same, entry: same ? got : null, reason: same ? null : 'does not match its replay' };
@@ -5639,6 +5641,55 @@
 
   // Every call that changes a life goes through recorded(), so the life can be replayed.
   // A finished challenge is frozen: every recorded call becomes a no-op failure.
+  // Rules 47: adopt a baby through the welfare office. A real home (not a sofa or a squat), a fee, at most three
+  // children, and a ten-week wait between new babies, the same as having one.
+  // Rules 47: small social moves with another player you meet (the other player sees a note; nothing changes in their life).
+  var PLAYER_SOCIAL = { hello: { label: 'Say hello', mins: 15, fx: { social: 4 } }, gist: { label: 'Gist', mins: 30, fx: { fun: 4, social: 7 } },
+    joke: { label: 'Crack a joke', mins: 15, fx: { fun: 6, social: 5 }, chance: 0.44 }, shade: { label: 'Throw shade', mins: 15, fx: { fun: 4, social: 2 } } };
+  function playerSocial(s, kind) {
+    var P = own(PLAYER_SOCIAL, kind) ? PLAYER_SOCIAL[kind] : null; if (!P || !(s.rules >= 47)) return fail('You cannot do that.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    s.alerts = []; advance(s, P.mins);
+    var hit = P.chance == null || rand(s) < P.chance;
+    applyFx(s, hit ? P.fx : { social: 1, stress: 2 });
+    return finish(s, ok(kind === 'joke' ? (hit ? '😂 The joke landed. Everybody laughed.' : '😬 The joke fell flat. Awkward.') : kind === 'shade' ? '😏 You threw shade. They will remember that one.' : kind === 'gist' ? '🗣️ Good gist. You caught up on everything.' : '👋 You said hello.', { hit: hit }));
+  }
+  // Rules 47: send money to another player. The sender really pays. The receiver may accept up to GIFT_DAY a game day;
+  // a life that accepts any is marked Gifted and stays off the Hall of Fame and weekly boards, like a Boosted one.
+  var GIFT_MAX = 100000, GIFT_DAY = 50000;
+  function giftOut(s, amount) {
+    amount = Math.round(+amount); if (!(s.rules >= 47) || !(amount >= 100 && amount <= GIFT_MAX)) return fail('Send between ' + naira(100) + ' and ' + naira(GIFT_MAX) + '.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    s.alerts = []; if (!pay(s, amount, 'Sent to a friend')) return fail('You do not have ' + naira(amount) + '.');
+    return finish(s, ok('💸 Sent ' + naira(amount) + '.', { amount: amount }));
+  }
+  function giftIn(s, amount, ref) {
+    amount = Math.round(+amount); if (!(s.rules >= 47) || !(amount >= 100 && amount <= GIFT_MAX) || typeof ref !== 'string' || !/^[a-z0-9]{6,16}$/.test(ref)) return fail('That gift is not valid.');
+    s.giftLog = s.giftLog || { day: -1, got: 0, refs: [] };
+    if (s.giftLog.refs.indexOf(ref) >= 0) return fail('You already took that gift.');
+    if (s.giftLog.day !== day(s)) { s.giftLog.day = day(s); s.giftLog.got = 0; }
+    var take = Math.min(amount, GIFT_DAY - s.giftLog.got); if (take <= 0) return fail('You can take at most ' + naira(GIFT_DAY) + ' in gifts a day.');
+    s.giftLog.got += take; s.giftLog.refs.push(ref); if (s.giftLog.refs.length > 60) s.giftLog.refs.shift();
+    s.alerts = []; s.gifted = true; post(s, 'bank', take, 'Gift from a friend');
+    return finish(s, ok('🎁 ' + naira(take) + ' landed in your bank.' + (take < amount ? ' (The daily gift limit kept the rest.)' : '') + ' This life is now Gifted: it stays off the boards.'));
+  }
+  var ADOPT_FEE = 150000;
+  function adoptInfo(s) {
+    var why = !(s.rules >= 47) ? 'Adoption is not open in this life' : s.kids.length >= 3 ? 'You already have three children' : week(s) < s.babyPause ? 'The welfare office asks you to wait ' + (s.babyPause - week(s)) + ' more week' + (s.babyPause - week(s) === 1 ? '' : 's')
+      : /^squat/.test(s.home) || !homeDef(s) ? 'You need a home of your own first (not a friend\'s sofa)' : s.pending.length ? 'Decide on the open event first' : null;
+    return { fee: price(s, ADOPT_FEE), why: why, together: !!(s.partner && s.partner.stage === 'married') };
+  }
+  function adoptBaby(s) {
+    var A = adoptInfo(s); if (A.why) return fail(A.why + '.');
+    s.alerts = [];
+    if (!pay(s, A.fee, 'Adoption fees and paperwork')) return fail('The fees and paperwork cost ' + naira(A.fee) + '.');
+    s.kids.push({ born: day(s), school: null, nextFees: day(s) + 84, v: 30, adopted: true });
+    s.babyPause = week(s) + 10; unlock(s, 'parent');
+    applyFx(s, { social: 20, fun: 15, stress: 10 });
+    var msg = 'Welcome home, little one! ' + (A.together ? 'You and ' + s.partner.name + ' adopted a baby.' : 'You adopted a baby on your own.') + ' Babies cost ' + naira(price(s, 4000)) + ' a week; school fees start in 12 weeks.';
+    log(s, msg, 'good');
+    return finish(s, ok(msg));
+  }
   function recorded(code, raw) {
     var fn = function (s) { return s.over ? fail('This Weekly Lagos is over. Start next week\'s, or go back to your life.') : s.japa ? fail('You have japa-ed. This life is complete: start a new one.') : raw.apply(null, arguments); };
     if (RECORDED[code]) throw new Error('Replay code used twice: ' + code);
@@ -5688,7 +5739,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost, rentSeaPlots: recorded('sr', rentSeaPlots), seaRentCost: seaRentCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
+    adoptBaby: recorded('ab', adoptBaby), giftOut: recorded('go', giftOut), giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
     buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
     decRates: decRates, luxuryCar: luxuryCar, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), stageShow: recorded('st', stageShow), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,

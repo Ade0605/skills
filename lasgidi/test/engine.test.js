@@ -3617,7 +3617,7 @@ test('rules 46: income pays 2.55x (70% on top of 1.5x); old lives keep 1.5x', ()
 
 test('rules 46: a streak day gives XP and reports your Lagos level; rules 45 does not', () => {
   const s = L.newGame({ seed: 4602, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 46);
+  assert.ok(s.rules >= 46);
   const x0 = L.lagosXp(s), r = L.claimStreak(s, '2026-10-10');
   assert.ok(r.ok && r.streak, r.msg); assert.equal(r.streak.n, 1); assert.ok(r.streak.xp > 0); assert.equal(L.lagosXp(s), x0 + r.streak.xp); assert.equal(r.streak.level, L.lagosLevel(s));
   const o = L.newGame({ seed: 4602, origin: 'mid', goal: 'freestyle', rules: 45 }); while (o.pending.length) L.resolveChoice(o, 0);
@@ -3638,4 +3638,29 @@ test('rules 46: the owambe invitation has three choices; spraying BIG makes you 
 
 test('rules 46: Jibowu motor park is on the map in Yaba and never hides a gem', () => {
   const p = D.PLACES.find(x => x.id === 'jibowu_park'); assert.ok(p); assert.equal(p.district, 'yaba'); assert.ok(p.nogem); assert.equal(D.insideKind(p), 'motorpark');
+});
+
+test('rules 47: adopt a baby from the phone: fee, home needed, three children at most, ten-week wait, replays', () => {
+  const s = L.newGame({ seed: 4701, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 47);
+  const A = L.adoptInfo(s); assert.equal(A.why, null); assert.equal(A.fee, 150000);
+  const c0 = s.cash + s.bank, r = L.adoptBaby(s); assert.ok(r.ok, r.msg);
+  assert.equal(s.kids.length, 1); assert.ok(s.kids[0].adopted); assert.equal(c0 - (s.cash + s.bank), 150000); assert.ok(s.ach.parent);
+  const r2 = L.adoptBaby(s); assert.equal(r2.ok, false); assert.match(r2.msg, /wait/);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  const o = L.newGame({ seed: 4701, origin: 'nepo', goal: 'freestyle', rules: 46 }); while (o.pending.length) L.resolveChoice(o, 0);
+  assert.equal(L.adoptBaby(o).ok, false);
+});
+
+test('rules 47: social moves with players and gifts between players; a gifted life stays off the boards', () => {
+  const s = L.newGame({ seed: 4702, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const t0 = s.t; for (const k of ['hello', 'gist', 'joke', 'shade']) assert.ok(L.playerSocial(s, k).ok);
+  assert.equal(s.t - t0, 75); assert.equal(L.playerSocial(s, 'punch').ok, false);
+  const c0 = s.cash + s.bank; assert.ok(L.giftOut(s, 5000).ok); assert.equal(c0 - (s.cash + s.bank), 5000);
+  assert.equal(L.giftOut(s, 50).ok, false); assert.equal(L.giftOut(s, L.GIFT_MAX + 1).ok, false);
+  const c1 = s.cash + s.bank, g = L.giftIn(s, 80000, 'ref000001'); assert.ok(g.ok); assert.equal(s.cash + s.bank - c1, L.GIFT_DAY);
+  assert.equal(L.giftIn(s, 1000, 'ref000002').ok, false, 'daily cap'); assert.equal(L.giftIn(s, 1000, 'ref000001').ok, false, 'no double take');
+  assert.ok(s.gifted); assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  const o = L.newGame({ seed: 4702, origin: 'nepo', goal: 'freestyle', rules: 46 }); while (o.pending.length) L.resolveChoice(o, 0);
+  assert.equal(L.giftIn(o, 1000, 'ref000003').ok, false); assert.equal(L.playerSocial(o, 'hello').ok, false);
 });
