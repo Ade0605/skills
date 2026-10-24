@@ -1538,6 +1538,19 @@
         galG.add(mesh(new T.BoxGeometry(RW - 2, 6, 0.1), mat('owin', { color: 0x9fd0ff, emissive: 0x6aa8e0, emissiveIntensity: 0.4, transparent: true, opacity: 0.6 }), 0, 4, -RD / 2 + 0.3));
         galG.add(mesh(new T.BoxGeometry(6, 2.2, 2), mat('ordesk', { color: 0x1f2a44 }), -18, 1.1, 14)); var rc2 = flowFig(200, 0x1f2a44); rc2.position.set(-18, 0.05, 15.6); rc2.rotation.y = -Math.PI / 2; plant(-24, 18); plant(24, -18);
         flow(flowFig(201, 0x1f2a44), [[DX, DZ], [-18, 12.4], [16, 12], [DX, DZ]], 1.8, 0, 4); flow(flowFig(202), [[DX, DZ + 1], [-9, -2], [9, -2], [DX, DZ + 1]], 1.8, 6, 5); flow(flowFig(203), [[DX, DZ - 1], [0, 5], [18, 14], [DX, DZ - 1]], 1.6, 11, 6);
+        if (sc.placeId === 'office_tower') { // Marina Towers: the ground-floor lobby (blue carpet, glass curtain wall, the big blue sign, green sofas, reception, the canteen)
+          floor.material.color.set(0x56657a);
+          poster('MARINA TOWERS', '#1f4fa0', '#ffffff', 16, 2.4, 8, RH - 2.2, -RD / 2 + 0.45, 0); poster('MARINA TOWERS', '#1f2a44', '#ffffff', 5, 0.9, -18, 3.6, 13.2, Math.PI);
+          for (var mu = -RW / 2 + 2; mu < RW / 2 - 1; mu += 4) galG.add(mesh(new T.BoxGeometry(0.25, 6.2, 0.25), mat('mull', { color: 0x2b2f36, metalness: 0.6 }), mu, 4, -RD / 2 + 0.4));
+          [[-21, -6], [-21, 1]].forEach(function (q, i) { var so = new T.Group(); so.position.set(q[0], 0, q[1]); so.rotation.y = Math.PI / 2; var gm = mat('sofaG', { color: 0x14532d, roughness: 0.7 }); so.add(mesh(new T.BoxGeometry(5, 0.9, 1.8), gm, 0, 0.6, 0)); so.add(mesh(new T.BoxGeometry(5, 1.2, 0.5), gm, 0, 1.4, -0.75)); so.add(mesh(new T.BoxGeometry(0.5, 1.1, 1.8), gm, -2.5, 0.9, 0)); so.add(mesh(new T.BoxGeometry(0.5, 1.1, 1.8), gm, 2.5, 0.9, 0)); galG.add(so); if (i === 0) sitter(205, q[0] + 0.4, q[1] + 1, Math.PI / 2); });
+          plant(-24, -12); plant(-24, 8); plant(-12, 18); plant(24, 8);
+          galG.add(mesh(new T.BoxGeometry(1.4, 0.9, 0.1), mat('mon', {}), -18, 2.6, 13.6));
+          // the canteen at the far side: counter, a menu board, little round tables
+          galG.add(mesh(new T.BoxGeometry(10, 2.2, 1.6), mat('cant', { color: 0xc8a165, roughness: 0.6 }), 20, 1.1, -14)); poster('CANTEEN · RICE · BEANS · CHICKEN', '#b91c1c', '#ffffff', 10, 1, 20, 4.8, -16.5, 0);
+          [[14, -6], [20, -6], [26, -6]].forEach(function (q) { galG.add(mesh(new T.CylinderGeometry(1, 1, 0.12, 18), mat('ctab', { color: 0xf4f3ec }), q[0], 1.5, q[1])); galG.add(mesh(new T.CylinderGeometry(0.12, 0.12, 1.5, 8), mat('frame', {}), q[0], 0.75, q[1])); chair(q[0] - 1.4, q[1], Math.PI / 2, 0xe2463f); chair(q[0] + 1.4, q[1], -Math.PI / 2, 0xe2463f); });
+          sitter(206, 18.6, -6, Math.PI / 2); flow(flowFig(207, 0xffffff), [[20, -12.6], [24, -12.6], [20, -12.6]], 0.6, 0, 3);
+          flow(flowFig(208), [[DX, DZ], [-20, 4], [20, -10], [DX, DZ]], 1.7, 3, 5); flow(flowFig(209), [[DX, DZ - 1], [-17, 11.5], [DX, DZ - 1]], 1.5, 9, 6);
+        }
       }
     }
     function buildCivic(kind, room, floor, RW, RD, RH) {

@@ -105,7 +105,9 @@
   // cuts that match the city (dumsor, load shedding, none in London or Dubai), and eviction to a friend's sofa in your city.
   // 46 makes money 70% easier: work, gigs, takings and prizes pay 2.55x (was 1.5x since rules 41).
   // 47 adds adoption: give a baby a home from the phone's Family app, on your own or with your partner.
-  var RULES = 47;
+  // 48 lets you change your lifetime dream (your goal) once a week, from the phone's Goals, and adds Gidi Bet: made-up
+  // football leagues every 4 game hours and a High-Low card game, with a house edge and daily stake caps.
+  var RULES = 48;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -1083,6 +1085,13 @@
     var q = s.quals && s.quals[id], st = s.study && s.study[id];
     return { id: id, P: P, done: q != null, at: q, enrolled: !!st, classes: st ? st.n : q != null ? P.classes : 0, total: P.classes, residentOnly: !!P.resident && visitBar(s, P.district) };
   }
+  // Rules 48: Short Courses at UNILAG (Yaba). The next lesson of every course you have not finished, one a day each.
+  function shortState(s, id) { var C = D.SHORT_COURSES[id]; if (!C) return null; var st = (s.short || {})[id] || { n: 0, last: -1 }; return { id: id, C: C, n: Math.min(st.n, C.lessons.length), done: st.n >= C.lessons.length, today: st.last === day(s), at: st.at }; }
+  function shortActions(s) {
+    if (s.loc !== 'yaba') return [];
+    return Object.keys(D.SHORT_COURSES).map(function (id) { var st = shortState(s, id); if (st.done) return null; var a = { id: 'sc_' + id, label: st.C.icon + ' Short course: ' + st.C.name + ' · lesson ' + (st.n + 1) + ' of 5: ' + st.C.lessons[st.n], mins: 45, cost: 2000, fx: { energy: -6, stress: 2 }, xp: {}, special: 'shortlesson', short: id, once: true, when: { from: 8, to: 19 }, minRules: 48 }; a.xp[st.C.skill] = 1; return a; }).filter(Boolean);
+  }
+  function shortCert(s, skill) { return Object.keys(s.short || {}).some(function (id) { var C = D.SHORT_COURSES[id]; return C && C.skill === skill && s.short[id].n >= C.lessons.length; }); }
   function studyActions(s) {
     var out = [];
     Object.keys(D.STUDY).forEach(function (id) {
@@ -1125,6 +1134,7 @@
     if (s.rules >= 36) list = list.concat(stallActions(s));
     if (s.rules >= 40) list = list.concat(leagueActions(s));
     if (s.rules >= 42) list = list.concat(studyActions(s));
+    if (s.rules >= 48) list = list.concat(shortActions(s));
     if (s.rules >= 43) list = list.concat(lagoonActions(s));
     if (s.rules >= 44) list = list.concat(campusActions(s));
     if (s.rules >= 41) Object.keys(D.BIZ_LICENCES).forEach(function (c) { var B0 = D.BIZ_LICENCES[c]; if (s.loc === B0.district && !(s.bizLicence && s.bizLicence[c])) list.push({ id: 'bizlic_' + c, label: 'Apply for a ' + B0.name + ' (open businesses in ' + D.CITIES[c].name + ')', mins: 120, cost: B0.fee, fx: { stress: 8 }, special: 'bizlicence', city: c, minRules: 41 }); });
@@ -1377,6 +1387,15 @@
       s.study[a.study] = { n: 0, since: day(s) };
       log(s, D.STUDY_KINDS[P.kind].icon + ' Enrolled: ' + P.name + ' at ' + P.where + '. ' + P.classes + (P.kind === 'apprentice' ? ' working days' : ' classes') + ' to finish.', 'good');
       return 'Enrolled in ' + P.name + '.';
+    },
+    shortlesson: function (s, a) {
+      var C = D.SHORT_COURSES[a.short]; s.short = s.short || {}; var st = s.short[a.short] = s.short[a.short] || { n: 0, last: -1 };
+      if (st.last === day(s)) return 'One lesson a day for each course. Come back tomorrow.';
+      st.n++; st.last = day(s);
+      if (st.n < C.lessons.length) return 'Lesson ' + st.n + ' of ' + C.lessons.length + ' done: ' + C.lessons[st.n - 1] + '.';
+      st.at = day(s); unlock(s, 'qualified');
+      log(s, '🎓 Certificate in hand: ' + C.name + ' (UNILAG short course). ' + D.SKILLS[C.skill] + ' jobs: +15% work performance.', 'good');
+      return 'You finished the ' + C.name + ' short course!';
     },
     studyclass: function (s, a) {
       var P = D.STUDY[a.study], st = s.study && s.study[a.study]; if (!st) return 'Enrol first.';
@@ -1681,6 +1700,7 @@
     var edu = [];
     var qd = Object.keys(s.quals || {}).filter(function (q) { return D.STUDY[q]; });
     qd.forEach(function (q) { var P = D.STUDY[q]; edu.push({ code: 'q:' + q, icon: D.STUDY_KINDS[P.kind].icon, title: P.name + ', ' + P.where }); });
+    Object.keys(s.short || {}).forEach(function (id) { var C = D.SHORT_COURSES[id]; if (C && s.short[id].n >= C.lessons.length) edu.push({ code: 'sc:' + id, icon: '📜', title: C.name + ' short course, UNILAG' }); });
     Object.keys(s.study || {}).forEach(function (q) { var P = D.STUDY[q]; if (P) edu.push({ code: 'qs:' + q, icon: '📚', title: 'Studying ' + P.name + ', ' + P.where, note: s.study[q].n + ' of ' + P.classes + ' done' }); });
     var ownDegree = s.edu.lectures >= 30 || (s.heir && s.heir.school === 'intl') || !qd.some(function (q) { return D.STUDY[q].kind === 'degree'; });
     if (s.edu.degree && ownDegree) edu.push({ code: 'degree', icon: '🎓', title: s.heir && s.heir.school === 'intl' ? 'International school diploma (counts as a degree)' : 'Degree, University of Lagos' });
@@ -1702,6 +1722,7 @@
     var c = D.CAREERS[s.job.id];
     var perf = performance(s);
     if ((s.job.id === 'bank' || s.job.id === 'tech') && outfitTags(s).office) perf = Math.min(1.2, perf * 1.06); // dressed for the office
+    if (s.rules >= 48 && shortCert(s, c.skill)) perf = Math.min(1.3, perf * 1.15); // rules 48: a short course in this skill
     var late = a.late;
     // Mark the shift before advancing: a shift ending at midnight must not
     // count as missed by the midnight check it crosses.
@@ -1712,7 +1733,8 @@
     // Cooperative loan repayments come straight out of wages.
     var coop = s.loans.filter(function (l) { return l.kind === 'coop' && l.bal > 0; })[0];
     var deduct = coop ? Math.min(coop.bal, roundTo(got * 0.25, 50)) : 0;
-    earn(s, got, 'Shift pay: ' + c.titles[s.job.level]);
+    var avg0 = s.job.shifts ? s.job.perfSum / s.job.shifts : null;
+    var paidW = earn(s, got, 'Shift pay: ' + c.titles[s.job.level]);
     var tax = payeTax(s, got);
     if (tax) post(s, 'cash', -tax, 'PAYE income tax');
     if (deduct) { pay(s, deduct, 'Cooperative deduction'); coop.bal -= deduct; }
@@ -1724,10 +1746,17 @@
     if (!late) s.stats.onTime++;
     unlock(s, 'first_pay');
     if (s.stats.onTime >= 10) unlock(s, 'punctual');
-    var msg = (late ? 'You were late, so 30% was docked. ' : '') + 'Earned ' + naira(got) + (deduct ? ' (' + naira(deduct) + ' went to the cooperative)' : '') + '.';
+    var msg = (late ? 'You were late, so 30% was docked. ' : '') + 'Earned ' + naira(s.rules >= 48 ? paidW : got) + (deduct ? ' (' + naira(deduct) + ' went to the cooperative)' : '') + '.';
     var promo = checkPromotion(s);
     if (promo) msg += ' ' + promo;
-    return finish(s, ok(msg));
+    // Rules 48: one shift in three brings a workplace moment: a risky call that leans on your skill, or the safe bet.
+    var task = false;
+    if (s.rules >= 48 && !s.pending.length && rand(s) < 0.34) {
+      var DL = D.WORK_DILEMMAS[c.skill] || D.WORK_DILEMMAS.hustle, dl = DL[Math.floor(rand(s) * DL.length)];
+      queue(s, { id: 'workdilemma', icon: dl.icon, title: dl.title, text: dl.text, options: [dl.risky, dl.safe], subs: ['Risky · ' + D.SKILLS[c.skill], 'Safe bet'], skill: c.skill }); task = true;
+    }
+    var avg1 = s.job.perfSum / s.job.shifts;
+    return finish(s, ok(msg, s.rules >= 48 ? { shift: { earned: paidW - (tax || 0) - (deduct || 0), perf: Math.round(avg1 * 100), delta: avg0 == null ? null : Math.round((avg1 - avg0) * 100), task: task, title: c.titles[s.job.level], org: c.name, promo: promo || null } } : null));
   }
 
   function promotionNeeds(s) {
@@ -2385,6 +2414,11 @@
           msg = (idx === 1 ? 'Negotiation failed. ' : '') + 'Rent is now ' + naira(s.rentRate) + ' a week.';
         }
         break;
+      case 'workdilemma': {
+        if (s.job && idx === 0) { var win = rand(s) < 0.35 + skillLevel(s, ev.skill) * 0.06; if (win) { s.job.perfSum += 0.15; applyFx(s, { fun: 6, stress: -2 }); msg = 'It went well. Your oga noticed: performance up.'; } else { s.job.perfSum = Math.max(0, s.job.perfSum - 0.1); applyFx(s, { stress: 8 }); msg = 'It did not land. Lesson learnt: performance down a little.'; } }
+        else { applyFx(s, { stress: -2 }); msg = 'You played it safe. No wahala.'; }
+        break;
+      }
       case 'owambe':
         if (ev.big) { // rules 46
           if (idx === 1 && canAfford(s, ev.big)) { pay(s, ev.amt, 'Aso-ebi'); pay(s, ev.big - ev.amt, 'Owambe spraying money'); s.asoebi = true; s.sprayBig = true; msg = 'Aso-ebi sewn and a fresh bundle of notes in your pocket. Saturday, you go spray them like you just won the pools.'; }
@@ -3952,6 +3986,7 @@
   }
   function passport(s) { return s.rules >= 29 ? Object.keys(D.CITIES).filter(function (k) { return cityOpen(s, k); }).map(function (k) { return { city: k, name: D.CITIES[k].name, day: s.stamps && s.stamps[k] != null ? s.stamps[k] : null }; }) : null; }
   function finish(s, res) {
+    if (s.rules >= 48 && s.bets && s.bets.length) settleBets(s);
     if (s.rules >= 29) stampPassport(s);
     if (!s.over && (s.needs.hunger <= 0 || s.needs.energy <= 0)) collapse(s, res);
     if (s.over) res.over = true;
@@ -5673,6 +5708,74 @@
     s.alerts = []; s.gifted = true; post(s, 'bank', take, 'Gift from a friend');
     return finish(s, ok('🎁 ' + naira(take) + ' landed in your bank.' + (take < amount ? ' (The daily gift limit kept the rest.)' : '') + ' This life is now Gifted: it stays off the boards.'));
   }
+  // Rules 48: change your lifetime dream, at most once every 7 game days (not in Weekly Lagos, not after you won).
+  function changeGoal(s, goal) {
+    if (!(s.rules >= 48)) return fail('You cannot change your dream in this life.');
+    if (!own(D.GOALS, goal) || goal === s.goal) return fail('Pick a different dream.');
+    if (s.challenge) return fail('Weekly Lagos has no dreams to change.');
+    if (s.won) return fail('You already reached your dream. Enjoy it!');
+    if (s.goalSet != null && day(s) - s.goalSet < 7) return fail('You can change your dream again in ' + (7 - (day(s) - s.goalSet)) + ' day' + (7 - (day(s) - s.goalSet) === 1 ? '' : 's') + '.');
+    s.goal = goal; s.goalSet = day(s); log(s, 'New dream: ' + D.GOALS[goal].name + '. ' + D.GOALS[goal].text, 'good');
+    return finish(s, ok('✨ Your dream is now ' + D.GOALS[goal].name + '.'));
+  }
+  /* ---------- Gidi Bet (rules 48): in-game money only, made-up teams, a house edge, capped stakes ---------- */
+  var BET_LEAGUES = [
+    { id: 'npl', name: 'Naija Premier League', teams: [['Lagos Lions', 82], ['Abuja Eagles', 78], ['Kano Falcons', 74], ['Ibadan Hawks', 71], ['Enugu Panthers', 69], ['Calabar Marlins', 66], ['Jos Rocks', 63], ['Owerri Stallions', 60]] },
+    { id: 'esl', name: 'Euro Super League', teams: [['Thames Royals', 88], ['Mersey Reds', 86], ['Madrid Crowns', 85], ['Milano Stars', 80], ['Paris Saints', 83], ['Bavaria Kings', 84], ['Lisbon Lights', 74], ['Amsterdam Tulips', 72]] }
+  ];
+  var BET_MAX = 20000, BET_DAY = 50000, BET_SLOT = 240;
+  function hashInt(str) { var h = 0x811c9dc5; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return h >>> 0; }
+  function betSlot(s) { return Math.floor(s.t / BET_SLOT); }
+  // This slot's fixtures: each league's teams paired by the slot number, with fair-ish odds less an 8% house margin.
+  function betFixtures(slot) {
+    var out = [];
+    BET_LEAGUES.forEach(function (Lg) {
+      var t = Lg.teams.map(function (x, i) { return { x: x, k: hashInt(Lg.id + ':' + slot + ':' + i) }; }).sort(function (a, b) { return a.k - b.k; }).map(function (o) { return o.x; });
+      for (var i = 0; i + 1 < t.length; i += 2) {
+        var h = t[i], a = t[i + 1], sh = Math.pow(h[1] * 1.08, 3), sa = Math.pow(a[1], 3), pd = 0.26, ph = (1 - pd) * sh / (sh + sa), pa = 1 - pd - ph;
+        var odd = function (p) { return Math.max(1.05, Math.round(0.92 / p * 100) / 100); };
+        out.push({ id: Lg.id + i / 2, league: Lg.id, leagueName: Lg.name, home: h[0], away: a[0], p: [ph, pd, pa], odds: [odd(ph), odd(pd), odd(pa)] });
+      }
+    });
+    return out;
+  }
+  function betInfo(s) { var day0 = Math.floor(s.t / 1440), staked = (s.bets || []).concat(s.betDone || []).filter(function (b) { return Math.floor(b.t / 1440) === day0; }).reduce(function (a, b) { return a + b.stake; }, 0); return { slot: betSlot(s), next: BET_SLOT - s.t % BET_SLOT, fixtures: betFixtures(betSlot(s)), open: s.bets || [], done: (s.betDone || []).slice(-15), left: Math.max(0, BET_DAY - staked), max: BET_MAX }; }
+  function placeBet(s, matchId, pick, stake) {
+    if (!(s.rules >= 48)) return fail('Gidi Bet is not open in this life.');
+    stake = Math.round(+stake); pick = +pick;
+    var m = betFixtures(betSlot(s)).filter(function (x) { return x.id === matchId; })[0];
+    if (!m || !(pick === 0 || pick === 1 || pick === 2)) return fail('That match is not on.');
+    if (!(stake >= 100 && stake <= BET_MAX)) return fail('Stake between ' + naira(100) + ' and ' + naira(BET_MAX) + '.');
+    if (stake > betInfo(s).left) return fail('Daily limit: ' + naira(BET_DAY) + ' in stakes a day. Come back tomorrow.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    s.alerts = []; if (!pay(s, stake, 'Gidi Bet stake')) return fail('You do not have ' + naira(stake) + '.');
+    (s.bets = s.bets || []).push({ slot: betSlot(s), m: m.id, label: m.home + ' v ' + m.away, pick: pick, odds: m.odds[pick], stake: stake, t: s.t });
+    return finish(s, ok('🎟️ Bet placed: ' + ['Home', 'Draw', 'Away'][pick] + ' at ' + m.odds[pick] + ' for ' + naira(stake) + '. Results at the top of the next 4 hours.'));
+  }
+  function settleBets(s) {
+    var now = betSlot(s), keep = [];
+    (s.bets || []).forEach(function (b) {
+      if (b.slot >= now) { keep.push(b); return; }
+      var m = betFixtures(b.slot).filter(function (x) { return x.id === b.m; })[0], r = rand(s), res = r < m.p[0] ? 0 : r < m.p[0] + m.p[1] ? 1 : 2;
+      b.res = res; b.win = res === b.pick; b.paid = b.win ? Math.round(b.stake * b.odds) : 0;
+      if (b.win) { post(s, 'cash', b.paid, 'Gidi Bet winnings'); log(s, '⚽ ' + b.label + ': ' + ['home win', 'draw', 'away win'][res] + '. Your bet won ' + naira(b.paid) + '!', 'good'); }
+      else log(s, '⚽ ' + b.label + ': ' + ['home win', 'draw', 'away win'][res] + '. Your bet lost.', 'info');
+      (s.betDone = s.betDone || []).push(b); if (s.betDone.length > 40) s.betDone.shift();
+    });
+    s.bets = keep;
+  }
+  // High-Low: guess if the next card (1 to 13) is higher or lower than 7. A 7 loses. Pays 2x.
+  function highLow(s, guess, stake) {
+    if (!(s.rules >= 48)) return fail('Gidi Bet is not open in this life.');
+    stake = Math.round(+stake); if (!(guess === 'hi' || guess === 'lo') || !(stake >= 100 && stake <= BET_MAX)) return fail('Stake between ' + naira(100) + ' and ' + naira(BET_MAX) + '.');
+    if (stake > betInfo(s).left) return fail('Daily limit: ' + naira(BET_DAY) + ' in stakes a day.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    s.alerts = []; if (!pay(s, stake, 'Gidi Bet stake')) return fail('You do not have ' + naira(stake) + '.');
+    var card = 1 + Math.floor(rand(s) * 13), win = guess === 'hi' ? card > 7 : card < 7;
+    (s.betDone = s.betDone || []).push({ hl: true, label: 'High-Low', card: card, pick: guess, stake: stake, t: s.t, win: win, paid: win ? stake * 2 : 0 }); if (s.betDone.length > 40) s.betDone.shift();
+    if (win) post(s, 'cash', stake * 2, 'Gidi Bet winnings');
+    return finish(s, ok((win ? '🎉 ' : '😬 ') + 'The card is ' + (['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][card - 1]) + '. ' + (win ? 'You win ' + naira(stake * 2) + '!' : card === 7 ? 'A seven: the house wins.' : 'You lose ' + naira(stake) + '.'), { card: card, win: win }));
+  }
   var ADOPT_FEE = 150000;
   function adoptInfo(s) {
     var why = !(s.rules >= 47) ? 'Adoption is not open in this life' : s.kids.length >= 3 ? 'You already have three children' : week(s) < s.babyPause ? 'The welfare office asks you to wait ' + (s.babyPause - week(s)) + ' more week' + (s.babyPause - week(s) === 1 ? '' : 's')
@@ -5739,7 +5842,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost, rentSeaPlots: recorded('sr', rentSeaPlots), seaRentCost: seaRentCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    adoptBaby: recorded('ab', adoptBaby), giftOut: recorded('go', giftOut), giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
+    adoptBaby: recorded('ab', adoptBaby), shortState: shortState, placeBet: recorded('bt', placeBet), highLow: recorded('hz', highLow), betInfo: betInfo, BET_LEAGUES: BET_LEAGUES, changeGoal: recorded('cg', changeGoal), giftOut: recorded('go', giftOut), giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
     buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
     decRates: decRates, luxuryCar: luxuryCar, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), stageShow: recorded('st', stageShow), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,

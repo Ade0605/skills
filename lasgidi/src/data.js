@@ -2076,7 +2076,7 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     { id: 'city_library', icon: '📚', name: 'Lagos City Library, Yaba', type: 'learn', glyph: 'book', district: 'yaba', x: 15.0, y: 15.3, acts: [], civic: 'library', text: 'Rows of shelves, reading tables, a computer room and a strict librarian.' },
     { id: 'grand_hotel', icon: '🏨', name: 'Marina Grand Hotel, Victoria Island', type: 'nightlife', glyph: 'hotel', district: 'vi', x: 19.5, y: 25.4, acts: [], civic: 'hotel', text: 'A marble lobby, a chandelier, the pool atrium, the spa and the buffet. Rooms by the night.' },
     { id: 'lagoon_casino', icon: '🎰', name: 'Lagoon Casino, Victoria Island', type: 'nightlife', glyph: 'dice', district: 'vi', x: 18.5, y: 24.9, acts: [], civic: 'casino', text: 'Slots, roulette and blackjack under a gold dome. 18 and over. The house always wins in the end.' },
-    { id: 'office_tower', icon: '🏢', name: 'Marina Office Towers, Island', type: 'services', glyph: 'tower', district: 'island', x: 15.5, y: 23.4, acts: [], civic: 'office', text: 'Glass towers on the Marina: a co-working floor, meeting rooms and the building\'s canteen.' }
+    { id: 'office_tower', icon: '🏢', name: 'Marina Towers', type: 'services', glyph: 'tower', district: 'island', x: 15.5, y: 23.4, acts: [], civic: 'office', text: 'Glass towers on the Marina: a lobby with reception, a co-working floor, meeting rooms and the building\'s canteen.' }
   );
   CIVIC_ACTS.high_court = [
     { id: 'court_gallery', label: 'Watch a case from the public gallery', mins: 90, fx: { fun: 6, stress: 2 }, when: { days: [0, 1, 2, 3, 4], from: 9, to: 16 } },
@@ -3039,10 +3039,34 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     return INSIDE_BY_GLYPH[pl.glyph] || 'park';
   }
   Object.keys(INSIDE).forEach(function (k) { INSIDE[k].forEach(function (a, i) { a.id = 'in_' + k + '_' + (i + 1); a.inside = k; }); });
+  // Rules 48: Short Courses at UNILAG. Five lessons each (one a day), a certificate on your CV, and +15% work
+  // performance in careers that use the same skill.
+  var SHORT_COURSES = {
+    musician:  { name: 'Musician / Artiste', icon: '🎤', skill: 'music', blurb: 'Your craft and your sound, recording, getting heard, and the money side: royalties and contracts.', lessons: ['The music business: who does what', 'Your craft and your sound', 'Recording your music', 'Getting heard', 'Money, rights and contracts'] },
+    developer: { name: 'Software Developer', icon: '💻', skill: 'tech', blurb: 'From your first line of code to shipping an app people pay for.', lessons: ['How software is made', 'Your first program', 'Building for the web', 'Working in a team with Git', 'Shipping and getting hired'] },
+    banker:    { name: 'Banker', icon: '🏦', skill: 'charisma', blurb: 'Accounts, targets, credit and the customer who walks in angry.', lessons: ['How a bank makes money', 'Opening accounts and hitting targets', 'Credit and loans', 'Customer service under pressure', 'Climbing to branch manager'] },
+    chef:      { name: 'Chef', icon: '👩🏾‍🍳', skill: 'cooking', blurb: 'From mama put to a restaurant kitchen: knife skills, stocks and service.', lessons: ['Kitchen safety and hygiene', 'Knife skills and prep', 'Soups, stews and stocks', 'Plating and service', 'Costing a menu'] },
+    fashion:   { name: 'Fashion Designer', icon: '🧵', skill: 'craft', blurb: 'Sketch, cut, sew and sell: aso-ebi season is your harvest.', lessons: ['Sketching your ideas', 'Fabrics: ankara, lace, adire', 'Pattern cutting', 'Sewing a full outfit', 'Selling your line'] },
+    trainer:   { name: 'Fitness Coach', icon: '🏋🏾', skill: 'fitness', blurb: 'Train yourself, then train clients who pay.', lessons: ['How the body works', 'Strength and cardio plans', 'Coaching a client', 'Food and recovery', 'Building your client list'] },
+    trader:    { name: 'Entrepreneur', icon: '🛒', skill: 'hustle', blurb: 'Buy low, sell right, keep books and grow a stall into a business.', lessons: ['Finding a gap in the market', 'Buying stock and pricing', 'Keeping your books', 'Marketing on a budget', 'Growing and hiring'] },
+    journalist: { name: 'Journalist / Broadcaster', icon: '🎙️', skill: 'charisma', blurb: 'Find the story, check the facts, and tell it on air.', lessons: ['What makes news', 'Interviews and checking facts', 'Writing for print and web', 'On air: radio and TV', 'Ethics and the law'] },
+    realestate: { name: 'Real Estate Pro', icon: '🏘️', skill: 'hustle', blurb: 'Agents, landlords, C of O and how deals really close in Lagos.', lessons: ['How property works in Lagos', 'Titles: C of O and survey plans', 'Finding buyers and tenants', 'Negotiating the deal', 'Managing properties'] },
+    lawyer:    { name: 'Lawyer', icon: '⚖️', skill: 'charisma', blurb: 'The basics of Nigerian law, contracts and arguing a case.', lessons: ['How the courts work', 'Contracts and agreements', 'Land and tenancy law', 'Arguing a case', 'Your rights with the police'] }
+  };
+  // Rules 48: workplace moments after a shift. The risky call leans on the job's skill; the safe bet changes nothing.
+  var WORK_DILEMMAS = {
+    charisma: [{ icon: '🦟', title: '"Doctor, just give me drip"', text: 'The client wants the special treatment for everything. Even a headache.', risky: 'Explain, kindly, why not', safe: 'Do the small thing to keep the peace' }, { icon: '😤', title: 'An angry customer at the counter', text: 'They have been on the queue for an hour and want the manager.', risky: 'Calm them down yourself', safe: 'Call the manager' }],
+    tech: [{ icon: '🐞', title: 'Production is down', text: 'The app crashed at 4 PM and everybody is looking at you.', risky: 'Hot-fix it live', safe: 'Roll back and write a report' }, { icon: '🧑🏾‍💻', title: 'The intern broke the build', text: 'Your lead wants someone to own it.', risky: 'Pair with them and fix it', safe: 'Leave it to the lead' }],
+    music: [{ icon: '🎤', title: 'The headliner is late', text: 'The crowd is restless and the MC looks at you.', risky: 'Freestyle a new song', safe: 'Play the usual set' }, { icon: '🎛️', title: 'The sound man is drunk', text: 'The mix is terrible and the show starts in ten minutes.', risky: 'Mix it yourself', safe: 'Go on as it is' }],
+    cooking: [{ icon: '🍲', title: 'A VIP table walks in', text: 'They want something off the menu.', risky: 'Cook your special', safe: 'Serve the usual jollof' }, { icon: '🔥', title: 'Gas finished mid-service', text: 'Orders are piling up.', risky: 'Switch to firewood out back', safe: 'Tell them food will delay' }],
+    fitness: [{ icon: '🏋🏾', title: 'A client wants results by Friday', text: 'Their wedding is on Saturday.', risky: 'Push a hard programme', safe: 'Keep to the safe plan' }, { icon: '🤕', title: 'Someone strained a muscle', text: 'Mid-session, in front of everybody.', risky: 'Handle the first aid', safe: 'Send them to the clinic' }],
+    craft: [{ icon: '🧵', title: 'A rush order for aso-ebi', text: 'Twenty outfits for Saturday, and it is Wednesday.', risky: 'Take it and work late', safe: 'Take only ten' }, { icon: '🔧', title: 'The machine broke down', text: 'The job is due tomorrow.', risky: 'Fix it yourself', safe: 'Wait for the mechanic' }],
+    hustle: [{ icon: '📦', title: 'A big buyer wants credit', text: 'They promise to pay next week.', risky: 'Give them the goods', safe: 'Cash only' }, { icon: '🚚', title: 'Your supplier raised prices', text: 'Overnight, by 20%.', risky: 'Negotiate hard', safe: 'Pay and move on' }]
+  };
   var DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   var DATA = {
-    DISTRICTS: DISTRICTS, ROADS: ROADS, FERRY_STOPS: FERRY_STOPS, BRT_STOPS: BRT_STOPS, RAIL_LINES: RAIL_LINES,
+    SHORT_COURSES: SHORT_COURSES, WORK_DILEMMAS: WORK_DILEMMAS, DISTRICTS: DISTRICTS, ROADS: ROADS, FERRY_STOPS: FERRY_STOPS, BRT_STOPS: BRT_STOPS, RAIL_LINES: RAIL_LINES,
     OKADA_BAN: OKADA_BAN, MODES: MODES, HOMES: HOMES, HOME_TYPES: HOME_TYPES, SKILLS: SKILLS, SKILL_XP: SKILL_XP,
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
     ROOM_SIZES: ROOM_SIZES, FURNITURE: FURNITURE, VEHICLES: VEHICLES, VEHICLE_TIERS: VEHICLE_TIERS, LOOKS: LOOKS, CLOTHES: CLOTHES,

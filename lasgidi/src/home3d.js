@@ -8,8 +8,8 @@
 (function (root) {
   'use strict';
   var D = root.LASGIDI_DATA;
-  var FLOORS = { room: 0x9a958b, share: 0xb8ab92, selfcon: 0xd8ccb4, miniflat: 0xd8ccb4, flat2: 0xcdb79a, flat3: 0xcdb79a, duplex: 0xa77b52, luxury: 0xe9e6df, mansion: 0xefece4 };
-  var WALLS = { room: 0xc9bfa6, share: 0xd6ccb4, selfcon: 0xe2dccd, miniflat: 0xe2dccd, flat2: 0xe7e1d2, flat3: 0xe7e1d2, duplex: 0xefe9dc, luxury: 0x3a3c42, mansion: 0xf4f1ea };
+  var FLOORS = { room: 0xa6774a, share: 0xb8ab92, selfcon: 0xd8ccb4, miniflat: 0xd8ccb4, flat2: 0xcdb79a, flat3: 0xcdb79a, duplex: 0xa77b52, luxury: 0xe9e6df, mansion: 0xefece4 };
+  var WALLS = { room: 0xd9b85c, share: 0xd6ccb4, selfcon: 0xe2dccd, miniflat: 0xe2dccd, flat2: 0xe7e1d2, flat3: 0xe7e1d2, duplex: 0xefe9dc, luxury: 0x3a3c42, mansion: 0xf4f1ea };
   var ROOM_FLOORS = { Kitchen: 0xe6e1d6, Bathroom: 0xc7d9df };
   function roomsFor(type, sz) {
     var w = sz[0], d = sz[1];
@@ -89,7 +89,10 @@
     }
     function build() {
       wipe(home); items3 = []; fans = []; screens = []; ghost = null;
-      var sz = view.size || [4, 3], w = sz[0], d = sz[1], type = view.type || 'room', wallC = view.paint ? hexN(view.paint) : WALLS[type] || 0xe2dccd;
+      var sz = view.size || [4, 3], w = sz[0], d = sz[1], type = view.type || 'room', BIG = /^(room|share|selfcon)$/.test(type);
+      if (BIG) { w = Math.max(w, 7); d = Math.max(d, 6); } // entry-level homes: a bigger room to walk around in
+      HOMEW = w; HOMED = d;
+      var _w = 0, wallC = view.paint ? hexN(view.paint) : WALLS[type] || 0xe2dccd;
       // Floor tiles, room floors, the two walls with windows and a door, skirting.
       var tileM = [M(FLOORS[type] || 0xd8ccb4, 0.55), M(((FLOORS[type] || 0xd8ccb4) & 0xfefefe) - 0x0a0a0a, 0.55)], rooms = roomsFor(type, sz);
       for (var x = 0; x < w; x++) for (var y = 0; y < d; y++) { var rm = rooms.filter(function (r) { return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.d; })[0], fm = rm && ROOM_FLOORS[rm.name] ? M(ROOM_FLOORS[rm.name], 0.4) : tileM[(x + y) % 2]; var t = new T.Mesh(new T.BoxGeometry(0.98, 0.06, 0.98), fm); t.position.set(x + 0.5, -0.03, y + 0.5); t.receiveShadow = true; t.userData.tile = [x, y]; home.add(t); }
@@ -103,26 +106,44 @@
       rooms.forEach(function (r) { if (r.x + r.w < w) for (var py = r.y; py < r.y + r.d; py++) { if (py === r.y + Math.floor(r.d / 2)) continue; box(home, 0.08, 1.1, 1, wm, r.x + r.w, 0.55, py + 0.5); } if (r.y + r.d < d) for (var px = r.x; px < r.x + r.w; px++) { if (px === r.x + Math.floor(r.w / 2)) continue; box(home, 1, 1.1, 0.08, wm, px + 0.5, 0.55, r.y + r.d); } });
       // Furniture.
       (view.items || []).forEach(function (it, i) { if (it.x == null) return; var f = D.FURNITURE[it.id]; if (!f) return; var g = model(it, f); g.position.set(it.x, 0, it.y); g.traverse(function (o) { o.userData.item = i; }); home.add(g); items3[i] = g; });
+      // Entry-level homes come with the basics, like a real first room in Lagos: a foam mattress, a red plastic chair,
+      // a cooler box, a water drum, jerrycans, a bucket, a wall fan, a bulb and a plant. Tap one to see what it is for.
+      PROPT = {};
+      if (/^(room|share|selfcon)$/.test(type)) {
+        var occI = occupied(), put = function (key, x, y, fn, tiles) { tiles = tiles || [[x, y]]; if (x < 0 || y < 0 || x >= w || y >= d || tiles.some(function (t) { return t[0] >= w || t[1] >= d || occI[t[0] + ',' + t[1]] || PROPT[t[0] + ',' + t[1]]; })) return; var g = new T.Group(); fn(g); g.position.set(x, 0, y); g.traverse(function (o) { o.userData.prop = key; }); home.add(g); tiles.forEach(function (t) { PROPT[t[0] + ',' + t[1]] = key; }); };
+        put('mattress', 0, 0, function (g) { var iron = M(0x5a3a2a, 0.5, 0.5); [[0.1, 0.1], [1.85, 0.1], [0.1, 0.9], [1.85, 0.9]].forEach(function (q) { box(g, 0.06, 0.45, 0.06, iron, q[0], 0.22, q[1]); }); box(g, 0.06, 0.75, 0.9, iron, 0.08, 0.5, 0.5); box(g, 0.06, 0.55, 0.9, iron, 1.87, 0.4, 0.5); box(g, 1.8, 0.05, 0.85, iron, 0.97, 0.3, 0.5); box(g, 1.75, 0.18, 0.82, M(0xb3262e, 0.85), 0.97, 0.42, 0.5); box(g, 0.4, 0.1, 0.6, M(0xffffff, 0.9), 0.35, 0.56, 0.5); }, [[0, 0], [1, 0]]);
+        put('stove', w - 3, 0, function (g) { var wood = M(0xe8d9b8, 0.7); box(g, 0.9, 0.05, 0.6, wood, 0.5, 0.75, 0.45); [[0.1, 0.2], [0.9, 0.2], [0.1, 0.7], [0.9, 0.7]].forEach(function (q) { box(g, 0.05, 0.75, 0.05, wood, q[0], 0.37, q[1]); }); cyl(g, 0.2, 0.22, 0.2, M(0x1f8a3a, 0.5), 0.45, 0.88, 0.45, 14); cyl(g, 0.17, 0.17, 0.16, M(0x3b3f45, 0.4, 0.6), 0.45, 1.06, 0.45, 14); });
+        put('toilet', 0, d - 1, function (g) { var por = M(0xf2f2f0, 0.25); cyl(g, 0.18, 0.15, 0.4, por, 0.5, 0.2, 0.55, 14); box(g, 0.42, 0.06, 0.48, por, 0.5, 0.42, 0.55); box(g, 0.42, 0.42, 0.16, por, 0.5, 0.62, 0.18); });
+        var lampM = new T.MeshStandardMaterial({ color: 0xfff2c4, emissive: 0xffe08a, emissiveIntensity: 0.7 }); [w * 0.3, w * 0.7].forEach(function (lx) { var sc = new T.Mesh(new T.SphereGeometry(0.13, 12, 10), lampM); sc.position.set(lx, 2.2, 0.16); sc.userData.prop = 'bulb'; home.add(sc); box(home, 0.08, 0.08, 0.12, M(0x333333), lx, 2.2, 0.06); });
+        put('chair', 2, 2, function (g) { var red = M(0xd62828, 0.45); box(g, 0.5, 0.06, 0.5, red, 0.5, 0.45, 0.5); box(g, 0.5, 0.5, 0.06, red, 0.5, 0.72, 0.27); [[0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]].forEach(function (q) { box(g, 0.05, 0.45, 0.05, red, q[0], 0.22, q[1]); }); });
+        put('cooler', Math.min(2, w - 1), 0, function (g) { box(g, 0.7, 0.5, 0.45, M(0x1e63c9, 0.4), 0.5, 0.25, 0.4); box(g, 0.72, 0.08, 0.47, M(0xffffff, 0.4), 0.5, 0.52, 0.4); });
+        put('drum', w - 1, d - 1, function (g) { cyl(g, 0.33, 0.33, 0.95, M(0x1f5fc9, 0.45), 0.5, 0.48, 0.5, 18); cyl(g, 0.34, 0.34, 0.05, M(0x163f8a, 0.45), 0.5, 0.96, 0.5, 18); });
+        put('jerry', Math.max(0, w - 2), d - 1, function (g) { var y = M(0xf2c200, 0.5); box(g, 0.3, 0.45, 0.2, y, 0.35, 0.23, 0.5); box(g, 0.3, 0.45, 0.2, y, 0.68, 0.23, 0.55); box(g, 0.08, 0.08, 0.08, M(0x111111), 0.4, 0.5, 0.5); });
+        put('bucket', w - 3, d - 1, function (g) { cyl(g, 0.22, 0.17, 0.36, M(0x2aa7d6, 0.5), 0.5, 0.18, 0.5, 14); cyl(g, 0.3, 0.26, 0.1, M(0xe23b2e, 0.5), 0.5, 0.05, 0.85, 14); });
+        put('plant', 0, Math.min(2, d - 1), function (g) { cyl(g, 0.16, 0.12, 0.3, M(0x8a4a2a, 0.8), 0.25, 0.15, 0.5, 10); for (var lf = 0; lf < 5; lf++) { var l = box(g, 0.08, 0.5, 0.18, M(0x2f8a3a, 0.7), 0.25, 0.5, 0.5); l.rotation.set(Math.cos(lf) * 0.5, lf * 1.2, Math.sin(lf) * 0.5); } });
+        var fan = new T.Group(); box(fan, 0.12, 0.35, 0.35, M(0xf4f3ec, 0.5), 0, 0, 0); var blades = new T.Group(); blades.position.set(0.12, 0, 0); for (var bl = 0; bl < 3; bl++) { var b = box(blades, 0.02, 0.32, 0.08, M(0x2f6fa0, 0.5), 0, 0.12, 0); b.geometry.translate(0, 0.08, 0); b.rotation.x = bl * 2.09; } blades.rotation.y = Math.PI / 2; fan.add(blades); fans.push(blades); fan.position.set(0.1, 2.15, d * 0.6); fan.traverse(function (o) { o.userData.prop = 'fan'; }); home.add(fan);
+        var bulb = new T.Mesh(new T.SphereGeometry(0.11, 12, 10), new T.MeshStandardMaterial({ color: 0xfff2c4, emissive: 0xffe08a, emissiveIntensity: 0.8 })); bulb.position.set(w / 2, 2.35, d / 2); bulb.userData.prop = 'bulb'; home.add(bulb); box(home, 0.02, 0.4, 0.02, M(0x111111), w / 2, 2.6, d / 2);
+      }
       // Outside: a paved driveway with your rides.
       var drive = new T.Mesh(new T.PlaneGeometry(6, Math.max(d, 6)).rotateX(-Math.PI / 2), M(0x8a8d84, 0.9)); drive.position.set(w + 3.5, -0.05, d / 2); drive.receiveShadow = true; home.add(drive);
       (view.vehicles || []).slice(0, 6).forEach(function (v, i) { var V = D.VEHICLES[v.id]; if (!V) return; var vm = vehicleModel(V); vm.position.set(w + 3.5, 0, 1.6 + i * 2.6); vm.rotation.y = Math.PI / 2 * (i % 2 ? 1 : -1) * 0 + Math.PI / 2; home.add(vm); });
       // You, standing in the room.
-      ME = null; if (root.LasgidiAvatar3D && view.look) { var me = root.LasgidiAvatar3D.figure(T, view.look, view.outfit || {}, null); me.scale.setScalar(0.95); var free = freeTile(), occ0 = occupied(), keep = WKH && !occ0[Math.floor(WKH.x) + ',' + Math.floor(WKH.z)] && WKH.x < (view.size || [4])[0] && WKH.z < (view.size || [4, 3])[1]; if (!keep) WKH = { x: free[0] + 0.5, z: free[1] + 0.5, yaw: 0.6 }; WKH.path = []; me.position.set(WKH.x, 0, WKH.z); me.rotation.y = WKH.yaw; home.add(me); ME = me; }
+      ME = null; if (root.LasgidiAvatar3D && view.look) { var me = root.LasgidiAvatar3D.figure(T, view.look, view.outfit || {}, null); me.scale.setScalar(0.95); var free = freeTile(), occ0 = occupied(), keep = WKH && !occ0[Math.floor(WKH.x) + ',' + Math.floor(WKH.z)] && WKH.x < HOMEW && WKH.z < HOMED; if (!keep) WKH = { x: free[0] + 0.5, z: free[1] + 0.5, yaw: 0.6 }; WKH.path = []; me.position.set(WKH.x, 0, WKH.z); me.rotation.y = WKH.yaw; home.add(me); ME = me; }
       HOMEW = w; HOMED = d; orbit.tx = w / 2 + 0.8; orbit.tz = d / 2; orbit.r = Math.max(7, Math.max(w, d) * 1.25); place();
       sun.position.set(w / 2 + 8, 12, d / 2 + 10); sun.target.position.set(w / 2, 0, d / 2); lamp.position.set(w / 2, 2.5, d / 2);
       WIN = glass;
     }
-    var HOMEW = 4, HOMED = 3, WIN = null, ME = null, WKH = null;
+    var HOMEW = 4, HOMED = 3, WIN = null, ME = null, WKH = null, PROPT = {};
     // Walking in your home: the shortest way over free tiles (a small grid, so a breadth-first search).
     function walkPath(to) {
-      if (!WKH) return; var w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1], occ = occupied(true), k = function (x, y) { return x + ',' + y; };
+      if (!WKH) return; var w = HOMEW, d = HOMED, occ = occupied(true), k = function (x, y) { return x + ',' + y; };
       var s0 = [Math.floor(WKH.x), Math.floor(WKH.z)], prev = {}, q = [s0]; prev[k(s0[0], s0[1])] = null;
       while (q.length) { var c = q.shift(); if (c[0] === to[0] && c[1] === to[1]) break; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (dv) { var nx = c[0] + dv[0], ny = c[1] + dv[1], kk = k(nx, ny); if (nx < 0 || ny < 0 || nx >= w || ny >= d || occ[kk] || kk in prev) return; prev[kk] = c; q.push([nx, ny]); }); }
       if (!(k(to[0], to[1]) in prev)) return false; var path = [], cur = to; while (cur) { path.unshift([cur[0] + 0.5, cur[1] + 0.5]); cur = prev[k(cur[0], cur[1])]; } WKH.path = path.slice(1); return true;
     }
     // The free tile next to an item, nearest to you.
     function besideItem(i) {
-      var it = view.items[i], f = it && D.FURNITURE[it.id]; if (!f || it.x == null) return null; var dm = it.r ? [f.d, f.w] : [f.w, f.d], occ = occupied(), w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1], best = null, bd = 1e9;
+      var it = view.items[i], f = it && D.FURNITURE[it.id]; if (!f || it.x == null) return null; var dm = it.r ? [f.d, f.w] : [f.w, f.d], occ = occupied(), w = HOMEW, d = HOMED, best = null, bd = 1e9;
       for (var a = -1; a <= dm[0]; a++) for (var b = -1; b <= dm[1]; b++) { var x = it.x + a, y = it.y + b; if (x < 0 || y < 0 || x >= w || y >= d || occ[x + ',' + y]) continue; var dd = Math.hypot(x + 0.5 - WKH.x, y + 0.5 - WKH.z); if (dd < bd) { bd = dd; best = [x, y]; } }
       return best ? { tile: best, face: [it.x + dm[0] / 2, it.y + dm[1] / 2] } : null;
     }
@@ -134,8 +155,8 @@
       var lg = ME.userData.legs, sw = moving ? Math.sin(t * 9) * 0.55 : 0; if (lg) lg.forEach(function (l, k) { l.rotation.x = k ? -sw : sw; });
       var ar = ME.userData.arms; if (ar) ar.forEach(function (l, k) { l.rotation.x = moving ? (k ? sw : -sw) * 0.7 : 0; });
     }
-    function occupied(walk) { var occ = {}; (view.items || []).forEach(function (it) { if (it.x == null) return; var f = D.FURNITURE[it.id]; if (!f || (walk && f.shape === 'rug')) return; /* you can walk over a rug */ var dm = it.r ? [f.d, f.w] : [f.w, f.d]; for (var a = 0; a < dm[0]; a++) for (var b = 0; b < dm[1]; b++) occ[(it.x + a) + ',' + (it.y + b)] = 1; }); return occ; }
-    function freeTile() { var occ = occupied(), w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1]; for (var y = d - 1; y >= 0; y--) for (var x = w - 1; x >= 0; x--) if (!occ[x + ',' + y]) return [x, y]; return [w - 1, d - 1]; }
+    function occupied(walk) { var occ = {}; if (walk) Object.keys(PROPT).forEach(function (k) { occ[k] = true; }); (view.items || []).forEach(function (it) { if (it.x == null) return; var f = D.FURNITURE[it.id]; if (!f || (walk && f.shape === 'rug')) return; /* you can walk over a rug */ var dm = it.r ? [f.d, f.w] : [f.w, f.d]; for (var a = 0; a < dm[0]; a++) for (var b = 0; b < dm[1]; b++) occ[(it.x + a) + ',' + (it.y + b)] = 1; }); return occ; }
+    function freeTile() { var occ = occupied(true), w = HOMEW, d = HOMED; for (var y = d - 1; y >= 0; y--) for (var x = w - 1; x >= 0; x--) if (!occ[x + ',' + y]) return [x, y]; return [w - 1, d - 1]; }
     function selectGlow() { items3.forEach(function (g, i) { if (!g) return; g.traverse(function (o) { if (o.isMesh && o.material && o.material.emissive && !o.userData.keepEmissive && screens.indexOf(o.material) < 0) { if (!o.userData.ownMat) { o.material = o.material.clone(); o.userData.ownMat = true; } o.material.emissive.set(i === view.sel ? 0xffb000 : 0x000000); o.material.emissiveIntensity = i === view.sel ? 0.35 : 0; } }); }); }
 
     /* ---------- a party at home: guests dancing, a disco ball and coloured lights, decorations ---------- */
@@ -144,7 +165,7 @@
     function stranger(n) { var h = Math.imul(n + 7, 2654435761) >>> 0, C = D.CLOTHES, ids = Object.keys(C), pk = function (slot, k) { var l = ids.filter(function (c) { return C[c].slot === slot; }); return l[(h >>> k) % l.length]; }; var o = (h >>> 3) % 3 === 0 ? { dress: pk('dress', 4) } : { top: pk('top', 5), bottom: pk('bottom', 9) }; o.shoes = pk('shoes', 13); if ((h >>> 15) % 3 === 0) o.head = pk('head', 17); return { look: { skin: h % D.LOOKS.skin.length, hair: (h >>> 6) % D.LOOKS.hair.length, shape: (h >>> 11) % 3 }, outfit: o }; }
     function buildParty() {
       wipe(partyG); PT = null; var p = view && view.party; if (!p || !root.LasgidiAvatar3D) return;
-      var w = (view.size || [4, 3])[0], d = (view.size || [4, 3])[1], occ = occupied(), tiles = [], mine = freeTile();
+      var w = HOMEW, d = HOMED, occ = occupied(), tiles = [], mine = freeTile();
       for (var y = 0; y < d; y++) for (var x = 0; x < w; x++) if (!occ[x + ',' + y] && !(x === mine[0] && y === mine[1])) tiles.push([x, y]);
       var fancy = p.planner || /owambe|grand|wedding/.test(p.kind), want = Math.min(tiles.length * 2, Math.max((p.guests || []).length, { small: 5, owambe: 9, grand: 12, wedding: 10 }[p.kind] || 6));
       PT = { guests: [], lights: [], ball: null, conf: null, w: w, d: d };
@@ -182,7 +203,7 @@
     var orbit = { az: -0.75, pol: 0.95, r: 9, tx: 2, tz: 1.5 }, ptrs = {}, drag = null, moved = false, pinch0 = 0;
     function place() { orbit.pol = Math.max(0.35, Math.min(1.25, orbit.pol)); orbit.r = Math.max(3, Math.min(40, orbit.r)); var s = Math.sin(orbit.pol); cam.position.set(orbit.tx + orbit.r * s * Math.sin(orbit.az + Math.PI), orbit.r * Math.cos(orbit.pol), orbit.tz - orbit.r * s * Math.cos(orbit.az + Math.PI)); cam.lookAt(orbit.tx, 0.4, orbit.tz); }
     var ray = new T.Raycaster(), ndc = new T.Vector2(), floorPlane = new T.Plane(new T.Vector3(0, 1, 0), 0);
-    function pick(e) { var r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam); var h = ray.intersectObjects(home.children, true).filter(function (x) { return x.object.userData.item != null || x.object.userData.tile; })[0]; var p = new T.Vector3(); var tile = ray.ray.intersectPlane(floorPlane, p) ? [Math.floor(p.x), Math.floor(p.z)] : null; return { item: h && h.object.userData.item != null ? h.object.userData.item : null, tile: tile }; }
+    function pick(e) { var r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam); var all = ray.intersectObjects(home.children, true), pr = all.filter(function (x) { return x.object.userData.prop; })[0], h = all.filter(function (x) { return x.object.userData.item != null || x.object.userData.tile; })[0]; if (pr && (!h || pr.distance < h.distance)) return { prop: pr.object.userData.prop, item: null, tile: null }; var p = new T.Vector3(); var tile = ray.ray.intersectPlane(floorPlane, p) ? [Math.floor(p.x), Math.floor(p.z)] : null; return { item: h && h.object.userData.item != null ? h.object.userData.item : null, tile: tile }; }
     cv.addEventListener('pointerdown', function (e) { ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; var p = pick(e); drag = { x: e.clientX, y: e.clientY, item: p.item != null && p.item === view.sel ? p.item : null }; moved = false; var a = Object.values(ptrs); if (a.length === 2) pinch0 = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); try { cv.setPointerCapture(e.pointerId); } catch (x) {} });
     cv.addEventListener('pointermove', function (e) {
       if (!ptrs[e.pointerId]) return; ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; var a = Object.values(ptrs);
@@ -195,6 +216,7 @@
     cv.addEventListener('pointerup', function (e) { var d0 = drag, mv = moved; up(e); drag = null; if (!view) return;
       if (d0 && d0.item != null && d0.to) { var it = view.items[d0.item]; opts.onPlace && opts.onPlace(d0.item, d0.to[0], d0.to[1], it.r); return; }
       if (mv) return; var p = pick(e);
+      if (p.prop) { opts.onProp && opts.onProp(p.prop); return; }
       if (p.item != null) { var bi = WKH && besideItem(p.item); if (bi && walkPath(bi.tile)) WKH.face = bi.face; opts.onSelect && opts.onSelect(p.item); return; }
       if (p.tile && view.sel != null && p.tile[0] >= 0 && p.tile[1] >= 0) { opts.onPlace && opts.onPlace(view.sel, p.tile[0], p.tile[1], view.items[view.sel].r); return; }
       if (p.tile && WKH && walkPath(p.tile)) return; // nothing selected: walk there
