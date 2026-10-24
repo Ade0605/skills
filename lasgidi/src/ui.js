@@ -782,9 +782,10 @@
       if (!u) return;
       online.user = u;
       u.id().then(function (id) { online.me = id; scheduleRender(); subscribeMyReview(); if (typeof u.setName === 'function' && S && S.name) u.setName(CH.clean ? CH.clean(S.name) : S.name); });
-      // The owner's dashboard: only the claude.ai owner of this game. The website has no owner, so it never shows there.
+      // The owner's dashboard: the claude.ai owner of this game, or on the website an admin.
       if (typeof u.isOwner === 'function' && window.claude.online !== 'supabase') u.isOwner().then(function (o) { online.isOwner = o === true; scheduleRender(); if (o === true) subscribeReports(); }, function () {});
-      if (typeof u.canEdit === 'function') u.canEdit().then(function (c) { online.canEdit = !!c; scheduleRender(); if (c) { subscribeReviews(); subscribeReports(); } }, function () {});
+      // On the website, the owner is whoever is listed in public.admins (see docs/HOSTING.md).
+      if (typeof u.canEdit === 'function') u.canEdit().then(function (c) { online.canEdit = !!c; if (window.claude.online === 'supabase') online.isOwner = !!c; scheduleRender(); if (c) { subscribeReviews(); subscribeReports(); } }, function () {});
       u.can('data.write').then(function (c) { online.canWrite = c; scheduleRender(); });
     });
     window.claude.use('db').then(function (db) {
@@ -4920,7 +4921,7 @@
     res.forEach(function (r) { var c = homeCity(r.home) || 'other'; byCity[c] = (byCity[c] || 0) + 1; });
     (online.peerList || []).forEach(function (p) { var c = cityOfD(p.presence && p.presence.d) || 'other'; live[c] = (live[c] || 0) + 1; });
     var cn = function (c) { return own(D.CITIES, c) ? D.CITIES[c].name : 'Elsewhere'; };
-    var html = '<div class="section od"><p class="note">🛡️ Only you see this page: it shows to the owner of the game on claude.ai, and it never appears on the public website. It is view only.</p>';
+    var html = '<div class="section od"><p class="note">🛡️ Only you see this page: it shows to the owner of the game on claude.ai, and on the website only to ids listed as admins in Supabase. It is view only.</p>';
     // Sign-in
     html += '<details class="od-box" open><summary>🔑 How players sign in</summary><ul class="od-list">' +
       '<li><b>On claude.ai</b> (this link): a player opens the game while signed in to claude.ai. Their claude.ai account is their identity, so there is no password or email form in the game. Share it from the artifact\'s Share menu; anyone you share it with can play, post to the Hall of Fame, vote and chat.</li>' +
