@@ -148,6 +148,8 @@
 
   var C = root.LASGIDI_ONLINE || {};
   if (root.claude || !C.url || !C.anon) return;
+  // Accept the address as Supabase shows it in places (…/rest/v1/) as well as the bare project URL.
+  C = { url: String(C.url).trim().replace(/\/(rest|auth)\/v1\/?$/, '').replace(/\/+$/, ''), anon: String(C.anon).trim() };
   var ready = null;
   function loadLib() {
     if (root.supabase && root.supabase.createClient) return Promise.resolve();
