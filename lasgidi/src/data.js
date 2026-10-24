@@ -2344,9 +2344,14 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       act('hp_boat', 'Hire a pedalo on the lake', 30, gbp(15), 0, { fun: 14, energy: -6 }, null, { from: 10, to: 18 }),
       act('hp_speak', 'Listen at Speakers\' Corner', 45, 0, 0, { fun: 10, social: 6 }, null, { days: [6], from: 10, to: 17 })
     ]],
-    ['ldn_canary', '🏢', 'Canary Wharf', 'services', 'tower', 'ldn_tower', 27.4, 13.6, null, 'Glass towers on the old docks: banks, a Naija professionals\' breakfast club and the river bus.', [
+    ['ldn_canary', '🏙️', 'Canary Wharf', 'services', 'tower', 'ldn_tower', 27.4, 13.6, 'canary', 'Glass towers on the old docks: One Canada Square, the banks, the roof garden, the DLR, a Naija professionals\' breakfast club and the river bus.', [
       act('cw_walk', 'Walk the docks between the towers', 45, 0, 0, { fun: 6 }, null, { from: 7, to: 21 }),
       act('cw_coffee', 'A flat white with the bankers', 15, gbp(4), 0, { fun: 4, energy: 6 }, null, { from: 7, to: 18 }),
+      act('cw_garden', 'The roof garden at Crossrail Place', 30, 0, 0, { fun: 8, stress: -8 }, null, { from: 9, to: 21 }),
+      act('cw_lunch', 'Lunch at the food court under the towers', 30, gbp(14), 0, { hunger: 36 }, null, { from: 11, to: 16 }),
+      act('cw_rink', 'Ice skating in Canada Square', 60, gbp(18), 0, { fun: 22, energy: -6 }, null, { months: [10, 11, 0, 1], from: 10, to: 21 }),
+      act('cw_boat', 'The river bus to Westminster at sunset', 45, gbp(9), 0, { fun: 14, stress: -6 }, null, { from: 17, to: 21 }),
+      act('cw_network', 'Network at an after-work finance drinks', 120, gbp(30), 0, { social: 20, stress: 4 }, { charisma: 1 }, { days: [3], from: 18, to: 22 }),
       Object.assign(act('cw_talk', 'Speak at a diaspora business breakfast (a small fee)', 120, 0, 3000, { social: 12, stress: 6 }, { charisma: 1 }, { days: [1, 3], from: 7, to: 11 }), { minRules: 26, permitted: true })
     ]],
     ['ldn_church', '⛪', 'Grace Assembly, Peckham', 'services', 'dome', 'ldn_peckham', 22.8, 22.8, null, 'A Naija church in an old cinema: the choir, the pastor and jollof after.', [

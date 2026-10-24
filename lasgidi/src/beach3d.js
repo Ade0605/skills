@@ -1029,6 +1029,30 @@
       var el = new T.Mesh(new T.PlaneGeometry(3.2, 3.2), new T.MeshBasicMaterial({ map: canvasTex(256, 256, function (c, w, h) { c.strokeStyle = '#6950a1'; c.lineWidth = 34; c.beginPath(); c.arc(w / 2, h / 2, 90, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#1f3a93'; c.fillRect(10, h / 2 - 26, w - 20, 52); c.fillStyle = '#fff'; c.font = '900 24px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ELIZABETH LINE', w / 2, h / 2 + 1); }), transparent: true, side: T.DoubleSide })); el.position.set(30, 5, -6); g.add(el);
       plzG.add(g);
     }
+    // Canary Wharf: One Canada Square (the pyramid top with its blinking light), glass bank towers, the dock, the DLR
+    // on its viaduct and the wooden roof of Crossrail Place.
+    function canaryWharf(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z);
+      var steel = mat('cwSteel', { color: 0xb8c2cc, metalness: 0.75, roughness: 0.25 }), glassB = mat('cwGlass', { color: 0x5f86a8, metalness: 0.6, roughness: 0.15, emissive: 0x1d3550, emissiveIntensity: 0.25 });
+      var stripes = canvasTex(256, 512, function (c, w, h) { c.fillStyle = '#9fb0bf'; c.fillRect(0, 0, w, h); c.fillStyle = '#3e5568'; for (var y = 0; y < h; y += 12) c.fillRect(0, y, w, 6); for (var x2 = 0; x2 < w; x2 += 32) c.fillRect(x2, 0, 3, h); });
+      var ocs = mesh(new T.BoxGeometry(18, 120, 18), new T.MeshStandardMaterial({ map: stripes, metalness: 0.6, roughness: 0.3 }), 0, 60, 30); g.add(ocs);
+      var pyr = mesh(new T.ConeGeometry(12.7, 12, 4), steel, 0, 126, 30); pyr.rotation.y = Math.PI / 4; g.add(pyr);
+      var blink = mesh(new T.SphereGeometry(0.8, 8, 6), new T.MeshBasicMaterial({ color: 0xffffff }), 0, 132.5, 30); g.add(blink);
+      [[-38, 20, 90, 'NORTHBANK'], [38, 22, 96, 'CITYBANK'], [-62, 40, 70, 'ATLAS'], [62, 44, 76, 'HORIZON']].forEach(function (t) { g.add(mesh(new T.BoxGeometry(20, t[2], 20), glassB, t[0], t[2] / 2, t[1])); var sg = new T.Mesh(new T.PlaneGeometry(14, 3), new T.MeshBasicMaterial({ map: ldnTex(t[3], '#c8102e', '#ffffff', 512, 96, '900 60px system-ui'), side: T.DoubleSide })); sg.position.set(t[0], t[2] - 4, t[1] - 10.2); sg.rotation.y = Math.PI; g.add(sg); });
+      // the old dock in front
+      var dock = new T.Mesh(new T.PlaneGeometry(140, 22).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x3f6f7f, roughness: 0.08, clearcoat: 1 })); dock.position.set(0, 0.12, -6); g.add(dock);
+      g.add(mesh(new T.BoxGeometry(140, 1, 1), mat('cwRail', { color: 0x2b2f36, metalness: 0.6 }), 0, 0.9, -17.5));
+      // the DLR on its concrete viaduct, a red-and-blue train crossing
+      for (var pc = 0; pc < 9; pc++) g.add(mesh(new T.BoxGeometry(1.6, 9, 1.6), mat('cwConc', { color: 0xc9ccd1 }), -64 + pc * 16, 4.5, 12));
+      g.add(mesh(new T.BoxGeometry(140, 1.2, 4), mat('cwConc', {}), 0, 9.6, 12));
+      var dlr = new T.Group(); dlr.position.set(-20, 11.6, 12); dlr.add(mesh(new T.BoxGeometry(26, 3, 3.2), mat('cwDlr', { color: 0xf2f2f2 }), 0, 0, 0)); dlr.add(mesh(new T.BoxGeometry(26.1, 0.6, 3.25), mat('cwDlrR', { color: 0xd8261c }), 0, -0.8, 0)); dlr.add(mesh(new T.BoxGeometry(26.1, 0.9, 3.25), mat('cwDlrW', { color: 0x1d2a33, metalness: 0.4 }), 0, 0.5, 0)); g.add(dlr);
+      // Crossrail Place: the lattice wooden roof garden over the dock
+      for (var rb = 0; rb < 10; rb++) { var rib = new T.Mesh(new T.TorusGeometry(9, 0.35, 6, 20, Math.PI), mat('cwTimber', { color: 0xc49a6c, roughness: 0.8 })); rib.position.set(-54 + rb * 3, 2, -6); rib.rotation.y = Math.PI / 2; g.add(rib); }
+      for (var tr = 0; tr < 5; tr++) { var tt = mesh(new T.SphereGeometry(1.6, 8, 6), mat('cwTree', { color: 0x4f7d3a }), -54 + tr * 7, 4, -6); g.add(tt); }
+      var el = new T.Mesh(new T.PlaneGeometry(4, 4), new T.MeshBasicMaterial({ map: canvasTex(256, 256, function (c, w, h) { c.strokeStyle = '#6950a1'; c.lineWidth = 34; c.beginPath(); c.arc(w / 2, h / 2, 90, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#1f3a93'; c.fillRect(10, h / 2 - 26, w - 20, 52); c.fillStyle = '#fff'; c.font = '900 22px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('CANARY WHARF', w / 2, h / 2 + 1); }), transparent: true, side: T.DoubleSide })); el.position.set(-40, 6, -16); g.add(el);
+      var sign = new T.Mesh(new T.PlaneGeometry(26, 3.4), new T.MeshBasicMaterial({ map: ldnTex('CANARY WHARF', '#17181a', '#ffffff', 1024, 128, '900 80px system-ui'), side: T.DoubleSide })); sign.position.set(0, 18, 20.8); sign.rotation.y = Math.PI; g.add(sign);
+      plzG.add(g);
+    }
     function towerBridge(x, z) {
       var g = new T.Group(); g.position.set(x, 0, z); var st = mat('tbStone', { color: 0xcfc7b0, roughness: 0.7 }), blue = mat('tbBlue', { color: 0x2f6fa0, roughness: 0.5 });
       var river = new T.Mesh(new T.PlaneGeometry(400, 50).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x5f7a86, roughness: 0.1, clearcoat: 1 })); river.position.set(0, 0.2, 0); g.add(river);
@@ -1113,6 +1137,7 @@
       else if (id === 'dxb_safari') desertCamp();
       else if (id === 'ldn_bigben') bigBen(20, 95);
       else if (id === 'ldn_towerbridge') towerBridge(0, 70);
+      else if (id === 'ldn_canary') canaryWharf(0, 60);
       else if (id === 'ldn_harrods') harrods(0, 70);
       else if (id === 'ldn_selfridges') selfridges(0, 70);
       else if (id === 'ldn_oxcircus') oxfordCircus(0, 40);
