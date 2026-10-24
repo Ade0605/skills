@@ -3155,7 +3155,7 @@ test('rules 31: the National Theatre runs one show a week, on its nights; seen s
   // Stage crew: once a day, pays a gig's wage.
   until(() => [2, 3, 4, 5, 6].indexOf(L.dow(s)) >= 0 && L.hour(s) === 12);
   const c0 = s.cash + s.bank; const c = L.doAction(s, 'th_crew'); assert.ok(c.ok, c.msg);
-  assert.ok(s.cash + s.bank - c0 <= 3000 * 1.2, 'small pay');
+  assert.ok(s.cash + s.bank - c0 <= 3000 * 1.2 * 1.7, 'small pay'); // rules 46: payouts are 1.7x bigger
   assert.match(L.availableActions(s).find(a => a.id === 'th_crew').disabled || '', /Once a day/);
   for (const k of Object.keys(D.TH_KIND)) assert.equal(D.TH_KIND[k].mins % 15, 0);
   // A real life that rides to Surulere and sees the show replays to the same seal.
@@ -3193,7 +3193,7 @@ test('rules 32: Eko Detty Fest counts down from late November, runs 21 nights in
   // Volunteer at the gates: small pay, once a day.
   for (let i = 0; i < 20000 && L.hour(s) !== 12; i++) { step(); s.loc = 'island'; }
   s.needs.energy = 100; s.needs.hunger = 80;
-  const c0 = s.cash + s.bank; const vr = L.doAction(s, 'df_volunteer'); assert.ok(vr.ok, vr.msg); assert.ok(s.cash + s.bank - c0 <= 3000 * 1.2 * 1.2);
+  const c0 = s.cash + s.bank; const vr = L.doAction(s, 'df_volunteer'); assert.ok(vr.ok, vr.msg); assert.ok(s.cash + s.bank - c0 <= 3000 * 1.2 * 1.2 * 1.7); // rules 46
   assert.match(L.availableActions(s).find(a => a.id === 'df_volunteer').disabled || '', /Once a day/);
   // Night 21 is the last day of the year; then it is over.
   for (let i = 0; i < 40000 && L.dettyFest(s) && L.dettyFest(s).night !== 21; i++) { step(); s.loc = 'island'; }
@@ -3607,4 +3607,35 @@ test('rules 45: lives outside Lagos stay local: no Lagos vote or floods, city po
   floods = s.log.filter(l => /flooded today|Fuel scarcity|grid collapse/.test(l.text)).length;
   assert.equal(votes, 0); assert.equal(floods, 0);
   const ev = s.log.find(l => /Quit notice/.test(l.text)); if (ev) { assert.ok(!/Mushin/.test(ev.text), ev.text); assert.equal(L.districtCity(D.HOMES[s.home].district), 'ldn'); }
+});
+
+test('rules 46: income pays 2.55x (70% on top of 1.5x); old lives keep 1.5x', () => {
+  const pay = (rules) => { const s = L.newGame({ seed: 4601, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); const c0 = s.cash + s.bank; assert.ok(L.claimStreak(s, '2026-10-10').ok); return s.cash + s.bank - c0; };
+  const a = pay(45), b = pay(46);
+  assert.ok(Math.abs(b / a - 1.7) < 0.02, a + ' -> ' + b);
+});
+
+test('rules 46: a streak day gives XP and reports your Lagos level; rules 45 does not', () => {
+  const s = L.newGame({ seed: 4602, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 46);
+  const x0 = L.lagosXp(s), r = L.claimStreak(s, '2026-10-10');
+  assert.ok(r.ok && r.streak, r.msg); assert.equal(r.streak.n, 1); assert.ok(r.streak.xp > 0); assert.equal(L.lagosXp(s), x0 + r.streak.xp); assert.equal(r.streak.level, L.lagosLevel(s));
+  const o = L.newGame({ seed: 4602, origin: 'mid', goal: 'freestyle', rules: 45 }); while (o.pending.length) L.resolveChoice(o, 0);
+  const ro = L.claimStreak(o, '2026-10-10'); assert.ok(ro.ok); assert.equal(ro.streak, undefined);
+});
+
+test('rules 46: the owambe invitation has three choices; spraying BIG makes you a legend; replays to the same seal', () => {
+  const s = L.newGame({ seed: 4603, origin: 'nepo', goal: 'freestyle' });
+  let seen = null;
+  for (let i = 0; i < 40000 && !seen && !s.over; i++) {
+    if (s.pending.length) { const ev = s.pending[0]; if (ev.id === 'owambe') { seen = ev; L.resolveChoice(s, 1); break; } L.resolveChoice(s, ev.options.length - 1); continue; }
+    L.wait(s, 60);
+  }
+  assert.ok(seen, 'an owambe invite came'); assert.equal(seen.options.length, 3); assert.equal(seen.icon, '👯'); assert.ok(seen.big > seen.amt);
+  assert.ok(s.sprayBig && s.asoebi);
+  const r = L.replayLife(s.replay); assert.equal(r.ledgerHash, s.ledgerHash);
+});
+
+test('rules 46: Jibowu motor park is on the map in Yaba and never hides a gem', () => {
+  const p = D.PLACES.find(x => x.id === 'jibowu_park'); assert.ok(p); assert.equal(p.district, 'yaba'); assert.ok(p.nogem); assert.equal(D.insideKind(p), 'motorpark');
 });

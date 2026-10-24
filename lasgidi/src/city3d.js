@@ -239,8 +239,22 @@
       [-1, 1].forEach(function (sx) { var tw = new T.Group(); tw.position.set(sx * 15, 0, 3); tw.add(mesh(new T.BoxGeometry(4, 0.8, 4), dark, 0, 0.3, 0)); tw.add(mesh(new T.BoxGeometry(0.4, 9, 0.4), dark, 0, 4.8, 0)); tw.add(mesh(new T.BoxGeometry(1.8, 2.4, 1.4), mat('shSpk', { color: 0x0c0c0e }), 0, 9.5, 0)); tw.add(mesh(new T.BoxGeometry(1.6, 1.8, 1.2), mat('shSpk', { color: 0x0c0c0e }), 0, 2, 0)); g.add(tw); });
       var glow = new T.Mesh(new T.CircleGeometry(14, 40).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 0xff2a6a, transparent: true, opacity: 0.25, blending: T.AdditiveBlending, depthWrite: false })); glow.position.y = 0.15; g.add(glow);
       var cdM = new T.SpriteMaterial({ map: cdTex(showLines(v)), depthTest: false, transparent: true }), cd = new T.Sprite(cdM); cd.scale.set(26, 10, 1); cd.position.set(0, 26, 0); cd.renderOrder = 10; g.add(cd);
+      // The show effect: a red-hot core with a wide light column, a gold circle on the deck, searchlights from the
+      // towers raking the water, and white foam wakes streaming off the stage.
+      var core = new T.Mesh(new T.BoxGeometry(2.4, 1, 2.4), new T.MeshBasicMaterial({ color: 0xff4a2a })); core.position.set(0, 2.2, 0); g.add(core);
+      var colG = new T.CylinderGeometry(5.5, 1.6, 44, 24, 1, true); colG.translate(0, 22, 0);
+      var colM = new T.MeshBasicMaterial({ color: 0xffb070, transparent: true, opacity: 0.3, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }), col = new T.Mesh(colG, colM); col.position.y = 2; g.add(col);
+      var gold = new T.Mesh(new T.TorusGeometry(6, 0.1, 4, 80), new T.MeshBasicMaterial({ color: 0xffd23f })); gold.rotation.x = -Math.PI / 2; gold.position.y = 1.85; g.add(gold);
+      var sq = new T.LineSegments(new T.EdgesGeometry(new T.PlaneGeometry(9, 9).rotateX(-Math.PI / 2)), new T.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })); sq.position.y = 1.86; g.add(sq);
+      var searchM = new T.MeshBasicMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0.16, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }), search = [];
+      [-1, 1].forEach(function (sx) { var sg = new T.ConeGeometry(4, 60, 14, 1, true); sg.translate(0, -30, 0); var sl = new T.Mesh(sg, searchM); sl.position.set(sx * 15, 10, 3); sl.rotation.z = sx * 1.25; sl.userData.sx = sx; g.add(sl); search.push(sl); });
+      var foamT, fc = document.createElement('canvas'); fc.width = 64; fc.height = 256; var fx = fc.getContext('2d'); fx.clearRect(0, 0, 64, 256);
+      for (var fi = 0; fi < 90; fi++) { fx.fillStyle = 'rgba(255,255,255,' + (0.5 + (fi % 5) * 0.1) + ')'; fx.fillRect((fi * 37) % 60, (fi * 53) % 256, 2 + fi % 3, 4 + fi % 7); }
+      foamT = new T.CanvasTexture(fc); foamT.wrapS = foamT.wrapT = T.RepeatWrapping; foamT.repeat.set(1, 3);
+      var foamM = new T.MeshBasicMaterial({ map: foamT, transparent: true, depthWrite: false, opacity: 0.85 }), wakes = [];
+      [[-6, 0.15], [6, -0.15], [-15, 0.35], [15, -0.35]].forEach(function (w) { var wk = new T.Mesh(new T.PlaneGeometry(4, 46).rotateX(-Math.PI / 2), foamM); wk.position.set(w[0] + w[1] * 23, 0.12, 28); wk.rotation.y = w[1]; g.add(wk); wakes.push(wk); });
       g.traverse(function (o) { o.userData.show = 1; }); LIVE.add(g);
-      LV.show = { g: g, ring: ringM, dots: dots, face: faceM, act: v.act, live: v.live, pillars: pillars, pil: pilM, beams: beams, beamM: beamM, glow: glow, cd: cdM, cdKey: showLines(v).join('|') };
+      LV.show = { g: g, ring: ringM, ringMesh: ring, dotsMesh: dots, faceMesh: face, backMesh: back, core: core, colM: colM, col: col, search: search, searchM: searchM, foam: foamT, foamM: foamM, dots: dots, face: faceM, act: v.act, live: v.live, pillars: pillars, pil: pilM, beams: beams, beamM: beamM, glow: glow, cd: cdM, cdKey: showLines(v).join('|') };
     }
     function flyShow() { var Sh = D.LAGOON_SHOW; if (Sh) fly = { tx: Sh.x * K, tz: Sh.y * K + 4, r: 62 }; }
     function showFrame(t) {
@@ -252,6 +266,11 @@
       X.beams.forEach(function (b, i) { var sp = v.live ? 0.9 : 0.25; b.rotation.z = Math.sin(t * sp + i * 0.9) * 0.6; b.rotation.x = 0.3 + Math.cos(t * sp * 0.7 + i) * 0.25; b.visible = night || v.live; });
       X.ring.color.setHSL(0, 1, v.live ? 0.45 + 0.1 * Math.sin(t * 6) : 0.42); X.dots.rotation.z = t * (v.live ? 0.8 : 0.2);
       X.glow.material.opacity = (v.live ? 0.35 : 0.18) * (0.8 + 0.2 * Math.sin(t * 3));
+      // The hoop sways, the core throbs, the searchlights sweep, the foam streams away from the stage.
+      var sway = v.live ? 0.22 : 0.08; [X.ringMesh, X.dotsMesh, X.faceMesh, X.backMesh].forEach(function (m, i) { m.rotation.x = Math.sin(t * 0.7) * sway; m.rotation.z = Math.sin(t * 0.5 + 1) * sway * 0.5; if (i === 3) m.rotation.y = Math.PI; });
+      X.core.material.color.setHSL(0.03, 1, 0.45 + 0.15 * Math.sin(t * 5)); X.colM.opacity = (0.16 + 0.12 * Math.sin(t * 2.5)) * k; X.col.scale.x = X.col.scale.z = 1 + 0.08 * Math.sin(t * 3);
+      X.searchM.opacity = (night ? 0.2 : 0.09) * (v.live ? 1 : 0.6); X.search.forEach(function (sl, i) { sl.rotation.y = Math.sin(t * (v.live ? 0.6 : 0.2) + i * 2) * 0.9; });
+      X.foam.offset.y = -(t * (v.live ? 0.5 : 0.2)) % 1; X.foamM.opacity = night ? 0.7 : 0.9;
     }
     function liveFrame(t, now) {
       if (liveKey() !== LV.key) buildLive();

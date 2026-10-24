@@ -1337,3 +1337,28 @@ button.need:focus-visible { outline: 2px solid #2f6fd0; }
 .sp-tag { font-size: 12px; padding: 3px 8px; border-radius: 8px; background: rgba(242,182,0,.18); color: var(--ink); margin-bottom: 4px; display: inline-block; }
 .sp-form summary { font-weight: 800; cursor: pointer; }
 .sp-form input, .sp-form select { width: 100%; box-sizing: border-box; margin: 2px 0 8px; }
+
+/* ---------- rules 46: pop cards (invitations, streak celebration) ---------- */
+.sheet.pop { max-width: 360px; border-top: 0; border-radius: 22px; padding: 22px 18px 18px; text-align: center; justify-items: center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); animation: pop-in .28s cubic-bezier(.2,1.4,.4,1); }
+.sheet.pop h2 { font-family: var(--font-ui, inherit); font-weight: 800; font-size: 21px; }
+.sheet.pop p { color: var(--muted); font-size: 14px; line-height: 1.45; }
+.sheet.pop .opts { width: 100%; }
+.sheet.pop .opts .btn { text-align: center; border-radius: 18px; padding: 12px 14px; font-weight: 700; }
+.sheet.pop .opts .btn.go { box-shadow: 0 4px 0 rgb(0 0 0 / .2); }
+.sheet.pop .opts .btn.ghost { background: color-mix(in srgb, var(--ink) 6%, transparent); border-color: transparent; font-weight: 600; }
+.pop-ic { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.pop-ic.big { width: auto; height: auto; background: none; font-size: 64px; animation: pop-wiggle 1s ease-in-out 2; }
+.cel-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.cel-chip { padding: 4px 12px; border-radius: 99px; font-weight: 700; font-size: 13px; }
+.cel-chip.money { background: #dff3e6; color: #11653a; }
+.cel-chip.xp { background: #fdf0c8; color: #8a5a00; }
+.cel-level { width: 100%; padding: 9px; border-radius: 18px; background: #c4855a; color: #fff; font-weight: 700; }
+@keyframes pop-in { from { transform: scale(.82); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pop-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-10deg) scale(1.08); } 75% { transform: rotate(8deg) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .sheet.pop, .pop-ic.big { animation: none; } }
+.ph-night { margin-top: 8px; border: 0; border-radius: 99px; padding: 6px 14px; font: 600 13px var(--font-body); color: #fff; background: rgb(255 255 255 / .22); backdrop-filter: blur(6px); cursor: pointer; text-shadow: none; }
+.ph-night:hover { background: rgb(255 255 255 / .32); }
+.course-row { cursor: pointer; }
+.course-row:hover, .course-row:focus-visible { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.course-row.open { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.course-card { margin-top: 8px; display: grid; gap: 8px; cursor: default; }
