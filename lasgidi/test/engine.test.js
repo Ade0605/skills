@@ -13,7 +13,7 @@ function sane(s) {
 }
 
 test('new game rolls an origin deterministically from the seed', () => {
-  const a = L.newGame({ seed: 7 }), b = L.newGame({ seed: 7 });
+  const a = L.newGame({ seed: 7, rules: 48 }), b = L.newGame({ seed: 7, rules: 48 });
   assert.equal(a.origin, b.origin);
   assert.equal(a.bank, D.ORIGINS[a.origin].cash);
   assert.equal(a.loc, D.HOMES[a.home].district);
@@ -3503,7 +3503,7 @@ test('rules 41: income pays 1.5x (not sales or loans); businesses and a tech sta
 test('rules 42: start a life in Accra, London, Dubai or Cape Town; residents need no visa; local clothes and cars; replays', () => {
   const mk = (origin, home, rules) => { const s = L.newGame({ seed: 4200, origin, goal: 'freestyle', startHome: home, rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
   for (const [c, A] of Object.entries(D.START_ABROAD)) for (const [o, h] of Object.entries(A.homes)) {
-    const s = mk(o, h); assert.equal(s.home, h); assert.equal(L.cityOf(s), c, c + ' ' + o); sane(s);
+    const s = mk(o, h, 48); assert.equal(s.home, h); assert.equal(L.cityOf(s), c, c + ' ' + o); sane(s);
     assert.equal(s.opening.bank, Math.round(D.ORIGINS[o].cash * A.cash / 1000) * 1000);
     if (D.CITIES[c].visit) { assert.equal(s.residence, c); assert.equal(L.visaQuote(s, c).state.status, 'valid'); } else assert.equal(s.residence, undefined);
   }
@@ -3656,7 +3656,7 @@ test('rules 47: adopt a baby from the phone: fee, home needed, three children at
 });
 
 test('rules 47: social moves with players and gifts between players; a gifted life stays off the boards', () => {
-  const s = L.newGame({ seed: 4702, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const s = L.newGame({ rules: 48, seed: 4702, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
   const t0 = s.t; for (const k of ['hello', 'gist', 'joke', 'shade']) assert.ok(L.playerSocial(s, k).ok);
   assert.equal(s.t - t0, 75); assert.equal(L.playerSocial(s, 'punch').ok, false);
   const c0 = s.cash + s.bank; assert.ok(L.giftOut(s, 5000).ok); assert.equal(c0 - (s.cash + s.bank), 5000);
@@ -3669,7 +3669,7 @@ test('rules 47: social moves with players and gifts between players; a gifted li
 });
 
 test('rules 48: change your lifetime dream once a week; replays; not in Weekly Lagos or older lives', () => {
-  const s = L.newGame({ seed: 4801, origin: 'lapo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const s = L.newGame({ rules: 48, seed: 4801, origin: 'lapo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
   assert.equal(s.rules, 48);
   assert.ok(L.changeGoal(s, 'landlord').ok); assert.equal(s.goal, 'landlord');
   assert.match(L.changeGoal(s, 'japa').msg, /again in 7 days/); assert.equal(L.changeGoal(s, 'nope').ok, false);
@@ -3679,7 +3679,7 @@ test('rules 48: change your lifetime dream once a week; replays; not in Weekly L
 });
 
 test('rules 48: Gidi Bet: fixtures every 4 hours, capped stakes, settles on the next slot, house edge, replays', () => {
-  const s = L.newGame({ seed: 4802, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const s = L.newGame({ rules: 48, seed: 4802, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
   const I = L.betInfo(s); assert.equal(I.fixtures.length, 8); for (const m of I.fixtures) assert.ok(m.p[0] * m.odds[0] < 1 && m.p[2] * m.odds[2] < 1, 'house edge');
   assert.equal(L.placeBet(s, I.fixtures[0].id, 0, 50).ok, false); assert.equal(L.placeBet(s, I.fixtures[0].id, 0, 25000).ok, false);
   assert.ok(L.placeBet(s, I.fixtures[0].id, 1, 20000).ok); assert.ok(L.placeBet(s, I.fixtures[1].id, 0, 20000).ok);
@@ -3701,4 +3701,30 @@ test('rules 48: short courses at UNILAG: five lessons one a day, a CV certificat
   assert.ok(L.shortState(s, 'developer').done); assert.ok(L.cv(s).edu.some(e => /Software Developer short course/.test(e.title)));
   const o = L.newGame({ seed: 4803, origin: 'mid', goal: 'freestyle', rules: 47 }); while (o.pending.length) L.resolveChoice(o, 0);
   assert.equal(L.availableActions(o).filter(a => a.special === 'shortlesson').length, 0);
+});
+
+test('rules 49: no caps: bets up to 500k with no daily limit, gifts up to 1m with no daily limit', () => {
+  const s = L.newGame({ seed: 4901, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 49); s.bank = 5e6;
+  const f = L.betInfo(s).fixtures; assert.ok(L.placeBet(s, f[0].id, 0, 300000).ok); assert.ok(L.placeBet(s, f[1].id, 0, 300000).ok);
+  assert.equal(L.placeBet(s, f[2].id, 0, 600000).ok, false);
+  assert.ok(L.giftOut(s, 900000).ok); assert.ok(L.giftIn(s, 800000, 'ref900001').ok); assert.ok(L.giftIn(s, 800000, 'ref900002').ok);
+});
+
+test('rules 49: the birth lottery pays in the money of the city you start in, and those lives replay', () => {
+  const mk = (origin, home, rules) => L.newGame({ seed: 4901, origin, goal: 'freestyle', startHome: home, rules });
+  assert.equal(mk('lapo').bank, 500000);
+  assert.equal(mk('lapo', 'ldn_pk_room').bank, 1000 * D.LOCAL.ldn.rate);
+  assert.equal(mk('lapo', 'acc_jt_room').bank, 1000 * D.LOCAL.accra.rate);
+  assert.equal(mk('lapo', 'ctn_ob_room').bank, 1000 * D.LOCAL.ctn.rate);
+  assert.equal(mk('lapo', 'dxb_dr_room').bank, 1000 * D.LOCAL.dxb.rate);
+  assert.equal(mk('mid').bank, 1250000);
+  assert.equal(mk('nepo').bank, 5000000);
+  assert.equal(mk('lapo', null, 48).bank, 8000, 'older lives keep the old amount');
+  assert.match(L.originText('lapo', 'ldn'), /£1,000/);
+  assert.match(L.originText('lapo', 'accra'), /₵1,000/);
+  assert.match(L.originText('lapo', 'ctn'), /R1,000/);
+  const s = mk('lapo', 'ldn_pk_room'); while (s.pending.length) L.resolveChoice(s, 0);
+  sane(s);
+  assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(s)))).ok, 'a rules-49 London life replays');
 });

@@ -15,14 +15,14 @@ create table if not exists public.docs (
   constraint docs_size check (length(data::text) <= 65536),
   constraint docs_known check (coll in ('fame','weekly','ads','sponsored','residents','plots','adreview','adimg','adpaid','homes','gifts',
     'sea','seaimg','seareview','votes','photo','photoreview','photooff','govrun','govvote','govparty','govprimary','govcab','govconfirm',
-    'reports','cvs','clubradio','ajocircle','sponsorreq','sponsorjob'))
+    'reports','cvs','clubradio','ajocircle','sponsorreq','sponsorjob','voice','huntfin'))
 );
 create index if not exists docs_coll_time on public.docs (coll, updated_at desc);
 -- Re-running this file refreshes the list of collections (new ones are added over time, like ajocircle).
 alter table public.docs drop constraint if exists docs_known;
 alter table public.docs add constraint docs_known check (coll in ('fame','weekly','ads','sponsored','residents','plots','adreview','adimg','adpaid','homes','gifts',
   'sea','seaimg','seareview','votes','photo','photoreview','photooff','govrun','govvote','govparty','govprimary','govcab','govconfirm',
-  'reports','cvs','clubradio','ajocircle','sponsorreq','sponsorjob'));
+  'reports','cvs','clubradio','ajocircle','sponsorreq','sponsorjob','voice','huntfin'));
 
 create table if not exists public.profiles (
   id uuid primary key default auth.uid(),

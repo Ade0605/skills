@@ -47,6 +47,53 @@
       }
       world.add(g); movers.push(g);
     }
+    // Busy roads: traffic both ways (danfos, cars, black SUVs, BRT buses, big trucks, okadas, kekes), people walking,
+    // bus stops with people waiting, market umbrellas, tall towers and low shops.
+    var traffic = [], walkers = [], decor = [];
+    if (!air && !water) {
+      var CITY = !HW;
+      function vehicle(kind) {
+        var g = new T.Group(), c = [0xf4f3ec, 0x8a8d93, 0xc0392b, 0x2f6fa0, 0x17181a, 0x6b6f75][Math.floor(Math.random() * 6)];
+        var wheels = function (zs, xw, r) { zs.forEach(function (zz) { [-xw, xw].forEach(function (xx) { var wh = new T.Mesh(new T.CylinderGeometry(r, r, 0.25, 10), M(0x111111)); wh.rotation.z = Math.PI / 2; wh.position.set(xx, r, zz); g.add(wh); }); }); };
+        if (kind === 'danfo') { box3(g, 2, 1.9, 4.6, M(0xf2c200, 0.5), 0, 1.4, 0); box3(g, 2.05, 0.22, 4.65, M(0x111111), 0, 1, 0); box3(g, 2.02, 0.6, 3, M(0x1d2a33, 0.1, 0.6), 0, 1.9, 0.3); wheels([-1.5, 1.5], 0.95, 0.42); }
+        else if (kind === 'bus') { box3(g, 2.4, 2.6, 11, M(0x1f5fa0, 0.45), 0, 1.75, 0); box3(g, 2.45, 0.8, 9.5, M(0x1d2a33, 0.1, 0.6), 0, 2.3, 0.3); box3(g, 2.45, 0.3, 11.05, M(0xf2c200), 0, 0.9, 0); wheels([-3.8, 3.8], 1.1, 0.5); }
+        else if (kind === 'truck') { box3(g, 2.5, 2.2, 2.6, M(0xc0392b, 0.5), 0, 1.6, -4.2); box3(g, 2.5, 2.9, 7.6, M([0x2f6fa0, 0x6b6f75, 0x16a34a][Math.floor(Math.random() * 3)], 0.6), 0, 2.1, 1.2); wheels([-4.2, -0.5, 3.6], 1.15, 0.5); }
+        else if (kind === 'suv') { box3(g, 2, 1.1, 4.6, M(0x111214, 0.25, 0.6), 0, 1, 0); box3(g, 1.9, 0.7, 2.8, M(0x1d2a33, 0.05, 0.8), 0, 1.85, 0.2); wheels([-1.5, 1.5], 0.95, 0.45); }
+        else if (kind === 'okada') { box3(g, 0.3, 0.6, 1.8, M(c, 0.4), 0, 0.7, 0); [-0.8, 0.8].forEach(function (zz) { var wh = new T.Mesh(new T.CylinderGeometry(0.33, 0.33, 0.12, 12), M(0x111111)); wh.rotation.z = Math.PI / 2; wh.position.set(0, 0.33, zz); g.add(wh); }); box3(g, 0.45, 0.8, 0.35, M([0xc0392b, 0x2f6fa0, 0x16a34a][Math.floor(Math.random() * 3)]), 0, 1.4, 0.1); var hd = new T.Mesh(new T.SphereGeometry(0.2, 8, 6), M(0x111111)); hd.position.set(0, 2, 0.1); g.add(hd); }
+        else if (kind === 'keke') { box3(g, 1.3, 1.4, 2.4, M(0x16a34a, 0.5), 0, 1.1, 0); box3(g, 1.35, 0.2, 2.45, M(0xf2c200), 0, 1.9, 0); wheels([-0.8, 0.8], 0.6, 0.3); }
+        else { box3(g, 1.9, 0.75, 4.3, M(c, 0.35, 0.3), 0, 0.75, 0); box3(g, 1.7, 0.6, 2.2, M(0x1d2a33, 0.05, 0.8), 0, 1.4, 0.1); wheels([-1.4, 1.4], 0.95, 0.38); }
+        g.traverse(function (x) { x.castShadow = true; }); world.add(g); return g;
+      }
+      var KINDS = ['danfo', 'car', 'car', 'suv', 'danfo', 'bus', 'truck', 'okada', 'car', 'keke', 'okada', 'danfo'];
+      for (var tv = 0; tv < (CITY ? 22 : 12); tv++) {
+        var kd = KINDS[tv % KINDS.length], onc = tv % 2 === 0, lane = onc ? (tv % 4 === 0 ? -1.7 : -4.6) : 4.6;
+        traffic.push({ g: vehicle(kd), x: lane, z: -20 - tv * 14 - Math.random() * 6, rel: onc ? 14 + Math.random() * 6 : (Math.random() - 0.4) * 8, onc: onc });
+      }
+      if (CITY) {
+        // pavements
+        [-1, 1].forEach(function (sd) { var pv = new T.Mesh(new T.PlaneGeometry(2.6, 400).rotateX(-Math.PI / 2), M(0xbdb8ad, 0.95)); pv.position.set(sd * 7.4, 0.04, -150); pv.receiveShadow = true; world.add(pv); });
+        var person = function () { var g = new T.Group(), sk = [0x5a3a22, 0x6b4a33, 0x3d2817, 0x8a5a3c][Math.floor(Math.random() * 4)], cl = [0xc0392b, 0x2f6fa0, 0x16a34a, 0xf2c200, 0x7c3aed, 0xf4f3ec, 0x17181a][Math.floor(Math.random() * 7)];
+          box3(g, 0.5, 0.75, 0.3, M(cl, 0.8), 0, 1.2, 0); var hd = new T.Mesh(new T.SphereGeometry(0.17, 8, 6), M(sk)); hd.position.y = 1.75; g.add(hd);
+          var legs = [-0.12, 0.12].map(function (lx) { var l = new T.Group(); l.position.set(lx, 0.85, 0); box3(l, 0.13, 0.8, 0.13, M(0x2b2f36), 0, -0.4, 0); g.add(l); return l; }); g.userData.legs = legs; return g; };
+        for (var wk = 0; wk < 34; wk++) { var sdw = wk % 2 ? 1 : -1, pp = person(); world.add(pp); walkers.push({ g: pp, x: sdw * (6.8 + (wk % 3) * 0.5), z: -wk * 9, dir: wk % 3 ? 1 : -1, ph: wk }); }
+        for (var dc = 0; dc < 14; dc++) {
+          var dg = new T.Group(), dsd = dc % 2 ? 1 : -1;
+          if (dc % 3 === 0) { // a bus stop with people waiting
+            box3(dg, 1.6, 0.12, 4, M(0x1f5fa0, 0.4), dsd * 8.2, 2.6, 0); [-1.8, 1.8].forEach(function (zz) { box3(dg, 0.1, 2.6, 0.1, M(0x9aa0a6, 0.4, 0.5), dsd * 8.9, 1.3, zz); }); box3(dg, 0.5, 0.45, 3.4, M(0x8a6a3a), dsd * 8.6, 0.45, 0);
+            var bs = tex(256, 64, function (c, w, hh) { c.fillStyle = '#1f5fa0'; c.fillRect(0, 0, w, hh); c.fillStyle = '#fff'; c.font = '800 34px system-ui'; c.textAlign = 'center'; c.fillText('BUS STOP', w / 2, 44); }); var bsm = new T.Mesh(new T.PlaneGeometry(1.8, 0.45), new T.MeshBasicMaterial({ map: bs, side: T.DoubleSide })); bsm.position.set(dsd * 7.4, 3.2, 1.5); bsm.rotation.y = Math.PI / 2; dg.add(bsm);
+            for (var wq = 0; wq < 4; wq++) { var wpn = person(); wpn.position.set(dsd * (7.4 + (wq % 2) * 0.5), 0, -1.4 + wq * 0.9); wpn.rotation.y = dsd > 0 ? -Math.PI / 2 : Math.PI / 2; dg.add(wpn); }
+          } else if (dc % 3 === 1) { // market umbrellas and stalls
+            for (var um = 0; um < 3; um++) { var uz = -3 + um * 3, umb = new T.Mesh(new T.ConeGeometry(1.5, 0.6, 10, 1, true), M([0xc0392b, 0x2f6fa0, 0x16a34a, 0xf2c200][(dc + um) % 4], 0.7, 0, { side: T.DoubleSide })); umb.position.set(dsd * 9.2, 2.4, uz); dg.add(umb); box3(dg, 0.06, 2.2, 0.06, M(0x2b2f36), dsd * 9.2, 1.1, uz); box3(dg, 1.6, 0.7, 1, M(0x8a6a3a), dsd * 9.2, 0.7, uz); }
+          } else { // a palm in the median
+            box3(dg, 1, 0.25, 21, M(0xa9a39a, 0.9), -0.1, 0.12, 0); box3(dg, 0.8, 0.05, 20.6, M(0x4f8a3a, 0.9), -0.1, 0.27, 0);
+            var pt = new T.Mesh(new T.CylinderGeometry(0.15, 0.22, 5, 6), M(0x6b4a2b)); pt.position.set(-0.1, 2.5, 0); dg.add(pt); for (var pf = 0; pf < 6; pf++) { var pfr = new T.Mesh(new T.BoxGeometry(2.4, 0.06, 0.5), M(0x3f8f3a, 0.8)); pfr.position.set(-0.1 + Math.cos(pf) * 1, 5, Math.sin(pf) * 1); pfr.rotation.y = pf; pfr.rotation.z = 0.3; dg.add(pfr); }
+          }
+          world.add(dg); decor.push({ g: dg, z: -dc * 22 - 10 });
+        }
+        // a few tall towers and low shops with awnings far back
+        for (var tw2 = 0; tw2 < 10; tw2++) { var tg = new T.Group(), tsd = tw2 % 2 ? 1 : -1, tall = tw2 % 3 === 0, th = tall ? 34 + (tw2 * 7) % 14 : 4; box3(tg, tall ? 9 : 7, th, tall ? 9 : 5, M(0xffffff, 0.5, 0.1, { map: winT, emissiveMap: winT, emissive: 0xffd28c, emissiveIntensity: night ? 0.35 : 0 }), tsd * (tall ? 24 : 11.5), th / 2, 0); if (!tall) box3(tg, 7.2, 0.15, 1.6, M([0xc0392b, 0x16a34a, 0x2f6fa0, 0xf2c200][tw2 % 4], 0.6), tsd * 9.4, 3, 0); world.add(tg); decor.push({ g: tg, z: -tw2 * 31 - 6 }); }
+      }
+    }
     // Your ride.
     var V = new T.Group(); world.add(V); var col = { coach: 0xf4f3ec, danfo: 0xf2c200, keke: 0x2fa36b, okada: 0xc0392b, brt: 0x1f5fa0, cab: 0xf2c200, rail: 0x1d7a43 }[mode] || (o.chauffeur ? 0x17181a : 0xf4f3ec), body = M(col, 0.35, 0.3), glass = M(0x2c4a5c, 0.05, 0.8);
     if (water) { box3(V, 2.2, 0.8, mode === 'ferry' ? 7 : 4.5, M(0xf4f3ec, 0.4), 0, 0.3, 0); box3(V, 1.8, 0.9, mode === 'ferry' ? 3 : 1.6, M(0x1f5fa0), 0, 1.1, 0.4); var wake = new T.Mesh(new T.PlaneGeometry(3, 10).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, depthWrite: false })); wake.position.set(0, 0.05, 7); V.add(wake); V.userData.wake = wake; }
@@ -107,6 +154,10 @@
       var t = (now - t0) / 1000, run = reduce ? 0 : t;
       groundTex.offset.y = -(run * SPEED / (air ? 13 : 33)) % 1;
       movers.forEach(function (g, i) { var z = (-i * 12 + run * SPEED) % 312; g.position.z = z > 20 ? z - 312 : z; });
+      var dtt = Math.min(0.05, t - (frame.lt || t)); frame.lt = t;
+      traffic.forEach(function (v) { if (!reduce) v.z += (SPEED + v.rel) * dtt * (v.onc ? 1 : 1); if (!v.onc && !reduce) v.z += 0; if (v.z > 30) v.z -= 330; if (v.z < -300) v.z += 330; v.g.position.set(v.x, 0, v.z); v.g.rotation.y = v.onc ? Math.PI : 0; });
+      decor.forEach(function (d) { var z = (d.z + run * SPEED) % 310; d.g.position.z = z > 20 ? z - 310 : z; });
+      walkers.forEach(function (w) { var z = (w.z + run * SPEED + run * 1.3 * w.dir) % 306; w.g.position.set(w.x, 0, z > 20 ? z - 306 : z); w.g.rotation.y = w.dir > 0 ? 0 : Math.PI; var a = Math.sin(t * 7 + w.ph) * 0.5; w.g.userData.legs[0].rotation.x = a; w.g.userData.legs[1].rotation.x = -a; });
       sights.forEach(function (s) { var dz = (t - s.at) * SPEED * 1.4; s.g.position.z = Math.min(40, -120 + dz * 1.6); });
       V.position.y = air ? Math.sin(t * 1.2) * 0.5 + (t < 1 ? -3 * (1 - t) : 0) : water ? Math.sin(t * 2) * 0.1 : Math.abs(Math.sin(t * 9)) * 0.03; V.rotation.z = water ? Math.sin(t * 1.6) * 0.03 : 0;
       if (V.userData.rotor) V.userData.rotor.rotation.y = t * 25; if (V.userData.tailRotor) V.userData.tailRotor.rotation.x = t * 40; if (V.userData.navs) V.userData.navs.forEach(function (l) { l.visible = Math.floor(t * 2) % 2 === 0; }); if (V.userData.wake) V.userData.wake.material.opacity = 0.35 + Math.sin(t * 5) * 0.1;

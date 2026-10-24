@@ -498,6 +498,8 @@
       (live.length ? '<p class="note"><b>Live:</b> ' + live.map(function (x) { return esc(x[1].brand) + ' on ' + esc(D.CAREERS[x[0]].name) + ' until ' + esc(new Date(x[1].until).toLocaleDateString()) + ' <button class="btn sm ghost" id="spend-' + x[0] + '" data-spend="' + x[0] + '">End</button>'; }).join(' · ') + '</p>' : '') +
       '<p class="note">Price: ' + L.naira(SPONSOR_PRICE) + ' a month, paid to you outside the game. Approve only after you have agreed payment with the brand.</p>' + (ui.spAdminWhy ? '<p class="why">' + esc(ui.spAdminWhy) + '</p>' : '') + '</details>';
   }
+  var MONEY_OUT = ['data-buyitem', 'data-buycloth', 'data-btqbuy', 'data-paysend', 'data-betplace', 'data-hilo', 'data-buyveh', 'data-buyp', 'data-buyb', 'data-buyplot', 'data-bank', 'data-adopt', 'data-shopbuy', 'data-buybond', 'data-stockbuy'];
+  function pinHash(v) { var h = 0x811c9dc5, str = 'lasgidi-pin:' + v; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); }
   function settingsView() {
     var sw = function (id, label, on, desc) { return '<div class="st-row"><div><b>' + label + '</b>' + (desc ? '<small>' + desc + '</small>' : '') + '</div><button type="button" class="st-sw' + (on ? ' on' : '') + '" id="set-' + id + '" data-setpref="' + id + '" role="switch" aria-checked="' + !!on + '" aria-label="' + label.replace(/<[^>]+>/g, '') + '"><i></i></button></div>'; };
     var seg = function (id, label, desc, opts, cur, note) { return '<div class="st-block"><b>' + label + '</b>' + (desc ? '<small>' + desc + '</small>' : '') + '<div class="st-seg" role="group" aria-label="' + label.replace(/<[^>]+>/g, '') + '">' + opts.map(function (o) { return '<button type="button" class="' + (o[0] === cur ? 'on' : '') + '" id="seg-' + id + '-' + o[0] + '" data-seg="' + id + ':' + o[0] + '" aria-pressed="' + (o[0] === cur) + '">' + o[1] + '</button>'; }).join('') + '</div>' + (note ? '<small class="st-note">' + note + '</small>' : '') + '</div>'; };
@@ -517,6 +519,8 @@
       '<div class="st-block"><b>🪙 Money sounds</b><small>Coins drop into the box for cash; the bank alert rings for your bank.</small><div class="st-seg"><button type="button" data-sfx="cashIn">▶ Cash</button><button type="button" data-sfx="bankIn">▶ Bank</button></div></div>' +
       '<h4 class="st-h">Privacy</h4>' +
       seg('dm', '💬 Who can message me', prefs.dm === 'circle' ? 'Only your baes and family can open a chat with you.' : 'Everyone online can chat with you. Chat is always filtered.', [['all', 'Everyone'], ['circle', 'Only baes & family']], prefs.dm === 'circle' ? 'circle' : 'all') +
+      '<h4 class="st-h">Security</h4><div class="st-block"><b>🔐 Transaction PIN</b><small>' + (prefs.pinHash ? 'On · buying, gifts, bets and transfers ask for your PIN (then it stays open 5 minutes).' : 'Off · ask for a 4–6 digit PIN before money leaves.') + '</small>' +
+        (ui.pinSetup ? (prefs.pinHash ? '<div class="inline"><input id="pin-old" type="password" inputmode="numeric" maxlength="6" placeholder="Your PIN"><button type="button" class="btn sm" data-pinoff="1">Turn off</button></div>' : '<div class="inline"><input id="pin-new" type="password" inputmode="numeric" maxlength="6" placeholder="New PIN (4–6 digits)"><button type="button" class="btn sm go" data-pinset="1">Save PIN</button></div>') : '<div class="inline"><button type="button" class="btn sm ghost" data-pinsetup="1">' + (prefs.pinHash ? 'Turn off' : 'Turn on') + '</button></div>') + (ui.pinMsg ? '<small class="st-note">' + esc(ui.pinMsg) + '</small>' : '') + '<small class="st-note">Kept on this device only. Forgot it? Clear the site\'s data in your browser.</small></div>' +
       '<h4 class="st-h">Help</h4><div class="st-group">' +
       '<button type="button" class="st-link" data-app="guide"><span>💡 Help & guide</span><i>›</i></button>' +
       '<button type="button" class="st-link" data-tourreplay="1"><span>🧭 Replay the walkthrough</span><i>›</i></button>' +
@@ -540,6 +544,43 @@
   }
   // Talk: a floating bar when other live players are in your district. Tap Talk and speak (or type): it goes to
   // everyone here, filtered, and is read aloud on their phones when their sound is on.
+  // A live shift: your workplace in 3D with a shift panel. Tasks pop up; stay to the end to get paid (or skip ahead).
+  var SHIFT_TASKS = {
+    charisma: [['😤', 'A customer wants the manager', 'Calm them down yourself', 'Call the manager'], ['📋', 'Morning brief', 'Speak up in the meeting', 'Take notes quietly'], ['📞', 'A client is on hold', 'Close the deal', 'Book a call back']],
+    tech: [['🐞', 'A bug in production', 'Hot-fix it', 'Roll back'], ['🧑🏾‍💻', 'Code review waiting', 'Review it properly', 'Approve quickly'], ['☕', 'Stand-up meeting', 'Share a new idea', 'Give your update']],
+    music: [['🎤', 'The crowd is restless', 'Freestyle', 'Play the hit'], ['🎛️', 'Sound check', 'Mix it yourself', 'Leave it to the engineer'], ['🎶', 'Fans want selfies', 'Stop and pose', 'Wave and move on']],
+    cooking: [['🍲', 'VIP table order', 'Cook your special', 'Serve the usual'], ['🔥', 'Gas is low', 'Switch to firewood', 'Ask them to wait'], ['🧾', 'Stock count', 'Count it all', 'Estimate it']],
+    fitness: [['🏋🏾', 'Client wants results', 'Push harder', 'Keep it steady'], ['🤕', 'Someone strained', 'Do first aid', 'Send to the clinic'], ['📣', 'Group class', 'Lead with energy', 'Follow the plan']],
+    craft: [['🧵', 'Rush order', 'Work faster', 'Do it properly'], ['🔧', 'Machine jammed', 'Fix it yourself', 'Call the mechanic'], ['📐', 'New design', 'Try something bold', 'Copy the pattern']],
+    hustle: [['📦', 'Buyer wants credit', 'Give the goods', 'Cash only'], ['🚚', 'Supplier is late', 'Chase them', 'Wait'], ['💬', 'Customer haggling', 'Hold your price', 'Give a discount']]
+  };
+  function startLiveShift() {
+    var c = D.CAREERS[S.job.id], wp = CAREER_PLACE[S.job.id];
+    ui.shiftLive = { start: Date.now(), dur: 45000, next: Date.now() + 7000, task: null, done: 0, good: 0, perf: 50, skill: c.skill, title: c.titles[S.job.level], org: c.name };
+    if (wp && D.PLACES.some(function (p) { return p.id === wp; })) { ui.venueOpen = wp; ui.venueSlot = null; ui.venueTab = null; }
+    render(); clearInterval(ui.shiftTimer); ui.shiftTimer = setInterval(shiftTick, 1000);
+  }
+  function shiftTick() {
+    var L0 = ui.shiftLive; if (!L0) { clearInterval(ui.shiftTimer); return; }
+    var now = Date.now();
+    if (!L0.task && now >= L0.next && L0.done < 3) { var T0 = SHIFT_TASKS[L0.skill] || SHIFT_TASKS.hustle; L0.task = T0[L0.done % T0.length]; play('ping'); }
+    if (now - L0.start >= L0.dur && !L0.task) { endLiveShift(true); return; }
+    renderShiftHud();
+  }
+  function endLiveShift(paid) {
+    var L0 = ui.shiftLive; clearInterval(ui.shiftTimer); ui.shiftLive = null; if (!L0) return;
+    if (!paid) { ui.toasts.push({ msg: 'You left early: no pay for this shift.', ok: false }); render(); return; }
+    run(function () { var r = L.doAction(S, 'work_shift'); if (r && r.ok && r.shift) { r.shift.tasks = L0.done; r.shift.good = L0.good; ui.workCard = r.shift; } else if (r && r.ok) ui.workCard = { earned: 0, perf: 0, title: L0.title, org: L0.org, tasks: L0.done, good: L0.good }; return r; });
+  }
+  function shiftHud() {
+    var L0 = ui.shiftLive; if (!L0) return '';
+    var el = Date.now() - L0.start, pct = Math.min(100, Math.round(el / L0.dur * 100)), left = Math.max(0, Math.ceil((L0.dur - el) / 1000));
+    return '<div class="shift-hud" id="shift-hud"><div class="sh-h"><b>' + esc(L0.title) + '</b><small>' + esc(L0.org) + '</small></div><span class="sh-bar"><i style="width:' + pct + '%"></i></span>' +
+      '<div class="sh-row"><b>' + (left ? 'No pay yet · stay ' + left + 's' : 'Shift done!') + '</b></div><div class="sh-row"><span>⚡ ' + L0.perf + '%</span><span>⭐ ' + L0.good + '/' + L0.done + ' tasks</span></div>' +
+      (L0.task ? '<div class="sh-task"><b>' + L0.task[0] + ' ' + esc(L0.task[1]) + '</b><button type="button" data-shtask="0">' + esc(L0.task[2]) + '<small>RISKY · ' + esc((D.SKILLS[L0.skill] || '').toUpperCase()) + '</small></button><button type="button" data-shtask="1">' + esc(L0.task[3]) + '<small>SAFE BET</small></button></div>' : '') +
+      '<div class="sh-acts"><button type="button" data-shskip="1">⏩ Skip to the end</button><button type="button" data-shleave="1">Leave now · no pay</button></div></div>';
+  }
+  function renderShiftHud() { var h = document.getElementById('shift-hud'); if (!h) { render(); return; } var tmp = document.createElement('div'); tmp.innerHTML = shiftHud(); if (tmp.firstChild) h.replaceWith(tmp.firstChild); else h.remove(); }
   function talkBar() {
     if (!online.room || familyOn() || !S || ui.boutique) return '';
     var here = (online.peerList || []).filter(function (p) { return p.d === S.loc && !online.muted[p.by]; });
@@ -551,27 +592,45 @@
     var voice = '<div class="vv"><div class="vv-h"><b>Venue voice</b><small>📍 ' + esc(where) + ' · ' + (here.length + 1) + ' here · filtered</small></div>' +
       '<div class="vv-stage">' + (ui.listening ? '<span class="vv-ring live">' + face('me') + '</span><b>You</b><small>Listening… speak now</small>' : speaking ? '<span class="vv-label">NOW SPEAKING</span><span class="vv-ring">' + face(speaking.by) + '</span><b>' + esc(speaking.by === 'me' ? 'You' : nameOf(speaking.by)) + '</b><small>“' + esc(speaking.text) + '”</small>' : '<span class="vv-mic">🎙</span><small>Floor\'s open</small>') + '</div>' +
       '<div class="vv-listen"><small>Listening · ' + here.length + '</small><div>' + here.slice(0, 10).map(function (p) { return '<span>' + face(p.by) + '<i>' + esc(nameOf(p.by)) + '</i></span>'; }).join('') + '</div></div>' +
-      '<div class="talk-log">' + (lines.length ? lines.map(function (l) { return '<p><b>' + esc(l.by === 'me' ? 'You' : nameOf(l.by)) + ':</b> ' + esc(l.text) + '</p>'; }).join('') : '<p class="muted">Nobody has spoken yet.</p>') + '</div>' +
+      '<div class="talk-log">' + (lines.length ? lines.map(function (l) { return '<p><b>' + esc(l.by === 'me' ? 'You' : nameOf(l.by)) + ':</b> ' + (l.voice ? '🔊 ' : '') + esc(l.text) + '</p>'; }).join('') : '<p class="muted">Nobody has spoken yet.</p>') + '</div>' +
       '<div class="talk-type"><input id="talk-in" maxlength="140" placeholder="Speak with 🎤 Talk, or type it…"><button type="button" class="btn sm go" data-talksend="1">Send</button></div></div>';
     return '<div class="talk-bar' + (ui.talkOpen ? ' open' : '') + '">' + (ui.talkOpen ? voice : '') +
       '<div class="talk-row"><span class="talk-mic">' + (ui.listening ? '🔴' : '🎙') + '</span><div class="talk-t"><b>' + (ui.listening ? 'Listening…' : 'Floor\'s open') + '</b><small>' + (here.length + 1) + ' here · tap Talk</small></div><button type="button" class="talk-btn" id="talk" data-talk="1">🎤 Talk</button><button type="button" class="talk-peace" data-peace="1" aria-label="Send peace to everyone here">✌️</button><button type="button" class="talk-more" data-talkopen="1" aria-label="Show what people said">' + (ui.talkOpen ? '⌄' : '⌃') + '</button></div></div>';
   }
-  function sendTalk(text) {
-    var r = CH.clean(String(text || '').slice(0, 140)); if (!text || !r.ok) { if (text) ui.toasts.push({ msg: r.why || 'Not sent.', ok: false }); render(); return; }
+  // Talk: your own voice. The clip is recorded while the browser writes down what you said; only if those words pass
+  // the chat filter does the clip go out (kept in your voice record, the others play it). No transcript, no clip.
+  function sendTalk(text, clip) {
+    var r = CH.clean(String(text || '').slice(0, 140)); if (!text || !r.ok) { if (text) ui.toasts.push({ msg: (r.why || 'Not sent.') + (clip ? ' Your voice note was not sent.' : ''), ok: false }); render(); return; }
     var wt = CH.canSend(online.sentTimes, Date.now(), online.blocked); if (wt) { ui.toasts.push({ msg: wt, ok: false }); render(); return; }
     online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
-    online.talk = (online.talk || []).concat([{ by: 'me', text: r.text, at: Date.now() }]).slice(-20);
-    if (online.room) online.room.emit('deck', { here: S.loc, text: r.text }).catch(function () {});
+    online.talk = (online.talk || []).concat([{ by: 'me', text: r.text, at: Date.now(), voice: !!clip }]).slice(-20);
+    var go = function (vat) { if (online.room) online.room.emit('deck', Object.assign({ here: S.loc, text: r.text }, vat ? { voice: vat } : {})).catch(function () {}); };
+    if (clip && online.db && online.me && clip.length < 60000) { var vat = Date.now(); online.db.doc('voice/' + online.me).set({ at: vat, here: S.loc, text: r.text, audio: clip }).then(function () { go(vat); }, function () { go(null); }); }
+    else go(null);
     ui.talkOpen = true; render();
+  }
+  function playVoice(by, vat, text) {
+    if (!online.db || !prefs.sound) { if (prefs.sound && prefs.voices !== false) say(text, { queue: true }); return; }
+    online.db.doc('voice/' + by).get().then(function (d) { var v = d && d.exists ? d.data() : null;
+      if (v && v.at === vat && typeof v.audio === 'string' && /^data:audio\/[a-z0-9.+-]+(;codecs=[a-z0-9.,]+)?;base64,/.test(v.audio)) { try { var a = new Audio(v.audio); a.play().catch(function () { say(text, { queue: true }); }); } catch (e) { say(text, { queue: true }); } }
+      else say(text, { queue: true }); }, function () { say(text, { queue: true }); });
   }
   function startTalk() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     ui.talkOpen = true;
-    if (!SR) { ui.talkOpen = true; render(); setTimeout(function () { var i = document.getElementById('talk-in'); if (i) i.focus(); }, 30); return; }
-    try { var rec = new SR(); rec.lang = 'en-NG'; rec.interimResults = false; rec.maxAlternatives = 1; ui.listening = true; render(); setTimeout(function () { if (ui.listening) { ui.listening = false; render(); } }, 9000);
-      rec.onresult = function (e) { ui.listening = false; sendTalk(e.results[0][0].transcript); };
-      rec.onerror = rec.onend = function () { if (ui.listening) { ui.listening = false; ui.talkOpen = true; render(); } };
-      rec.start(); } catch (e) { ui.listening = false; ui.talkOpen = true; render(); }
+    if (!SR) { render(); setTimeout(function () { var i = document.getElementById('talk-in'); if (i) i.focus(); }, 30); return; }
+    var chunks = [], recorder = null, stream = null, said = null, done = false;
+    var finish = function () { if (done) return; done = true; ui.listening = false;
+      var stopAll = function () { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); };
+      if (!said) { stopAll(); render(); return; }
+      if (!recorder || recorder.state === 'inactive') { stopAll(); sendTalk(said, null); return; }
+      recorder.onstop = function () { stopAll(); var blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }); if (!blob.size) { sendTalk(said, null); return; } var fr = new FileReader(); fr.onload = function () { sendTalk(said, fr.result); }; fr.onerror = function () { sendTalk(said, null); }; fr.readAsDataURL(blob); };
+      try { recorder.stop(); } catch (e) { stopAll(); sendTalk(said, null); } };
+    try { var rec = new SR(); rec.lang = 'en-NG'; rec.interimResults = false; rec.maxAlternatives = 1; ui.listening = true; render(); setTimeout(function () { if (ui.listening) { try { rec.stop(); } catch (e) {} finish(); } }, 7000);
+      rec.onresult = function (e) { said = e.results[0][0].transcript; finish(); };
+      rec.onerror = rec.onend = function () { setTimeout(finish, 50); };
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder) navigator.mediaDevices.getUserMedia({ audio: true }).then(function (st) { stream = st; if (done) { st.getTracks().forEach(function (t) { t.stop(); }); return; } try { var mt = MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : ''; recorder = new MediaRecorder(st, mt ? { mimeType: mt, audioBitsPerSecond: 16000 } : { audioBitsPerSecond: 16000 }); recorder.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); }; recorder.start(); } catch (e) { recorder = null; } }, function () {});
+      rec.start(); } catch (e) { ui.listening = false; render(); }
   }
   function render() {
     // Live updates re-render at any moment, so keep what the viewer is typing.
@@ -583,7 +642,7 @@
     var focusId = document.activeElement && document.activeElement.id;
     if (!S) { app.innerHTML = introView(); bindIntro(); }
     else {
-      app.innerHTML = strip() + '<main class="wrap">' + needsView() + board() + '</main>' + talkBar() + '<div class="fab-dock"><button type="button" class="fab-btn" id="fab-phone" data-phoneopen="1" aria-label="Open your phone">📱 Phone</button></div>' + modal() + '<div class="toasts" id="toasts" aria-live="polite"></div>';
+      app.innerHTML = strip() + '<main class="wrap">' + needsView() + board() + '</main>' + talkBar() + shiftHud() + '<div class="fab-dock"><button type="button" class="fab-btn" id="fab-phone" data-phoneopen="1" aria-label="Open your phone">📱 Phone</button></div>' + modal() + '<div class="toasts" id="toasts" aria-live="polite"></div>';
       renderToasts();
     }
     Object.keys(kept).forEach(function (id) {
@@ -801,6 +860,7 @@
     });
     window.claude.use('db').then(function (db) {
       if (!db) return;
+      db.collection('huntfin').limit(500).onSnapshot(function (snap) { online.huntfin = snap.docs.map(function (d) { var r = d.data() || {}; return { id: d.id, hunt: typeof r.hunt === 'string' ? r.hunt : '', week: typeof r.week === 'number' ? r.week : -1, at: typeof r.at === 'number' ? r.at : 0 }; }); scheduleRender(); }, function () { online.huntfin = []; });
       db.collection('residents').limit(500).onSnapshot(function (snap) {
         online.residents = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, home: r && typeof r.home === 'string' ? r.home : null, links: cleanLinks(r && r.links) }; });
         var ids = online.residents.map(function (r) { return r.id; });
@@ -854,7 +914,7 @@
           if (msg.data.invite || (msg.data.money && typeof msg.data.ref === 'string')) {
             var lg2 = online.chats[msg.by] = online.chats[msg.by] || [];
             if (msg.data.invite) { lg2.push({ sys: 'invited', at: Date.now() }); ui.toasts.push({ msg: '🏠 ' + nm + ' invited you over. Open your chat with them to visit.', ok: true }); }
-            else { var amt = Math.round(+msg.data.money); if (amt >= 100 && amt <= L.GIFT_MAX && /^[a-z0-9]{6,16}$/.test(msg.data.ref) && !lg2.some(function (m) { return m.ref === msg.data.ref; })) { lg2.push({ sys: 'money', amt: amt, ref: msg.data.ref, at: Date.now() }); ui.toasts.push({ msg: '💸 ' + nm + ' sent you ' + N(amt) + '. Open your chat to accept.', ok: true }); play('bankIn'); } }
+            else { var amt = Math.round(+msg.data.money); if (amt >= 100 && amt <= 1000000 && /^[a-z0-9]{6,16}$/.test(msg.data.ref) && !lg2.some(function (m) { return m.ref === msg.data.ref; })) { lg2.push({ sys: 'money', amt: amt, ref: msg.data.ref, at: Date.now() }); ui.toasts.push({ msg: '💸 ' + nm + ' sent you ' + N(amt) + '. Open your chat to accept.', ok: true }); play('bankIn'); } }
             markDuo(msg.by, 'them'); if (ui.chatWith !== msg.by) online.unread[msg.by] = (online.unread[msg.by] || 0) + 1; scheduleRender(); return;
           }
           var KN = { hello: '👋 ' + nm + ' said hello.', gist: '🗣️ ' + nm + ' wants to gist with you.', joke: '😂 ' + nm + ' cracked a joke at you.', shade: '😏 ' + nm + ' threw shade at you!' };
@@ -873,8 +933,8 @@
             if (!S || msg.data.here !== S.loc || msg.by === online.me || online.muted[msg.by] || !(online.peerList || []).some(function (p) { return p.by === msg.by && p.d === S.loc; })) return;
             if (msg.data.peace) { ui.toasts.push({ msg: '✌️ ' + nameOf(msg.by) + ' sends peace to everyone here.', ok: true }); scheduleRender(); return; }
             var tr = CH.clean(String(msg.data.text || '').slice(0, 140)); if (!tr.ok) return;
-            online.talk = (online.talk || []).concat([{ by: msg.by, text: tr.text, at: Date.now() }]).slice(-20);
-            ui.toasts.push({ msg: '🎙 ' + nameOf(msg.by) + ': ' + tr.text, ok: true }); if (prefs.sound && prefs.voices !== false) say(tr.text, { queue: true });
+            online.talk = (online.talk || []).concat([{ by: msg.by, text: tr.text, at: Date.now(), voice: typeof msg.data.voice === 'number' }]).slice(-20);
+            ui.toasts.push({ msg: '🎙 ' + nameOf(msg.by) + ': ' + tr.text, ok: true }); if (typeof msg.data.voice === 'number') playVoice(msg.by, msg.data.voice, tr.text); else if (prefs.sound && prefs.voices !== false) say(tr.text, { queue: true });
             scheduleRender(); return;
           }
           if (msg && msg.data && typeof msg.data.space === 'string') { // a Space's chat: only from people in that Space, only if you are in it too
@@ -1086,7 +1146,7 @@
         (online.cvs && checkCv(online.cvs[by]) ? '<button class="btn sm ghost" id="pcv-' + esc(by) + '" data-cvfor="' + esc(by) + '">📄 CV</button>' : '') + '</div>' + reportBox(by) +
       (function () { var du = duoInfo(by); return '<p class="duo-priv">🔒 Private · only you and ' + esc(handleOf(by)) + ' can see this</p><div class="duo"><span class="duo-n">🔥 ' + du.n + '</span><div><b>' + (du.n ? du.n + '-day streak' : 'Start a streak') + '</b><small>' + (du.today ? 'Done for today. Come back tomorrow!' : 'Both of you do something together on the same day: chat, invite or send a gift.' + (du.me ? ' Waiting for them.' : du.them ? ' Your turn!' : '')) + '</small></div></div>'; })() +
       '<div class="duo-acts"><button type="button" class="duo-a inv" id="pinv-' + esc(by) + '" data-pinvite="' + esc(by) + '">🏠 Invite</button>' + (home ? '<button type="button" class="duo-a vis" data-visit2="' + esc(by) + '">🚪 Visit</button>' : '<button type="button" class="duo-a vis" disabled title="They have not shared a home yet">🚪 Visit</button>') + (S.rules >= 47 ? '<button type="button" class="duo-a pay" id="ppay-' + esc(by) + '" data-paybox="' + esc(by) + '">💸 Send money</button>' : '') + '</div>' +
-      (ui.payBox === by ? '<div class="duo-pay"><input id="pay-amt" type="number" min="100" max="' + L.GIFT_MAX + '" step="100" placeholder="Amount (₦100 – ' + N(L.GIFT_MAX) + ')"><button type="button" class="btn sm go" data-paysend="' + esc(by) + '">Send</button><small>They can take up to ' + N(L.GIFT_DAY) + ' a day in gifts. Lives that take gifts stay off the boards.</small></div>' : '') +
+      (ui.payBox === by ? '<div class="duo-pay"><input id="pay-amt" type="number" min="100" max="' + L.giftMax(S) + '" step="100" placeholder="Amount (₦100 – ' + N(L.giftMax(S)) + ')"><button type="button" class="btn sm go" data-paysend="' + esc(by) + '">Send</button><small>' + (S.rules >= 49 ? 'No daily limit.' : 'They can take up to ' + N(L.GIFT_DAY) + ' a day in gifts.') + ' Lives that take gifts stay off the Hall of Fame.</small></div>' : '') +
       '<div class="pc-badges">' + (p.lv ? '<span class="pc-lv">Lv ' + p.lv + ' · ' + (p.lv >= 10 ? 'Gold' : p.lv >= 5 ? 'Silver' : 'Bronze') + '</span>' : '') + (p.st ? '<span class="pc-st">🔥 ' + p.st + '</span>' : '') + (theirLinks(by).bae.length && !familyOn() ? '<span>💞 ' + theirLinks(by).bae.length + ' bae' + (theirLinks(by).bae.length === 1 ? '' : 's') + '</span>' : '') + '</div>' +
       '<div class="inline pc-links">' + linkButtons(by) + '</div>' +
       (S.rules >= 47 ? '<div class="pc-social">' + [['hello', '👋', 'Say hello', '+Social'], ['gist', '💬', 'Gist', '+Fun · +Social'], ['joke', '😂', 'Crack a joke', '44% · +Fun · +Social'], ['shade', '😏', 'Throw shade', '+Fun · +Social']].map(function (x) { return '<button type="button" class="pc-soc" id="psoc-' + x[0] + '" data-psoc="' + x[0] + ':' + esc(by) + '"><span>' + x[1] + '</span><b>' + x[2] + '</b><small>' + x[3] + '</small><i>›</i></button>'; }).join('') + '</div>' : '') +
@@ -1723,7 +1783,7 @@
     var h = huntNow(), st = huntState(), k = st.found.length, pc = h.pieces[k];
     if (!pc || pc.place !== pl.id) return;
     if (S.loc !== pl.district) { ui.toasts.push({ msg: 'Ride to ' + pl.name + ' first, then catch the letter.', ok: false }); renderToasts(); return; }
-    st.found.push(k); st.started = st.started || st.since; st.since = Date.now(); if (st.found.length >= huntNow().pieces.length) st.doneAt = Date.now();
+    st.found.push(k); st.started = st.started || st.since; st.since = Date.now(); if (st.found.length >= huntNow().pieces.length) { st.doneAt = Date.now(); if (online.db && online.me) online.db.doc('huntfin/' + online.me).set({ hunt: huntNow().id, week: huntWeek(), at: st.doneAt }).catch(function () {}); }
     var done = st.found.length >= h.pieces.length;
     if (done && st.badges.indexOf(h.id) < 0) st.badges.push(h.id);
     writeJSON(HUNT_KEY, st); play('good');
@@ -1763,15 +1823,16 @@
     var dots = function (n) { var o = ''; for (var i = 0; i < h.pieces.length; i++) o += '<i class="' + (i < n ? 'on' : '') + '"></i>'; return '<span class="crew-dots">' + o + '</span>'; };
     var row = function (id, me) { var n = me ? st.found.length : peers[id] && peers[id].hk && peers[id].hk.split(':')[0] === h.id ? +peers[id].hk.split(':')[1] : null; return '<div class="crew-row' + (me ? ' me' : '') + '"><span class="crew-av">' + (photoImg(me ? online.me : id) || '🙂') + '</span><div><b>' + esc(me ? handleOf(online.me || 'me') + ' (you)' : handleOf(id)) + '</b>' + dots(n || 0) + '</div><span class="muted">' + (n == null ? (peers[id] ? 'not started' : 'offline') : n + '/' + h.pieces.length) + '</span>' + (!me && peers[id] ? '<button type="button" class="btn sm ghost" data-chatopen="' + esc(id) + '">Ask</button>' : '') + (!me ? '<button type="button" class="link-btn" data-crewdel="' + esc(id) + '" aria-label="Remove">✕</button>' : '') + '</div>'; };
     var pick = ui.crewPick ? '<div class="crew-pick">' + ((online.peerList || []).filter(function (p) { return crew.indexOf(p.by) < 0 && !online.muted[p.by]; }).slice(0, 20).map(function (p) { return '<button type="button" class="btn sm ghost" data-crewadd="' + esc(p.by) + '">＋ ' + esc(handleOf(p.by)) + '</button>'; }).join('') || '<p class="note">Nobody online to add right now.</p>') + '</div>' : '';
-    var days = st.found.length >= h.pieces.length && st.doneAt ? (st.doneAt - (st.started || st.since)) / 864e5 : null;
-    var tiers = [['📦', 'Big box', 'Finish within a day'], ['🎁', 'Small box', 'Finish within 3 days'], ['🛍️', 'Pack', 'Finish this week']];
-    var won = days == null ? -1 : days <= 1 ? 0 : days <= 3 ? 1 : 2;
+    var fin = (online.huntfin || []).filter(function (r) { return r.hunt === h.id && r.week === huntWeek() && r.at > 0; }).sort(function (a, b) { return a.at - b.at; });
+    var myRank = online.me ? fin.map(function (r) { return r.id; }).indexOf(online.me) + 1 : 0;
+    var tiers = [['📦', 'Big box', '1st – 5th to finish'], ['🎁', 'Small box', '6th – 10th'], ['🛍️', 'Pack', '11th – 20th']];
+    var won = myRank ? (myRank <= 5 ? 0 : myRank <= 10 ? 1 : myRank <= 20 ? 2 : -1) : -1;
     return huntCardCore() +
       '<div class="crew"><div class="crew-h"><b>👥 Your hunt crew</b>' + (online.room ? '<span class="crew-live"><i class="dot-live"></i> Live</span>' : '') + '</div><p class="note">Ask anyone in your crew for help with a riddle. As many friends as you like.</p>' +
       row(null, true) + crew.map(function (id) { return row(id, false); }).join('') + (crew.length ? '' : '<p class="note crew-none">No one yet. Bring your friends in 👇</p>') +
       '<div class="inline crew-acts"><button type="button" class="btn ghost" data-crewpick="1">👥 From the game</button><button type="button" class="btn crew-inv" data-copytext="' + esc('Join my ' + h.title + ' letter hunt on Lasgidi! Find the 5 letters hidden around Lagos with me. https://ade0605.github.io/skills/') + '">🔗 Invite link</button></div>' + pick +
       '<p class="note">Only friends you bring in through the game show their progress here.</p></div>' +
-      '<div class="crew-prizes"><b>The prizes</b><small>' + (won >= 0 ? 'You won the ' + tiers[won][1] + '!' : 'Your prize shows when you finish') + '</small><div class="crew-tiers">' + tiers.map(function (t, i) { return '<div class="crew-tier' + (won === i ? ' won' : '') + '"><span>' + t[0] + '</span><b>' + t[1] + '</b><small>' + t[2] + '</small></div>'; }).join('') + '</div></div>';
+      '<div class="crew-prizes"><b>The 20 prizes</b><small>' + (myRank ? (won >= 0 ? 'You finished #' + myRank + ': the ' + tiers[won][1] + ' is yours!' : 'You finished #' + myRank + '.') : st.found.length >= h.pieces.length ? 'Finished! Your place shows when you are online.' : 'Your number shows when you finish') + '</small><div class="crew-tiers">' + tiers.map(function (t, i) { return '<div class="crew-tier' + (won === i ? ' won' : '') + '"><span>' + t[0] + '</span><b>' + t[1] + '</b><small>' + t[2] + '</small></div>'; }).join('') + '</div>' + (fin.length ? '<div class="crew-board">' + fin.slice(0, 20).map(function (r, i) { return '<div class="' + (r.id === online.me ? 'me' : '') + '"><span>#' + (i + 1) + '</span><b>' + esc(r.id === online.me ? 'You' : handleOf(r.id)) + '</b><small>' + (i < 5 ? '📦' : i < 10 ? '🎁' : '🛍️') + '</small></div>'; }).join('') + '</div>' : '') + '</div>';
   }
 
   /* ---------- daily gem hunt ---------- */
@@ -2589,15 +2650,34 @@
     return '<div class="room-night"><span>' + I.n.icon + ' <b>Tonight: ' + esc(I.n.name) + '</b> · ' + (I.fee ? N(I.fee) : 'free') + '</span>' +
       (I.joined ? '<span class="muted">You are in ✓</span>' : '<button class="btn sm go" id="room-night" data-roomnight="' + id + '"' + (I.why ? ' disabled title="' + esc(I.why) + '"' : '') + '>Join</button>') + '</div>';
   }
+  // A line about the place today, picked by the day so everyone in the room sees the same one.
+  var ROOM_MOODS = {
+    beach: ['🌊 The waves are strong today', '☀️ Sun is out, sand is hot', '🐎 The horse men are busy today', '🎶 Speakers are loud by the huts'],
+    _: ['✨ The place is buzzing today', '🎶 Good music on today', '👥 Everyone is out today', '🌤️ Nice weather for it']
+  };
+  function roomMood(id) { var m = ROOM_MOODS[id] || ROOM_MOODS._; return m[L.day(S) % m.length]; }
   function roomPanel(id) {
-    var R = D.ROOMS[id], peers = roomPeers(id), left = Math.max(0, S.room.until - S.t);
-    return '<div class="cv-head">' + (photoImg(online.me, 'cv-me') || '<span class="cv-me">🙂</span>') + '<div><b>📍 ' + esc(R.name) + ' <span class="muted">· ' + esc(R.where) + '</span></b><small>' + esc(S.room.last || dur(left) + ' here. Pick a spot.') + '</small></div>' +
-      '<button class="btn sm ghost" id="room-photo" data-photo="room" aria-label="Take a photo">📷</button><button class="btn sm ghost" id="room-close" data-roomclose="1" aria-label="Back to the map">🗺️</button><button class="btn sm ghost" id="room-fold" data-roomfold="1" aria-label="' + (ui.roomFold ? 'Show the panel' : 'Hide the panel') + '">' + (ui.roomFold ? '⌃' : '⌄') + '</button></div>' +
-      (ui.roomFold ? '' : '<div class="chat-send"><input id="room-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Say something to the ' + (peers.length + 1) + ' player' + (peers.length ? 's' : '') + ' here…" aria-label="Room chat"><button class="btn" id="room-send" data-roomsend="1" aria-label="Send">➤</button></div>' +
-      (ui.roomWhy ? '<p class="why">' + esc(ui.roomWhy) + '</p>' : '') + roomNightBar(id) + roomFriendChips(id) +
-      '<div class="cv-spots">' + Object.keys(R.spots).map(function (k) { var P0 = R.spots[k], on = S.room.spot === k, n = peers.filter(function (p) { return p.at.slice(('room:' + id + ':').length) === k; }).length; return '<button type="button" class="act-chip' + (on ? ' on' : '') + '" id="rspot-' + k + '" data-roomspot="' + k + '">' + P0.icon + ' ' + esc(P0.name) + (P0.cost ? ' · ' + N(L.price(S, P0.cost)) : '') + (n ? ' · 👥' + n : '') + '</button>'; }).join('') + '</div>' +
+    var R = D.ROOMS[id], peers = roomPeers(id), left = Math.max(0, S.room.until - S.t), pre = 'room:' + id + ':';
+    var place = D.PLACES.filter(function (x) { return x.id === R.place; })[0], friends = roomFriends(id), total = peers.length + friends.length + 1;
+    // Players here: you first, then real players (green ring), then your friends (orange ring). Seven faces, then "+N more".
+    var faces = [{ me: true }].concat(peers.map(function (p) { return { by: p.by }; }), friends.map(function (f) { return { npc: f }; }));
+    var face = function (f) {
+      if (f.me) return '<span class="rp-face me"><span class="rp-av">' + (photoImg(online.me) || '🙂') + '</span><small>You</small></span>';
+      if (f.npc) return '<button type="button" class="rp-face npc" id="rpf-' + f.npc.id + '" data-roomhang="' + f.npc.id + '" title="Hang out with ' + esc(f.npc.name) + '"><span class="rp-av">' + esc(f.npc.name.charAt(0)) + '</span><small>' + esc(f.npc.name) + '</small></button>';
+      return '<button type="button" class="rp-face" id="rpf-' + esc(f.by) + '" data-roompeer="' + esc(f.by) + '" title="Chat with ' + esc(handleOf(f.by)) + '"><span class="rp-av">' + (photoImg(f.by) || esc(handleOf(f.by).replace('@', '').charAt(0).toUpperCase())) + '</span><small>' + esc(handleOf(f.by)) + '</small></button>';
+    };
+    var shown = faces.slice(0, 7), more = faces.length - shown.length;
+    return '<div class="rp-grab"></div><div class="cv-head rp-head"><span class="rp-icon">' + (place && place.icon || '📍') + '</span><div><b>' + esc(R.name) + '</b><small>' + esc(R.where) + ' · ' + esc(roomMood(id)) + '</small></div>' +
+      '<div class="rp-btns"><button class="btn sm ghost rp-ib" id="room-share" data-shareplace="' + esc(R.place) + '" aria-label="Share this place" title="Share">🔗</button><button class="btn sm ghost rp-ib" id="room-photo" data-photo="room" aria-label="Take a photo" title="Photo">📷</button><button class="btn sm ghost rp-ib" id="room-close" data-roomclose="1" aria-label="Back to the map" title="Map">🗺️</button><button class="btn sm ghost rp-ib" id="room-home" data-roomhome="1" aria-label="Go home" title="Home">🏠</button><button class="btn sm ghost rp-ib" id="room-fold" data-roomfold="1" aria-label="' + (ui.roomFold ? 'Show the panel' : 'Hide the panel') + '">' + (ui.roomFold ? '⌃' : '⌄') + '</button></div></div>' +
+      (ui.roomFold ? '' : '<div class="chat-send rp-say"><input id="room-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Say something to all ' + total + ' here…" aria-label="Room chat"><kbd class="rp-kbd">Enter</kbd><button class="btn" id="room-send" data-roomsend="1" aria-label="Send">➤</button></div>' +
+      (ui.roomWhy ? '<p class="why">' + esc(ui.roomWhy) + '</p>' : '') + roomNightBar(id) +
+      '<div class="rp-lab"><b>Spots here</b><small>👣 Tap one to walk there</small></div>' +
+      '<div class="cv-spots">' + Object.keys(R.spots).map(function (k) { var P0 = R.spots[k], on = S.room.spot === k, n = peers.filter(function (p) { return p.at.slice(pre.length) === k; }).length + (on ? 1 : 0) + friends.filter(function (f) { return f.spot === k; }).length; return '<button type="button" class="act-chip' + (on ? ' on' : '') + '" id="rspot-' + k + '" data-roomspot="' + k + '">' + P0.icon + ' ' + esc(P0.name) + (P0.cost ? ' · ' + N(L.price(S, P0.cost)) : '') + (n ? ' <span class="rp-n">' + n + '</span>' : '') + '</button>'; }).join('') + '</div>' +
+      '<div class="rp-lab"><b>Players here · ' + total + '</b><small>Tap a face to chat</small></div>' +
+      '<div class="rp-faces">' + shown.map(face).join('') + (more > 0 ? '<span class="rp-face more"><span class="rp-av">+' + more + '</span><small>more here</small></span>' : '') + '</div>' +
+      roomFriendChips(id) +
       (id === 'beach' ? fishingCard(true) : '') +
-      '<div class="inline" style="justify-content:space-between"><p class="note cv-note">' + dur(left) + ' left. Tap a spot to move, or a player to chat. Chat is filtered and never stored.</p><button class="btn sm ghost" id="room-leave" data-roomleave="1">Leave</button></div>');
+      '<div class="inline" style="justify-content:space-between"><p class="note cv-note">' + dur(left) + ' left. Chat is filtered and never stored.</p><button class="btn sm ghost" id="room-leave" data-roomleave="1">Leave</button></div>');
   }
   function mountRoom() {
     var ov = document.getElementById('room-view');
@@ -3008,6 +3088,7 @@
         var p0 = placeById(ui.venueOpen), x = p0 && venueActs(p0)[i]; if (!x) return;
         if (S.loc !== p0.district) { ui.toasts.push({ msg: 'Ride to ' + D.DISTRICTS[p0.district].name + ' first, then walk in.', ok: false }); renderToasts(); return; }
         if (!x.a || x.a.disabled) { ui.toasts.push({ msg: (x.a && x.a.disabled) || (x.def.when ? 'Open ' + whenText(x.def.when) : 'Not open now'), ok: false }); renderToasts(); return; }
+        if (x.id === 'work_shift' && !ui.shiftLive && S.job) { ui.venueSlot = i; startLiveShift(); return; }
         ui.venueSlot = i; run(function () { var r = L.doAction(S, x.id); if (r && r.ok) { ui.activity = activityFor(x.id); ui.activityAt = Date.now(); if (x.id === 'work_shift') ui.venueBubble = { place: p0.id, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; });
       } };
   }
@@ -3287,7 +3368,7 @@
     var h = L.hour(S), night = h < 6 || h >= 19, dusk = h >= 17 && h < 19;
     var ic = icon3d(MODE_ICONS[mode] || (air ? 't_heli' : 'car'), name).replace('width="32" height="32"', 'width="64" height="64"');
     var veh = ic || '<span class="rv-emoji">' + (MODE_EMOJI[mode] || (mode === 'flight' || mode === 'jet' ? '✈️' : '🚗')) + '</span>';
-    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, secs = reduce ? 2.5 : coach ? 12 : 5.5;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, secs = reduce ? 2.5 : air ? 8 : 12; // every road and water journey plays out in full, about 12 seconds
     var fromName = cf !== ctt && D.CITIES[cf] ? D.CITIES[cf].name : D.DISTRICTS[from].name, toName = cf !== ctt && D.CITIES[ctt] ? D.CITIES[ctt].name : D.DISTRICTS[to].name;
     var el = document.createElement('div');
     el.id = 'ride-view'; el.className = 'ride-view' + (night ? ' night' : dusk ? ' dusk' : '') + (water ? ' water' : '') + (air ? ' air' : '') + (reduce ? ' still' : '');
@@ -4561,7 +4642,7 @@
     }
     var mine = I.open.map(function (b) { return '<div class="gb-bet"><span>' + esc(b.label) + ' · ' + ['Home', 'Draw', 'Away'][b.pick] + ' @' + b.odds + '</span><b>' + N(b.stake) + '</b><small>pending</small></div>'; }).concat(I.done.slice().reverse().slice(0, 8).map(function (b) { return '<div class="gb-bet ' + (b.win ? 'won' : 'lost') + '"><span>' + esc(b.label) + (b.hl ? ' · ' + (b.pick === 'hi' ? 'Higher' : 'Lower') : ' · ' + ['Home', 'Draw', 'Away'][b.pick]) + '</span><b>' + (b.win ? '+' + N(b.paid) : '−' + N(b.stake)) + '</b></div>'; })).join('');
     return '<div class="section gb"><h3>⚽ Gidi Bet</h3>' + head + body + (mine ? '<h4 class="st-h">Your bets</h4>' + mine : '') +
-      '<p class="note gb-rg">18+ · Game money only, never real money. Stakes up to ' + N(I.max) + ', ' + N(I.left) + ' left today. The house always has an edge: bet for fun, never to make money.</p></div>';
+      '<p class="note gb-rg">18+ · Game money only, never real money. Stakes up to ' + N(I.max) + (I.nocap ? ', no daily limit.' : ', ' + N(I.left) + ' left today.') + ' The house always has an edge: bet for fun, never to make money.</p></div>';
   }
 
   // Pay Index: what every job pays at each rank, in your city first.
@@ -5285,9 +5366,10 @@
       '<div class="opts"><button class="btn go" id="cel-ok" data-celebok="1">Nice!</button></div></div></div>';
   }
   function modal() {
+    if (ui.pinAsk) return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="pin-title" style="z-index:95"><div class="sheet pop"><div class="pop-ic" aria-hidden="true">🔐</div><h2 id="pin-title">Enter your PIN</h2><p>Money is about to leave your account.</p><input id="pin-in" type="password" inputmode="numeric" maxlength="6" class="pin-in" autocomplete="off">' + (ui.pinWhy ? '<p class="why">' + esc(ui.pinWhy) + '</p>' : '') + '<div class="opts"><button class="btn go" data-pinok="1">Confirm</button><button class="btn ghost" data-pincancel="1">Cancel</button></div></div></div>';
     if (ui.workCard && !(S.pending && S.pending.length)) { var wc = ui.workCard; return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="wc-title"><div class="sheet pop"><div class="pop-ic" aria-hidden="true">💼</div><h2 id="wc-title">Back from work</h2><p>' + esc(wc.title) + ' · ' + esc(wc.org) + '</p>' +
       '<div class="cel-chips"><span class="cel-chip money">+' + N(wc.earned) + '</span><span class="cel-chip xp">Performance ' + wc.perf + '%' + (wc.delta != null ? ' (' + (wc.delta >= 0 ? '+' : '') + wc.delta + ')' : '') + '</span></div>' +
-      (wc.promo ? '<div class="cel-level">⬆️ ' + esc(wc.promo) + '</div>' : '') + (wc.task ? '<p class="note">You handled 1 workplace moment on this shift.</p>' : '<p class="note">A quiet shift.</p>') +
+      (wc.promo ? '<div class="cel-level">⬆️ ' + esc(wc.promo) + '</div>' : '') + (wc.tasks != null ? '<p class="note">You handled ' + wc.tasks + ' task' + (wc.tasks === 1 ? '' : 's') + ' (' + wc.good + ' went well).</p>' : '') + (wc.task ? '<p class="note">A workplace moment is waiting for you.</p>' : '') +
       '<div class="opts"><button class="btn go" id="wc-ok" data-workok="1">Nice one</button></div></div></div>'; }
     if (ui.phoneSheet) return '<div class="scrim phone-sheet" role="dialog" aria-modal="true" aria-label="Your phone"><div class="ps-wrap"><button type="button" class="ps-close" data-phoneclose="1">✕ Close</button><div class="ps-phone tab-body">' + phoneView() + '</div></div></div>';
     if (ui.boutique) return boutiqueView();
@@ -5378,6 +5460,7 @@
     if (step === 6) return !!o.home;
     return true;
   }
+  function onbCity() { var c = onb().city; return c && D.START_ABROAD[c] ? c : 'lagos'; }
   function onboardView(orig) {
     var o = onb(), st = o.step, body = '';
     if (st === 0) body = '<h2>Who are you in Lagos?</h2>' +
@@ -5405,17 +5488,17 @@
       var CITY_LINE = { lagos: 'Danfo, owambe and the hustle. Eko o ni baje.', accra: 'Trotro, jollof wars and Labadi beach.', ldn: 'The Tube, rain and big money. Life costs more, pay is higher.', dxb: 'Towers, souks and the desert. Life costs more, pay is higher.', ctn: 'Table Mountain, the Waterfront and the Atlantic.' };
       body = '<h2>Where you start</h2><p class="note">Pick the city you live in. You live there with no visa, with homes, jobs and businesses there. Every other city is a trip. You can travel any time.</p><div class="onb-grid onb-citygrid">' + cs.map(function (c) {
         var on = c === cur, x = localOf(c), AB0 = D.START_ABROAD[c];
-        return '<button type="button" class="onb-card onb-city' + (on ? ' sel' : '') + '" id="onb-city-' + c + '" data-onbcity="' + c + '" aria-pressed="' + on + '"><span class="onb-e">' + (CITY_ICON[c] || '📍') + '</span><b>' + esc(D.CITIES[c].name) + '</b><small>' + esc(CITY_LINE[c] || '') + '</small><small class="muted">' + (x ? esc(x.person) + ' · ' + esc(x.cur) + (AB0 && AB0.cash !== 1 ? ' · ' + AB0.cash + '× starting money' : '') : '') + '</small><small class="slogan">“' + esc(x ? x.slogan : '') + '”</small></button>';
+        return '<button type="button" class="onb-card onb-city' + (on ? ' sel' : '') + '" id="onb-city-' + c + '" data-onbcity="' + c + '" aria-pressed="' + on + '"><span class="onb-e">' + (CITY_ICON[c] || '📍') + '</span><b>' + esc(D.CITIES[c].name) + '</b><small>' + esc(CITY_LINE[c] || '') + '</small><small class="muted">' + (x ? esc(x.person) + ' · ' + esc(x.cur) + (AB0 && AB0.cash !== 1 && L.RULES < 49 ? ' · ' + AB0.cash + '× starting money' : '') + (L.RULES >= 49 && D.START_LOCAL[c] ? ' · LAPO Baby starts with ' + (x ? x.sym : '₦') + D.START_LOCAL[c].toLocaleString('en-US') : '') : '') + '</small><small class="slogan">“' + esc(x ? x.slogan : '') + '”</small></button>';
       }).join('') + '</div>';
     }
-    else if (st === 5) body = '<h2>The birth lottery</h2><div class="lottery">' + (orig ? '<b>' + esc(orig.name) + '</b><p style="margin:0">' + esc(orig.text) + '</p>' : '<p style="margin:0">Lagos decides where you start. The roll is random and happens once per life.</p>') +
-      '<div class="odds"><span>LAPO Baby 50%</span><span>Ajepako 35%</span><span>Nepo Baby 15%</span></div>' + (orig ? '' : '<div class="inline"><button class="btn go" id="roll" data-roll="1">Roll the birth lottery</button></div>') + '</div>';
+    else if (st === 5) body = '<h2>The birth lottery</h2><div class="lottery">' + (orig ? '<b>' + esc(orig.name) + '</b><p style="margin:0">' + esc(L.originText && L.RULES >= 49 ? L.originText(ui.draftOrigin, onbCity()) : orig.text) + '</p>' : '<p style="margin:0">Lagos decides where you start. The roll is random and happens once per life.</p>') +
+      '<div class="odds"><span>LAPO Baby 50%</span><span>Ajepako 35%</span><span>Nepo Baby 15%</span></div>' + (L.RULES >= 49 ? '<div class="odds lot-cash">' + ['lapo', 'mid', 'nepo'].map(function (k) { var lx = localOf(onbCity()) || { sym: '₦', rate: 1, dp: 0 }; return '<span>' + esc(D.ORIGINS[k].name) + ': ' + fmtCur(L.startCashFor(k, onbCity()) / lx.rate, lx.sym, 0) + '</span>'; }).join('') + '</div><p class="note">Starting money is paid in the money of ' + esc(D.CITIES[onbCity()].name) + '.</p>' : '') + (orig ? '' : '<div class="inline"><button class="btn go" id="roll" data-roll="1">Roll the birth lottery</button></div>') + '</div>';
     else {
       // Rules 42: pick the city you live in. Lagos, or start a life in Accra, London, Dubai or Cape Town.
       var cities = ['lagos'].concat(Object.keys(D.START_ABROAD || {})), city = cities.indexOf(o.city) >= 0 ? o.city : 'lagos', AB = city !== 'lagos' && D.START_ABROAD[city];
       var homes = !orig ? [] : AB ? [AB.homes[ui.draftOrigin]].filter(Boolean) : (D.START_HOMES[ui.draftOrigin] || []);
       var lx = localOf(city), cm = function (n) { return lx && lx.rate !== 1 ? fmtCur(n / lx.rate, lx.sym, lx.dp) + ' (' + L.naira(n) + ')' : L.naira(n); };
-      body = '<p class="note">' + (CITY_ICON[city] || '📍') + ' Starting in <b>' + esc(D.CITIES[city].name) + '</b> <button type="button" class="btn sm ghost" id="onb-city-change" data-onb="back2">Change city</button></p>' + (lx ? '<p class="note">You will be ' + (/^[AEIOU]/.test(lx.person) ? 'an' : 'a') + ' <b>' + esc(lx.person) + '</b>. “' + esc(lx.slogan) + '”' + (AB ? ' You live here with no visa, and arrive with ' + cm(Math.round(orig ? orig.cash * AB.cash / 1000 : 0) * 1000) + '. Other cities are trips.' : '') + '</p>' : '') +
+      body = '<p class="note">' + (CITY_ICON[city] || '📍') + ' Starting in <b>' + esc(D.CITIES[city].name) + '</b> <button type="button" class="btn sm ghost" id="onb-city-change" data-onb="back2">Change city</button></p>' + (lx ? '<p class="note">You will be ' + (/^[AEIOU]/.test(lx.person) ? 'an' : 'a') + ' <b>' + esc(lx.person) + '</b>. “' + esc(lx.slogan) + '”' + (AB ? ' You live here with no visa, and arrive with ' + cm(orig ? (L.RULES >= 49 ? L.startCashFor(ui.draftOrigin, city) : Math.round(orig.cash * AB.cash / 1000) * 1000) : 0) + '. Other cities are trips.' : '') + '</p>' : '') +
         '<h2>Your first home</h2><p class="note">' + (orig ? esc(orig.name) + ': these are the homes your start can pay for.' : 'Roll the birth lottery first.') + ' Rent is due every Saturday at noon.</p><div class="onb-grid">' + homes.map(function (k) {
         var H = D.HOMES[k], on = o.home === k;
         return '<button type="button" class="onb-card' + (on ? ' sel' : '') + '" id="onb-home-' + k + '" data-onbhome="' + k + '" aria-pressed="' + on + '">' + (icon3d('h_' + (H.type === 'flat2' || H.type === 'flat3' ? 'flat' : H.type)) || '<span class="onb-e">🏠</span>') + '<b>' + esc(H.name) + '</b><small>' + esc(D.DISTRICTS[H.district].name) + ' · ' + cm(H.rent) + ' a week · light ' + Math.round(H.power * 100) + '%</small></button>';
@@ -5447,9 +5530,16 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok],[data-pinok],[data-pincancel],[data-pinset],[data-pinoff],[data-pinsetup],[data-shtask],[data-shskip],[data-shleave],[data-roompeer],[data-roomhome]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
+    // Transaction PIN: money-out buttons ask for it first (then it stays unlocked for 5 minutes).
+    var mk = prefs.pinHash && !(ui.pinOk > Date.now()) ? MONEY_OUT.filter(function (k) { return t.hasAttribute(k); })[0] : null; if (mk) { ui.pinSel = '[' + mk + '="' + String(t.getAttribute(mk)).replace(/["\\]/g, '') + '"]'; ui.pinEl = t; ui.pinAsk = true; ui.pinWhy = ''; render(); setTimeout(function () { var pi = document.getElementById('pin-in'); if (pi) pi.focus(); }, 30); return; }
+    if (ds.pinok) { var pv = (document.getElementById('pin-in') || {}).value || ''; if (pinHash(pv) === prefs.pinHash) { ui.pinOk = Date.now() + 5 * 60000; ui.pinAsk = false; ui.pinEl = null; render(); var again = ui.pinSel ? document.querySelector(ui.pinSel) : null; if (again) again.click(); } else { ui.pinWhy = 'Wrong PIN.'; render(); } return; }
+    if (ds.pincancel) { ui.pinAsk = false; ui.pinEl = null; render(); return; }
+    if (ds.pinset) { var p1 = (document.getElementById('pin-new') || {}).value || ''; if (!/^\d{4,6}$/.test(p1)) { ui.pinMsg = 'Use 4 to 6 digits.'; render(); return; } prefs.pinHash = pinHash(p1); writeJSON(PREF_KEY, prefs); ui.pinMsg = 'PIN is on. Money-out actions now ask for it.'; ui.pinSetup = false; render(); return; }
+    if (ds.pinoff) { var p2 = (document.getElementById('pin-old') || {}).value || ''; if (pinHash(p2) !== prefs.pinHash) { ui.pinMsg = 'Wrong PIN.'; render(); return; } delete prefs.pinHash; writeJSON(PREF_KEY, prefs); ui.pinMsg = 'PIN is off.'; ui.pinSetup = false; render(); return; }
+    if (ds.pinsetup) { ui.pinSetup = !ui.pinSetup; ui.pinMsg = ''; render(); return; }
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
     if (ds.wwset) { var ws = ds.wwset.split(':'); wwDraft()[ws[0]] = ws[1]; ui.wwOpen = true; render(); return; }
     if (ds.wwextra) { var wx = wwDraft().extras, wi = wx.indexOf(ds.wwextra); if (wi >= 0) wx.splice(wi, 1); else wx.push(ds.wwextra); ui.wwOpen = true; render(); return; }
@@ -5733,6 +5823,9 @@
     if (ds.scopen != null && t.hasAttribute('data-scopen')) { ui.scOpen = ds.scopen || null; render(); var tb2 = document.querySelector('.tab-body'); if (tb2) tb2.scrollTop = 0; return; }
     if (ds.phoneopen) { ui.phoneSheet = true; ui.app = null; render(); return; }
     if (ds.phoneclose) { ui.phoneSheet = false; render(); return; }
+    if (ds.shtask != null && t.hasAttribute('data-shtask') && ui.shiftLive && ui.shiftLive.task) { var L1 = ui.shiftLive, risky = ds.shtask === '0', win = risky ? Math.random() < 0.35 + L.skillLevel(S, L1.skill) * 0.06 : true; L1.done++; if (win) L1.good++; L1.perf = Math.max(10, Math.min(99, L1.perf + (risky ? (win ? 12 : -8) : 3))); ui.toasts.push({ msg: risky ? (win ? '✅ It went well!' : '😬 That did not land.') : '👍 Safe choice.', ok: win }); L1.task = null; L1.next = Date.now() + 9000; renderShiftHud(); return; }
+    if (ds.shskip) { if (ui.shiftLive) { ui.shiftLive.task = null; ui.shiftLive.start = Date.now() - ui.shiftLive.dur; endLiveShift(true); } return; }
+    if (ds.shleave) { endLiveShift(false); return; }
     if (ds.workok) { ui.workCard = null; render(); return; }
     if (ds.propclose) { ui.propCard = null; render(); return; }
     if (ds.stepout) { openStreet(); return; }
@@ -5812,6 +5905,7 @@
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
     if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
+    if (ds.act === 'work_shift' && !ui.shiftLive && S.job && !t.hasAttribute('data-quick')) { startLiveShift(); return; }
     if (ds.act) { var aid0 = ds.act, alab0 = ((availMemo().filter(function (x) { return x.id === aid0; })[0]) || {}).label; run(function () { var r = L.doAction(S, aid0); if (r && r.ok && r.shift) ui.workCard = r.shift; if (r && r.ok) { try { actVoice(alab0); } catch (e) {} clubMoment(aid0); ui.activity = activityFor(aid0); ui.activityAt = Date.now(); if (aid0 === 'work_shift' && ui.venueOpen) ui.venueBubble = { place: ui.venueOpen, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
     if (ds.apply) { run(function () { var r = L.applyJob(S, ds.apply); if (r && r.interview) { ui.interview = r.interview; ui.tab = 'work'; } return r; }); return; }
@@ -5852,6 +5946,8 @@
       return;
     }
     if (ds.ridemode) { ui.rideMode = ds.ridemode; render(); return; }
+    if (ds.roompeer) { ui.roomOpen = null; clearPicks(); ui.chatWith = ds.roompeer; online.unread[ds.roompeer] = 0; ui.tab = 'map'; render(); return; }
+    if (ds.roomhome) { ui.roomOpen = null; ui.tab = 'home'; render(); return; }
     if (ds.chatopen) { clearPicks(); ui.chatWith = ds.chatopen; online.unread[ds.chatopen] = 0; ui.tab = 'map'; render(); return; }
     if (ds.cruiseboard) { run(function () { var r = L.cruiseBoard(S); if (r.ok) { ui.cruiseOpen = true; ui.airportOpen = false; } return r; }); syncPresence(); return; }
     if (ds.cruiseopen) { ui.cruiseOpen = true; ui.airportOpen = false; render(); return; }

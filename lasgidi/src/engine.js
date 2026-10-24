@@ -107,7 +107,8 @@
   // 47 adds adoption: give a baby a home from the phone's Family app, on your own or with your partner.
   // 48 lets you change your lifetime dream (your goal) once a week, from the phone's Goals, and adds Gidi Bet: made-up
   // football leagues every 4 game hours and a High-Low card game, with a house edge and daily stake caps.
-  var RULES = 48;
+  // 49 lifts the caps: bets up to ₦500,000 each with no daily limit, gifts up to ₦1,000,000 with no daily limit.
+  var RULES = 49;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -476,7 +477,7 @@
     if (abroad && D.CITIES[abroad].visit) s.residence = abroad;
     var traits = cleanTraits(opts.traits);
     // Opening balance is the one deposit that is not an in-game action.
-    var startCash = heir ? heir.inherit : abroad ? Math.round(o.cash * D.START_ABROAD[abroad].cash / 1000) * 1000 : o.cash;
+    var startCash = heir ? heir.inherit : s.rules >= 49 && D.START_MULT[originId] ? startCashFor(originId, abroad || 'lagos') : abroad ? Math.round(o.cash * D.START_ABROAD[abroad].cash / 1000) * 1000 : o.cash;
     s.bank = startCash; s.opening.bank = startCash;
     if (heir) {
       s.heir = heir; s.name = opts.name || heir.name; if (heir.boosted) s.boosted = true;
@@ -508,8 +509,9 @@
     if (look) s.replay.look = look;
     if (outfit) s.replay.outfit = outfit;
     // A life abroad (rules 42) gets its own opening line, not the Lagos one.
-    if (abroad) log(s, o.name + ': you land in ' + D.CITIES[abroad].name + ' with ' + naira(startCash) + ' and a ' + D.HOMES[s.home].name.charAt(0).toLowerCase() + D.HOMES[s.home].name.slice(1) + ' waiting.', 'story');
-    else log(s, o.text, 'story');
+    if (abroad && s.rules >= 49) log(s, o.name + ' in ' + D.CITIES[abroad].name + ': ' + originText(originId, abroad), 'story');
+    else if (abroad) log(s, o.name + ': you land in ' + D.CITIES[abroad].name + ' with ' + naira(startCash) + ' and a ' + D.HOMES[s.home].name.charAt(0).toLowerCase() + D.HOMES[s.home].name.slice(1) + ' waiting.', 'story');
+    else log(s, s.rules >= 49 && !heir ? originText(originId, 'lagos') : o.text, 'story');
     if (startHome) log(s, 'You chose to start in ' + D.HOMES[startHome].name + '.', 'story');
     if (heir) log(s, 'You are ' + s.name + ', child of ' + heir.parent + '. Your share of the estate: ' + naira(heir.inherit) + '.' + (heir.school === 'intl' ? ' Your international school education counts as a degree.' : ''), 'story');
     if (abroad) log(s, 'A new life in ' + D.CITIES[abroad].name + '. ' + (D.LOCAL && D.LOCAL[abroad] ? D.LOCAL[abroad].slogan : ''), 'story');
@@ -1795,6 +1797,19 @@
   /* ---------- cities ---------- */
   // A city added in a later rules version (Accra, rules 22) is closed to older lives: no trips, homes, jobs or shops there.
   // Rules 42: a start home in another city for this origin, or null. Returns the city.
+  // Rules 49: opening money by origin and city, in naira (the game's unit), and the line that goes with it.
+  function startCashFor(origin, city) {
+    var loc = D.LOCAL && D.LOCAL[city], local = D.START_LOCAL[city] || D.START_LOCAL.lagos;
+    return Math.round(local * (D.START_MULT[origin] || 1) * (loc ? loc.rate : 1));
+  }
+  function originText(origin, city) {
+    var O = D.ORIGINS[origin]; if (!O || !D.START_MULT[origin]) return O ? O.text : '';
+    var loc = (D.LOCAL && D.LOCAL[city]) || { sym: '₦', rate: 1 }, amt = (D.START_LOCAL[city] || D.START_LOCAL.lagos) * D.START_MULT[origin];
+    var money = loc.sym + Math.round(amt).toLocaleString('en-US'), A = D.START_ABROAD[city];
+    var home = A ? D.HOMES[A.homes[origin]] : D.HOMES[O.home], where = home ? 'a ' + home.name.charAt(0).toLowerCase() + home.name.slice(1) : 'a room';
+    var tail = { lapo: 'A microfinance officer has your number.', mid: 'Your parents scraped it together. Make it count.', nepo: 'Daddy also sends ' + naira(O.allowance || 0) + ' a week. For now.' }[origin];
+    return 'You start with ' + money + ' and ' + where + '. ' + tail;
+  }
   function startAbroad(origin, home) {
     var A = D.START_ABROAD || {}, hit = null;
     Object.keys(A).forEach(function (c) { if (A[c].homes[origin] === home) hit = c; });
@@ -4395,7 +4410,7 @@
     // Ceiling on wealth: starting cash plus a generous ₦3m a week.
     if (e.origin === 'heir') { if (!int(raw.inherit, 0, HEIR_CAP)) return null; e.inherit = raw.inherit; if (raw.gen != null) { if (!int(raw.gen, 2, 50)) return null; e.gen = raw.gen; } }
     else if (raw.gen != null) return null;
-    if (e.worth > (e.origin === 'heir' ? e.inherit : D.ORIGINS[e.origin].cash) * 2 + e.weeks * 3000000) return null;
+    if (e.worth > (e.origin === 'heir' ? e.inherit : Math.max(D.ORIGINS[e.origin].cash, D.START_MULT[e.origin] ? startCashFor(e.origin, 'ldn') : 0)) * 2 + e.weeks * 3000000) return null;
     if (e.level > 0 && !e.career) return null;
     e.score = scoreOf(e);
     return e;
@@ -5645,7 +5660,7 @@
   // Wordle-style: one square per week by how net worth moved.
   function challengeSquares(s) {
     var prev = s.history.length ? null : null, out = '';
-    var start = s.heir ? s.heir.inherit : D.ORIGINS[s.origin].cash;
+    var start = s.heir ? s.heir.inherit : s.rules >= 49 ? s.opening.bank + s.opening.cash : D.ORIGINS[s.origin].cash;
     var last = start;
     s.history.forEach(function (h) {
       var ch = (h.worth - last) / Math.max(1, Math.abs(last));
@@ -5692,18 +5707,19 @@
   // Rules 47: send money to another player. The sender really pays. The receiver may accept up to GIFT_DAY a game day;
   // a life that accepts any is marked Gifted and stays off the Hall of Fame and weekly boards, like a Boosted one.
   var GIFT_MAX = 100000, GIFT_DAY = 50000;
+  function giftMax(s) { return s.rules >= 49 ? 1000000 : GIFT_MAX; }
   function giftOut(s, amount) {
-    amount = Math.round(+amount); if (!(s.rules >= 47) || !(amount >= 100 && amount <= GIFT_MAX)) return fail('Send between ' + naira(100) + ' and ' + naira(GIFT_MAX) + '.');
+    amount = Math.round(+amount); if (!(s.rules >= 47) || !(amount >= 100 && amount <= giftMax(s))) return fail('Send between ' + naira(100) + ' and ' + naira(giftMax(s)) + '.');
     if (s.pending.length) return fail('Decide on the open event first.');
     s.alerts = []; if (!pay(s, amount, 'Sent to a friend')) return fail('You do not have ' + naira(amount) + '.');
     return finish(s, ok('💸 Sent ' + naira(amount) + '.', { amount: amount }));
   }
   function giftIn(s, amount, ref) {
-    amount = Math.round(+amount); if (!(s.rules >= 47) || !(amount >= 100 && amount <= GIFT_MAX) || typeof ref !== 'string' || !/^[a-z0-9]{6,16}$/.test(ref)) return fail('That gift is not valid.');
+    amount = Math.round(+amount); if (!(s.rules >= 47) || !(amount >= 100 && amount <= giftMax(s)) || typeof ref !== 'string' || !/^[a-z0-9]{6,16}$/.test(ref)) return fail('That gift is not valid.');
     s.giftLog = s.giftLog || { day: -1, got: 0, refs: [] };
     if (s.giftLog.refs.indexOf(ref) >= 0) return fail('You already took that gift.');
     if (s.giftLog.day !== day(s)) { s.giftLog.day = day(s); s.giftLog.got = 0; }
-    var take = Math.min(amount, GIFT_DAY - s.giftLog.got); if (take <= 0) return fail('You can take at most ' + naira(GIFT_DAY) + ' in gifts a day.');
+    var take = s.rules >= 49 ? amount : Math.min(amount, GIFT_DAY - s.giftLog.got); if (take <= 0) return fail('You can take at most ' + naira(GIFT_DAY) + ' in gifts a day.');
     s.giftLog.got += take; s.giftLog.refs.push(ref); if (s.giftLog.refs.length > 60) s.giftLog.refs.shift();
     s.alerts = []; s.gifted = true; post(s, 'bank', take, 'Gift from a friend');
     return finish(s, ok('🎁 ' + naira(take) + ' landed in your bank.' + (take < amount ? ' (The daily gift limit kept the rest.)' : '') + ' This life is now Gifted: it stays off the boards.'));
@@ -5739,13 +5755,15 @@
     });
     return out;
   }
-  function betInfo(s) { var day0 = Math.floor(s.t / 1440), staked = (s.bets || []).concat(s.betDone || []).filter(function (b) { return Math.floor(b.t / 1440) === day0; }).reduce(function (a, b) { return a + b.stake; }, 0); return { slot: betSlot(s), next: BET_SLOT - s.t % BET_SLOT, fixtures: betFixtures(betSlot(s)), open: s.bets || [], done: (s.betDone || []).slice(-15), left: Math.max(0, BET_DAY - staked), max: BET_MAX }; }
+  function betMax(s) { return s.rules >= 49 ? 500000 : BET_MAX; }
+  function betDayCap(s) { return s.rules >= 49 ? Infinity : BET_DAY; }
+  function betInfo(s) { var day0 = Math.floor(s.t / 1440), staked = (s.bets || []).concat(s.betDone || []).filter(function (b) { return Math.floor(b.t / 1440) === day0; }).reduce(function (a, b) { return a + b.stake; }, 0); return { slot: betSlot(s), next: BET_SLOT - s.t % BET_SLOT, fixtures: betFixtures(betSlot(s)), open: s.bets || [], done: (s.betDone || []).slice(-15), left: Math.max(0, betDayCap(s) - staked), max: betMax(s), nocap: s.rules >= 49 }; }
   function placeBet(s, matchId, pick, stake) {
     if (!(s.rules >= 48)) return fail('Gidi Bet is not open in this life.');
     stake = Math.round(+stake); pick = +pick;
     var m = betFixtures(betSlot(s)).filter(function (x) { return x.id === matchId; })[0];
     if (!m || !(pick === 0 || pick === 1 || pick === 2)) return fail('That match is not on.');
-    if (!(stake >= 100 && stake <= BET_MAX)) return fail('Stake between ' + naira(100) + ' and ' + naira(BET_MAX) + '.');
+    if (!(stake >= 100 && stake <= betMax(s))) return fail('Stake between ' + naira(100) + ' and ' + naira(betMax(s)) + '.');
     if (stake > betInfo(s).left) return fail('Daily limit: ' + naira(BET_DAY) + ' in stakes a day. Come back tomorrow.');
     if (s.pending.length) return fail('Decide on the open event first.');
     s.alerts = []; if (!pay(s, stake, 'Gidi Bet stake')) return fail('You do not have ' + naira(stake) + '.');
@@ -5767,7 +5785,7 @@
   // High-Low: guess if the next card (1 to 13) is higher or lower than 7. A 7 loses. Pays 2x.
   function highLow(s, guess, stake) {
     if (!(s.rules >= 48)) return fail('Gidi Bet is not open in this life.');
-    stake = Math.round(+stake); if (!(guess === 'hi' || guess === 'lo') || !(stake >= 100 && stake <= BET_MAX)) return fail('Stake between ' + naira(100) + ' and ' + naira(BET_MAX) + '.');
+    stake = Math.round(+stake); if (!(guess === 'hi' || guess === 'lo') || !(stake >= 100 && stake <= betMax(s))) return fail('Stake between ' + naira(100) + ' and ' + naira(betMax(s)) + '.');
     if (stake > betInfo(s).left) return fail('Daily limit: ' + naira(BET_DAY) + ' in stakes a day.');
     if (s.pending.length) return fail('Decide on the open event first.');
     s.alerts = []; if (!pay(s, stake, 'Gidi Bet stake')) return fail('You do not have ' + naira(stake) + '.');
@@ -5842,7 +5860,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost, rentSeaPlots: recorded('sr', rentSeaPlots), seaRentCost: seaRentCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    adoptBaby: recorded('ab', adoptBaby), shortState: shortState, placeBet: recorded('bt', placeBet), highLow: recorded('hz', highLow), betInfo: betInfo, BET_LEAGUES: BET_LEAGUES, changeGoal: recorded('cg', changeGoal), giftOut: recorded('go', giftOut), giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
+    adoptBaby: recorded('ab', adoptBaby), shortState: shortState, placeBet: recorded('bt', placeBet), highLow: recorded('hz', highLow), betInfo: betInfo, BET_LEAGUES: BET_LEAGUES, changeGoal: recorded('cg', changeGoal), giftOut: recorded('go', giftOut), giftMax: giftMax, startCashFor: startCashFor, originText: originText, giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
     buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
     decRates: decRates, luxuryCar: luxuryCar, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), stageShow: recorded('st', stageShow), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
