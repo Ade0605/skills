@@ -1,0 +1,10 @@
+{
+  "name": "Lasgidi",
+  "short_name": "Lasgidi",
+  "description": "A Lagos life simulator that runs on any phone, even offline.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f3ec",
+  "theme_color": "#f2b600",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
