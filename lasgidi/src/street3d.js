@@ -37,6 +37,7 @@
     var houseN = 1;
     for (var z = -8; z > -LEN + 6; z -= 13) {
       [-1, 1].forEach(function (s) {
+        if (s < 0 && z <= -48 && z >= -76) return; // the open plot where the boys play ball
         var x = s * (ROADW / 2 + 2.7), n = houseN++;
         var wall = mat('wall' + (n % 5), { color: wallCols[n % 5] });
         box(0.35, 2.3, 12.4, wall, x, 1.15, z); // fence wall
@@ -65,6 +66,36 @@
     // your own gate, at the start
     var mine = label('🏠 Your home', '#16a34a', '#ffffff', 2.4, 0.6); mine.position.set(0, 2.5, 4.6); mine.rotation.y = Math.PI; S3.add(mine);
     box(ROADW + 6, 2.3, 0.35, mat('wall0', {}), 0, 1.15, 5); box(3.4, 2.1, 0.2, mat('gate0', {}), 0, 1.05, 4.8);
+
+    /* ---------- the street pitch: an open plot, two goals, a ball ---------- */
+    var PX0 = -26, PX1 = -6, PZ0 = -75, PZ1 = -49, pcx = (PX0 + PX1) / 2, pcz = (PZ0 + PZ1) / 2;
+    box(PX1 - PX0, 0.05, PZ1 - PZ0, mat('pitch', { color: 0x9a6b3f, roughness: 1 }), pcx, 0.03, pcz);
+    for (var gz = PZ0 + 2; gz < PZ1; gz += 4) box(0.5, 0.02, 2.5, mat('grassP', { color: 0x5b8a3a }), PX0 + 1 + ((gz * 7) % 17), 0.06, gz);
+    box(PX1 - PX0, 0.02, 0.12, mat('chalk', { color: 0xf4f3ec }), pcx, 0.07, pcz);
+    var post = mat('post', { color: 0xf4f3ec, roughness: 0.4 });
+    [PZ0 + 0.6, PZ1 - 0.6].forEach(function (gz2) { [-2.2, 2.2].forEach(function (dx) { mesh(new T.CylinderGeometry(0.08, 0.08, 1.6, 8), post, pcx + dx, 0.8, gz2); }); box(4.5, 0.12, 0.12, post, pcx, 1.6, gz2); });
+    var plotSign = label('⚽ Street football', '#16a34a', '#ffffff', 3.2, 0.7); plotSign.position.set(-(ROADW / 2 + 2.6), 2.6, -50); plotSign.rotation.y = Math.PI / 2; S3.add(plotSign);
+    var ballC = document.createElement('canvas'); ballC.width = 64; ballC.height = 64; var bg = ballC.getContext('2d'); bg.fillStyle = '#fff'; bg.fillRect(0, 0, 64, 64); bg.fillStyle = '#111'; [[16, 16], [48, 16], [32, 40], [8, 52], [56, 52]].forEach(function (q) { bg.beginPath(); bg.arc(q[0], q[1], 7, 0, 7); bg.fill(); });
+    var ball = new T.Mesh(new T.SphereGeometry(0.22, 16, 12), new T.MeshStandardMaterial({ map: new T.CanvasTexture(ballC), roughness: 0.5 })); ball.castShadow = !lite; S3.add(ball);
+    var B = { x: pcx, z: pcz, vx: 0, vz: 0 }, score = { you: 0, boys: 0 }, goalMsg = 0, goalText = '';
+    var boys = null;
+    function kickBall(power, dirx, dirz) { var d = Math.hypot(dirx, dirz) || 1; B.vx = dirx / d * power; B.vz = dirz / d * power; }
+    function ballFrame(dt, t) {
+      if (!boys) boys = [0, 1].map(function (i) { return { f: person(50 + i), x: pcx + (i ? 3 : -3), z: pcz + (i ? -5 : 5), kick: 0 }; });
+      B.x += B.vx * dt; B.z += B.vz * dt; var fr = Math.pow(0.35, dt); B.vx *= fr; B.vz *= fr;
+      if (B.x < PX0 + 0.3) { B.x = PX0 + 0.3; B.vx = Math.abs(B.vx) * 0.6; } if (B.x > PX1 - 0.3) { B.x = PX1 - 0.3; B.vx = -Math.abs(B.vx) * 0.6; }
+      var inGoal = Math.abs(B.x - pcx) < 2.1;
+      if (B.z < PZ0 + 0.6) { if (inGoal) { score.you++; goalMsg = t + 2.5; goalText = '⚽ GOAL! You ' + score.you + ' – ' + score.boys + ' Boys'; B.x = pcx; B.z = pcz; B.vx = B.vz = 0; } else { B.z = PZ0 + 0.6; B.vz = Math.abs(B.vz) * 0.6; } }
+      if (B.z > PZ1 - 0.6) { if (inGoal) { score.boys++; goalMsg = t + 2.5; goalText = '😩 The boys scored! You ' + score.you + ' – ' + score.boys + ' Boys'; B.x = pcx; B.z = pcz; B.vx = B.vz = 0; } else { B.z = PZ1 - 0.6; B.vz = -Math.abs(B.vz) * 0.6; } }
+      var sp = Math.hypot(B.vx, B.vz); ball.position.set(B.x, 0.24, B.z); ball.rotation.x += B.vz * dt / 0.22; ball.rotation.z -= B.vx * dt / 0.22;
+      var dx = B.x - P.x, dz = B.z - P.z; if (Math.hypot(dx, dz) < 0.75 && sp < 9) kickBall(P.run || keys.shift ? 11 : 6.5, Math.sin(P.yaw) + dx * 0.3, Math.cos(P.yaw) + dz * 0.3);
+      boys.forEach(function (bo, i) { var tx = B.x + (i ? 0.8 : -0.8), tz = B.z - 0.6, ddx = tx - bo.x, ddz = tz - bo.z, dd = Math.hypot(ddx, ddz), spd = 3.4 + i * 0.6;
+        if (dd > 0.3) { bo.x += ddx / dd * Math.min(dd, spd * dt); bo.z += ddz / dd * Math.min(dd, spd * dt); }
+        bo.x = Math.max(PX0 + 0.5, Math.min(PX1 - 0.5, bo.x)); bo.z = Math.max(PZ0 + 0.5, Math.min(PZ1 - 0.5, bo.z));
+        bo.f.position.set(bo.x, 0.12, bo.z); bo.f.rotation.y = Math.atan2(ddx, ddz);
+        var ls = dd > 0.3 ? Math.sin(t * 11 + i) * 0.7 : 0; if (bo.f.userData.legs) bo.f.userData.legs.forEach(function (l, k) { l.rotation.x = k ? -ls : ls; });
+        if (Math.hypot(B.x - bo.x, B.z - bo.z) < 0.7 && t > bo.kick) { bo.kick = t + 0.8; kickBall(6 + Math.random() * 3, pcx - B.x + (Math.random() - 0.5) * 3, PZ1 - B.z); } });
+    }
 
     /* ---------- the main road ---------- */
     box(260, 0.06, 18, mat('asphalt', {}), 0, 0.03, MAINZ - 4);
@@ -107,12 +138,12 @@
 
     /* ---------- controls ---------- */
     var ui = document.createElement('div'); ui.className = 'st3-ui';
-    ui.innerHTML = '<div class="st3-top"><button type="button" class="st3-btn" data-st3="home">🏠 Back inside</button><span class="st3-where" aria-live="polite">Your street</span><button type="button" class="st3-btn" data-st3="map">🗺️ Go somewhere</button></div>' +
+    ui.innerHTML = '<div class="st3-top"><button type="button" class="st3-btn" data-st3="home">🏠 Back inside</button><span class="st3-where" aria-live="polite">Your street</span><button type="button" class="st3-btn" data-st3="where">📍 Where to?</button></div>' +
       '<div class="st3-joy" aria-label="Joystick: drag to walk"><i></i></div><button type="button" class="st3-run" data-st3="run" aria-pressed="false">🏃 Run</button>';
     el.appendChild(ui);
     var knob = ui.querySelector('.st3-joy i'), joyEl = ui.querySelector('.st3-joy'), runBtn = ui.querySelector('.st3-run'), whereEl = ui.querySelector('.st3-where');
     function setRun(on) { P.run = on; runBtn.setAttribute('aria-pressed', String(on)); runBtn.classList.toggle('on', on); }
-    ui.addEventListener('click', function (e) { var b = e.target.closest('[data-st3]'); if (!b) return; var a = b.getAttribute('data-st3'); if (a === 'run') setRun(!P.run); else if (a === 'home' && opts.onHome) opts.onHome(); else if (a === 'map' && opts.onMap) opts.onMap(); });
+    ui.addEventListener('click', function (e) { var b = e.target.closest('[data-st3]'); if (!b) return; var a = b.getAttribute('data-st3'); if (a === 'run') setRun(!P.run); else if (a === 'home' && opts.onHome) opts.onHome(); else if (a === 'map' && opts.onMap) opts.onMap(); else if (a === 'where') openWhere(); });
     var jid = null, jc = null;
     joyEl.addEventListener('pointerdown', function (e) { jid = e.pointerId; var r = joyEl.getBoundingClientRect(); jc = { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width / 2 }; try { joyEl.setPointerCapture(jid); } catch (x) {} move(e); e.preventDefault(); });
     function move(e) { if (e.pointerId !== jid) return; var dx = e.clientX - jc.x, dy = e.clientY - jc.y, d = Math.hypot(dx, dy), k = Math.min(1, d / jc.r); if (d > 0) { joy.x = dx / d * k; joy.y = dy / d * k; } knob.style.transform = 'translate(' + joy.x * jc.r * 0.6 + 'px,' + joy.y * jc.r * 0.6 + 'px)'; if (k > 0.95 && !P.run && d > jc.r * 1.35) setRun(true); }
@@ -128,6 +159,17 @@
     cv.addEventListener('pointermove', function (e) { if (!drag) return; var dx = e.clientX - drag.x; if (Math.abs(dx) > 3) drag.moved = true; camYaw -= dx * 0.006; drag.x = e.clientX; });
     cv.addEventListener('pointerup', function (e) { var d0 = drag; drag = null; if (!d0 || d0.moved) return; var r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam); var hitP = ray.intersectObjects(people.map(function (p) { return p.f; }), true)[0]; if (hitP && hitP.object.userData.npc) { chat(hitP.object.userData.npc); return; } var gp = new T.Vector3(); if (ray.ray.intersectPlane(ground, gp)) { P.tx = gp.x; P.tz = gp.z; } });
 
+    // Where to? Search the places in your city and go straight there.
+    var whereBox = document.createElement('div'); whereBox.className = 'st3-where-box'; whereBox.hidden = true; el.appendChild(whereBox);
+    function renderWhere(q) {
+      var list = (opts.places || []).filter(function (p) { return !q || (p.name + ' ' + p.area).toLowerCase().indexOf(q.toLowerCase()) >= 0; }).slice(0, 40);
+      whereBox.querySelector('.st3-wl').innerHTML = list.map(function (p) { return '<button type="button" data-st3go="' + p.id + '"><span>' + p.icon + '</span><b>' + p.name + '</b><small>' + p.area + '</small></button>'; }).join('') || '<p>No place called that.</p>';
+    }
+    function openWhere() {
+      whereBox.hidden = false; whereBox.innerHTML = '<div class="st3-wh"><b>📍 Where to?</b><button type="button" data-st3w="close">✕</button></div><input class="st3-wq" placeholder="Search a place, e.g. Balogun market" autocomplete="off"><div class="st3-wl"></div>';
+      renderWhere(''); var inp = whereBox.querySelector('.st3-wq'); inp.addEventListener('input', function () { renderWhere(inp.value); }); inp.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    }
+    whereBox.addEventListener('click', function (e) { var b = e.target.closest('[data-st3go],[data-st3w]'); if (!b) return; if (b.getAttribute('data-st3w')) { whereBox.hidden = true; return; } if (opts.onGo) opts.onGo(b.getAttribute('data-st3go')); });
     // A quick chat with a passer-by.
     var GREET = ['Ah, good day o!', 'How you dey?', 'Morning o!', 'My person!', 'Afternoon o, how body?'];
     var WHERE = ['The main road dey straight down. Walk past No. 7, you go see the petrol station.', 'Danfo? Go the main road, stand by the shops. Conductors go call you.', 'Pharmacy dey for the main road, God\'s Time. Them get everything.', 'Your gate? Turn back, na the green sign.'];
@@ -144,7 +186,7 @@
     // Where you can walk: the close (road and pavements) and the main road strip.
     function clampPos() {
       if (P.z > -1.2) P.z = -1.2; // your gate is behind you
-      if (P.z > MAINZ + 9) P.x = Math.max(-(ROADW / 2 + 2.2), Math.min(ROADW / 2 + 2.2, P.x));
+      if (P.z > MAINZ + 9) P.x = Math.max(P.z <= PZ1 - 0.2 && P.z >= PZ0 + 0.2 ? PX0 + 0.4 : -(ROADW / 2 + 2.2), Math.min(ROADW / 2 + 2.2, P.x));
       else { P.x = Math.max(-125, Math.min(125, P.x)); P.z = Math.max(MAINZ - 16.5, P.z); if (P.z > MAINZ + 9 && Math.abs(P.x) > ROADW / 2 + 2.2) P.z = MAINZ + 9; }
       if (Math.abs(P.z - (MAINZ - 4.5)) < 0.5 && Math.abs(P.x) > 1) P.z += P.z > MAINZ - 4.5 ? 0.5 : -0.5; // the median
     }
@@ -171,13 +213,14 @@
       if (moving && !drag) { var dyaw = ((P.yaw + Math.PI - camYaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI; camYaw += dyaw * Math.min(1, dt * 1.6); }
       var back = running ? 7 : 6, hgt = 3.1; cam.position.set(P.x + Math.sin(camYaw) * back, hgt, P.z + Math.cos(camYaw) * back); cam.lookAt(P.x, 1.5, P.z);
       sun.position.set(P.x + 30, 60, P.z + 20); sun.target.position.set(P.x, 0, P.z);
+      ballFrame(dt, t);
       // traffic and people
       movers.forEach(function (m) { m.x += m.dir * m.sp * dt; if (m.x > 130) m.x = -130; if (m.x < -130) m.x = 130; m.g.position.set(m.x, 0, m.lane); });
       people.forEach(function (r) { var u = ((t * r.sp * 0.12 + r.ph) % 2), f = u < 1 ? u : 2 - u, dir = u < 1 ? 1 : -1;
         if (r.main) r.f.position.set(r.x0 + f * r.len, 0.12, r.z), r.f.rotation.y = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
         else r.f.position.set(r.x, 0.12, r.z0 - f * r.len), r.f.rotation.y = dir > 0 ? Math.PI : 0;
         var ls = Math.sin(t * 7 + r.ph) * 0.5; if (r.f.userData.legs) r.f.userData.legs.forEach(function (l, k) { l.rotation.x = k ? -ls : ls; }); });
-      var where = P.z > MAINZ + 9 ? (P.z > -6 ? 'At your gate' : 'Your street · ' + Math.round(-P.z) + ' m from your gate') : 'Main road · danfos, shops, the petrol station';
+      var where = goalMsg > t ? goalText : P.x < -(ROADW / 2 + 2.5) ? '⚽ Street football · You ' + score.you + ' – ' + score.boys + ' Boys · run into the ball to kick' : P.z > MAINZ + 9 ? (P.z > -6 ? 'At your gate' : 'Your street · ' + Math.round(-P.z) + ' m from your gate') : 'Main road · danfos, shops, the petrol station';
       if (whereEl.textContent !== where) whereEl.textContent = where;
       renderer.render(S3, cam);
       raf = el.isConnected ? root.requestAnimationFrame(frame) : 0;
