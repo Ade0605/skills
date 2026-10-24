@@ -1998,7 +1998,9 @@
     if (!window.LasgidiStreet3D) return;
     if (!window.THREE) { if (threeState !== 'failed') { ui.toasts.push({ msg: 'Opening the street…', ok: true }); render(); loadThree(function () { if (window.THREE) openStreet(); }); } return; }
     closeStreet();
-    street = window.LasgidiStreet3D.create({ look: S.look, outfit: S.outfit, lite: liteOn(), onSay: function (t) { if (t && prefs.sound && prefs.voices !== false) say(t, { force: true }); }, onHome: function () { closeStreet(); }, onMap: function () { closeStreet(); ui.tab = 'map'; ui.app = null; render(); } });
+    street = window.LasgidiStreet3D.create({ look: S.look, outfit: S.outfit, lite: liteOn(), onSay: function (t) { if (t && prefs.sound && prefs.voices !== false) say(t, { force: true }); }, onHome: function () { closeStreet(); }, onMap: function () { closeStreet(); ui.tab = 'map'; ui.app = null; render(); },
+      places: D.PLACES.filter(function (p) { return L.districtCity(p.district) === L.cityOf(S) && !/_site$/.test(p.id); }).map(function (p) { return { id: p.id, name: esc(p.name), icon: p.icon || '📍', area: esc(D.DISTRICTS[p.district].name) }; }),
+      onGo: function (id) { closeStreet(); clearPicks(); ui.tab = 'map'; ui.app = null; ui.place = id; render(); var pl = D.PLACES.filter(function (x) { return x.id === id; })[0]; if (pl) focusMap(pl.district, id); } });
     if (!street) { ui.toasts.push({ msg: 'Your phone cannot show the 3D street.', ok: false }); render(); return; }
     street.el.id = 'street-view'; document.body.appendChild(street.el); street.start(); window.__street = street; play('tap');
   }

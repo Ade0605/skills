@@ -674,6 +674,8 @@ The test suite runs the engine under Node. It covers rent and eviction, travel r
   - **Workplace moments and Back from work (rules 48):** one shift in three brings a quick call (a risky one that leans on your skill, or the safe bet), and every shift ends with a card: what you earned and how your performance moved.
   - **Your phone everywhere:** a 📱 Phone button inside walk-ins, rooms, rides and the street opens your phone on top.
   - **Passers-by:** tap people on your street for a quick chat: ask the way, or the area gist.
+  - **Street football:** an open plot on your street has goalposts and a ball. Run into the ball to kick it (Run kicks harder); two boys from the area play against you and the score shows at the top.
+  - **Where to?:** from the street, search any place in your city and go straight to it on the map.
   - **Full-screen walk-ins:** walk-ins, the cruise deck, rooms and the airport fill the whole screen on phones and tablets in any orientation; the panel floats over the bottom of the scene.
   - **Updates arrive by themselves:** the website fetches the game's own files fresh whenever you are online (the offline copy is only used offline), and when a new version is installed the page reloads once by itself, keeping your saved game.
   - **Graduation day:** finishing a degree, apprenticeship or certificate opens a ceremony card (confetti, convocation or freedom day) with the careers it now opens one rank up, and a button to the careers list.
