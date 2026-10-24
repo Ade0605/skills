@@ -2667,6 +2667,38 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       Object.assign(act('pr_water', 'A day at the resort waterpark', 240, aed(330), 0, { fun: 40, energy: -18, stress: -10 }, { fitness: 1 }, { from: 10, to: 18 }), { minRules: 41, sight: true }),
       Object.assign(act('pr_aqua', 'The lost-chambers aquarium', 60, aed(140), 0, { fun: 18 }, null, { from: 10, to: 22 }), { minRules: 41 }),
       Object.assign(act('pr_beach', 'Beach club with the skyline across the water', 180, aed(250), 0, { fun: 26, social: 10, stress: -12 }, null, { from: 10, to: 19 }), { minRules: 41 })
+    ]],
+    // More London: the big shops of the West End and Knightsbridge, Oxford Circus, Shoreditch and Liverpool Street.
+    ['ldn_oxcircus', '⊖', 'Oxford Circus', 'outdoors', 'dome', 'ldn_oxford', 16.4, 7.2, 'oxcircus', 'The busiest crossing in London: the diagonal zebra, the Tube entrances, red buses and shoppers everywhere.', [
+      act('oxc_cross', 'Cross the famous diagonal crossing', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 23 }),
+      act('oxc_lights', 'See the Christmas lights on Regent Street', 45, 0, 0, { fun: 16, stress: -4 }, null, { months: [10, 11], from: 16, to: 23 }),
+      act('oxc_regent', 'Window-shop down Regent Street', 60, 0, 0, { fun: 10 }, null, { from: 10, to: 21 }),
+      Object.assign(act('oxc_flyers', 'Hand out flyers for a West End show (a day rate)', 240, 0, 2800, { energy: -12, social: 6 }, null, { from: 11, to: 19 }), { minRules: 26, permitted: true })
+    ]],
+    ['ldn_selfridges', '🛍️', 'Selfridges', 'outdoors', 'dome', 'ldn_oxford', 15.0, 7.8, 'selfridges', 'The great department store on Oxford Street: stone columns, the clock over the door and the yellow bags.', [
+      act('sfr_beauty', 'Try perfumes in the beauty hall', 30, 0, 0, { fun: 8, hygiene: 6 }, null, { from: 10, to: 22 }),
+      act('sfr_food', 'Lunch in the food hall', 45, gbp(28), 0, { hunger: 40, fun: 8 }, null, { from: 10, to: 21 }),
+      act('sfr_bag', 'Buy something just for the yellow bag', 60, gbp(120), 0, { fun: 22, social: 6 }, null, { from: 10, to: 22 }),
+      act('sfr_windows', 'See the window displays', 15, 0, 0, { fun: 8 }, null, { from: 7, to: 23 })
+    ]],
+    ['ldn_harrods', '👜', 'Harrods', 'outdoors', 'dome', 'ldn_westminster', 15.4, 12.2, 'harrods', 'Knightsbridge: the terracotta store lit up at night, green awnings, doormen and the food halls.', [
+      act('hrd_food', 'Walk the food halls (and buy one cake)', 45, gbp(18), 0, { hunger: 20, fun: 12 }, null, { from: 10, to: 21 }),
+      act('hrd_tea', 'Afternoon tea upstairs', 90, gbp(75), 0, { hunger: 30, fun: 20, social: 8 }, null, { from: 12, to: 18 }),
+      act('hrd_bag', 'Buy a designer handbag', 30, gbp(1800), 0, { fun: 30, social: 10 }, null, { from: 10, to: 21 }),
+      act('hrd_lights', 'See the store lit up at night', 15, 0, 0, { fun: 10 }, null, { from: 18, to: 24 })
+    ]],
+    ['ldn_shoreditch', '🎨', 'Shoreditch', 'outdoors', 'dome', 'ldn_tower', 24.2, 8.6, 'shoreditch', 'Street art on every wall, Brick Lane curry and bagels, shipping-container shops and the tech crowd.', [
+      act('shd_art', 'Street-art walk round Brick Lane', 90, 0, 0, { fun: 18, stress: -6 }, { charisma: 1 }, { from: 9, to: 20 }),
+      act('shd_bagel', 'A salt-beef bagel on Brick Lane (open all night)', 15, gbp(8), 0, { hunger: 30 }, null, { from: 0, to: 24 }),
+      act('shd_curry', 'Curry on Brick Lane', 60, gbp(20), 0, { hunger: 44, social: 6 }, null, { from: 12, to: 24 }),
+      act('shd_box', 'Drinks and music at the container market', 120, gbp(25), 0, { fun: 24, social: 14 }, null, { from: 17, to: 24 }),
+      Object.assign(act('shd_cowork', 'A freelance coding day in a co-working space', 360, gbp(25), 3000, { energy: -14 }, { tech: 2 }, { days: [0, 1, 2, 3, 4], from: 9, to: 19 }), { minRules: 26, permitted: true })
+    ]],
+    ['ldn_livst', '🚉', 'Liverpool Street station', 'outdoors', 'dome', 'ldn_tower', 23.4, 10.2, 'livst', 'The big Victorian station: iron and glass roof, the departure board, the Elizabeth line and the City office crowds.', [
+      act('lvs_board', 'Watch the departure board and the rush hour', 15, 0, 0, { fun: 4 }, null, { from: 6, to: 23 }),
+      act('lvs_coffee', 'Coffee and a croissant on the concourse', 15, gbp(6), 0, { hunger: 12, energy: 6 }, null, { from: 5, to: 23 }),
+      act('lvs_city', 'Walk through the City: the Gherkin and the towers', 60, 0, 0, { fun: 12 }, null, { from: 7, to: 21 }),
+      Object.assign(act('lvs_shift', 'A shift at a station coffee kiosk', 240, 0, 2600, { energy: -12 }, null, { from: 6, to: 20 }), { minRules: 26, permitted: true })
     ]]
   ].forEach(function (q) {
     var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^cc_/.test(q[5]) ? 'capecoast' : /^ldn_/.test(q[5]) ? 'london' : /^dxb_/.test(q[5]) ? 'dubai' : /^ctn_/.test(q[5]) ? 'capetown' : 'lagos'), text: q[9] };

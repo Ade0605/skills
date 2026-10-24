@@ -962,6 +962,73 @@
       g.add(mesh(new T.BoxGeometry(90, 18, 12), st, -52, 9, 4)); for (var tw = 0; tw < 12; tw++) g.add(mesh(new T.ConeGeometry(1.2, 6, 4), st, -94 + tw * 7.4, 21, 4));
       plzG.add(g);
     }
+    // London shops and streets (a facade with rows of windows, a name sign, awnings) for the West End, Knightsbridge,
+    // Shoreditch and Liverpool Street.
+    function ldnTex(text, bg, fg, w, h, font) { return canvasTex(w || 1024, h || 128, function (c, W, H) { c.fillStyle = bg; c.fillRect(0, 0, W, H); c.fillStyle = fg; c.font = font || ('900 ' + Math.round(H * 0.6) + 'px Georgia, serif'); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, W / 2, H / 2 + 2); }); }
+    function ldnFacade(g, w, h, d, stone, winCol, rows, cols, x, z) {
+      g.add(mesh(new T.BoxGeometry(w, h, d), stone, x, h / 2, z));
+      var wm = mat('ldnWin' + winCol, { color: winCol, emissive: winCol, emissiveIntensity: 0.25, roughness: 0.2, metalness: 0.3 });
+      for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) g.add(mesh(new T.BoxGeometry(w / cols * 0.55, h / rows * 0.5, 0.3), wm, x - w / 2 + (c + 0.5) * w / cols, h * 0.2 + (r + 0.5) * (h * 0.78) / rows, z - d / 2 - 0.1));
+    }
+    function ldnSign(g, tex, w, h, x, y, z) { var m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.35, side: T.DoubleSide })); m.position.set(x, y, z); m.rotation.y = Math.PI; g.add(m); return m; }
+    function harrods(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var terra = mat('hrdTerra', { color: 0xb5653a, roughness: 0.8 }), green = mat('hrdGreen', { color: 0x0f5a3a, roughness: 0.6 }), gold = mat('hrdGold', { color: 0xd4af37, metalness: 0.7, roughness: 0.3 });
+      ldnFacade(g, 110, 30, 18, terra, 0xffe8b0, 4, 22, 0, 0);
+      var dome = mesh(new T.SphereGeometry(7, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat('hrdDome', { color: 0x7a8a6a, roughness: 0.5, metalness: 0.4 }), 0, 33, -2); g.add(dome); g.add(mesh(new T.BoxGeometry(16, 4, 16), terra, 0, 31, -2));
+      for (var a = 0; a < 12; a++) { var aw = mesh(new T.BoxGeometry(7, 0.4, 3), green, -50 + a * 9, 5.2, -10.4); aw.rotation.x = -0.35; g.add(aw); }
+      ldnSign(g, ldnTex('Harrods', '#0f5a3a', '#d4af37', 1024, 160, 'italic 900 110px Georgia, serif'), 26, 4, 0, 26, -9.2);
+      for (var b = 0; b < 40; b++) g.add(mesh(new T.SphereGeometry(0.25, 6, 4), new T.MeshBasicMaterial({ color: 0xffd98a }), -54 + b * 2.8, 30.2, -9.2));
+      [-8, 8].forEach(function (dx) { var dm = new T.Group(); dm.position.set(dx, 0, -12); dm.add(mesh(new T.CylinderGeometry(0.35, 0.35, 1.5, 8), green, 0, 0.75, 0)); dm.add(mesh(new T.SphereGeometry(0.28, 8, 6), mat('skin1', { color: 0x6b4a33 }), 0, 1.75, 0)); dm.add(mesh(new T.CylinderGeometry(0.3, 0.3, 0.4, 8), green, 0, 2.15, 0)); g.add(dm); });
+      g.add(mesh(new T.BoxGeometry(10, 7, 0.4), gold, 0, 3.5, -9.3));
+      plzG.add(g);
+    }
+    function selfridges(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var stone = mat('sfrStone', { color: 0xe7dfc8, roughness: 0.7 });
+      ldnFacade(g, 120, 28, 18, stone, 0xfff2c8, 3, 18, 0, 0);
+      for (var c = 0; c < 18; c++) g.add(mesh(new T.CylinderGeometry(1, 1.1, 20, 12), stone, -57 + c * 6.7, 14, -9.8));
+      ldnSign(g, ldnTex('SELFRIDGES & Co', '#ffe500', '#111111', 1024, 128, '900 70px system-ui, sans-serif'), 30, 3.6, 0, 6.2, -10.6);
+      var clk = new T.Group(); clk.position.set(0, 9.5, -11); clk.add(mesh(new T.BoxGeometry(5, 5, 1.2), mat('sfrBronze', { color: 0x6b4a2b, metalness: 0.6 }), 0, 0, 0)); var fc = new T.Mesh(new T.CircleGeometry(1.8, 24), new T.MeshStandardMaterial({ color: 0xfff6dc, emissive: 0xfff1c0, emissiveIntensity: 0.4 })); fc.position.set(0, 0, -0.65); fc.rotation.y = Math.PI; clk.add(fc); g.add(clk);
+      for (var w = 0; w < 8; w++) { var win = mesh(new T.BoxGeometry(9, 5, 0.3), new T.MeshStandardMaterial({ color: [0xffe500, 0xff6b9a, 0x5fb3cf, 0x9ad15a][w % 4], emissive: [0xffe500, 0xff6b9a, 0x5fb3cf, 0x9ad15a][w % 4], emissiveIntensity: 0.3 }), -52 + w * 15, 3, -10.2); g.add(win); }
+      for (var bg = 0; bg < 10; bg++) g.add(mesh(new T.BoxGeometry(0.8, 1, 0.4), mat('sfrBag', { color: 0xffe500 }), -30 + bg * 6, 0.5, -16 - (bg % 3)));
+      plzG.add(g);
+    }
+    function oxfordCircus(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var stone = mat('oxcStone', { color: 0xd9cfb4, roughness: 0.75 });
+      // four curved corner buildings round the crossing
+      [[-40, -30], [40, -30], [-40, 40], [40, 40]].forEach(function (q, i) { ldnFacade(g, 50, 22, 26, stone, 0xfff0c8, 4, 10, q[0], q[1]); ldnSign(g, ldnTex(['OXFORD ST', 'REGENT ST', 'KICKS LDN', 'THREADS'][i], '#17181a', '#fff', 512, 96, '900 56px system-ui'), 14, 2.6, q[0], 9, q[1] - 13.2); });
+      // the diagonal zebra crossing
+      var zt = canvasTex(256, 256, function (c, w, h) { c.fillStyle = '#3a3f46'; c.fillRect(0, 0, w, h); c.strokeStyle = '#f4f3ec'; c.lineWidth = 14; for (var k = -w; k < w * 2; k += 34) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k + h, h); c.stroke(); c.beginPath(); c.moveTo(k, h); c.lineTo(k + h, 0); c.stroke(); } });
+      var road = mesh(new T.PlaneGeometry(30, 30).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: zt, roughness: 0.9 }), 0, 0.05, 5); road.castShadow = false; g.add(road);
+      // Tube entrances with the roundel
+      var rt = canvasTex(256, 256, function (c, w, h) { c.clearRect(0, 0, w, h); c.strokeStyle = '#dc241f'; c.lineWidth = 34; c.beginPath(); c.arc(w / 2, h / 2, 90, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#1f3a93'; c.fillRect(10, h / 2 - 26, w - 20, 52); c.fillStyle = '#fff'; c.font = '900 26px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('UNDERGROUND', w / 2, h / 2 + 1); });
+      [[-18, -12], [18, -12], [-18, 22], [18, 22]].forEach(function (q) { g.add(mesh(new T.BoxGeometry(6, 1.2, 0.3), mat('oxcRail', { color: 0x2b2f36, metalness: 0.5 }), q[0], 0.6, q[1])); g.add(mesh(new T.CylinderGeometry(0.15, 0.15, 4, 6), mat('oxcPole', { color: 0x2b2f36 }), q[0] + 3, 2, q[1])); var rd = new T.Mesh(new T.PlaneGeometry(2.6, 2.6), new T.MeshBasicMaterial({ map: rt, transparent: true, side: T.DoubleSide })); rd.position.set(q[0] + 3, 4.6, q[1]); g.add(rd); });
+      ldnSign(g, ldnTex('OXFORD CIRCUS', '#1f3a93', '#ffffff', 1024, 128, '900 74px system-ui, sans-serif'), 16, 2, 0, 7, -14);
+      // two red buses
+      [[-10, 12, 0], [10, 0, Math.PI]].forEach(function (b) { var bus = new T.Group(); bus.position.set(b[0], 0, b[1]); bus.rotation.y = b[2]; bus.add(mesh(new T.BoxGeometry(2.6, 4.2, 10), mat('ldnBusR', { color: 0xd8261c, roughness: 0.45 }), 0, 2.5, 0)); [1.8, 3.6].forEach(function (yy) { bus.add(mesh(new T.BoxGeometry(2.65, 0.9, 9), mat('ldnBusW', { color: 0x1d2a33, metalness: 0.4 }), 0, yy, 0)); }); g.add(bus); });
+      plzG.add(g);
+    }
+    function shoreditch(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var brick = mat('shdBrick', { color: 0x8a4a32, roughness: 0.95 });
+      var mural = function (seed) { return canvasTex(512, 256, function (c, w, h) { c.fillStyle = '#8a4a32'; c.fillRect(0, 0, w, h); var cols = ['#ff3d7f', '#ffd23f', '#3bceac', '#0ead69', '#540d6e', '#ee4266', '#2f6fd6']; for (var k = 0; k < 18; k++) { c.fillStyle = cols[(k + seed) % cols.length]; c.beginPath(); c.arc((k * 97 + seed * 41) % w, (k * 53 + seed * 29) % h, 20 + (k * 13 + seed) % 60, 0, Math.PI * 2); c.fill(); } c.fillStyle = '#fff'; c.font = '900 64px system-ui'; c.textAlign = 'center'; c.fillText(['EAST LDN', 'DREAM', 'NAIJA X LDN', 'SHOREDITCH'][seed % 4], w / 2, h * 0.58); }); };
+      for (var b = 0; b < 4; b++) { var bx = -48 + b * 32; g.add(mesh(new T.BoxGeometry(28, 16 + b * 3, 14), brick, bx, (16 + b * 3) / 2, 0)); var mp = new T.Mesh(new T.PlaneGeometry(24, 10), new T.MeshStandardMaterial({ map: mural(b), roughness: 0.9 })); mp.position.set(bx, 6.5, -7.1); mp.rotation.y = Math.PI; g.add(mp); }
+      // the shipping-container market
+      var boxCols = [0x17181a, 0x2b2f36, 0x17181a, 0x3a3f46];
+      for (var k = 0; k < 10; k++) { var cx = -27 + (k % 5) * 13.5, cy = k < 5 ? 1.3 : 3.9; g.add(mesh(new T.BoxGeometry(12, 2.6, 5), mat('shdBox' + (k % 4), { color: boxCols[k % 4], roughness: 0.6, metalness: 0.4 }), cx, cy, -22)); if (k < 5) g.add(mesh(new T.BoxGeometry(10, 1.6, 0.2), new T.MeshStandardMaterial({ color: 0xffd28c, emissive: 0xffb04a, emissiveIntensity: 0.5 }), cx, 1.3, -24.6)); }
+      ldnSign(g, ldnTex('BOX MARKET · BRICK LANE', '#17181a', '#ffd23f', 1024, 128, '900 60px system-ui'), 30, 3.6, 0, 7.5, -24.8);
+      plzG.add(g);
+    }
+    function liverpoolStreet(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var iron = mat('lvsIron', { color: 0x5a7a8a, metalness: 0.6, roughness: 0.4 }), brick = mat('lvsBrick', { color: 0xa45a3a, roughness: 0.9 });
+      ldnFacade(g, 90, 20, 10, brick, 0xfff0c8, 3, 14, 0, 0); g.add(mesh(new T.BoxGeometry(10, 30, 10), brick, -40, 15, 0)); g.add(mesh(new T.ConeGeometry(6, 8, 4), mat('lvsRoof', { color: 0x4a5560 }), -40, 34, 0));
+      // the iron and glass train shed behind
+      for (var a = 0; a < 6; a++) { var arch = new T.Mesh(new T.TorusGeometry(22, 0.5, 6, 32, Math.PI), iron); arch.position.set(0, 14, 18 + a * 9); g.add(arch); }
+      var glassRoof = new T.Mesh(new T.CylinderGeometry(22, 22, 50, 32, 1, true, -Math.PI / 2, Math.PI), new T.MeshPhysicalMaterial({ color: 0xcfe3ec, transparent: true, opacity: 0.35, roughness: 0.1, side: T.DoubleSide })); glassRoof.rotation.x = Math.PI / 2; glassRoof.rotation.z = Math.PI / 2; glassRoof.position.set(0, 14, 40); g.add(glassRoof);
+      ldnSign(g, ldnTex('LIVERPOOL STREET', '#17181a', '#ffffff', 1024, 128, '900 76px system-ui'), 26, 3, 0, 16, -5.2);
+      var boardT = canvasTex(1024, 384, function (c, w, h) { c.fillStyle = '#0b0b0b'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffb000'; c.font = '700 40px monospace'; ['10:02  Cambridge        Plat 3', '10:05  Stansted Express Plat 7', '10:08  Norwich          Plat 9', '10:12  Shenfield        Plat 15', '10:15  Elizabeth line   ⊖'].forEach(function (l, i) { c.fillText(l, 30, 64 + i * 66); }); });
+      ldnSign(g, boardT, 20, 7.5, 0, 9, -5.4);
+      var el = new T.Mesh(new T.PlaneGeometry(3.2, 3.2), new T.MeshBasicMaterial({ map: canvasTex(256, 256, function (c, w, h) { c.strokeStyle = '#6950a1'; c.lineWidth = 34; c.beginPath(); c.arc(w / 2, h / 2, 90, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#1f3a93'; c.fillRect(10, h / 2 - 26, w - 20, 52); c.fillStyle = '#fff'; c.font = '900 24px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ELIZABETH LINE', w / 2, h / 2 + 1); }), transparent: true, side: T.DoubleSide })); el.position.set(30, 5, -6); g.add(el);
+      plzG.add(g);
+    }
     function towerBridge(x, z) {
       var g = new T.Group(); g.position.set(x, 0, z); var st = mat('tbStone', { color: 0xcfc7b0, roughness: 0.7 }), blue = mat('tbBlue', { color: 0x2f6fa0, roughness: 0.5 });
       var river = new T.Mesh(new T.PlaneGeometry(400, 50).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x5f7a86, roughness: 0.1, clearcoat: 1 })); river.position.set(0, 0.2, 0); g.add(river);
@@ -1046,6 +1113,11 @@
       else if (id === 'dxb_safari') desertCamp();
       else if (id === 'ldn_bigben') bigBen(20, 95);
       else if (id === 'ldn_towerbridge') towerBridge(0, 70);
+      else if (id === 'ldn_harrods') harrods(0, 70);
+      else if (id === 'ldn_selfridges') selfridges(0, 70);
+      else if (id === 'ldn_oxcircus') oxfordCircus(0, 40);
+      else if (id === 'ldn_shoreditch') shoreditch(0, 60);
+      else if (id === 'ldn_livst') liverpoolStreet(0, 60);
       else if (/mosque/.test(id)) mosque(0, 50, 1.15);
       else if (/ecumenical/.test(id)) cathedral(0, 50, 1.2);
       else if (/eagle|tbs/.test(id)) {
