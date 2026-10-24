@@ -357,6 +357,7 @@
     h.classList.toggle('big-text', !!prefs.big);
     h.classList.toggle('lite', liteOn());
     h.setAttribute('lang', prefs.lang === 'pcm' ? 'pcm' : 'en');
+    if (prefs.theme === 'dark' || prefs.theme === 'light') h.setAttribute('data-theme', prefs.theme); else h.removeAttribute('data-theme');
   }
   applyPrefs();
   // Rules 42: study paths. Every degree, apprenticeship and certificate, where it is taught and how far along you are.
@@ -370,7 +371,14 @@
         var st = L.studyState(S, id), P = st.P, here = S.loc === P.district, city = L.districtCity(P.district);
         var status = st.done ? '<span class="gain">✓ Qualified</span>' : st.enrolled ? '<span class="study-bar"><i style="width:' + Math.round(st.classes / st.total * 100) + '%"></i></span><span>' + st.classes + ' of ' + st.total + '</span>' : st.residentOnly ? '<span class="muted">For people who live in ' + esc(D.CITIES[city].name) + '</span>' : '<span class="cost num">' + N(L.price(S, P.fee)) + ' to enrol</span>';
         var go = st.done ? '' : here ? '<span class="muted">📍 You are here: see Do</span>' : city === L.cityOf(S) ? '<button class="btn sm ghost" id="st-go-' + id + '" data-tab="map" data-tripto="' + P.district + '">🧭 Go</button>' : '<span class="muted">In ' + esc(D.CITIES[city].name) + '</span>';
-        return '<div class="item"><div><h3>' + esc(P.name) + '</h3><div class="meta"><span>' + esc(P.where) + '</span><span>' + D.SKILLS[P.skill] + ' +' + P.xp + ' a class</span><span>' + P.classes + (kind === 'apprentice' ? ' days' : ' classes') + '</span>' + (P.stipend ? '<span class="gain">' + N(P.stipend) + ' a day</span>' : '') + status + '</div></div>' + go + '</div>';
+        var open = ui.course === id, det = '';
+        if (open) { // the course card: what it is, and the button to enrol or go to class right here
+          var act = here ? L.availableActions(S).filter(function (a) { return a.study === id; })[0] : null;
+          var btn = st.done ? '<span class="gain">✓ You are qualified</span>' : st.residentOnly ? '' : act ? '<button class="btn sm go" id="st-act-' + id + '" data-act="' + act.id + '"' + (act.disabled ? ' disabled title="' + esc(act.disabled) + '"' : '') + '>' + (st.enrolled ? (kind === 'apprentice' ? '🛠️ Go to work today' : '📚 Go to class now') : '✍️ Enrol now · ' + N(L.price(S, P.fee))) + '</button>' + (act.disabled ? '<p class="why">' + esc(act.disabled) + '.</p>' : '')
+            : city === L.cityOf(S) ? '<button class="btn sm go" id="st-go2-' + id + '" data-tab="map" data-tripto="' + P.district + '">🧭 Go to ' + esc(D.DISTRICTS[P.district].name) + ' to ' + (st.enrolled ? 'attend' : 'enrol') + '</button>' : '<button class="btn sm go" id="st-fly-' + id + '" data-app="travel">✈️ Fly to ' + esc(D.CITIES[city].name) + '</button>';
+          det = '<div class="course-card"><p class="note">' + esc(K.name) + ' at ' + esc(P.where) + ', ' + esc(D.DISTRICTS[P.district].name) + '. ' + P.classes + (kind === 'apprentice' ? ' working days' : ' classes') + ', one a day, ' + dur(P.mins) + ' each. Fee ' + N(L.price(S, P.fee)) + '.' + (P.stipend ? ' Pays ' + N(P.stipend) + ' a day while you learn.' : '') + ' Each class: ' + D.SKILLS[P.skill] + ' +' + P.xp + '.</p><div class="inline">' + btn + '</div></div>';
+        }
+        return '<div class="item course-row' + (open ? ' open' : '') + '" role="button" tabindex="0" aria-expanded="' + open + '" id="course-' + id + '" data-course="' + id + '"><div><h3>' + esc(P.name) + ' <span class="muted">' + (open ? '▾' : '▸') + '</span></h3><div class="meta"><span>' + esc(P.where) + '</span><span>' + D.SKILLS[P.skill] + ' +' + P.xp + ' a class</span><span>' + P.classes + (kind === 'apprentice' ? ' days' : ' classes') + '</span>' + (P.stipend ? '<span class="gain">' + N(P.stipend) + ' a day</span>' : '') + status + '</div>' + det + '</div>' + (open ? '' : go) + '</div>';
       }).join('') + '</div></details>';
     });
     return html + '</div>';
@@ -1836,7 +1844,7 @@
   function houseTab() {
     var h = L.homeDef(S), sz = L.roomSize(S), sel = ui.itemSel != null ? S.items[ui.itemSel] : null;
     var html = '<div class="panel-h"><h2>' + esc(h.name) + '</h2><span class="muted">' + esc(D.HOME_TYPES[h.type || 'room'].name) + ' · ' + sz[0] + '×' + sz[1] + ' floor</span></div><div class="panel-b">';
-    html += '<div class="iv-slot"></div>';
+    html += '<div class="iv-slot"></div>' + streakCard() + sickCard() + goalsCard(); // the daily streak, being sick and today's goals live on Home
     if (sel) {
       var f = D.FURNITURE[sel.id];
       html += '<div class="iv-bar"><span><b>' + f.icon + ' ' + esc(f.name) + '</b> <span class="muted">' + esc(fxText(f)) + '</span></span><span class="inline">' +
@@ -3217,6 +3225,23 @@
     return html;
   }
 
+  // "Go there": move the map camera onto the exact district or place, once the map is drawn.
+  function mapSpot(district, placeId) {
+    var pl = placeId ? D.PLACES.filter(function (x) { return x.id === placeId; })[0] : null;
+    var dk = pl ? pl.district : district, dd = dk && D.DISTRICTS[dk];
+    if (!dd || L.districtCity(dk) !== L.cityOf(S)) return null;
+    return pl && pl.x != null ? { x: pl.x, y: pl.y, close: true } : { x: dd.x, y: dd.y, close: false };
+  }
+  function focusMap(district, placeId) {
+    var sp = mapSpot(district, placeId); if (!sp) return;
+    var go = function () {
+      if (city3d && city3d.el.isConnected && city3d.flyTo) city3d.flyTo(sp.x, sp.y, sp.close ? 34 : 55);
+      if (playground && playground.focusAt && playground.el.isConnected) playground.focusAt(sp.x, sp.y, sp.close ? 6 : 4);
+    };
+    var raf = window.requestAnimationFrame || function (f) { setTimeout(f, 16); };
+    raf(function () { go(); setTimeout(go, 400); }); // again after the 3D map finishes loading
+  }
+  window.__focusMap = focusMap;
   function mountPlayground() {
     if (!S || !window.LasgidiPlayground) return;
     var narrow = window.matchMedia && window.matchMedia('(max-width: 899px)').matches;
@@ -4127,11 +4152,52 @@
   function markRead() { try { localStorage.setItem(READ_KEY, JSON.stringify({ seed: S.seed, t: S.t })); } catch (e) {} }
   function unreadCount() { var t = lastRead(); return S.log.filter(function (l) { return l.t > t; }).length; }
   var APPS = [
-    ['guide', '❓', 'Guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['home', '🏠', 'Home'], ['people', '👥', 'People'], ['jobs', '💼', 'Careers'], ['money', '💰', 'Money'], ['assets', '📊', 'Assets'], ['houses', '🏡', 'Houses'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shop'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Dealers'],
-    ['gems', '💎', 'Gem hunt'], ['hunt', '🔤', 'Letter hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Government'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe'], ['style', '🎨', 'Style shop'],
-    ['news', '📰', 'News'], ['music', '🎧', 'Music'], ['calendar', '📅', 'Calendar'], ['courses', '🎓', 'Courses'], ['health', '🩺', 'Health'], ['ride', '🚕', 'Ride'], ['radio', '📻', 'Club radio'], ['ideas', '💡', 'Suggestions'], ['settings', '⚙️', 'Settings'], ['owner', '🛡️', 'Dashboard']
+    ['guide', '❓', 'Help & guide'], ['messages', '💬', 'Messages'], ['quests', '🎯', 'Quests'], ['home', '🏠', 'Home'], ['people', '👥', 'People'], ['jobs', '💼', 'Jobs'], ['money', '💰', 'Money'], ['assets', '📊', 'Assets'], ['houses', '🏡', 'Houses'], ['bank', '🏦', 'Bank'], ['stocks', '📈', 'Stocks'], ['shop', '🛍️', 'Shops'], ['creator', '📸', 'Creator'], ['games', '🎮', 'Games'], ['dealers', '🚗', 'Cars'],
+    ['gems', '💎', 'Gem hunt'], ['hunt', '🔤', 'Letter hunt'], ['events', '🎟️', 'What\'s on'], ['weather', '🌦️', 'Weather'], ['travel', '✈️', 'Travel'], ['town', '🗳️', 'Town Hall'], ['govt', '🏛️', 'Lagos Gov'], ['nysc', '🎖️', 'NYSC'], ['sports', '🏅', 'Sports'], ['sights', '🗺️', 'Sightseeing'], ['story', '📖', 'My story'], ['fame', '🏆', 'Hall of Fame'], ['wardrobe', '👗', 'Wardrobe'], ['style', '🎨', 'Style shop'],
+    ['news', '📰', 'Lagos Gist'], ['music', '🎧', 'Music'], ['calendar', '📅', 'Calendar'], ['courses', '🎓', 'Courses'], ['health', '🩺', 'Health'], ['ride', '🚕', 'Ride'], ['radio', '📻', 'Club radio'], ['ideas', '💡', 'Suggestions'], ['settings', '⚙️', 'Settings'], ['owner', '🛡️', 'Dashboard']
   ];
+  // More apps: each opens a part of the game you already have, plus Pay Index (all salaries) and Invite. Names are made up.
+  var MORE_APPS = [['support', '🎧', 'Support'], ['tickets', '🎫', 'TixLagos'], ['fixam', '🛠️', 'FixAm'], ['dokita', '🩹', 'Dokita'], ['linkup', '💞', 'LinkUp'], ['payindex', '💹', 'Pay Index'],
+    ['flix', '🎬', 'NaijaFlix'], ['glow', '💄', 'Glow Beauty'], ['spaces', '🎙️', 'Spaces'], ['hangout', '🧺', 'Hangout'], ['contacts', '📞', 'Contacts'], ['chop', '🛵', 'ChopDash'],
+    ['boutique', '👠', 'Boutique'], ['gadgets', '📱', 'Gadgets'], ['richlist', '👑', 'Rich List'], ['invite', '🔗', 'Invite'], ['invest', '💼', 'Invest'], ['assurance', '🛡️', 'Assurance'],
+    ['family', '👨‍👩‍👧', 'Family'], ['staff', '🧹', 'Staff'], ['hustle', '🧰', 'Hustle'], ['busco', '🚌', 'Bus Co.'], ['company', '🏢', 'Company'], ['give', '🤲', 'Give'], ['police', '🚓', 'Police'], ['court', '⚖️', 'Court']];
+  APPS.splice.apply(APPS, [APPS.length - 2, 0].concat(MORE_APPS));
   var NEW_APPS = { radio: 1, hunt: 1, news: 1, music: 1, calendar: 1, courses: 1, health: 1, ride: 1 };
+  MORE_APPS.forEach(function (a) { NEW_APPS[a[0]] = 1; });
+  // Pay Index: what every job pays at each rank, in your city first.
+  function payIndexView() {
+    var here = L.cityOf(S), rows = Object.keys(D.CAREERS).map(function (k) { return { k: k, C: D.CAREERS[k], c: L.districtCity(D.CAREERS[k].district) }; }).filter(function (r) { return !(r.C.rules > S.rules); })
+      .sort(function (a, b) { return (a.c === here ? 0 : 1) - (b.c === here ? 0 : 1) || b.C.pay[b.C.pay.length - 1] - a.C.pay[a.C.pay.length - 1]; });
+    return '<div class="section"><h3>💹 Pay Index</h3><p class="note">Pay per shift at every rank (before tax). Money is 70% easier now: shifts pay more than this when you work them.</p><div class="list">' + rows.map(function (r) {
+      return '<div class="item"><div><h3>' + esc(r.C.name) + ' <span class="muted">· ' + esc(D.CITIES[r.c] ? D.CITIES[r.c].name : r.c) + '</span></h3><div class="meta">' + r.C.titles.map(function (t, i) { return '<span>' + esc(t) + ' ' + N(L.price(S, r.C.pay[i])) + '</span>'; }).join('') + '</div></div></div>';
+    }).join('') + '</div><div class="inline"><button class="btn sm go" id="pi-jobs" data-app="jobs">💼 Find a job</button></div></div>';
+  }
+  function moreAppView(app) {
+    var P = function (x) { return '<div class="panel-b">' + x + '</div>'; };
+    switch (app) {
+      case 'support': return P(guideView() + ideasView());
+      case 'tickets': return P(festCard('ev') + eventsView());
+      case 'fixam': case 'assurance': case 'family': case 'staff': return houseTab();
+      case 'dokita': return P(healthView());
+      case 'linkup': case 'contacts': case 'give': return P(peopleView());
+      case 'payindex': return P(payIndexView());
+      case 'flix': return P(actsApp('🎬 NaijaFlix', 'Films and shows in this city: cinemas, the theatre and screenings.', function (a) { return /cinema|film|movie|screening|theatre|show/i.test(a.label); }));
+      case 'glow': return P(actsApp('💄 Glow Beauty', 'Salons, barbers, nails and spa days near you.', function (a) { return /salon|hair|barb|nail|makeup|spa|braid|glam|beauty/i.test(a.label + ' ' + (a.special || '')); }));
+      case 'spaces': return P(radioView() + roomNightsView());
+      case 'hangout': return P(roomNightsView() + actsApp('🧺 Hangout', 'Places to chill with people in this city.', function (a) { return a.fx && a.fx.social > 0 && !a.gig; }));
+      case 'chop': return P(actsApp('🛵 ChopDash', 'Food spots in this city. Go there to eat.', function (a) { return a.fx && a.fx.hunger > 0 && !a.gig; }));
+      case 'boutique': return P(lagosianView());
+      case 'gadgets': return P(shopView());
+      case 'richlist': return P(fameView() || '<div class="section"><h3>👑 Rich List</h3><p class="note">The richest lives everyone has shared. It works when the game is opened on claude.ai.</p></div>');
+      case 'invite': return P('<div class="section"><h3>🔗 Invite friends</h3><p class="note">Share the game and your life story.</p>' + shareBlock() + '</div>');
+      case 'invest': return P(stocksView() + assetsView());
+      case 'hustle': return P(actsApp('🧰 Hustle', 'Side gigs in this city, once a day each.', function (a) { return !!a.gig; }));
+      case 'busco': case 'company': return P(assetsView());
+      case 'police': return P(actsApp('🚓 Police', 'Police stations and what you can do there.', function (a) { return /police|station|report|bail|statement/i.test(a.label); }));
+      case 'court': return P(actsApp('⚖️ Court', 'Courts, lawyers and cases in this city.', function (a) { return /court|lawyer|case|judge|affidavit|tribunal/i.test(a.label); }));
+    }
+    return null;
+  }
   var APPS_SEEN = 'lasgidi.appsseen.v1';
   function appsSeen() { return readJSON(APPS_SEEN, {}); }
   // The phone's "out now" banner: this week's letter hunt.
@@ -4678,6 +4744,7 @@
     }).join('');
     return html + '</div></div>';
   }
+  function themeDark() { return prefs.theme === 'dark' || (prefs.theme !== 'light' && !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)); }
   function phoneView() {
     var app = ui.app, body;
     if (app) {
@@ -4720,6 +4787,7 @@
       else if (app === 'assets') body = '<div class="panel-b">' + assetsView() + '</div>';
       else if (app === 'houses') body = '<div class="panel-b">' + housesView() + '</div>';
       else if (app === 'style') body = '<div class="panel-b">' + styleView() + '</div>';
+      if (body == null) body = moreAppView(app);
       var a = APPS.filter(function (x) { return x[0] === app; })[0];
       return '<div class="phone-top"><button class="btn sm ghost" id="app-back" data-app="">‹ Apps</button><b>' + (a ? a[1] + ' ' + esc(a[2]) : '') + '</b></div>' + body;
     }
@@ -4733,7 +4801,8 @@
     var h = L.hour(S), mins = S.t % 60, news = S.log.filter(function (l) { return l.kind !== 'info'; }).slice(0, 4);
     var batt = Math.max(5, Math.round(S.needs.energy)), net = S.power ? '4G' : 'E';
     return '<div class="phone-frame' + (h >= 19 || h < 6 ? ' night' : '') + '"><div class="ph-status"><span>' + pad(h) + ':' + pad(mins) + '</span><span class="ph-notch" aria-hidden="true"></span><span>' + net + ' ▮▮▮ ' + batt + '%</span></div>' +
-      '<div class="ph-lock"><b>' + pad(h) + ':' + pad(mins) + '</b><span>' + esc(L.dateLabel ? L.dateLabel(S) : L.clockLabel(S)) + ' · ' + esc(D.CITIES[L.cityOf(S)].name) + '</span></div>' +
+      '<div class="ph-lock"><b>' + pad(h) + ':' + pad(mins) + '</b><span>' + esc(L.dateLabel ? L.dateLabel(S) : L.clockLabel(S)) + ' · ' + esc(D.CITIES[L.cityOf(S)].name) + '</span>' +
+      '<button type="button" class="ph-night" id="ph-night" data-nightmode="1">' + (themeDark() ? '☀️ Day mode' : '🌙 Night mode') + '</button></div>' +
       (news.length ? '<div class="ph-news" aria-label="Latest news"><span class="ph-news-h">📰 Latest</span><div class="ph-ticker"><div>' + news.map(function (l) { return '<span>' + esc(l.text) + '</span>'; }).join('') + '</div></div></div>' : '') +
       huntBanner() + '<div class="apps ph-apps">' + APPS.filter(function (x) { return (x[0] !== 'style' || online.shop) && (x[0] !== 'owner' || online.isOwner); }).map(function (x, i) {
       var n = badge[x[0]], fresh = NEW_APPS[x[0]] && !(appsSeen()[x[0]]);
@@ -4794,7 +4863,16 @@
       (jobs.length ? '<div class="pg-chips" style="padding:0">' + jobs.map(function (k) { var c = D.CAREERS[k]; return '<span class="act-chip">💼 ' + esc(c.titles[1]) + ' · ' + esc(c.name) + '</span>'; }).join('') + '</div>' : '') +
       '<div class="opts"><button class="btn go" id="grad-jobs" data-gradok="jobs">See careers</button><button class="btn ghost" id="grad-ok" data-gradok="1">Celebrate</button></div></div></div>';
   }
+  // The daily streak celebration (rules 46 adds XP and your Lagos level).
+  function celebView() {
+    var c = ui.celebrate;
+    return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="cel-title"><div class="sheet pop celebrate"><div class="pop-ic big" aria-hidden="true">🎉</div><h2 id="cel-title">Day ' + c.n + ' streak!</h2>' +
+      '<div class="cel-chips"><span class="cel-chip money">+' + N(c.prize) + '</span>' + (c.xp ? '<span class="cel-chip xp">+' + c.xp + ' XP</span>' : '') + '</div>' +
+      (c.up ? '<div class="cel-level">⬆️ Level ' + c.level + '!</div>' : c.level ? '<p class="note">Lagos level ' + c.level + '</p>' : '') +
+      '<div class="opts"><button class="btn go" id="cel-ok" data-celebok="1">Nice!</button></div></div></div>';
+  }
   function modal() {
+    if (ui.celebrate) return celebView();
     if (ui.gradCard && D.STUDY && D.STUDY[ui.gradCard]) return gradView();
     if (S.japa && !S.japaSeen) {
       var J = D.JAPA_DESTS[S.japa.dest];
@@ -4814,6 +4892,8 @@
     }
     var ev = S.pending[0];
     if (ev) {
+      if (ev.icon) return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ev-title"><div class="sheet pop"><div class="pop-ic" aria-hidden="true">' + esc(ev.icon) + '</div><h2 id="ev-title">' + esc(ev.title) + '</h2><p>' + esc(locText(ev.text)) + '</p><div class="opts">' +
+        ev.options.map(function (o, i) { return '<button class="btn' + (i === 0 ? ' go' : ' ghost') + '" id="choice-' + i + '" data-choice="' + i + '">' + esc(o) + (ev.subs && ev.subs[i] ? '<small class="ch-sub">' + esc(locText(ev.subs[i])) + '</small>' : '') + '</button>'; }).join('') + '</div></div></div>';
       return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ev-title"><div class="sheet"><span class="label">' + L.clockLabel(S) + ' · ' + esc(D.DISTRICTS[S.loc].name) + '</span><h2 id="ev-title">' + esc(ev.title) + '</h2><p>' + esc(ev.text) + '</p><div class="opts">' +
         ev.options.map(function (o, i) { return '<button class="btn' + (i === 0 ? ' go' : ' ghost') + '" id="choice-' + i + '" data-choice="' + i + '">' + esc(o) + (ev.subs && ev.subs[i] ? '<small class="ch-sub">' + esc(ev.subs[i]) + '</small>' : '') + '</button>'; }).join('') + '</div></div></div>';
     }
@@ -4948,7 +5028,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     if (ds.wwopen) { ui.wwOpen = !ui.wwOpen; return; }
@@ -5021,8 +5101,8 @@
       ui.confirmRestart = false; ui.flash = ''; playWeekly(true); return;
     }
     if (ds.wpost) { t.disabled = true; postWeekly().then(function (m) { online.wStatus = m; render(); }); return; }
-    if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; if (t.hasAttribute('data-app')) ui.app = ds.app || null; if (ds.tripto) { clearPicks(); ui.sel = ds.tripto === S.loc ? null : ds.tripto; } if (ds.seaopen) { clearPicks(); ui.seaOpen = true; } if (ds.place && t.hasAttribute('data-place')) { clearPicks(); ui.place = ds.place; } if (t.hasAttribute('data-placecat')) { clearPicks(); ui.placeCat = ds.placecat || null; } render(); if (ds.seaopen && playground && playground.focusSea) playground.focusSea(); return; }
-    if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); return; }
+    if (ds.tab) { ui.tab = ds.tab; ui.flash = ''; if (t.hasAttribute('data-app')) ui.app = ds.app || null; if (ds.tripto) { clearPicks(); ui.sel = ds.tripto === S.loc ? null : ds.tripto; } if (ds.seaopen) { clearPicks(); ui.seaOpen = true; } if (ds.place && t.hasAttribute('data-place')) { clearPicks(); ui.place = ds.place; } if (t.hasAttribute('data-placecat')) { clearPicks(); ui.placeCat = ds.placecat || null; } render(); if (ui.tab === 'map' && (ds.tripto || (ds.place && t.hasAttribute('data-place')))) focusMap(ds.tripto, t.hasAttribute('data-place') ? ds.place : null); if (ds.seaopen && playground && playground.focusSea) playground.focusSea(); return; }
+    if (ds.go) { ui.sel = ds.go === S.loc ? null : ds.go; ui.place = null; ui.board = null; render(); focusMap(ds.go); return; }
     if (ds.placecat !== undefined) { ui.placeCat = ds.placecat || null; render(); return; }
     if (ds.place) { ui.place = ds.place; ui.board = null; ui.mapPop = null; ui.sel = null; render(); return; }
     if (ds.lookskin !== undefined) { run(function () { return L.setLook(S, +ds.lookskin, S.look.hair, S.look.shape); }); return; }
@@ -5061,7 +5141,7 @@
     if (ds.boardsel) { ui.board = ds.boardsel; ui.place = null; ui.sel = null; online.status = ''; render(); return; }
     if (ds.closeplace) { ui.place = null; render(); return; }
     if (ds.closeboard) { ui.board = null; online.status = ''; render(); return; }
-    if (ds.tripto) { ui.sel = ds.tripto; render(); return; }
+    if (ds.tripto) { ui.sel = ds.tripto; render(); focusMap(ds.tripto); return; }
     if (ds.ademoji) { ui.ad.emoji = +ds.ademoji; render(); return; }
     if (ds.adcolor) { ui.ad.color = +ds.adcolor; render(); return; }
     if (ds.app != null && t.hasAttribute('data-app')) { ui.app = ds.app || null; if (ui.app && NEW_APPS[ui.app]) { var asn = appsSeen(); asn[ui.app] = 1; writeJSON(APPS_SEEN, asn); } render(); var tb = document.querySelector('.tab-body'); if (tb) tb.scrollTop = 0; return; }
@@ -5166,7 +5246,10 @@
       online.room.emit('wave', { to: ds.bell, bell: true }).then(function () { ui.toasts.push({ msg: '🔔 Ding dong! ' + nameOf(ds.bell) + ' knows you are here.', ok: true }); render(); }, function () {});
       return;
     }
-    if (ds.streak) { var sid = gemToday(); run(function () { return L.claimStreak(S, sid); }); return; }
+    if (ds.streak) { var sid = gemToday(); run(function () { var r = L.claimStreak(S, sid); if (r && r.ok) { var si = L.streakInfo(S, sid); ui.celebrate = r.streak || { n: si.n, prize: si.prize }; ui.toasts = ui.toasts || []; setTimeout(function () { play('fanfare'); }, 120); } return r; }); return; }
+    if (ds.course && t.hasAttribute('data-course')) { if (e.target.closest('.course-card')) return; ui.course = ui.course === ds.course ? null : ds.course; render(); return; }
+    if (ds.nightmode) { prefs.theme = themeDark() ? 'light' : 'dark'; writeJSON(PREF_KEY, prefs); applyPrefs(); render(); return; }
+    if (ds.celebok) { ui.celebrate = null; render(); return; }
     if (ds.stock) { ui.stock = ui.stock === ds.stock ? null : ds.stock; render(); return; }
     if (ds.stockbuy) { var sb = ds.stockbuy.split(':'); run(function () { return L.buyStock(S, sb[0], +sb[1]); }); return; }
     if (ds.stocksell) { var sl = ds.stocksell.split(':'); run(function () { return L.sellStock(S, sl[0], +sl[1]); }); return; }
@@ -5575,7 +5658,7 @@
         if (b) { b.click(); e.preventDefault(); return; }
       }
     }
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-go]')) {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-go],[data-course]')) {
       e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     }
   });

@@ -1302,6 +1302,32 @@
         [-13, 13].forEach(function (x, ci) { var co = new T.Group(); co.position.set(x, 0, 25); co.add(mesh(new T.BoxGeometry(18, 3.6, 3.2), mat('coachW', { color: 0xf4f3ec, roughness: 0.35 }), 0, 2.4, 0)); co.add(mesh(new T.BoxGeometry(18.05, 0.6, 3.25), mat('coachS' + ci, { color: ci ? 0x1f5fa0 : 0x16a35a }), 0, 1.4, 0)); co.add(mesh(new T.BoxGeometry(16, 1.1, 3.3), glassM, 0.4, 3.2, 0));
           [-6.5, -4.5, 5, 7].forEach(function (wx) { var wh = mesh(new T.CylinderGeometry(0.6, 0.6, 3.4, 12), mat('tyre', { color: 0x111111 }), wx, 0.6, 0); wh.rotation.x = Math.PI / 2; co.add(wh); }); B.add(co); });
         for (var bg = 0; bg < 6; bg++) B.add(mesh(new T.BoxGeometry(0.9, 0.7, 0.6), mat('lug' + bg % 3, { color: [0xc0392b, 0x2f6fa0, 0x17181a][bg % 3] }), -18 + bg * 0.9, 0.35, 22.6));
+        // The yard as it really is: a brick-paved apron, a ring of market stalls under red umbrellas, a POS stand,
+        // rows of blue waiting seats and shopfronts (salon, chemist, POS) facing the park.
+        B.add(mesh(new T.BoxGeometry(96, 0.06, 14), mat('brick', { color: 0xa65a3a, roughness: 0.95 }), 0, 0.03, 34));
+        var umbM = mat('redUmb', { color: 0xd61f26, side: T.DoubleSide, roughness: 0.7 }), stallM = mat('stallTop', { color: 0x7a5232, roughness: 0.85 }), bucketM = mat('bucket', { color: 0x1f5fd0, roughness: 0.5 });
+        var fruitM = [0xe23b2e, 0x2fa84f, 0xf2c200, 0xf07a1a, 0x7b3fa0].map(function (c, i) { return mat('fruit' + i, { color: c, roughness: 0.6 }); });
+        for (var ms = 0; ms < 14; ms++) {
+          var st = new T.Group(), side = ms < 8 ? 0 : 1, sx = side ? (ms % 2 ? 40 : -40) : -38 + ms * 10.8, sz = side ? -6 + Math.floor((ms - 8) / 2) * 10 : 33;
+          st.position.set(sx, 0, sz); st.rotation.y = side ? (sx > 0 ? -Math.PI / 2 : Math.PI / 2) : Math.PI;
+          st.add(mesh(new T.BoxGeometry(4.2, 0.2, 2), stallM, 0, 1.1, 0)); [[-1.9, -0.8], [1.9, -0.8], [-1.9, 0.8], [1.9, 0.8]].forEach(function (q) { st.add(mesh(new T.BoxGeometry(0.15, 1.1, 0.15), stallM, q[0], 0.55, q[1])); });
+          for (var fr = 0; fr < 6; fr++) st.add(mesh(new T.SphereGeometry(0.32, 8, 6), fruitM[(fr + ms) % 5], -1.5 + fr * 0.6, 1.45, (fr % 2) * 0.5 - 0.25));
+          st.add(mesh(new T.CylinderGeometry(0.06, 0.06, 3.6, 6), frameM, 0, 1.8, 0)); st.add(mesh(new T.ConeGeometry(3, 0.9, 12, 1, true), umbM, 0, 3.7, 0));
+          st.add(mesh(new T.CylinderGeometry(0.35, 0.3, 0.7, 10), bucketM, 2.6, 0.35, 0.6));
+          var sel = person(90 + ms, ms % 3 === 0); sel.position.set(0.3, 0, -1.6); sel.rotation.y = 0; st.add(sel); B.add(st);
+        }
+        var pos = new T.Group(); pos.position.set(-20, 0, -13); pos.add(mesh(new T.BoxGeometry(3.4, 2.6, 2.4), mat('posK', { color: 0xf4f3ec }), 0, 1.3, 0)); pos.add(mesh(new T.BoxGeometry(3.8, 0.2, 2.8), mat('posRoof', { color: 0x16a35a }), 0, 2.7, 0));
+        pos.add(mesh(new T.BoxGeometry(3, 0.12, 0.6), mat('posSill', { color: 0x2b2f36 }), 0, 1.2, -1.4)); B.add(pos); signBoard(B, 'POS · TRANSFER · WITHDRAWAL', 'CASH OUT HERE', '#16a35a', -20, 3.6, -14.3, 7);
+        var posGirl = person(110, true); posGirl.position.set(-20, 0, -12.6); posGirl.rotation.y = Math.PI; B.add(posGirl);
+        var seatM = mat('wseat', { color: 0x1f3f8a, roughness: 0.5 });
+        for (var wr = 0; wr < 3; wr++) for (var ws = 0; ws < 6; ws++) { B.add(mesh(new T.BoxGeometry(1, 0.15, 1), seatM, 24 + ws * 1.15, 0.9, -2 + wr * 3)); B.add(mesh(new T.BoxGeometry(1, 1, 0.15), seatM, 24 + ws * 1.15, 1.4, -1.5 + wr * 3)); }
+        for (var wr2 = 0; wr2 < 3; wr2++) B.add(mesh(new T.BoxGeometry(7, 0.12, 0.3), frameM, 26.9, 0.5, -2 + wr2 * 3));
+        for (var wpp = 0; wpp < 4; wpp++) { var wpn = person(115 + wpp, wpp % 2 === 0); wpn.position.set(24.5 + wpp * 2.3, 0.5, -2 + (wpp % 3) * 3); wpn.rotation.y = Math.PI; if (wpn.userData.legs) wpn.userData.legs.forEach(function (l) { l.rotation[wpn.userData.axis || 'z'] = -1.2; }); B.add(wpn); }
+        [['BLESSED HANDS UNISEX SALON', '#2b4fd6', -28], ['GOOD HEALTH CHEMIST', '#16a35a', 0], ['POS · TRANSFER · WITHDRAWAL', '#6b2fd6', 28]].forEach(function (sh, i) {
+          B.add(mesh(new T.BoxGeometry(22, 7, 6), mat('shopW' + i, { color: [0xe9e2d3, 0xd9d4c8, 0xcfd6dc][i], roughness: 0.9 }), sh[2], 3.5, 44)); B.add(mesh(new T.BoxGeometry(20, 3, 0.2), glassM, sh[2], 1.8, 40.9));
+          signBoard(B, sh[0], i === 1 ? 'DRUGS · TESTS · FIRST AID' : i === 0 ? 'HAIR · NAILS · BARBING' : 'AIRTIME · DATA · BILLS', sh[1], sh[2], 7.6, 40.8, 18);
+        });
+        for (var cw = 0; cw < 14; cw++) { var cp3 = person(130 + cw, cw % 2 === 1); cp3.position.set(-26 + (cw * 7.3) % 50, 0, -18 + (cw * 3.7) % 14); cp3.rotation.y = (cw * 1.3) % (Math.PI * 2); B.add(cp3); }
         mergeStatic(B, []);
       } else if (kind === 'rail') {
         // Idu: a long platform under a canopy, the ticket gate, two tracks, a timetable board and a two-car train on a one-minute loop.

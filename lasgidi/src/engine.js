@@ -103,7 +103,8 @@
   // union elections) while you study for a degree, and six more careers in Accra, London and Dubai.
   // 45 keeps lives outside Lagos local: no Lagos governorship vote, no Lagos floods or Nigerian fuel queues abroad, power
   // cuts that match the city (dumsor, load shedding, none in London or Dubai), and eviction to a friend's sofa in your city.
-  var RULES = 45;
+  // 46 makes money 70% easier: work, gigs, takings and prizes pay 2.55x (was 1.5x since rules 41).
+  var RULES = 46;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -150,6 +151,7 @@
     investor:    'Investor: bought shares on the exchange',
     host:        'Owambe host: threw a party at home',
     streak7:     'Seven-day streak',
+    owambe_legend: 'Owambe legend: sprayed money BIG at a wedding',
     oga:         'Oga at the top: hired domestic staff',
     pet:         'Best friend: adopted a pet',
     chief:       'Chieftaincy: took a title',
@@ -335,7 +337,9 @@
   // loans or refunds, so buying and reselling cannot print money.
   var INCOME_RX = /^(Shift pay|Business payout|Tenant rent|Prize: |Headline fee|Opening act fee|Open stage tips|Runway booking|Finisher prize|Daily goals|Event appearance fee|Live stream gifts|Brand deal|NYSC )/;
   function incomeBoost(s, amount, memo) { return s.rules >= 41 && amount > 0 && (INCOME_RX.test(memo) || category(memo, amount) === 'gigs' || category(memo, amount) === 'wages'); }
-  function earn(s, amount, memo) { var a = Math.round(amount); if (incomeBoost(s, a, memo)) a = Math.round(a * 1.5); post(s, 'cash', a, memo); return a; }
+  // Rules 46: money is 70% easier on top of that (1.5 x 1.7 = 2.55x).
+  function incomeMult(s) { return s.rules >= 46 ? 2.55 : 1.5; }
+  function earn(s, amount, memo) { var a = Math.round(amount); if (incomeBoost(s, a, memo)) a = Math.round(a * incomeMult(s)); post(s, 'cash', a, memo); return a; }
 
   function priceFactor(s) {
     var f = s.econ.infl;
@@ -355,6 +359,9 @@
     for (var i = 0; i < D.SKILL_XP.length; i++) if (xp >= D.SKILL_XP[i]) lvl = i;
     return lvl;
   }
+  // Rules 46: your Lagos level, from all the skill XP you have earned.
+  function lagosXp(s) { var t = 0; Object.keys(s.skills || {}).forEach(function (k) { t += s.skills[k] || 0; }); return Math.floor(t); }
+  function lagosLevel(s) { return 1 + Math.floor(Math.sqrt(lagosXp(s) / 10)); }
   function addXp(s, xp) {
     if (!xp) return;
     Object.keys(xp).forEach(function (k) {
@@ -1402,6 +1409,13 @@
       return 'No prize, but you learnt a lot.';
     },
     owambe: function (s) {
+      if (s.sprayBig) { // rules 46: you sprayed money BIG
+        s.sprayBig = false; s.asoebi = false;
+        applyFx(s, { fun: 30, social: 35, stress: -10 });
+        var kk = Object.keys(s.friends); kk.forEach(function (f) { befriend(s, f, 6); });
+        unlock(s, 'owambe_legend');
+        return 'You danced in and sprayed crisp notes on the couple. The MC hailed your name, the band played your song, and the whole hall stood up. Legendary.' + dressBonus(s, 'owambe');
+      }
       if (s.asoebi) {
         s.asoebi = false;
         applyFx(s, { fun: 20, social: 20 });
@@ -2307,6 +2321,7 @@
         queue(s, { id: 'landlord', title: 'Landlord\'s notice', text: 'Your landlord is raising the rent by ' + naira(inc) + ' a week, "because of the economy".', options: ['Accept', 'Negotiate (Charisma)'], amt: inc });
         break;
       case 'owambe':
+        if (s.rules >= 46) { var oa = price(s, 12000), ob = price(s, 30000); queue(s, { id: 'owambe', icon: '👯', title: 'Owambe invitation', text: 'Your padi\'s cousin is getting married on Saturday! Aso-ebi is ' + naira(oa) + '. Jollof, small chops, live band, money spraying… It runs 12:00–19:00 in Surulere.', options: ['Buy aso-ebi & go!', 'Go & spray money BIG', 'Not today'], subs: [naira(oa), naira(ob) + ' · aso-ebi and a fat bundle to spray · legendary status', 'Stay home'], amt: oa, big: ob }); break; }
         queue(s, { id: 'owambe', title: 'Owambe invite', text: 'Your friend\'s mum is 60 on Saturday. Aso-ebi is ' + naira(price(s, 12000)) + '. Owambe runs 12:00–19:00 in Surulere.', options: ['Buy the aso-ebi', 'Go in your own clothes'], amt: price(s, 12000) });
         break;
       case 'crush':
@@ -2370,6 +2385,13 @@
         }
         break;
       case 'owambe':
+        if (ev.big) { // rules 46
+          if (idx === 1 && canAfford(s, ev.big)) { pay(s, ev.amt, 'Aso-ebi'); pay(s, ev.big - ev.amt, 'Owambe spraying money'); s.asoebi = true; s.sprayBig = true; msg = 'Aso-ebi sewn and a fresh bundle of notes in your pocket. Saturday, you go spray them like you just won the pools.'; }
+          else if (idx <= 1 && pay(s, ev.amt, 'Aso-ebi')) { s.asoebi = true; msg = (idx === 1 ? 'Not enough for the big spray, so just the aso-ebi. ' : '') + 'Your aso-ebi is ready. See you at the owambe on Saturday.'; }
+          else if (idx <= 1) msg = 'Money no reach for aso-ebi. You can still go in your own clothes.';
+          else msg = 'Not today. You stayed home and sent your best wishes on WhatsApp.';
+          break;
+        }
         if (idx === 0 && pay(s, ev.amt, 'Aso-ebi')) { s.asoebi = true; msg = 'Your aso-ebi is ready. See you at the owambe on Saturday.'; }
         else msg = 'You will still go. Just not in the family colours.';
         break;
@@ -5541,9 +5563,11 @@
     var info = streakInfo(s, dayId);
     s.alerts = [];
     s.streak = { last: dayId, n: info.n, gday: day(s) };
-    earn(s, info.prize, 'Daily streak');
+    var got = earn(s, info.prize, 'Daily streak'), x0 = lagosXp(s), l0 = lagosLevel(s);
+    if (s.rules >= 46) addXp(s, { hustle: 4 + info.slot * 2 }); // rules 46: streak days also give XP
     if (info.n >= 7) unlock(s, 'streak7');
-    return finish(s, ok('🔥 Day ' + info.n + ' streak: +' + naira(info.prize) + '.' + (info.slot === 6 ? ' Full week! The bonus resets tomorrow.' : '')));
+    return finish(s, ok('🔥 Day ' + info.n + ' streak: +' + naira(got) + '.' + (info.slot === 6 ? ' Full week! The bonus resets tomorrow.' : ''),
+      s.rules >= 46 ? { streak: { n: info.n, prize: got, xp: lagosXp(s) - x0, level: lagosLevel(s), up: lagosLevel(s) > l0 } } : null));
   }
 
   /* ---------- Weekly Lagos challenge ---------- */
@@ -5640,7 +5664,7 @@
     upgradeBusiness: recorded('ub', upgradeBusiness), hireManager: recorded('hm', hireManager), fireManager: recorded('fm', fireManager),
     dailyGoals: goalsView, passport: passport, kidAge: kidAge, ghana: ghana, startAbroad: startAbroad, visitBar: visitBar, studyState: studyState, lagoonShow: lagoonShow, campusWeek: campusWeek, promoQuestions: promoQuestions, promoBlock: promoBlock, promoExam: recorded('px', promoExam), qualFor: qualFor, golfOdds: golfOdds, leagueView: leagueView, stageCareer: stageCareer, stageChart: stageChart, theatreBill: theatreBill, dettyFest: dettyFest, yearFests: yearFests, golfPrize: golfPrize, cityOpen: cityOpen, visaQuote: visaQuote, applyVisa: recorded('vz', applyVisa), businessName: businessName, upgradeCost: upgradeCost, managerPay: managerPay, businessEstimate: businessEstimate,
     buyProperty: recorded('bp', buyProperty), buyCar: recorded('bc', buyCar),
-    netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, performance: performance,
+    netWorth: netWorth, debts: debts, goalProgress: goalProgress, skillLevel: skillLevel, lagosXp: lagosXp, lagosLevel: lagosLevel, performance: performance,
     price: price, okadaBanned: okadaBanned, homeDef: homeDef,
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
