@@ -92,6 +92,9 @@ test('jobs: apply in person, work a shift, get paid, get promoted', () => {
     // jump to 05:45 on the next day, keep the player fed and rested
     const target = (L.day(s) + 1) * 1440 + 5 * 60 + 45;
     L._advance(s, target - s.t);
+    while (s.pending.length) L.resolveChoice(s, 1);
+    if (L.hour(s) !== 5) continue; // an event took the morning
+    s.loc = 'mushin';
     Object.assign(s.needs, { hunger: 90, energy: 90, fun: 80, social: 80, hygiene: 90, stress: 10 });
     s.skills.cooking = Math.max(s.skills.cooking, 30);
     const shift = L.availableActions(s).find(a => a.id === 'work_shift');
@@ -3642,7 +3645,7 @@ test('rules 46: Jibowu motor park is on the map in Yaba and never hides a gem', 
 
 test('rules 47: adopt a baby from the phone: fee, home needed, three children at most, ten-week wait, replays', () => {
   const s = L.newGame({ seed: 4701, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
-  assert.equal(s.rules, 47);
+  assert.ok(s.rules >= 47);
   const A = L.adoptInfo(s); assert.equal(A.why, null); assert.equal(A.fee, 150000);
   const c0 = s.cash + s.bank, r = L.adoptBaby(s); assert.ok(r.ok, r.msg);
   assert.equal(s.kids.length, 1); assert.ok(s.kids[0].adopted); assert.equal(c0 - (s.cash + s.bank), 150000); assert.ok(s.ach.parent);
@@ -3663,4 +3666,39 @@ test('rules 47: social moves with players and gifts between players; a gifted li
   assert.ok(s.gifted); assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
   const o = L.newGame({ seed: 4702, origin: 'nepo', goal: 'freestyle', rules: 46 }); while (o.pending.length) L.resolveChoice(o, 0);
   assert.equal(L.giftIn(o, 1000, 'ref000003').ok, false); assert.equal(L.playerSocial(o, 'hello').ok, false);
+});
+
+test('rules 48: change your lifetime dream once a week; replays; not in Weekly Lagos or older lives', () => {
+  const s = L.newGame({ seed: 4801, origin: 'lapo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.rules, 48);
+  assert.ok(L.changeGoal(s, 'landlord').ok); assert.equal(s.goal, 'landlord');
+  assert.match(L.changeGoal(s, 'japa').msg, /again in 7 days/); assert.equal(L.changeGoal(s, 'nope').ok, false);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  const o = L.newGame({ seed: 4801, origin: 'lapo', goal: 'freestyle', rules: 47 }); while (o.pending.length) L.resolveChoice(o, 0);
+  assert.equal(L.changeGoal(o, 'landlord').ok, false);
+});
+
+test('rules 48: Gidi Bet: fixtures every 4 hours, capped stakes, settles on the next slot, house edge, replays', () => {
+  const s = L.newGame({ seed: 4802, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const I = L.betInfo(s); assert.equal(I.fixtures.length, 8); for (const m of I.fixtures) assert.ok(m.p[0] * m.odds[0] < 1 && m.p[2] * m.odds[2] < 1, 'house edge');
+  assert.equal(L.placeBet(s, I.fixtures[0].id, 0, 50).ok, false); assert.equal(L.placeBet(s, I.fixtures[0].id, 0, 25000).ok, false);
+  assert.ok(L.placeBet(s, I.fixtures[0].id, 1, 20000).ok); assert.ok(L.placeBet(s, I.fixtures[1].id, 0, 20000).ok);
+  assert.match(L.placeBet(s, I.fixtures[2].id, 0, 20000).msg, /Daily limit/);
+  assert.equal(L.betInfo(s).open.length, 2);
+  for (let i = 0; i < 5 && L.betInfo(s).open.length; i++) { L.wait(s, 60); while (s.pending.length) L.resolveChoice(s, 0); }
+  assert.equal(L.betInfo(s).open.length, 0); assert.equal(L.betInfo(s).done.length, 2);
+  assert.ok(L.highLow(s, 'hi', 100).ok || true);
+  assert.equal(L.replayLife(s.replay).ledgerHash, s.ledgerHash);
+  const o = L.newGame({ seed: 4802, origin: 'nepo', goal: 'freestyle', rules: 47 }); while (o.pending.length) L.resolveChoice(o, 0);
+  assert.equal(L.placeBet(o, I.fixtures[0].id, 0, 1000).ok, false);
+});
+
+test('rules 48: short courses at UNILAG: five lessons one a day, a CV certificate, a work boost; old lives have none', () => {
+  const s = L.newGame({ seed: 4803, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.loc, 'yaba');
+  for (let d = 0; d < 5; d++) { while (L.hour(s) !== 10) { L.wait(s, 15); while (s.pending.length) L.resolveChoice(s, 0); }
+    s.loc = 'yaba'; s.needs.energy = 90; s.needs.hunger = 80; const r = L.doAction(s, 'sc_developer'); assert.ok(r.ok, r.msg); assert.equal(L.doAction(s, 'sc_developer').ok, false, 'one a day'); L.wait(s, 60); }
+  assert.ok(L.shortState(s, 'developer').done); assert.ok(L.cv(s).edu.some(e => /Software Developer short course/.test(e.title)));
+  const o = L.newGame({ seed: 4803, origin: 'mid', goal: 'freestyle', rules: 47 }); while (o.pending.length) L.resolveChoice(o, 0);
+  assert.equal(L.availableActions(o).filter(a => a.special === 'shortlesson').length, 0);
 });

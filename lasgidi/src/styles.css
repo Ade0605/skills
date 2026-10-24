@@ -1555,3 +1555,84 @@ body:has(#venue-view) .b3-views { top: calc(10px + env(safe-area-inset-top)); }
 .duo-acts { display: flex; gap: 6px; justify-content: center; margin: 8px 0; flex-wrap: wrap; } .duo-a { border: 0; border-radius: 99px; padding: 6px 12px; font: 600 13px var(--font-body); cursor: pointer; } .duo-a.inv { background: #dcfce7; color: #166534; } .duo-a.vis { background: #dbeafe; color: #1e40af; } .duo-a.pay { background: #fef3c7; color: #92400e; } .duo-a:disabled { opacity: .5; cursor: default; }
 .duo-pay { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; } .duo-pay input { flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); } .duo-pay small { width: 100%; color: var(--muted); font-size: 11.5px; }
 .chat-sys { align-self: center; margin: 4px auto; padding: 4px 12px; border-radius: 99px; background: #fef9c3; color: #713f12; font-size: 12.5px; text-align: center; display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; } .chat-sys.money { background: #dcfce7; color: #14532d; }
+/* ---------- step outside: the 3D street ---------- */
+.st3-view { position: fixed; inset: 0; z-index: 75; background: #9fd3ef; height: 100dvh; overflow: hidden; touch-action: none; }
+.st3-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.st3-ui { position: absolute; inset: 0; pointer-events: none; }
+.st3-top { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 10px; right: 10px; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.st3-btn, .st3-run, .st3-joy { pointer-events: auto; }
+.st3-btn { border: 0; border-radius: 99px; padding: 9px 14px; background: rgb(255 255 255 / .92); color: #111; font: 700 13px var(--font-body); box-shadow: 0 4px 14px rgb(0 0 0 / .2); cursor: pointer; }
+.st3-where { padding: 6px 12px; border-radius: 99px; background: rgb(0 0 0 / .45); color: #fff; font: 600 12.5px var(--font-body); text-align: center; }
+.st3-joy { position: absolute; left: 22px; bottom: max(26px, env(safe-area-inset-bottom)); width: 110px; height: 110px; border-radius: 50%; background: rgb(255 255 255 / .28); border: 2px solid rgb(255 255 255 / .6); display: grid; place-items: center; touch-action: none; }
+.st3-joy i { width: 46px; height: 46px; border-radius: 50%; background: rgb(255 255 255 / .9); box-shadow: 0 2px 10px rgb(0 0 0 / .25); }
+.st3-run { position: absolute; right: 22px; bottom: max(40px, env(safe-area-inset-bottom)); width: 78px; height: 78px; border-radius: 50%; border: 0; background: rgb(255 255 255 / .9); font: 800 14px var(--font-body); color: #111; box-shadow: 0 4px 14px rgb(0 0 0 / .25); cursor: pointer; }
+.st3-run.on { background: #16a34a; color: #fff; }
+.home-out { margin: 8px 0; gap: 10px; align-items: center; }
+.prop-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 16px; background: color-mix(in srgb, var(--ink) 5%, transparent); margin-bottom: 8px; }
+.prop-card > span { font-size: 28px; } .prop-card > div { flex: 1; display: grid; gap: 2px; } .prop-card small { font-size: 12.5px; }
+.prop-ups { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; } .prop-ups small { width: 100%; font-weight: 700; }
+/* ---------- contacts ---------- */
+.ct { display: grid; gap: 4px; }
+.ct-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); } .ct-row > div { flex: 1; min-width: 0; } .ct-row b { display: block; font-size: 15px; } .ct-row small { color: var(--muted); font-size: 12px; }
+.ct-av { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #e7eef5; font-size: 24px; overflow: hidden; flex: 0 0 44px; } .ct-av .pc-photo { width: 44px; height: 44px; } .ct-av .dot-live { position: absolute; right: 2px; bottom: 2px; }
+.ct-call, .ct-chat { width: 40px; height: 40px; border-radius: 50%; border: 0; color: #fff; font-size: 17px; cursor: pointer; } .ct-call { background: #16a34a; } .ct-chat { background: #2f6fd6; }
+.ct-q { width: 100%; padding: 11px 14px; border-radius: 14px; border: 0; background: color-mix(in srgb, var(--ink) 6%, transparent); color: var(--ink); font: 500 15px var(--font-body); }
+.ct-off { font-size: 12px; }
+/* ---------- job board ---------- */
+.jb { display: grid; gap: 10px; }
+.jb-card { padding: 12px 14px; border-radius: 18px; background: color-mix(in srgb, var(--ink) 5%, transparent); display: grid; gap: 8px; }
+.jb-top { display: flex; gap: 10px; align-items: center; } .jb-top > div:nth-child(2) { flex: 1; } .jb-top b { display: block; font-size: 16px; } .jb-top small { color: var(--muted); }
+.jb-ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); font-size: 22px; }
+.jb-pay { text-align: right; } .jb-pay b { color: #16a34a; font-size: 17px; }
+.jb-card p { margin: 0; font-size: 13px; color: var(--muted); } .jb-meta { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600; }
+.jb-apply { width: 100%; justify-content: center; }
+/* ---------- goals hub ---------- */
+.gh { display: grid; gap: 10px; }
+.gh-rep { display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 20px; background: linear-gradient(135deg, #1e1b4b, #3730a3); color: #fff; } .gh-rep > div:last-child { flex: 1; display: grid; gap: 3px; } .gh-rep small { opacity: .8; font-size: 11px; } .gh-rep b { font-size: 17px; }
+.gh-lv { width: 52px; height: 52px; border-radius: 50%; border: 3px solid rgb(255 255 255 / .4); display: grid; place-items: center; line-height: 1; } .gh-lv b { font-size: 20px; }
+.gh-bar { height: 6px; border-radius: 99px; background: rgb(255 255 255 / .25); overflow: hidden; display: block; } .gh-bar i { display: block; height: 100%; background: #fde047; } .gh-bar.light { background: rgb(255 255 255 / .3); } .gh-bar.light i { background: #fff; }
+.gh-streak { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 18px; border: 1px solid var(--line); } .gh-streak > span:first-child { font-size: 26px; } .gh-streak > div { flex: 1; } .gh-streak b { display: block; } .gh-streak small { color: var(--muted); font-size: 12px; }
+.gh-dream { padding: 14px; border-radius: 22px; background: linear-gradient(160deg, #4338ca, #7c3aed); color: #fff; display: grid; gap: 8px; } .gh-dream > small { font: 700 11px var(--font-body); letter-spacing: .08em; opacity: .85; }
+.gh-dh { display: flex; gap: 10px; align-items: center; } .gh-dh > span { font-size: 30px; } .gh-dh b { display: block; font-size: 17px; } .gh-dh small { opacity: .85; font-size: 12.5px; } .gh-pct { text-align: right; font-weight: 700; }
+.gh-opts { display: grid; gap: 6px; padding: 8px; border-radius: 16px; background: rgb(255 255 255 / .12); }
+.gh-opt { display: flex; gap: 10px; align-items: center; text-align: left; padding: 9px 10px; border-radius: 12px; border: 0; background: rgb(255 255 255 / .14); color: #fff; cursor: pointer; } .gh-opt:hover:not(:disabled) { background: #fff; color: #111; } .gh-opt:disabled { opacity: .55; cursor: default; } .gh-opt b { display: block; } .gh-opt small { opacity: .85; font-size: 11.5px; } .gh-opt span { font-size: 20px; }
+.gh-note { opacity: .85; font-size: 11.5px; text-align: center; }
+.gh-origin { padding: 14px; border-radius: 20px; background: color-mix(in srgb, var(--ink) 5%, transparent); display: grid; gap: 8px; } .gh-origin .gh-dh small { color: var(--muted); opacity: 1; }
+.gh-debt { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+/* ---------- Gidi Bet ---------- */
+.gb { display: grid; gap: 8px; }
+.gb-tabs, .gb-chips { display: flex; gap: 6px; overflow-x: auto; } .gb-tabs button, .gb-chips button { flex: 0 0 auto; border: 0; border-radius: 99px; padding: 8px 14px; background: color-mix(in srgb, var(--ink) 6%, transparent); color: var(--ink); font: 600 13px var(--font-body); cursor: pointer; } .gb-tabs button.on, .gb-chips button.on { background: var(--ink); color: var(--surface); }
+.gb-next { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; padding: 12px 14px; border-radius: 16px; background: #14532d; color: #fff; } .gb-next b { display: block; } .gb-next small { opacity: .85; font-size: 12px; } .gb-next > span { color: #4ade80; font-weight: 800; white-space: nowrap; }
+.gb-match { padding: 10px 12px; border-radius: 16px; background: color-mix(in srgb, var(--ink) 5%, transparent); display: grid; gap: 8px; }
+.gb-odds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .gb-odds button { border: 0; border-radius: 99px; padding: 7px 4px; background: var(--surface); color: var(--ink); font: 600 13px var(--font-body); cursor: pointer; } .gb-odds button.on { background: #16a34a; color: #fff; }
+.gb-slip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .gb-slip input, .gb-hilo input { width: 120px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); } .gb-slip small { width: 100%; color: var(--muted); }
+.gb-hilo { display: grid; justify-items: center; gap: 10px; padding: 16px; border-radius: 18px; background: color-mix(in srgb, var(--ink) 5%, transparent); text-align: center; } .gb-hilo p { margin: 0; font-size: 14px; }
+.gb-card { width: 84px; height: 118px; border-radius: 12px; background: #fff; color: #b91c1c; display: grid; place-items: center; font: 800 36px var(--font-body); box-shadow: 0 6px 18px rgb(0 0 0 / .2); }
+.gb-bet { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--ink) 4%, transparent); font-size: 13px; } .gb-bet span { flex: 1; } .gb-bet.won b { color: #16a34a; } .gb-bet.lost b { color: #b91c1c; } .gb-bet small { color: var(--muted); }
+.gb-rg { font-size: 11.5px; }
+/* ---------- short courses ---------- */
+.sc { display: grid; gap: 10px; }
+.sc-hero { display: flex; gap: 12px; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; } .sc-hero > span { font-size: 34px; } .sc-hero small { font: 700 11px var(--font-body); letter-spacing: .08em; opacity: .85; } .sc-hero b { display: block; font-size: 18px; } .sc-hero p { margin: 4px 0 0; font-size: 13px; opacity: .9; }
+.sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sc-c { display: grid; gap: 2px; text-align: left; padding: 12px; border-radius: 16px; border: 0; background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink); cursor: pointer; } .sc-c span { font-size: 24px; } .sc-c small { color: var(--muted); font-size: 11px; } .sc-c b { font-size: 14px; } .sc-c i { font-style: normal; font-size: 11.5px; color: var(--muted); } .sc-c.done i { color: #16a34a; font-weight: 700; }
+.sc-top { display: flex; gap: 12px; padding: 14px; border-radius: 20px; background: #fde4ec; color: #3b0a18; } .sc-top > span { font-size: 30px; } .sc-top small { font: 700 11px var(--font-body); color: #be123c; letter-spacing: .06em; } .sc-top b { display: block; font-size: 18px; } .sc-top p { margin: 4px 0; font-size: 13px; }
+.sc-tags { display: flex; flex-wrap: wrap; gap: 6px; } .sc-tags span { padding: 2px 8px; border-radius: 99px; background: rgb(255 255 255 / .7); font-size: 11.5px; font-weight: 600; }
+.sc-reward { padding: 12px; border-radius: 16px; background: #fff7e0; color: #5b3a00; font-size: 13px; }
+.sc-lessons { display: grid; gap: 6px; } .sc-l { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--ink) 4%, transparent); } .sc-l > span { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); font-weight: 700; } .sc-l b { display: block; font-size: 14px; } .sc-l small { color: var(--muted); font-size: 12px; }
+.sc-l.done > span { background: #16a34a; color: #fff; } .sc-l.next { border: 2px solid #16a34a; } .sc-l.locked { opacity: .55; }
+.sc-done { text-align: center; }
+/* ---------- your phone, everywhere ---------- */
+.fab-dock { display: none; position: fixed; z-index: 82; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom)); gap: 8px; }
+body:has(#venue-view) .fab-dock, body:has(#room-view) .fab-dock, body:has(#cruise-view) .fab-dock, body:has(#airport-view) .fab-dock, body:has(#street-view) .fab-dock, body:has(#ride-view) .fab-dock { display: flex; }
+body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bottom: max(52px, env(safe-area-inset-bottom)); }
+.fab-btn { border: 0; border-radius: 99px; padding: 10px 16px; background: #17181a; color: #fff; font: 700 14px var(--font-body); box-shadow: 0 6px 18px rgb(0 0 0 / .3); cursor: pointer; }
+.scrim.phone-sheet { z-index: 90; background: rgb(0 0 0 / .5); }
+.ps-wrap { position: relative; width: min(400px, 100%); height: min(820px, calc(100dvh - 32px)); display: flex; flex-direction: column; }
+.ps-close { align-self: flex-end; margin-bottom: 6px; border: 0; border-radius: 99px; padding: 7px 14px; background: #fff; color: #111; font: 700 13px var(--font-body); cursor: pointer; }
+.ps-phone { flex: 1; overflow: auto; border-radius: 36px; background: var(--surface); box-shadow: 0 20px 60px rgb(0 0 0 / .4); border: 8px solid #111; }
+.ps-phone .phone-frame { margin: 0; border: 0; border-radius: 0; min-height: 100%; }
+.st3-chat { position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); bottom: max(16px, env(safe-area-inset-bottom)); width: min(440px, calc(100% - 24px)); padding: 14px; border-radius: 20px; background: #fff; color: #111; box-shadow: 0 10px 30px rgb(0 0 0 / .3); display: grid; gap: 8px; pointer-events: auto; }
+.st3-chat[hidden] { display: none; }
+.st3-ch { display: flex; gap: 10px; align-items: center; } .st3-ch > span { width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; display: grid; place-items: center; font-size: 18px; } .st3-ch b { display: block; } .st3-ch small { color: #666; font-size: 12px; }
+.st3-say { margin: 0; justify-self: start; padding: 6px 12px; border-radius: 12px; background: #f1f5f9; font-size: 14px; } .st3-me { margin: 0; justify-self: end; padding: 6px 12px; border-radius: 12px; background: #dcfce7; font-size: 13px; }
+.st3-chat button { text-align: left; padding: 9px 12px; border-radius: 12px; border: 1px solid #e5e7eb; background: #fff; color: #111; font: 600 14px var(--font-body); cursor: pointer; }
