@@ -4,6 +4,7 @@
 :root {
   --paper: #f4f3ec;
   --surface: #ffffff;
+  --card: var(--surface);
   --sunk: #ebe9df;
   --ink: #17181a;
   --muted: #5d5f63;
@@ -1673,3 +1674,24 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .rp-face.more .rp-av { border-color: transparent; background: #dff3e6; color: #1e8e4a; font-size: 15px; }
 .rp-face.me { cursor: default; }
 @media (max-width: 520px) { .rp-btns .rp-ib:nth-child(2) { display: none; } .rp-kbd { display: none; } }
+
+.ct-talk { width: 40px; height: 40px; border-radius: 50%; border: 0; background: #f2b600; color: #1a1500; font-size: 17px; cursor: pointer; margin-right: 6px; }
+.ct-talk.live { background: #dc2626; color: #fff; animation: ctPulse 1s ease-in-out infinite; }
+@keyframes ctPulse { 50% { transform: scale(1.12); } }
+/* Owner dashboard: every number and row opens its page. */
+.od-box { color: var(--ink); }
+.od-stat.od-go { border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: transform .1s, background .15s; }
+.od-stat.od-go:hover, .od-stat.od-go:focus-visible { background: rgba(242, 182, 0, .28); transform: translateY(-1px); }
+.od-row { cursor: pointer; }
+.od-row:hover td, .od-row:focus-visible td { background: rgba(242, 182, 0, .14); }
+
+/* TfL roundel: a red ring with a blue bar (buses red bar on white). */
+.tfl-r { display: inline-block; position: relative; width: 20px; height: 20px; border-radius: 50%; border: 4px solid #d8261c; box-sizing: border-box; vertical-align: -4px; margin-right: 6px; background: #fff; }
+.tfl-r i { position: absolute; left: -6px; right: -6px; top: 50%; height: 5px; margin-top: -2.5px; background: #d8261c; }
+.tfl-r.tube i { background: #1f3a93; }
+.tfl-card { margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; background: var(--surface); }
+.tfl-card summary { cursor: pointer; font-size: 14px; }
+.tfl-lines { display: grid; gap: 6px; margin-top: 6px; }
+.tfl-line { display: flex; gap: 10px; align-items: center; }
+.tfl-line > div { flex: 1; min-width: 0; } .tfl-line small { display: block; color: var(--muted); font-size: 12px; }
+.tfl-bar { width: 6px; align-self: stretch; border-radius: 3px; }

@@ -599,7 +599,25 @@
   }
   // Talk: your own voice. The clip is recorded while the browser writes down what you said; only if those words pass
   // the chat filter does the clip go out (kept in your voice record, the others play it). No transcript, no clip.
+  // Talk to one player (Contacts → 🎤): the same filtered voice note, sent as a direct chat to them only.
+  function sendTalkTo(to, text, clip) {
+    ui.talkTo = null; ui.listening = false;
+    if (familyOn()) return;
+    var r = CH.clean(String(text || '').slice(0, 140)); if (!text || !r.ok) { if (text) ui.toasts.push({ msg: (r.why || 'Not sent.') + (clip ? ' Your voice note was not sent.' : ''), ok: false }); render(); return; }
+    var wt = CH.canSend(online.sentTimes, Date.now(), online.blocked); if (wt) { ui.toasts.push({ msg: wt, ok: false }); render(); return; }
+    if (!online.room) { ui.toasts.push({ msg: 'Talk is not open here yet.', ok: false }); render(); return; }
+    online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
+    var go = function (vat) {
+      online.room.emit('chat', Object.assign({ to: to, text: r.text }, vat ? { voice: vat } : {})).then(function () {
+        (online.chats[to] = online.chats[to] || []).push({ me: true, text: r.text, at: Date.now(), vat: vat || undefined }); markDuo(to, 'me');
+        ui.toasts.push({ msg: '🎤 Sent to ' + handleOf(to) + ': “' + r.text + '”', ok: true }); render();
+      }, function () { ui.toasts.push({ msg: 'Talk is not open here yet.', ok: false }); render(); });
+    };
+    if (clip && online.db && online.me && clip.length < 60000) { var vat = Date.now(); online.db.doc('voice/' + online.me).set({ at: vat, here: S.loc, text: r.text, audio: clip }).then(function () { go(vat); }, function () { go(null); }); }
+    else go(null);
+  }
   function sendTalk(text, clip) {
+    if (ui.talkTo) { sendTalkTo(ui.talkTo, text, clip); return; }
     var r = CH.clean(String(text || '').slice(0, 140)); if (!text || !r.ok) { if (text) ui.toasts.push({ msg: (r.why || 'Not sent.') + (clip ? ' Your voice note was not sent.' : ''), ok: false }); render(); return; }
     var wt = CH.canSend(online.sentTimes, Date.now(), online.blocked); if (wt) { ui.toasts.push({ msg: wt, ok: false }); render(); return; }
     online.sentTimes = online.sentTimes.concat([Date.now()]).slice(-12);
@@ -615,14 +633,16 @@
       if (v && v.at === vat && typeof v.audio === 'string' && /^data:audio\/[a-z0-9.+-]+(;codecs=[a-z0-9.,]+)?;base64,/.test(v.audio)) { try { var a = new Audio(v.audio); a.play().catch(function () { say(text, { queue: true }); }); } catch (e) { say(text, { queue: true }); } }
       else say(text, { queue: true }); }, function () { say(text, { queue: true }); });
   }
-  function startTalk() {
+  function startTalk(to) {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    ui.talkOpen = true;
+    ui.talkTo = to || null;
+    if (to && !SR) { ui.talkTo = null; clearPicks(); ui.chatWith = to; online.unread[to] = 0; ui.tab = 'map'; ui.toasts.push({ msg: 'This browser cannot record talk, so type it instead.', ok: false }); render(); return; }
+    if (!to) ui.talkOpen = true;
     if (!SR) { render(); setTimeout(function () { var i = document.getElementById('talk-in'); if (i) i.focus(); }, 30); return; }
     var chunks = [], recorder = null, stream = null, said = null, done = false;
     var finish = function () { if (done) return; done = true; ui.listening = false;
       var stopAll = function () { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); };
-      if (!said) { stopAll(); render(); return; }
+      if (!said) { stopAll(); ui.talkTo = null; render(); return; }
       if (!recorder || recorder.state === 'inactive') { stopAll(); sendTalk(said, null); return; }
       recorder.onstop = function () { stopAll(); var blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }); if (!blob.size) { sendTalk(said, null); return; } var fr = new FileReader(); fr.onload = function () { sendTalk(said, fr.result); }; fr.onerror = function () { sendTalk(said, null); }; fr.readAsDataURL(blob); };
       try { recorder.stop(); } catch (e) { stopAll(); sendTalk(said, null); } };
@@ -964,9 +984,10 @@
           var r = CH.clean(msg.data.text); if (!r.ok) return; // the sender's filter is not trusted
           var log0 = online.chats[msg.by] = online.chats[msg.by] || [];
           if (log0.filter(function (m) { return !m.me && Date.now() - m.at < 60000; }).length >= 15) return;
-          log0.push({ me: false, text: r.text, at: Date.now() }); if (log0.length > 60) log0.shift(); markDuo(msg.by, 'them');
-          play('ping');
-          if (ui.chatWith !== msg.by) { online.unread[msg.by] = (online.unread[msg.by] || 0) + 1; ui.toasts.push({ msg: '💬 ' + handleOf(msg.by) + ': ' + r.text, ok: true }); }
+          var vat = typeof msg.data.voice === 'number' ? msg.data.voice : 0;
+          log0.push({ me: false, text: r.text, at: Date.now(), vat: vat || undefined }); if (log0.length > 60) log0.shift(); markDuo(msg.by, 'them');
+          if (vat) playVoice(msg.by, vat, r.text); else play('ping');
+          if (ui.chatWith !== msg.by) { online.unread[msg.by] = (online.unread[msg.by] || 0) + 1; ui.toasts.push({ msg: (vat ? '🎤 ' : '💬 ') + handleOf(msg.by) + ': ' + r.text, ok: true }); }
           scheduleRender();
         });
       } catch (e) {}
@@ -1155,7 +1176,7 @@
       '<div class="chat-log" id="chat-log" aria-live="polite">' + (msgs.length ? msgs.slice(-30).map(function (m) { var tm = new Date(m.at || Date.now()), hm = String(tm.getHours()).padStart(2, '0') + ':' + String(tm.getMinutes()).padStart(2, '0');
         if (m.sys === 'invited') return '<div class="chat-sys">' + (m.me ? 'You invited them over 🏠' : esc(nameOf(by)) + ' invited you over 🏠') + ' · ' + hm + (!m.me && home ? ' <button type="button" class="link-btn" data-visit2="' + esc(by) + '">Visit now</button>' : '') + '</div>';
         if (m.sys === 'money') return '<div class="chat-sys money">' + (m.me ? 'You sent ' + N(m.amt) + ' 💸' : esc(nameOf(by)) + ' sent you ' + N(m.amt) + ' 💸') + ' · ' + hm + (!m.me && !m.took ? ' <button type="button" class="btn sm go" data-giftok="' + esc(by) + ':' + m.ref + '">Accept</button>' : m.took ? ' · accepted' : '') + '</div>';
-        return '<div class="chat-msg' + (m.me ? ' me' : '') + '"><span>' + esc(m.text) + '</span></div>'; }).join('') : '<p class="muted">Say hello. Messages are not saved and vanish when you close the game.</p>') + '</div>' +
+        return '<div class="chat-msg' + (m.me ? ' me' : '') + '"><span>' + (m.vat ? '<button type="button" class="link-btn" data-voiceplay="' + esc((m.me ? online.me : by) + ':' + m.vat) + '" aria-label="Play voice note">🔊</button> ' : '') + esc(m.text) + '</span></div>'; }).join('') : '<p class="muted">Say hello. Messages are not saved and vanish when you close the game.</p>') + '</div>' +
       '<div class="chat-quick">' + CH.QUICK.map(function (q, i) { return '<button type="button" class="act-chip" id="cq-' + i + '" data-chatq="' + i + '">' + esc(q) + '</button>'; }).join('') + '</div>' +
       '<div class="chat-send"><input id="chat-in" maxlength="' + CH.MAX + '" autocomplete="off" placeholder="Message ' + esc(handleOf(by)) + '" aria-label="Message" value="' + esc(ui.chatDraft || '') + '"><button class="btn" id="chat-send" data-chatsend="' + esc(by) + '">Send</button></div>' +
       (ui.chatWhy ? '<p class="why">' + esc(ui.chatWhy) + '</p>' : '') +
@@ -2764,7 +2785,7 @@
   var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', badge: 'govt', ballot: 'govt', gavel: 'govt', book: 'campus', hotel: 'nightlife', dice: 'nightlife', tower: 'tech', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
   // Nightlife rooms drawn in 3D: the club strips, lounges and the members' house (not the harbour, which has its own scene).
   // Every other kind of place opens as a street scene or an interior hall in 3D; music venues use the club hall.
-  var PLACE3D = { castle: 'plaza', burj: 'plaza', desert: 'plaza', bigben: 'plaza', towerbridge: 'plaza', londoneye: 'park', blackstar: 'plaza', shop: 'street', conference: 'hall', funpark: 'park', rail: 'street', polo: 'park', waterpark: 'park', bowling: 'hall', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
+  var PLACE3D = { oxcircus: 'plaza', selfridges: 'plaza', harrods: 'plaza', shoreditch: 'plaza', livst: 'plaza', castle: 'plaza', burj: 'plaza', desert: 'plaza', bigben: 'plaza', towerbridge: 'plaza', londoneye: 'park', blackstar: 'plaza', shop: 'street', conference: 'hall', funpark: 'park', rail: 'street', polo: 'park', waterpark: 'park', bowling: 'hall', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
   function NIGHT3D(pl) { return (pl.type === 'nightlife' && pl.glyph === 'glass' && !/^harbour_/.test(pl.id)) || pl.id === 'club_tidewater'; }
   function venueSet(pl) {
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
@@ -3041,7 +3062,7 @@
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? placeById(ui.venueOpen) : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
-    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling|shop|blackstar|bigben|towerbridge|londoneye|burj|desert|castle)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
+    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling|shop|blackstar|bigben|towerbridge|londoneye|burj|desert|castle|oxcircus|selfridges|harrods|shoreditch|livst)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
     if (flat || venue3dBroken) want3d = false;
     if (want3d && threeState !== 'ready' && threeState !== 'failed') {
       if (!ov) { ov = document.createElement('div'); ov.id = 'venue-view'; ov.className = 'cruise-view venue-view venue-loading'; ov.setAttribute('data-kind', 'loading'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', pl.name); ov.innerHTML = '<div class="vl-box"><div class="vl-spin" aria-hidden="true"></div><p>Opening ' + esc(pl.name) + '…</p><button type="button" class="btn sm ghost" id="venue-close-loading" data-venueclose="1">Close</button></div>'; document.body.appendChild(ov); }
@@ -3101,6 +3122,8 @@
   function fids(kind) {
     var dayN = Math.floor(S.t / 1440), now = S.t % 1440, city = L.cityOf(S), out = [];
     var others = Object.keys(AIR_CODES).filter(function (c) { return c !== city; }).map(function (c) { return D.CITIES[c].name; });
+    // Heathrow is a world hub: long-haul routes, with the game's cities among them, and no helicopter shuttle.
+    if (city === 'ldn') others = ['Lagos', 'Abuja', 'Accra', 'Dubai', 'Cape Town', 'New York JFK', 'Paris CDG', 'Toronto', 'Johannesburg', 'Amsterdam', 'Nairobi', 'Lagos'];
     function row(mins, h, heli) {
       var al = AIRLINES[h % AIRLINES.length], dest = others[(h >>> 3) % others.length], late = (h >>> 9) % 7 === 0 ? 35 : 0, at = mins + late, diff = at - now;
       var status = kind === 'dep' ? (diff < -6 ? 'Departed' : diff < 6 ? 'Final call' : diff < 22 ? 'Boarding' : diff < 45 ? 'Gate open' : late ? 'Delayed' : 'On time') : (diff < -25 ? 'Landed' : diff < 0 ? 'Baggage' : diff < 20 ? 'Approaching' : late ? 'Delayed' : 'Expected');
@@ -3110,7 +3133,7 @@
       var slot = Math.floor(now / 30) - 2 + i, mins = slot * 30 + (kind === 'arr' ? 12 : 0) + 5; if (mins < 300 || mins > 1400) continue;
       out.push(row(mins, Math.imul(dayN * 131 + slot * 17 + (kind === 'arr' ? 7 : 0), 2654435761) >>> 0, false));
     }
-    for (var j = 0; j < 4; j++) {
+    for (var j = 0; j < (city === 'ldn' ? 0 : 4); j++) {
       var hs = Math.floor(now / 90) - 1 + j, hm = hs * 90 + (kind === 'arr' ? 40 : 20); if (hm < 360 || hm > 1260) continue;
       out.push(row(hm, Math.imul(dayN * 977 + hs * 31 + (kind === 'arr' ? 3 : 0), 2654435761) >>> 0, true));
     }
@@ -3213,7 +3236,8 @@
     if (!ui.airportOpen || !S) { if (ov) ov.remove(); if (ui.apTimer) { clearInterval(ui.apTimer); ui.apTimer = null; } if (airportStage && airportStage.dispose) { airportStage.dispose(); airportStage = null; } return; }
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'airport-view'; ov.className = 'cruise-view airport-view'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Live airport view');
-      if (!airportStage) airportStage = (window.LasgidiAirport3D && window.THREE && window.LasgidiAirport3D.create({ onTap: airportTap, onMovement: airportMovement })) || window.LasgidiAirport.create({ onTap: airportTap, onMovement: airportMovement });
+      if (airportStage && airportStage.city !== L.cityOf(S)) { if (airportStage.dispose) airportStage.dispose(); airportStage = null; } // each city's airport has its own look
+      if (!airportStage) { airportStage = (window.LasgidiAirport3D && window.THREE && window.LasgidiAirport3D.create({ city: L.cityOf(S), onTap: airportTap, onMovement: airportMovement })) || window.LasgidiAirport.create({ onTap: airportTap, onMovement: airportMovement }); airportStage.city = L.cityOf(S); }
       function airportTap(k) {
         if (k === 'parking') return;
         if (k === 'terminal') { ui.fidsTab = 'inside'; mountAirport(); return; }
@@ -3228,7 +3252,7 @@
     var own = function (kind) { var v = (S.vehicles || []).filter(function (x) { return D.VEHICLES[x.id] && D.VEHICLES[x.id].kind === kind; })[0]; return v ? D.VEHICLES[v.id].color || '#d4af37' : null; };
     speakAnnouncement(ann.filter(function (a) { return /^Final call|now boarding/.test(a); })[0]);
     airportStage.update({
-      name: city === 'lagos' ? 'Murtala Muhammed International Airport II' : ui.airportName, code: AIR_CODES[city] || 'LOS', night: h0 >= 19 || h0 < 6, clock: pad(h0) + ':' + pad(S.t % 60),
+      name: city === 'lagos' ? 'Murtala Muhammed International Airport II' : city === 'ldn' ? 'London Heathrow Airport' : ui.airportName, code: AIR_CODES[city] || 'LOS', night: h0 >= 19 || h0 < 6, clock: pad(h0) + ':' + pad(S.t % 60),
       board: { dep: dep.slice(0, 6), arr: arr.slice(0, 6) }, gates: gateStates(dep), players: airportPlayers(),
       nextDep: dep.filter(function (r) { return r.status !== 'Departed'; })[0] || null, nextArr: (arr.filter(function (r) { return /Approaching|Expected/.test(r.status); })[0] || {}).code || null,
       myJet: own('jet'), myHeli: own('heli')
@@ -3325,7 +3349,7 @@
   var ROUTE_KM = { 'lagos-abuja': 760, 'lagos-ph': 620, 'abuja-ph': 590, 'lagos-accra': 480, 'abuja-accra': 1240, 'ph-accra': 1100, 'accra-kumasi': 250, 'lagos-kumasi': 730, 'abuja-kumasi': 1490, 'ph-kumasi': 1350, 'accra-capecoast': 145, 'kumasi-capecoast': 220, 'lagos-capecoast': 625, 'abuja-capecoast': 1385, 'ph-capecoast': 1245 };
   var COACH_ROUTE = { 'lagos-abuja': ['Ojota', 'Ibadan', 'Ogbomosho', 'Ilorin', 'Jebba', 'Mokwa', 'Bida', 'Suleja'], 'lagos-ph': ['Ojota', 'Sagamu', 'Ore', 'Benin City', 'Asaba', 'Onitsha', 'Owerri'], 'abuja-ph': ['Lokoja', 'Okene', 'Auchi', 'Benin City', 'Asaba', 'Owerri'], 'lagos-accra': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'abuja-accra': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'ph-accra': ['Owerri', 'Benin City', 'Ore', 'Sagamu', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Tema'], 'accra-kumasi': ['Achimota', 'Nsawam', 'Apedwa', 'Bunso', 'Nkawkaw', 'Konongo', 'Ejisu'], 'lagos-kumasi': ['Mile 2', 'Badagry', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw', 'Ejisu'], 'abuja-kumasi': ['Lokoja', 'Ibadan', 'Ojota', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'], 'ph-kumasi': ['Owerri', 'Benin City', 'Ore', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Nkawkaw'], 'accra-capecoast': ['Kasoa', 'Winneba', 'Apam junction', 'Mankessim', 'Anomabo'], 'kumasi-capecoast': ['Bekwai', 'Obuasi', 'Fosu', 'Assin Praso', 'Jukwa'], 'lagos-capecoast': ['Mile 2', 'Seme border', 'Cotonou', 'Lomé', 'Aflao border', 'Accra', 'Winneba', 'Mankessim'], 'abuja-capecoast': ['Lokoja', 'Ibadan', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Winneba'], 'ph-capecoast': ['Benin City', 'Ore', 'Seme border', 'Lomé', 'Aflao border', 'Accra', 'Winneba'] };
   // Abuja's and Port Harcourt's own words for the same rides (display only: the engine and its ledger keep the mode names).
-  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, kumasi: { danfo: 'Tro-tro', cab: 'Taxi' }, capecoast: { danfo: 'Tro-tro', cab: 'Taxi' }, dxb: { danfo: 'Metro and bus', cab: 'Taxi', okada: 'Scooter', keke: 'Scooter' }, ctn: { danfo: 'MyCiTi bus', cab: 'Taxi', okada: 'Scooter', keke: 'Minibus taxi' }, ldn: { danfo: 'Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike', rail: 'Tube' } };
+  var CITY_MODE_NAMES = { abuja: { danfo: 'City bus', cab: 'Green cab' }, ph: { danfo: 'Bus', cab: 'Drop taxi' }, accra: { danfo: 'Trotro', cab: 'Taxi' }, kumasi: { danfo: 'Tro-tro', cab: 'Taxi' }, capecoast: { danfo: 'Tro-tro', cab: 'Taxi' }, dxb: { danfo: 'Metro and bus', cab: 'Taxi', okada: 'Scooter', keke: 'Scooter' }, ctn: { danfo: 'MyCiTi bus', cab: 'Taxi', okada: 'Scooter', keke: 'Minibus taxi' }, ldn: { danfo: 'TfL Bus', cab: 'Black cab', okada: 'Rental bike', keke: 'Rental bike', rail: 'TfL Tube' } };
   function modeName(o) { var m = CITY_MODE_NAMES[L.cityOf(S)]; return (m && own(m, o.mode)) ? m[o.mode] : o.name; }
   var RIDE_NAMES = { coach: 'Savanna Line coach', danfo: 'Danfo', brt: 'BRT bus', cab: 'Cab', keke: 'Keke', okada: 'Okada', car: 'Your car', ferry: 'Ferry', boat: 'Speedboat', heli: 'Chopper', trek: 'Trekking', rail: 'Train', flight: 'Flight', jet: 'Private jet' };
   // The ride's sound: an engine that rumbles (a big danfo or coach, a buzzing keke or okada, a smooth car), horns now and
@@ -3389,7 +3413,7 @@
     el.addEventListener('keydown', function (e) { if (e.key === 'Escape') done(); });
     document.body.appendChild(el);
     // In 3D when three.js is in: the same window, with the journey built in three.js (the 2D scene stays otherwise).
-    if (window.LasgidiRide3D && window.THREE && threeState === 'ready') { var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { mode: mode, highway: coach, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, subs: subs, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit })) el.classList.add('rv-3dmode'); } catch (e) {} }
+    if (window.LasgidiRide3D && window.THREE && threeState === 'ready') { var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { london: L.districtCity(to) === 'ldn', mode: mode, highway: coach, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, subs: subs, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit })) el.classList.add('rv-3dmode'); } catch (e) {} }
     var b = document.getElementById('rv-arrive'); if (b) b.focus();
     setTimeout(done, secs * 1000 + 400);
   }
@@ -3741,13 +3765,23 @@
     var km = opts.length ? opts[0].km : 0;
     var rows = opts.filter(function (o) { return !(o.mode === 'car' && !S.car); }).map(function (o) {
       var meta = dur(o.mins) + ' · ' + (o.cost ? N(o.cost) : 'free') + (o.energy ? ' · −' + o.energy + ' energy' : '') + (o.traffic > 1.3 ? ' · go-slow ×' + o.traffic : '') + (o.wet && !L.outfitTags(S).rain ? ' · you will get wet' : '');
-      return '<div class="mode' + (o.disabled ? ' dis' : '') + '"><b>' + (icon3d(MODE_ICONS[o.mode]) || '') + esc(modeName(o)) + '</b><div class="meta">' + (o.disabled ? esc(o.disabled) : meta) +
+      return '<div class="mode' + (o.disabled ? ' dis' : '') + '"><b>' + (icon3d(MODE_ICONS[o.mode]) || '') + (tflMode(o.mode) ? tflRoundel(o.mode) : '') + esc(modeName(o)) + '</b><div class="meta">' + (o.disabled ? esc(o.disabled) : meta) +
         (o.risk && !o.disabled ? '<em>' + esc(o.risk) + '</em>' : '') + '</div>' +
         '<button class="btn sm go" id="go-' + o.mode + '" data-travel="' + dest + '" data-mode="' + o.mode + '"' + (o.disabled ? ' disabled' : '') + '>Go</button></div>';
     }).join('');
     return '<div class="inline" style="justify-content:space-between"><h3>To ' + esc(D.DISTRICTS[dest].name) + ' <span class="muted num">· ' + km + ' km</span></h3>' +
       '<button class="btn sm ghost" id="clear-sel" data-clear-sel="1">Close</button></div>' +
-      '<p>' + esc(D.DISTRICTS[dest].blurb) + '</p>' + weatherNote() + '<div class="modes">' + rows + '</div>';
+      '<p>' + esc(D.DISTRICTS[dest].blurb) + '</p>' + weatherNote() + '<div class="modes">' + rows + '</div>' + (L.cityOf(S) === 'ldn' ? tflCard() : '');
+  }
+  // London: Transport for London (TfL) runs the buses, the Tube and the Overground.
+  function tflMode(m) { return L.cityOf(S) === 'ldn' && (m === 'danfo' || m === 'rail'); }
+  function tflRoundel(m) { return '<span class="tfl-r' + (m === 'rail' ? ' tube' : '') + '" aria-hidden="true"><i></i></span>'; }
+  function tflCard() {
+    var lines = Object.keys(D.RAIL_LINES).filter(function (k) { var R = D.RAIL_LINES[k]; return R.rules && S.rules >= R.rules && R.stops.every(function (d) { return L.districtCity(d) === 'ldn'; }); });
+    return '<details class="tfl-card"' + (ui.tflOpen ? ' open' : '') + '><summary>' + tflRoundel('rail') + '<b>TfL</b> · Transport for London</summary>' +
+      '<p class="note">Tap in with a contactless card or Oyster on the Tube, Overground and the red buses. The Tube runs 05:00 to midnight; buses run all night.</p>' +
+      '<div class="tfl-lines">' + lines.map(function (k) { var R = D.RAIL_LINES[k]; return '<div class="tfl-line"><span class="tfl-bar" style="background:' + R.color + '"></span><div><b>' + esc(R.name) + '</b><small>' + R.stops.map(function (d) { return esc(D.DISTRICTS[d].name); }).join(' · ') + '</small></div><span class="num">' + N(R.fare) + '</span></div>'; }).join('') +
+      '<div class="tfl-line"><span class="tfl-bar" style="background:#d8261c"></span><div><b>Red buses</b><small>Every area of London, door to door, slower in traffic</small></div><span class="num">by distance</span></div></div></details>';
   }
   var WX_INFO = { clear: ['☀️', 'Clear'], rain: ['🌧️', 'Rain'], storm: ['⛈️', 'Storm'], harmattan: ['🌫️', 'Harmattan'] };
   function weatherNote() {
@@ -4613,7 +4647,7 @@
     if (q) { var pool = {}; ids.forEach(function (i) { pool[i] = 1; }); (online.residents || []).forEach(function (r) { pool[r.id] = 1; }); Object.keys(online0).forEach(function (i) { pool[i] = 1; }); ids = Object.keys(pool).filter(function (id) { return id !== online.me && (handleOf(id) + ' ' + nameOf(id)).toLowerCase().indexOf(q) >= 0; }); }
     ids.sort(function (a, b) { return (online0[b] ? 1 : 0) - (online0[a] ? 1 : 0) || (met[b] || 0) - (met[a] || 0); });
     var rel = function (id) { var m = myLinks(), t = theirLinks(id); if (m.bae.indexOf(id) >= 0 && t.bae.indexOf(online.me) >= 0) return '💞 Bae'; if (m.fam[id] && t.fam[online.me]) return '👪 ' + REL[m.fam[id]]; return (online.chats[id] || []).length ? 'Friend' : 'Stranger'; };
-    var row = function (id) { var on = !!online0[id]; return '<div class="ct-row"><span class="ct-av">' + (photoImg(id) || '🙂') + (on ? '<i class="dot-live"></i>' : '') + '</span><div><b>' + esc(handleOf(id)) + '</b><small>' + rel(id) + (on && D.DISTRICTS[online0[id].d] ? ' · in ' + esc(D.DISTRICTS[online0[id].d].name) : ' · offline') + '</small></div>' + (on ? '<button type="button" class="ct-chat" data-chatopen="' + esc(id) + '" aria-label="Chat with ' + esc(handleOf(id)) + '">💬</button>' : '<span class="muted ct-off">offline</span>') + '</div>'; };
+    var row = function (id) { var on = !!online0[id]; return '<div class="ct-row"><span class="ct-av">' + (photoImg(id) || '🙂') + (on ? '<i class="dot-live"></i>' : '') + '</span><div><b>' + esc(handleOf(id)) + '</b><small>' + rel(id) + (on && D.DISTRICTS[online0[id].d] ? ' · in ' + esc(D.DISTRICTS[online0[id].d].name) : ' · offline') + '</small></div>' + (on && !familyOn() ? '<button type="button" class="ct-talk' + (ui.listening && ui.talkTo === id ? ' live' : '') + '" data-talkto="' + esc(id) + '" aria-label="Talk to ' + esc(handleOf(id)) + '">' + (ui.listening && ui.talkTo === id ? '🔴' : '🎤') + '</button>' : '') + (on ? '<button type="button" class="ct-chat" data-chatopen="' + esc(id) + '" aria-label="Chat with ' + esc(handleOf(id)) + '">💬</button>' : '<span class="muted ct-off">offline</span>') + '</div>'; };
     // Everyone online right now, wherever they are in the game (not just people you've met).
     var liveIds = Object.keys(online0).filter(function (id) { return id !== online.me && !online.muted[id]; }).sort(function (a, b) { return handleOf(a).localeCompare(handleOf(b)); });
     var liveBox = q ? '' : '<h4 class="st-h">🟢 Live now · ' + (liveIds.length + (online.me ? 1 : 0)) + '</h4>' + (liveIds.length ? liveIds.slice(0, 100).map(row).join('') + (liveIds.length > 100 ? '<p class="note">and ' + (liveIds.length - 100) + ' more</p>' : '') : '<p class="note">' + (online.room ? 'Only you are online right now.' : 'Live players show here when online play is on.') + '</p>');
@@ -4919,7 +4953,12 @@
   // and the safety queues. It only reads what the game already loads; nothing here can change anyone's game.
   function ownerView() {
     var q0 = function (a) { return (a || []).length; };
-    var stat = function (n, label) { return '<div class="od-stat"><b class="num">' + n + '</b><span>' + esc(label) + '</span></div>'; };
+    // Each number opens where you can see or act on it.
+    var OD_GO = { 'online now': 'contacts', 'residents': 'people', 'lives posted': 'fame', 'verified lives': 'fame', 'homes on the map': 'people', 'CVs': 'people',
+      'billboard ads live': 'creator', 'boards in use': 'creator', 'picture ads live': 'creator', 'sea plots held': 'creator', 'sponsored posts': 'creator', 'radio slots booked': 'radio', 'ads to review': 'creator',
+      'player reports': 'creator', 'photos to review': 'creator', 'sea plots to review': 'creator' };
+    var stat = function (n, label, app) { var go = app || OD_GO[label]; return go ? '<button type="button" class="od-stat od-go" data-app="' + go + '"><b class="num">' + n + '</b><span>' + esc(label) + ' ›</span></button>' : '<div class="od-stat"><b class="num">' + n + '</b><span>' + esc(label) + '</span></div>'; };
+    var goRow = function (app, cells) { return '<tr class="od-row" data-app="' + app + '" tabindex="0">' + cells + '</tr>'; };
     var cityOfD = function (d) { return d && own(D.DISTRICTS, d) ? L.districtCity(d) : null; };
     var homeCity = function (h) { var x = h && D.HOMES[h]; return x ? cityOfD(x.district) : null; };
     var res = online.residents || [], byCity = {}, live = {};
@@ -4937,12 +4976,12 @@
       stat(online.room ? online.others + 1 : 0, 'online now') + stat(res.length, 'residents') + stat((rawFame || []).length, 'lives posted') +
       stat((online.fameAll || []).length, 'verified lives') + stat(Object.keys(online.homes || {}).length, 'homes on the map') + stat(Object.keys(online.cvs || {}).length, 'CVs') + '</div>' +
       '<table class="stmt od-t"><thead><tr><th>City</th><th class="n">Residents</th><th class="n">Online now</th></tr></thead><tbody>' +
-      Object.keys(D.CITIES).concat(['other']).filter(function (c) { return byCity[c] || live[c]; }).map(function (c) { return '<tr><td>' + esc(cn(c)) + '</td><td class="n num">' + (byCity[c] || 0) + '</td><td class="n num">' + (live[c] || 0) + '</td></tr>'; }).join('') +
+      Object.keys(D.CITIES).concat(['other']).filter(function (c) { return byCity[c] || live[c]; }).map(function (c) { return goRow('contacts', '<td>' + esc(cn(c)) + ' ›</td><td class="n num">' + (byCity[c] || 0) + '</td><td class="n num">' + (live[c] || 0) + '</td>'); }).join('') +
       '</tbody></table>' + (res.length || online.room ? '' : '<p class="note">No one has joined online yet.</p>') + '</details>';
     // Net worth
     var rich = (online.fameAll || []).slice().sort(function (a, b) { return b.worth - a.worth; }).slice(0, 10);
     html += '<details class="od-box" open><summary>💰 Net worth leaders</summary>' + (rich.length ? '<table class="stmt od-t"><thead><tr><th>#</th><th>Player</th><th>City</th><th class="n">Net worth</th></tr></thead><tbody>' +
-      rich.map(function (r, i) { return '<tr><td>' + (i + 1) + '</td><td>' + esc(nameOf(r.id)) + '</td><td>' + esc(cn(homeCity(r.home))) + '</td><td class="n num">' + N(r.worth) + '</td></tr>'; }).join('') + '</tbody></table>' +
+      rich.map(function (r, i) { return '<tr class="od-row" data-chatopen="' + esc(r.id) + '" tabindex="0"><td>' + (i + 1) + '</td><td>' + esc(nameOf(r.id)) + ' ›</td><td>' + esc(cn(homeCity(r.home))) + '</td><td class="n num">' + N(r.worth) + '</td></tr>'; }).join('') + '</tbody></table>' +
       '<p class="note">Only lives that replay to the same result are counted, so these numbers cannot be faked.</p>' : '<p class="note">No verified lives yet.</p>') + '</details>';
     // Politics
     var g = government(), wk = townWeek(), sen = raceOf('sen', lastWeek()), pres = raceOf('pres', lastWeek()), mem = G.members(online.govparty, wk), pc = {};
@@ -4950,12 +4989,12 @@
     var who = function (id, extra) { return id ? '<b>' + esc(nameOf(id)) + '</b>' + (extra || '') : '<span class="muted">Seat open</span>'; };
     var ballots = (online.govvote || []).filter(function (r) { return G.weekVal(r.raw, wk); }).length, cands = (online.govrun || []).filter(function (r) { return G.weekVal(r.raw, wk); }).length;
     html += '<details class="od-box" open><summary>🏛️ Politics</summary><table class="stmt od-t"><tbody>' +
-      '<tr><td>Governor of Lagos</td><td>' + who(g && g.gov, g ? ' ' + partyChip(g.ticket.party) : '') + '</td></tr>' +
-      '<tr><td>Deputy Governor</td><td>' + who(g && g.deputy) + '</td></tr>' +
-      '<tr><td>Senator for Lagos</td><td>' + who(sen && sen.winner && sen.winner.cand.id, sen && sen.winner ? ' ' + partyChip(sen.winner.cand.party) + ' · ' + sen.winner.votes + ' votes' : '') + '</td></tr>' +
-      '<tr><td>President of Nigeria</td><td>' + who(pres && pres.winner && pres.winner.cand.id, pres && pres.winner ? ' ' + partyChip(pres.winner.cand.party) + ' · ' + pres.winner.votes + ' votes' : '') + '</td></tr>' +
-      '<tr><td>Executive Council</td><td>' + (g ? g.cabinet.length + ' posts filled' : '<span class="muted">None</span>') + '</td></tr>' +
-      '<tr><td>This week</td><td>' + esc(PHASE_LABEL[govPhase()]) + ' · ' + cands + ' declared · ' + ballots + ' ballots</td></tr></tbody></table>' +
+      '<tr class="od-row" data-app="govt" tabindex="0"><td>Governor of Lagos ›</td><td>' + who(g && g.gov, g ? ' ' + partyChip(g.ticket.party) : '') + '</td></tr>' +
+      '<tr class="od-row" data-app="govt" tabindex="0"><td>Deputy Governor ›</td><td>' + who(g && g.deputy) + '</td></tr>' +
+      '<tr class="od-row" data-app="govt" tabindex="0"><td>Senator for Lagos ›</td><td>' + who(sen && sen.winner && sen.winner.cand.id, sen && sen.winner ? ' ' + partyChip(sen.winner.cand.party) + ' · ' + sen.winner.votes + ' votes' : '') + '</td></tr>' +
+      '<tr class="od-row" data-app="govt" tabindex="0"><td>President of Nigeria ›</td><td>' + who(pres && pres.winner && pres.winner.cand.id, pres && pres.winner ? ' ' + partyChip(pres.winner.cand.party) + ' · ' + pres.winner.votes + ' votes' : '') + '</td></tr>' +
+      '<tr class="od-row" data-app="govt" tabindex="0"><td>Executive Council ›</td><td>' + (g ? g.cabinet.length + ' posts filled' : '<span class="muted">None</span>') + '</td></tr>' +
+      '<tr class="od-row" data-app="govt" tabindex="0"><td>This week ›</td><td>' + esc(PHASE_LABEL[govPhase()]) + ' · ' + cands + ' declared · ' + ballots + ' ballots</td></tr></tbody></table>' +
       '<div class="od-parties">' + Object.keys(G.PARTIES).map(function (k) { return '<span>' + partyChip(k) + ' <b class="num">' + (pc[k] || 0) + '</b> member' + ((pc[k] || 0) === 1 ? '' : 's') + '</span>'; }).join('') + '</div></details>';
     // Advertising: what is on the boards, the sea and the radio right now (in-game money only)
     var now = Date.now(), liveAds = (online.ads || []).map(function (d) { return L.checkAd(d.raw, now); }).filter(Boolean);
@@ -4970,7 +5009,7 @@
     // Suggestions from players
     var ideas = []; (online.reports || []).forEach(function (r) { (Array.isArray(r.raw.ideas) ? r.raw.ideas : []).slice(-5).forEach(function (m) { if (m && typeof m.t === 'string' && typeof m.at === 'number') { var c = CH.clean(m.t.slice(0, 140)); ideas.push({ by: r.id, k: IDEA_KINDS[m.k] ? m.k : 'other', t: m.t.slice(0, 280), ok: c.ok, at: m.at }); } }); });
     ideas.sort(function (a, b) { return b.at - a.at; });
-    html += '<details class="od-box" open><summary>💡 Suggestions · ' + ideas.length + '</summary>' + (ideas.length ? '<div class="od-stats">' + Object.keys(IDEA_KINDS).map(function (k) { return stat(ideas.filter(function (x) { return x.k === k; }).length, IDEA_KINDS[k][1]); }).join('') + '</div><ul class="od-list">' + ideas.slice(0, 40).map(function (m) { return '<li>' + IDEA_KINDS[m.k][0] + ' <b>' + esc(nameOf(m.by)) + '</b> · ' + esc(new Date(m.at).toLocaleDateString()) + ': ' + (m.ok ? esc(m.t) : '<span class="muted">(hidden by the filter)</span>') + '</li>'; }).join('') + '</ul>' : '<p class="note">No suggestions yet. Players send them from Phone → Suggestions.</p>') + '</details>';
+    html += '<details class="od-box" open><summary>💡 Suggestions · ' + ideas.length + '</summary>' + (ideas.length ? '<div class="od-stats">' + Object.keys(IDEA_KINDS).map(function (k) { return stat(ideas.filter(function (x) { return x.k === k; }).length, IDEA_KINDS[k][1], 'ideas'); }).join('') + '</div><ul class="od-list">' + ideas.slice(0, 40).map(function (m) { return '<li>' + IDEA_KINDS[m.k][0] + ' <b>' + esc(nameOf(m.by)) + '</b> · ' + esc(new Date(m.at).toLocaleDateString()) + ': ' + (m.ok ? esc(m.t) : '<span class="muted">(hidden by the filter)</span>') + '</li>'; }).join('') + '</ul>' : '<p class="note">No suggestions yet. Players send them from Phone → Suggestions.</p>') + '</details>';
     // Safety
     var q = function (a) { return (a || []).length; };
     html += '<details class="od-box" open><summary>🛟 Safety</summary><div class="od-stats">' + stat((online.reports || []).filter(function (r) { return r.raw.who; }).length, 'player reports') + stat(q(online.photoreview), 'photos to review') + stat(q(online.adreview), 'ads to review') + stat(q(online.seareview), 'sea plots to review') + '</div>' +
@@ -5536,7 +5575,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok],[data-pinok],[data-pincancel],[data-pinset],[data-pinoff],[data-pinsetup],[data-shtask],[data-shskip],[data-shleave],[data-roompeer],[data-roomhome]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok],[data-pinok],[data-pincancel],[data-pinset],[data-pinoff],[data-pinsetup],[data-shtask],[data-shskip],[data-shleave],[data-roompeer],[data-roomhome],[data-talkto],[data-voiceplay]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     // Transaction PIN: money-out buttons ask for it first (then it stays unlocked for 5 minutes).
@@ -5794,6 +5833,8 @@
       if (online.room) online.room.emit('deck', { space: ui.inSpace, text: cr.text }).catch(function () {}); render(); return; }
     if (ds.psoc) { var pk = ds.psoc.split(':'), pkind = pk[0], pby = pk.slice(1).join(':'); run(function () { return L.playerSocial(S, pkind); }); if (online.room) online.room.emit('wave', { to: pby, kind: pkind }).catch(function () {}); return; }
     if (ds.talk) { startTalk(); return; }
+    if (ds.talkto) { if (!ui.listening) startTalk(ds.talkto); return; }
+    if (ds.voiceplay) { var vp0 = ds.voiceplay.split(':'), vby = vp0[0], vat0 = +vp0[1], vm = ((online.chats[vby === online.me ? ui.chatWith : vby] || []).filter(function (m) { return m.vat === vat0; })[0] || {}); playVoice(vby, vat0, vm.text || ''); return; }
     if (ds.talkopen) { ui.talkOpen = !ui.talkOpen; render(); return; }
     if (ds.talksend) { var ti3 = document.getElementById('talk-in'); sendTalk(ti3 ? ti3.value.trim() : ''); return; }
     if (ds.peace) { if (online.room) online.room.emit('deck', { here: S.loc, peace: true }).catch(function () {}); ui.toasts.push({ msg: '✌️ Peace sent to everyone here.', ok: true }); render(); return; }

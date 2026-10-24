@@ -13,6 +13,7 @@
   function create(opts) {
     opts = opts || {};
     var T = root.THREE; if (!T) return null;
+    var LHR = opts.city === 'ldn'; // London Heathrow: purple band, Union flags, black cabs, a red TfL bus, plane trees, grey sky
     var el = document.createElement('div'); el.className = 'airport-stage airport-3d';
     var renderer;
     try { renderer = root.LasgidiGL ? root.LasgidiGL.make({ preserve: true }) : new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch (e) { return null; } if (!renderer) return null;
@@ -169,7 +170,7 @@
     var roofGeo = new T.PlaneGeometry(11.8, 2.5, 96, 8); roofGeo.rotateX(-Math.PI / 2); var rp = roofGeo.attributes.position;
     for (var vi = 0; vi < rp.count; vi++) { var vx = rp.getX(vi), vz = rp.getZ(vi); rp.setY(vi, 0.95 + Math.sin(vx * 0.9) * 0.06 + (1 - Math.pow(vz / 1.25, 2)) * 0.18); } roofGeo.computeVertexNormals();
     term.add(mesh(roofGeo, mat('roof', 0xdfe6ec, { roughness: 0.35, metalness: 0.35, side: T.DoubleSide }), 11.1, 0, 7.75));
-    var bandTex = canvasTex(2048, 96, function (g, w, h) { g.fillStyle = '#1d5a3c'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffd36b'; g.font = '900 54px system-ui, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(state.code || 'LOS', 26, h / 2); g.textAlign = 'right'; g.fillText(state.code || 'LOS', w - 26, h / 2); g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = '900 50px system-ui, sans-serif'; g.fillText((state.name || 'AIRPORT').toUpperCase(), w / 2, h / 2); });
+    var bandTex = canvasTex(2048, 96, function (g, w, h) { g.fillStyle = LHR ? '#4b2a7b' : '#1d5a3c'; g.fillRect(0, 0, w, h); g.fillStyle = LHR ? '#ffffff' : '#ffd36b'; g.font = '900 54px system-ui, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(state.code || 'LOS', 26, h / 2); g.textAlign = 'right'; g.fillText(state.code || 'LOS', w - 26, h / 2); g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = '900 50px system-ui, sans-serif'; g.fillText((state.name || 'AIRPORT').toUpperCase(), w / 2, h / 2); });
     var band = mesh(new T.PlaneGeometry(11.2, 0.2), new T.MeshStandardMaterial({ map: bandTex, roughness: 0.6, emissive: 0xffffff, emissiveMap: bandTex, emissiveIntensity: 0.35 }), 11.1, 0.76, 8.76, false); term.add(band);
     tag(term, 'terminal'); world.add(term);
     // Landside: kerb road, plaza, fountain, flags, car parks, taxi rank, access road, fence.
@@ -180,7 +181,7 @@
     world.add(boxM(2.7, 0.02, 3.0, mat('plaza', 0xe7e1d2, { roughness: 0.9 }), 10.95, 0.022, 11.0, false));
     world.add(mesh(new T.CylinderGeometry(0.75, 0.8, 0.12, 28), mat('basin', 0xc9ccd1), 10.95, 0.06, 11.4)); world.add(mesh(new T.CylinderGeometry(0.62, 0.62, 0.02, 28), mat('water', 0x3fb6d8, { roughness: 0.1, metalness: 0.2 }), 10.95, 0.13, 11.4, false));
     var jetsW = []; for (var fj = 0; fj < 8; fj++) { var dr = mesh(geo('drop', function () { return new T.SphereGeometry(0.025, 6, 4); }), mat('spray', 0xe8f7ff, { transparent: true, opacity: 0.85 }), 10.95, 0.2, 11.4, false); world.add(dr); jetsW.push(dr); }
-    var flagTex = canvasTex(96, 64, function (g, w, h) { g.fillStyle = '#1f8a4c'; g.fillRect(0, 0, w / 3, h); g.fillStyle = '#ffffff'; g.fillRect(w / 3, 0, w / 3, h); g.fillStyle = '#1f8a4c'; g.fillRect(w * 2 / 3, 0, w / 3, h); });
+    var flagTex = canvasTex(96, 64, LHR ? function (g, w, h) { g.fillStyle = '#012169'; g.fillRect(0, 0, w, h); g.strokeStyle = '#fff'; g.lineWidth = 12; g.beginPath(); g.moveTo(0, 0); g.lineTo(w, h); g.moveTo(w, 0); g.lineTo(0, h); g.stroke(); g.strokeStyle = '#c8102e'; g.lineWidth = 4; g.stroke(); g.fillStyle = '#fff'; g.fillRect(w / 2 - 10, 0, 20, h); g.fillRect(0, h / 2 - 10, w, 20); g.fillStyle = '#c8102e'; g.fillRect(w / 2 - 6, 0, 12, h); g.fillRect(0, h / 2 - 6, w, 12); } : function (g, w, h) { g.fillStyle = '#1f8a4c'; g.fillRect(0, 0, w / 3, h); g.fillStyle = '#ffffff'; g.fillRect(w / 3, 0, w / 3, h); g.fillStyle = '#1f8a4c'; g.fillRect(w * 2 / 3, 0, w / 3, h); });
     var flags = [];
     [[9.8, 12.3], [12.1, 12.3], [9.8, 9.7], [12.1, 9.7]].forEach(function (q) { world.add(mesh(geo('pole', function () { return new T.CylinderGeometry(0.015, 0.015, 1.3, 6); }), mat('pole', 0xd9dde1, { metalness: 0.6 }), q[0], 0.65, q[1])); var f = mesh(geo('flag', function () { var p = new T.PlaneGeometry(0.42, 0.26, 8, 1); p.translate(0.21, 0, 0); return p; }), new T.MeshStandardMaterial({ map: flagTex, side: T.DoubleSide }), q[0], 1.15, q[1], false); world.add(f); flags.push(f); });
     var bayTex = canvasTex(512, 256, function (g, w, h) { g.fillStyle = '#50565e'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3; for (var i = 0; i <= 10; i++) { var x = 6 + i * (w - 12) / 10; g.beginPath(); g.moveTo(x, 6); g.lineTo(x, h * 0.38); g.moveTo(x, h * 0.62); g.lineTo(x, h - 6); g.stroke(); } g.setLineDash([14, 12]); g.beginPath(); g.moveTo(10, h / 2); g.lineTo(w - 10, h / 2); g.stroke(); });
@@ -188,11 +189,18 @@
       var lot = boxM(3.6, 0.02, 2.6, mat('lot', 0xffffff, { map: bayTex }), r[0] + 1.8, 0.021, r[1] + 1.3, false); tag(lot, 'parking'); world.add(lot);
       for (var cx = 0; cx < 10; cx++) for (var cy = 0; cy < 2; cy++) { var c = car(CARC[(cx + cy * 3 + ri * 2) % CARC.length]); c.position.set(r[0] + 0.18 + cx * 0.355, 0.02, r[1] + (cy ? 2.15 : 0.45)); c.rotation.y = Math.PI / 2; world.add(c); }
     });
-    world.add(boxM(2.4, 0.02, 1.0, mat('lot2', 0x50565e), 18.6, 0.021, 10.3, false)); for (var tx2 = 0; tx2 < 5; tx2++) { var cab = car(0xf2c200); cab.position.set(17.65 + tx2 * 0.46, 0.02, 10.3); cab.rotation.y = Math.PI / 2; world.add(cab); }
-    var taxl = sprite('TAXI', '#f2c200', '#1a1500', 0.5); taxl.position.set(18.6, 0.8, 10.3); world.add(taxl);
+    world.add(boxM(2.4, 0.02, 1.0, mat('lot2', 0x50565e), 18.6, 0.021, 10.3, false)); for (var tx2 = 0; tx2 < 5; tx2++) { var cab = car(LHR ? 0x111214 : 0xf2c200); cab.position.set(17.65 + tx2 * 0.46, 0.02, 10.3); cab.rotation.y = Math.PI / 2; world.add(cab); }
+    var taxl = LHR ? sprite('BLACK CABS', '#111214', '#ffd36b', 0.5) : sprite('TAXI', '#f2c200', '#1a1500', 0.5); taxl.position.set(18.6, 0.8, 10.3); world.add(taxl);
+    if (LHR) {
+      // A red double-decker at the kerb, and the way to the Tube and the Elizabeth line.
+      var dd = new T.Group(); dd.add(boxM(0.95, 0.34, 0.22, mat('ldnbus', 0xd8261c, { roughness: 0.45 }), 0, 0.2, 0)); dd.add(boxM(0.9, 0.05, 0.225, mat('cabin', 0x2a3a4a), 0, 0.17, 0, false)); dd.add(boxM(0.9, 0.05, 0.225, mat('cabin', 0x2a3a4a), 0, 0.31, 0, false)); dd.position.set(7.4, 0.02, 9.1); world.add(dd);
+      var t5 = sprite('TERMINAL 5', '#4b2a7b', '#ffffff', 0.7); t5.position.set(11.1, 1.55, 8.6); world.add(t5);
+      var tube = sprite('⊖ Underground · Elizabeth line', '#1f3a93', '#ffffff', 0.55); tube.position.set(5.6, 0.95, 10.6); world.add(tube);
+      var bus = sprite('TfL buses', '#d8261c', '#ffffff', 0.45); bus.position.set(7.4, 0.75, 9.1); world.add(bus);
+    }
     // Palms and shade trees.
-    [[5.4, 9.6], [9.3, 9.7], [12.6, 9.6], [16.4, 9.6], [9.4, 12.5], [12.4, 12.5], [0.6, 13.2], [1.6, 14.1], [2.8, 13.0], [23.3, 8.4], [23.4, 11.0], [23.2, 13.9], [0.7, 2.9], [23.4, 3.2]].forEach(function (q) { world.add(palm(q[0], q[1], 0.95)); });
-    for (var pr = 0; pr < 12; pr++) world.add(palm(6.8 + pr * 1.4, 13.9 - (pr % 2) * 0.25, 0.9));
+    [[5.4, 9.6], [9.3, 9.7], [12.6, 9.6], [16.4, 9.6], [9.4, 12.5], [12.4, 12.5], [0.6, 13.2], [1.6, 14.1], [2.8, 13.0], [23.3, 8.4], [23.4, 11.0], [23.2, 13.9], [0.7, 2.9], [23.4, 3.2]].forEach(function (q) { world.add(LHR ? tree(q[0], q[1], 1.1) : palm(q[0], q[1], 0.95)); });
+    for (var pr = 0; pr < 12; pr++) world.add(LHR ? tree(6.8 + pr * 1.4, 13.9 - (pr % 2) * 0.25, 1) : palm(6.8 + pr * 1.4, 13.9 - (pr % 2) * 0.25, 0.9));
     [[19.0, 8.1], [20.5, 8.0], [18.4, 12.0], [21.5, 12.4], [1.2, 8.0]].forEach(function (q) { world.add(tree(q[0], q[1], 0.9)); });
     // The perimeter fence: posts and three wires, with a gate house at the entrance.
     var postGeo = new T.BoxGeometry(0.04, 0.34, 0.04), postMat = mat('post', 0x5a6068, { metalness: 0.5 }), wireMat = new T.LineBasicMaterial({ color: 0x8a9097 });
@@ -277,7 +285,7 @@
       if (root.LasgidiGL && !root.LasgidiGL.live(el)) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // hidden or under another view: skip the frame
       root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var dt = last ? Math.min(0.1, (t - last) / 1000) : 0; last = t; var s = reduce ? 0 : t / 1000;
-      var night = !!state.night; hemi.intensity = night ? 0.6 : 0.9; sun.intensity = night ? 0.4 : 1.6; sun.color.set(night ? 0x9fb7ff : 0xffffff); scene3.background = new T.Color(night ? 0x0d1a2e : 0x9fd3ef); scene3.fog.color.set(night ? 0x0d1a2e : 0x9fd3ef);
+      var night = !!state.night; hemi.intensity = night ? 0.6 : 0.9; sun.intensity = night ? 0.4 : 1.6; sun.color.set(night ? 0x9fb7ff : 0xffffff); var dayC = LHR ? 0xb7c2cc : 0x9fd3ef; scene3.background = new T.Color(night ? 0x0d1a2e : dayC); scene3.fog.color.set(night ? 0x0d1a2e : dayC);
       glass.emissive = new T.Color(night ? 0x6a5a2a : 0x000000); glass.emissiveIntensity = night ? 0.6 : 0;
       // Rotors, beacon, fountain and flags.
       helis.forEach(function (h, i) { h.userData.rotor.rotation.y = s * (i === 0 ? 14 : 0.2); h.userData.trotor.rotation.z = s * 30; });
