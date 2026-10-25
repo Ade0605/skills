@@ -5775,6 +5775,21 @@
     s.alerts = []; s.gifted = true; post(s, 'bank', take, 'Gift from a friend');
     return finish(s, ok('🎁 ' + naira(take) + ' landed in your bank.' + (take < amount ? ' (The daily gift limit kept the rest.)' : '') + ' This life is now Gifted: it stays off the boards.'));
   }
+  // Gifts for every life, whatever rules it started with (new recorded calls, so older gift calls replay as before).
+  function giftOutAny(s, amount) {
+    amount = Math.round(+amount); if (!(amount >= 100 && amount <= giftMax(s))) return fail('Send between ' + naira(100) + ' and ' + naira(giftMax(s)) + '.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    s.alerts = []; if (!pay(s, amount, 'Sent to a friend')) return fail('You do not have ' + naira(amount) + '.');
+    return finish(s, ok('💸 Sent ' + naira(amount) + '.', { amount: amount }));
+  }
+  function giftInAny(s, amount, ref) {
+    amount = Math.round(+amount); if (!(amount >= 100 && amount <= 1000000) || typeof ref !== 'string' || !/^[a-z0-9]{6,16}$/.test(ref)) return fail('That gift is not valid.');
+    s.giftLog = s.giftLog || { day: -1, got: 0, refs: [] };
+    if (s.giftLog.refs.indexOf(ref) >= 0) return fail('You already took that gift.');
+    s.giftLog.got += amount; s.giftLog.refs.push(ref); if (s.giftLog.refs.length > 60) s.giftLog.refs.shift();
+    s.alerts = []; s.gifted = true; post(s, 'bank', amount, 'Gift from a friend');
+    return finish(s, ok('🎁 ' + naira(amount) + ' landed in your bank. This life is now Gifted: it stays off the boards.'));
+  }
   // Rules 48: change your lifetime dream, at most once every 7 game days (not in Weekly Lagos, not after you won).
   function changeGoal(s, goal) {
     if (!(s.rules >= 48)) return fail('You cannot change your dream in this life.');
@@ -5911,7 +5926,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost, rentSeaPlots: recorded('sr', rentSeaPlots), seaRentCost: seaRentCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    adoptBaby: recorded('ab', adoptBaby), shortState: shortState, placeBet: recorded('bt', placeBet), highLow: recorded('hz', highLow), betInfo: betInfo, BET_LEAGUES: BET_LEAGUES, changeGoal: recorded('cg', changeGoal), giftOut: recorded('go', giftOut), giftMax: giftMax, startCashFor: startCashFor, originText: originText, giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
+    adoptBaby: recorded('ab', adoptBaby), shortState: shortState, placeBet: recorded('bt', placeBet), highLow: recorded('hz', highLow), betInfo: betInfo, BET_LEAGUES: BET_LEAGUES, changeGoal: recorded('cg', changeGoal), giftOut: recorded('go', giftOut), giftMax: giftMax, giftOutAny: recorded('gq', giftOutAny), giftInAny: recorded('gj', giftInAny), startCashFor: startCashFor, originText: originText, giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
     buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
     decRates: decRates, luxuryCar: luxuryCar, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), stageShow: recorded('st', stageShow), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,

@@ -622,6 +622,9 @@
   // Talk: your own voice. The clip is recorded while the browser writes down what you said; only if those words pass
   // the chat filter does the clip go out (kept in your voice record, the others play it). No transcript, no clip.
   // Talk to one player (Contacts → 🎤): the same filtered voice note, sent as a direct chat to them only.
+  // How much a player can accept as one gift, from their presence (null: unknown, an older client).
+  function cleanName(n) { var r = CH.clean ? CH.clean(String(n || '')) : null; return r && typeof r === 'object' ? (r.ok && r.text ? r.text : 'A Lagosian') : String(n || 'A Lagosian'); }
+  function giftCap() { return L.giftMax(S); } // every life can accept up to ₦1,000,000, the most anyone can send
   function sendTalkTo(to, text, clip) {
     ui.talkTo = null; ui.listening = false;
     if (familyOn()) return;
@@ -823,7 +826,7 @@
     window.claude.use('user').then(function (u) {
       if (!u) return;
       online.user = u;
-      u.id().then(function (id) { online.me = id; scheduleRender(); subscribeMyReview(); if (typeof u.setName === 'function' && S && S.name) u.setName(CH.clean ? CH.clean(S.name) : S.name); });
+      u.id().then(function (id) { online.me = id; scheduleRender(); subscribeMyReview(); if (typeof u.setName === 'function' && S && S.name) u.setName(cleanName(S.name)); });
       // The owner's dashboard: the claude.ai owner of this game, or on the website an admin.
       if (typeof u.isOwner === 'function' && window.claude.online !== 'supabase') u.isOwner().then(function (o) { online.isOwner = o === true; scheduleRender(); if (o === true) subscribeReports(); }, function () {});
       // On the website, the owner is whoever is listed in public.admins (see docs/HOSTING.md).
@@ -1061,7 +1064,7 @@
     return '<div class="list"><div class="item"><div><h3>🏪 Player shops in ' + esc(D.DISTRICTS[pl.district].name) + '</h3></div></div>' + rows.map(function (r) { return '<div class="item"><div><h3 class="clip" title="' + esc(r[0]) + '">' + esc(r[0]) + '</h3><div class="meta"><span>' + esc(r[1]) + '</span></div></div>' + (r[2] || '') + '</div>'; }).join('') + '</div>';
   }
   function syncPresence() {
-    if (online.user && typeof online.user.setName === 'function' && S && S.name && online.sentName !== S.name) { online.sentName = S.name; online.user.setName(CH.clean ? CH.clean(S.name) : S.name); } // own-site online: your game name is your profile name
+    if (online.user && typeof online.user.setName === 'function' && S && S.name && online.sentName !== S.name) { online.sentName = S.name; online.user.setName(cleanName(S.name)); } // own-site online: your game name is your profile name
     if (!online.room) return;
     var d = S ? S.loc : null, lk = S && S.look ? { skin: S.look.skin, hair: S.look.hair, shape: S.look.shape } : null, pt = myParty();
     var pres = { d: d, look: lk, party: pt, at: S && S.cruise && L.cruiseAboard(S) ? 'cruise:' + S.cruise.spot : S && S.room && L.roomIn(S, S.room.id) ? 'room:' + S.room.id + ':' + S.room.spot : ui.visit || null, a: S ? myActivity() : null, biz: S ? myBiz() : null, lv: S && L.lagosLevel ? L.lagosLevel(S) : null, st: S && S.streak ? S.streak.n : 0, hk: S ? huntNow().id + ':' + huntState().found.length : null };
@@ -1190,7 +1193,9 @@
         (online.cvs && checkCv(online.cvs[by]) ? '<button class="btn sm ghost" id="pcv-' + esc(by) + '" data-cvfor="' + esc(by) + '">📄 CV</button>' : '') + '</div>' + reportBox(by) +
       (function () { var du = duoInfo(by); return '<p class="duo-priv">🔒 Private · only you and ' + esc(handleOf(by)) + ' can see this</p><div class="duo"><span class="duo-n">🔥 ' + du.n + '</span><div><b>' + (du.n ? du.n + '-day streak' : 'Start a streak') + '</b><small>' + (du.today ? 'Done for today. Come back tomorrow!' : 'Both of you do something together on the same day: chat, invite or send a gift.' + (du.me ? ' Waiting for them.' : du.them ? ' Your turn!' : '')) + '</small></div></div>'; })() +
       '<div class="duo-acts"><button type="button" class="duo-a inv" id="pinv-' + esc(by) + '" data-pinvite="' + esc(by) + '">🏠 Invite</button>' + (home ? '<button type="button" class="duo-a vis" data-visit2="' + esc(by) + '">🚪 Visit</button>' : '<button type="button" class="duo-a vis" disabled title="They have not shared a home yet">🚪 Visit</button>') + (S.rules >= 47 ? '<button type="button" class="duo-a pay" id="ppay-' + esc(by) + '" data-paybox="' + esc(by) + '">💸 Send money</button>' : '') + '</div>' +
-      (ui.payBox === by ? '<div class="duo-pay"><input id="pay-amt" type="number" min="100" max="' + L.giftMax(S) + '" step="100" placeholder="Amount (₦100 – ' + N(L.giftMax(S)) + ')"><button type="button" class="btn sm go" data-paysend="' + esc(by) + '">Send</button><small>' + (S.rules >= 49 ? 'No daily limit.' : 'They can take up to ' + N(L.GIFT_DAY) + ' a day in gifts.') + ' Lives that take gifts stay off the Hall of Fame.</small></div>' : '') +
+      (ui.payBox === by ? (function () { var cap = giftCap(by);
+        if (cap === 0) return '<div class="duo-pay"><p class="why">' + esc(nameOf(by)) + '\'s life started before money gifts were added, so it cannot take gifts. Ask them to start a new life to receive money.</p></div>';
+        return '<div class="duo-pay"><input id="pay-amt" type="number" min="100" max="' + cap + '" step="100" placeholder="Amount (₦100 – ' + N(cap) + ')"><button type="button" class="btn sm go" data-paysend="' + esc(by) + '">Send</button><small>' + (cap < L.giftMax(S) ? esc(nameOf(by)) + ' can take up to ' + N(cap) + ' per gift. ' : '') + 'No daily limit.' + ' Lives that take gifts stay off the Hall of Fame.</small></div>'; })() : '') +
       '<div class="pc-badges">' + (p.lv ? '<span class="pc-lv">Lv ' + p.lv + ' · ' + (p.lv >= 10 ? 'Gold' : p.lv >= 5 ? 'Silver' : 'Bronze') + '</span>' : '') + (p.st ? '<span class="pc-st">🔥 ' + p.st + '</span>' : '') + (theirLinks(by).bae.length && !familyOn() ? '<span>💞 ' + theirLinks(by).bae.length + ' bae' + (theirLinks(by).bae.length === 1 ? '' : 's') + '</span>' : '') + '</div>' +
       '<div class="inline pc-links">' + linkButtons(by) + '</div>' +
       (S.rules >= 47 ? '<div class="pc-social">' + [['hello', '👋', 'Say hello', '+Social'], ['gist', '💬', 'Gist', '+Fun · +Social'], ['joke', '😂', 'Crack a joke', '44% · +Fun · +Social'], ['shade', '😏', 'Throw shade', '+Fun · +Social']].map(function (x) { return '<button type="button" class="pc-soc" id="psoc-' + x[0] + '" data-psoc="' + x[0] + ':' + esc(by) + '"><span>' + x[1] + '</span><b>' + x[2] + '</b><small>' + x[3] + '</small><i>›</i></button>'; }).join('') + '</div>' : '') +
@@ -5975,12 +5980,15 @@
     if (ds.newconfirm) { ui.newConfirm = !ui.newConfirm; render(); return; }
     if (ds.pinvite) { var ib = ds.pinvite; if (!online.room) return; online.room.emit('wave', { to: ib, invite: true }).then(function () { (online.chats[ib] = online.chats[ib] || []).push({ sys: 'invited', me: true, at: Date.now() }); markDuo(ib, 'me'); ui.toasts.push({ msg: '🏠 You invited ' + nameOf(ib) + ' over.', ok: true }); render(); }, function () {}); return; }
     if (ds.paybox) { ui.payBox = ui.payBox === ds.paybox ? null : ds.paybox; render(); return; }
-    if (ds.paysend) { var pb = ds.paysend, pa = document.getElementById('pay-amt'), amt2 = Math.round(+(pa ? pa.value : 0)); if (!online.room) return; var res2 = null;
-      run(function () { res2 = L.giftOut(S, amt2); return res2; });
+    if (ds.paysend) { var pb = ds.paysend, pa = document.getElementById('pay-amt'), amt2 = Math.round(+(pa ? pa.value : 0)); if (!online.room) return; var res2 = null, cap2 = giftCap(pb);
+      if (cap2 === 0 || amt2 > cap2) { ui.toasts.push({ msg: cap2 === 0 ? nameOf(pb) + '\'s life cannot take money gifts.' : nameOf(pb) + ' can take at most ' + N(cap2) + ' in one gift. Nothing was sent.', ok: false }); renderToasts(); return; }
+      run(function () { res2 = L.giftOutAny(S, amt2); return res2; });
       if (res2 && res2.ok) { var ref = ''; for (var q2 = 0; q2 < 12; q2++) ref += 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]; online.room.emit('wave', { to: pb, money: res2.amount, ref: ref }).catch(function () {}); (online.chats[pb] = online.chats[pb] || []).push({ sys: 'money', me: true, amt: res2.amount, at: Date.now() }); markDuo(pb, 'me'); ui.payBox = null; render(); }
       return; }
     if (ds.giftok) { var gp = ds.giftok.split(':'), gref = gp.pop(), gby = gp.join(':'), gm = (online.chats[gby] || []).filter(function (m) { return m.ref === gref && !m.me; })[0]; if (!gm || gm.took) return;
-      run(function () { var r3 = L.giftIn(S, gm.amt, gref); if (r3.ok) gm.took = true; return r3; }); return; }
+      run(function () { var r3 = L.giftInAny(S, gm.amt, gref); if (r3.ok) gm.took = true;
+        else if (/not valid/.test(r3.msg || '')) r3 = { ok: false, msg: !(S.rules >= 47) ? 'Your life started before money gifts were added, so it cannot take this gift. Start a new life to receive money.' : 'This life can take gifts of up to ' + N(L.giftMax(S)) + '; this one was ' + N(gm.amt) + '. Ask them to send a smaller amount.' };
+        return r3; }); return; }
     if (ds.callmum) { ui.mumSaid = MUMMY[Math.floor(Math.random() * MUMMY.length)]; play('ping'); if (prefs.sound) say(ui.mumSaid, { force: true }); render(); return; }
     if (ds.crewpick) { ui.crewPick = !ui.crewPick; render(); return; }
     if (ds.crewadd) { var cw = (readJSON(CREW_KEY, []) || []).filter(function (x) { return x !== ds.crewadd; }); cw.push(ds.crewadd); writeJSON(CREW_KEY, cw.slice(-12)); ui.toasts.push({ msg: '👥 ' + nameOf(ds.crewadd) + ' joined your hunt crew.', ok: true }); render(); return; }
