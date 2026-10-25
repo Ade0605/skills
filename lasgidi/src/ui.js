@@ -38,6 +38,11 @@
   // A finished Weekly Lagos run carries on as your life, with no end date. Its score is posted to the board first
   // (a continued life no longer replays to that end). An existing life is kept as a backup before it is replaced.
   var PREV_KEY = 'lasgidi.save.prev.v1';
+  function weeklyEndBar() {
+    if (!S || !S.challenge || !S.over) return '';
+    return '<div class="wk-end" role="region" aria-label="Weekly Lagos finished"><div><b>🏁 Weekly Lagos finished</b><small>Your life does not have to end here.</small></div><button type="button" class="btn go" id="wk-keep-bar" data-wkeep="1">▶ Keep playing</button></div>';
+  }
+  function keepCard() { return S && S.challenge && S.over ? '<div class="section wk-card"><h3>🏁 Your Weekly Lagos is finished</h3><p class="note">Final net worth ' + N(L.netWorth(S)) + '. Carry this same life on with no end date: same money, home, job and friends.</p><div class="inline"><button class="btn go" id="wk-keep-do" data-wkeep="1">▶ Keep playing this life</button><button class="btn ghost" id="wk-result" data-wresult="1">See the result</button></div></div>' : ''; }
   function keepPlayingWeekly() {
     if (!S || !S.challenge || !S.over) return;
     var main = load(SAVE_KEY);
@@ -679,7 +684,7 @@
     var focusId = document.activeElement && document.activeElement.id;
     if (!S) { app.innerHTML = introView(); bindIntro(); }
     else {
-      app.innerHTML = strip() + '<main class="wrap">' + needsView() + board() + '</main>' + talkBar() + shiftHud() + '<div class="fab-dock"><button type="button" class="fab-btn" id="fab-phone" data-phoneopen="1" aria-label="Open your phone">📱 Phone</button></div>' + modal() + '<div class="toasts" id="toasts" aria-live="polite"></div>';
+      app.innerHTML = strip() + '<main class="wrap">' + needsView() + board() + '</main>' + weeklyEndBar() + talkBar() + shiftHud() + '<div class="fab-dock"><button type="button" class="fab-btn" id="fab-phone" data-phoneopen="1" aria-label="Open your phone">📱 Phone</button></div>' + modal() + '<div class="toasts" id="toasts" aria-live="polite"></div>';
       renderToasts();
     }
     Object.keys(kept).forEach(function (id) {
@@ -1622,6 +1627,7 @@
   // Engine text (goal titles, action labels, reasons, toasts) is written in naira. Abroad, amounts like ₦100k or ₦2,500
   // read in the local money. Past log lines keep their naira, since they happened where they happened.
   function locText(t) {
+    if (typeof t === 'string' && t.indexOf('This Weekly Lagos is over') === 0) return 'Weekly Lagos finished: tap ▶ Keep playing to carry on.';
     if (typeof t !== 'string' || t.indexOf('₦') < 0) return t;
     var loc = localOf(S && L.cityOf(S)); if (!loc || loc.rate === 1) return t;
     return t.replace(/-?₦\s?(\d[\d,]*(?:\.\d+)?)(?:\s?(k|m)\b)?/gi, function (m, num, unit) { var v = parseFloat(num.replace(/,/g, '')) * (unit ? (unit.toLowerCase() === 'k' ? 1e3 : 1e6) : 1); return (m.charAt(0) === '-' ? '-' : '') + N(v).replace(/ ≈.*/, ''); });
@@ -3669,7 +3675,7 @@
   function mapDoHtml() {
     var acts = L.availableActions(S), sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
     var place = acts.filter(function (a) { return !a.atHome; }).sort(sortOpen), home = acts.filter(function (a) { return a.atHome; }).sort(sortOpen);
-    var html = adviceView() + groupedActs(place, 'map') +
+    var html = keepCard() + adviceView() + groupedActs(place, 'map') +
       (home.length ? '<h4>At home · ' + esc(L.homeDef(S).name) + '</h4><div class="list">' + home.map(actionRow).join('') + '</div>' : '') +
       '<div class="inline"><button class="btn ghost" id="wait-1" data-wait="60">Wait 1 hour</button></div>';
     return html.replace(/ id="/g, ' id="mp-'); // the Do tab can be on screen too: keep ids unique
@@ -4164,7 +4170,7 @@
     var home = acts.filter(function (a) { return a.atHome; });
     var place = acts.filter(function (a) { return !a.atHome; });
     var d = D.DISTRICTS[S.loc];
-    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + tourCard() + streakCard() + partyInvites() + visitView() + adviceView() + gemHere() + giftInbox();
+    var html = '<div class="panel-h"><h2>In ' + esc(d.name) + '</h2><span class="muted">Sorted: open now first</span></div><div class="panel-b">' + keepCard() + tourCard() + streakCard() + partyInvites() + visitView() + adviceView() + gemHere() + giftInbox();
     var sortOpen = function (a, b) { return (a.disabled ? 1 : 0) - (b.disabled ? 1 : 0); };
     html += sickCard() + festCard('home') + yearFestCards('home') + dettyCard() + goalsCard();
     html += groupedActs(place, 'do');

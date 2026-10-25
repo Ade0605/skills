@@ -1714,3 +1714,9 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .act-grp:not([open]) > summary::after { transform: rotate(-90deg); }
 .act-grp > summary small { margin-left: auto; font-weight: 600; color: var(--muted); font-size: 12px; }
 .act-grp > .list { padding: 0 8px 6px; }
+
+/* Weekly Lagos finished: always a way to keep going */
+.wk-end { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 60; width: min(560px, calc(100% - 24px)); display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; border-radius: 16px; background: var(--danfo); color: var(--danfo-ink); box-shadow: 0 10px 30px rgba(0,0,0,.28); }
+.wk-end > div { flex: 1; min-width: 0; } .wk-end b { display: block; font-size: 15px; } .wk-end small { font-size: 12px; opacity: .85; }
+.wk-end .btn.go { background: #17181a; color: #fff; white-space: nowrap; }
+.wk-card { border: 2px solid var(--danfo); border-radius: 14px; }
