@@ -3773,13 +3773,13 @@
   function periodRecaps(P) {
     var h = S.history || [], byW = {}; h.forEach(function (x) { byW[x.w] = x.worth; });
     var lastW = h.length ? h[h.length - 1].w : 0, done = Math.floor(lastW / P), out = [];
-    var open0 = (S.opening ? S.opening.bank + S.opening.cash : 0), curK = Math.floor(L.week(S) / 4), mi = L.monthIndex(S);
+    var open0 = (S.opening ? S.opening.bank + S.opening.cash : 0);
     for (var k = Math.max(1, done - 11); k <= done; k++) {
       var endW = k * P, startW = (k - 1) * P, end = byW[endW], start = startW === 0 ? open0 : byW[startW];
       if (end == null || start == null) continue;
       var step = P === 4 ? 1 : 4, sq = '';
       for (var j = startW + step; j <= endW; j += step) { var a = j - step === 0 ? open0 : byW[j - step], bb = byW[j]; if (a == null || bb == null) continue; var ch = (bb - a) / Math.max(1, Math.abs(a)); sq += ch > 0.1 ? '🟩' : ch >= -0.02 ? '🟨' : '🟥'; }
-      var label = P === 4 ? D.MONTHS[((mi - (curK - (k - 1))) % 12 + 120) % 12] + ' · month ' + k : 'Year ' + k;
+      var label = P === 4 ? 'Month ' + k : 'Year ' + k;
       out.push({ k: k, label: label, start: start, end: end, delta: end - start, sq: sq });
     }
     return out;
