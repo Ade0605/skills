@@ -1720,3 +1720,5 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .wk-end > div { flex: 1; min-width: 0; } .wk-end b { display: block; font-size: 15px; } .wk-end small { font-size: 12px; opacity: .85; }
 .wk-end .btn.go { background: #17181a; color: #fff; white-space: nowrap; }
 .wk-card { border: 2px solid var(--danfo); border-radius: 14px; }
+.od-livelist .ct-row { padding: 8px 2px; }
+.ct-chat sup { font-size: 10px; margin-left: 2px; }
