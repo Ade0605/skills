@@ -35,6 +35,21 @@
     S = w; ui.tab = 'map'; ui.sel = null; ui.place = null; ui.board = null; online.wStatus = '';
     setMode('weekly'); save(); render(); subscribeWeekly();
   }
+  // A finished Weekly Lagos run carries on as your life, with no end date. Its score is posted to the board first
+  // (a continued life no longer replays to that end). An existing life is kept as a backup before it is replaced.
+  var PREV_KEY = 'lasgidi.save.prev.v1';
+  function keepPlayingWeekly() {
+    if (!S || !S.challenge || !S.over) return;
+    var main = load(SAVE_KEY);
+    if (main && !main.over && !main.japa && !window.confirm('Keep playing this Weekly Lagos life with no end date? It becomes your life. Your other life (' + (main.name || 'you') + ', ' + N(L.netWorth(main)) + ') is kept as a backup copy on this device.')) return;
+    var go = function () {
+      try { var old = localStorage.getItem(SAVE_KEY); if (old) localStorage.setItem(PREV_KEY, old); } catch (e) {}
+      var r = L.keepPlaying(S);
+      if (!r.ok) { ui.toasts.push({ msg: r.msg, ok: false }); renderToasts(); return; }
+      S.overSeen = true; setMode('life'); save(); ui.toasts.push({ msg: '▶ ' + r.msg, ok: true }); render();
+    };
+    if (online.db && online.me) postWeekly().then(function (m) { online.wStatus = m; go(); }, go); else go();
+  }
   function backToLife() {
     if (S) save();
     S = load(SAVE_KEY); ui.tab = 'map'; ui.sel = null; ui.place = null; ui.board = null;
@@ -1442,7 +1457,7 @@
   }
   function weeklyMeView() {
     return '<div class="section"><h3>Weekly Lagos ' + esc(S.challenge.id) + '</h3><p class="note">' + (S.over ? 'Finished with ' + N(L.netWorth(S)) + '.' : 'Week ' + (L.week(S) + 1) + ' of ' + L.CHALLENGE_WEEKS + '. Net worth so far ' + N(L.netWorth(S)) + '.') + ' Your main life is saved and waiting.</p>' +
-      '<div class="inline"><button class="btn sm go" id="w-back" data-wlife="1">Back to your life</button>' + (S.over ? '<button class="btn sm" id="w-result" data-wresult="1">Show result</button>' : '') +
+      '<div class="inline"><button class="btn sm go" id="w-back" data-wlife="1">Back to your life</button>' + (S.over ? '<button class="btn sm" id="w-result" data-wresult="1">Show result</button><button class="btn sm go" id="w-keep2" data-wkeep="1">▶ Keep playing</button>' : '') +
       '<button class="btn sm ghost" id="w-restart" data-wrestart="1">Restart this week</button></div>' +
       '<h3>This week\'s board</h3>' + weeklyBoardView() + '</div>';
   }
@@ -3754,6 +3769,40 @@
     }).join('') + '</div>';
   }
   // Goals: your Lagos level, the daily streak, today's missions, your lifetime dream, your start and the Lagos stories.
+  // Monthly and yearly recaps, built from the weekly net-worth record: a game month is 4 weeks, a year 12 months.
+  function periodRecaps(P) {
+    var h = S.history || [], byW = {}; h.forEach(function (x) { byW[x.w] = x.worth; });
+    var lastW = h.length ? h[h.length - 1].w : 0, done = Math.floor(lastW / P), out = [];
+    var open0 = (S.opening ? S.opening.bank + S.opening.cash : 0), curK = Math.floor(L.week(S) / 4), mi = L.monthIndex(S);
+    for (var k = Math.max(1, done - 11); k <= done; k++) {
+      var endW = k * P, startW = (k - 1) * P, end = byW[endW], start = startW === 0 ? open0 : byW[startW];
+      if (end == null || start == null) continue;
+      var step = P === 4 ? 1 : 4, sq = '';
+      for (var j = startW + step; j <= endW; j += step) { var a = j - step === 0 ? open0 : byW[j - step], bb = byW[j]; if (a == null || bb == null) continue; var ch = (bb - a) / Math.max(1, Math.abs(a)); sq += ch > 0.1 ? '🟩' : ch >= -0.02 ? '🟨' : '🟥'; }
+      var label = P === 4 ? D.MONTHS[((mi - (curK - (k - 1))) % 12 + 120) % 12] + ' · month ' + k : 'Year ' + k;
+      out.push({ k: k, label: label, start: start, end: end, delta: end - start, sq: sq });
+    }
+    return out;
+  }
+  function recapCard() {
+    var ms = periodRecaps(4), ys = periodRecaps(48);
+    if (!ms.length) return '<div class="section recap"><h3>📅 Monthly · 🗓️ Yearly</h3><p class="note">Your first monthly recap comes after 4 weeks, and a yearly one after 12 months. Your life keeps going with no end date.</p></div>';
+    var row = function (r) { return '<div class="item"><div><h3>' + esc(r.label) + '</h3><div class="meta"><span>' + N(r.start) + ' → ' + N(r.end) + '</span><span class="' + (r.delta >= 0 ? 'gain' : 'cost') + '">' + (r.delta >= 0 ? '+' : '') + N(r.delta) + '</span><span>' + r.sq + '</span></div></div></div>'; };
+    return '<div class="section recap"><h3>📅 Monthly recaps</h3><div class="list">' + ms.slice().reverse().map(row).join('') + '</div>' +
+      (ys.length ? '<h3>🗓️ Yearly recaps</h3><div class="list">' + ys.slice().reverse().map(row).join('') + '</div>' : '<p class="note">Your first yearly recap comes after 12 months (48 weeks).</p>') + '</div>';
+  }
+  // The recap sheet, once, when a month or a year ends.
+  function recapModal() {
+    var y = periodRecaps(48), m = periodRecaps(4), seen = S.recapSeen || {};
+    var pick = y.length && y[y.length - 1].k > (seen.y || 0) ? ['y', y[y.length - 1]] : m.length && m[m.length - 1].k > (seen.m || 0) ? ['m', m[m.length - 1]] : null;
+    if (!pick) return '';
+    var r = pick[1], yr = pick[0] === 'y';
+    return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="rc-title"><div class="sheet"><span class="label">' + (yr ? '🗓️ Yearly recap' : '📅 Monthly recap') + '</span><h2 id="rc-title">' + esc(r.label) + '</h2>' +
+      '<p class="squares" aria-label="Net worth by ' + (yr ? 'month' : 'week') + '">' + r.sq + '</p>' +
+      '<p>Net worth ' + N(r.start) + ' → <b>' + N(r.end) + '</b> <span class="' + (r.delta >= 0 ? 'gain' : 'cost') + '">(' + (r.delta >= 0 ? '+' : '') + N(r.delta) + ')</span></p>' +
+      (S.weeklyDone ? '<p class="note">Started as Weekly Lagos ' + esc(S.weeklyDone.id) + ' (' + N(S.weeklyDone.worth) + ' after ' + S.weeklyDone.weeks + ' weeks). Still going.</p>' : '') +
+      '<div class="opts"><button class="btn go" id="rc-ok" data-recapok="' + pick[0] + ':' + r.k + '">Keep going</button></div></div></div>';
+  }
   function goalsHubView() {
     var lv = L.lagosLevel ? L.lagosLevel(S) : 1, xp = L.lagosXp ? L.lagosXp(S) : 0, lo = 10 * (lv - 1) * (lv - 1), hi = 10 * lv * lv, pctL = Math.max(0, Math.min(100, Math.round((xp - lo) / Math.max(1, hi - lo) * 100)));
     var TITLES = ['Fresh Lagosian', 'Hustler', 'Correct Person', 'Big Boy', 'Odogwu', 'Agba', 'Legend of Lagos'], title = TITLES[Math.min(TITLES.length - 1, Math.floor((lv - 1) / 2))];
@@ -5345,7 +5394,7 @@
       else if (app === 'weather') body = '<div class="panel-b">' + weatherView() + '</div>';
       else if (app === 'shop') body = '<div class="panel-b">' + shopView() + '</div>';
       else if (app === 'stocks') body = '<div class="panel-b">' + stocksView() + '</div>';
-      else if (app === 'quests') body = '<div class="panel-b">' + goalsHubView() + '</div>';
+      else if (app === 'quests') body = '<div class="panel-b">' + goalsHubView() + (S.challenge ? '' : recapCard()) + '</div>';
       else if (app === 'bank') body = '<div class="panel-b">' + bankView() + '</div>';
       else if (app === 'dealers') body = '<div class="panel-b"><div class="section"><h3>Car dealers</h3>' + dealerView('Buy from the phone, or visit the Berger and Lekki dealers on the map.') + '</div></div>';
       else if (app === 'gems') body = '<div class="panel-b">' + gemCard() + '</div>';
@@ -5477,9 +5526,11 @@
         '<p>' + esc(D.ORIGINS[S.origin].name) + ', ' + esc(S.job ? D.CAREERS[S.job.id].titles[S.job.level] : 'job hunting') + '. Everyone played this same Lagos this week.</p>' +
         shareBlock() + '<h3>This week\'s board</h3>' + weeklyBoardView() +
         '<div class="opts"><button class="btn go" id="w-post" data-wpost="1">Post to this week\'s board</button>' + (online.wStatus ? '<p class="note">' + esc(online.wStatus) + '</p>' : '') +
+        '<button class="btn go" id="w-keep" data-wkeep="1">▶ Keep playing this life (no end date)</button>' +
         '<button class="btn ghost" id="w-life" data-wlife="1">Back to your life</button><button class="btn ghost" id="w-close" data-wclose="1">Look around</button></div></div></div>';
     }
     var ev = S.pending[0];
+    if (!ev && !S.over && !S.challenge) { var rcm = recapModal(); if (rcm) return rcm; }
     if (ev) {
       if (ev.icon) return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ev-title"><div class="sheet pop"><div class="pop-ic" aria-hidden="true">' + esc(ev.icon) + '</div><h2 id="ev-title">' + esc(ev.title) + '</h2><p>' + esc(locText(ev.text)) + '</p><div class="opts">' +
         ev.options.map(function (o, i) { return '<button class="btn' + (i === 0 ? ' go' : ' ghost') + '" id="choice-' + i + '" data-choice="' + i + '">' + esc(o) + (ev.subs && ev.subs[i] ? '<small class="ch-sub">' + esc(locText(ev.subs[i])) + '</small>' : '') + '</button>'; }).join('') + '</div></div></div>';
@@ -5629,7 +5680,7 @@
     b.click();
   }, true);
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok],[data-pinok],[data-pincancel],[data-pinset],[data-pinoff],[data-pinsetup],[data-shtask],[data-shskip],[data-shleave],[data-roompeer],[data-roomhome],[data-talkto],[data-voiceplay],[data-flyvia],[data-actgrp]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok],[data-pinok],[data-pincancel],[data-pinset],[data-pinoff],[data-pinsetup],[data-shtask],[data-shskip],[data-shleave],[data-roompeer],[data-roomhome],[data-talkto],[data-voiceplay],[data-flyvia],[data-actgrp],[data-wkeep],[data-recapok]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     // Transaction PIN: money-out buttons ask for it first (then it stays unlocked for 5 minutes).
@@ -5702,6 +5753,8 @@
     if (ds.wplay) { introState(); playWeekly(false); return; }
     if (!S) return;
     if (ds.wlife) { backToLife(); return; }
+    if (ds.wkeep) { keepPlayingWeekly(); return; }
+    if (ds.recapok) { var rk = ds.recapok.split(':'); S.recapSeen = S.recapSeen || {}; S.recapSeen[rk[0]] = +rk[1]; if (rk[0] === 'y') { var lm = periodRecaps(4); S.recapSeen.m = Math.max(S.recapSeen.m || 0, lm.length ? lm[lm.length - 1].k : 0); } save(); render(); return; }
     if (ds.wclose) { S.overSeen = true; save(); render(); return; }
     if (ds.wresult) { S.overSeen = false; render(); return; }
     if (ds.wrestart) {

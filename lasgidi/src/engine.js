@@ -5665,6 +5665,15 @@
   }
 
   /* ---------- Weekly Lagos challenge ---------- */
+  // Keep playing after a Weekly Lagos ends: the life carries on with no end date and no Weekly limits. The score
+  // you finished with stays on the weekly board (post it first: a continued life no longer replays to that end).
+  function keepPlaying(s) {
+    if (!s.challenge || !s.over) return fail('Only a finished Weekly Lagos can carry on.');
+    s.weeklyDone = { id: s.challenge.id, worth: netWorth(s), weeks: s.challenge.weeks };
+    delete s.challenge; s.over = false;
+    log(s, 'Your Weekly Lagos is done, but your life goes on. No more end date: keep building.', 'story');
+    return finish(s, ok('Keep going! This life now runs with no end date.'));
+  }
 
   var CHALLENGE_ID = /^\d{4}-W\d{2}$/;
   var CHALLENGE_WEEKS = 4;
@@ -5853,13 +5862,13 @@
     log(s, msg, 'good');
     return finish(s, ok(msg));
   }
-  function recorded(code, raw) {
-    var fn = function (s) { return s.over ? fail('This Weekly Lagos is over. Start next week\'s, or go back to your life.') : s.japa ? fail('You have japa-ed. This life is complete: start a new one.') : raw.apply(null, arguments); };
+  function recorded(code, raw, whenOver) {
+    var fn = function (s) { return s.over && !whenOver ? fail('This Weekly Lagos is over. Start next week\'s, or go back to your life.') : s.japa ? fail('You have japa-ed. This life is complete: start a new one.') : raw.apply(null, arguments); };
     if (RECORDED[code]) throw new Error('Replay code used twice: ' + code);
     RECORDED[code] = { fn: fn };
     return function (s) {
       var args = Array.prototype.slice.call(arguments, 1);
-      if (s.over || s.japa) return fn.apply(null, arguments); // frozen: refuse without recording
+      if ((s.over && !whenOver) || s.japa) return fn.apply(null, arguments); // frozen: refuse without recording
       if (s.replay && s.replay.acts.length < MAX_ACTS) s.replay.acts.push([code].concat(args));
       else if (s.replay) s.replay = null; // too long to verify; stop recording
       return fn.apply(null, arguments);
@@ -5916,7 +5925,7 @@
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
     districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), roomNightInfo: roomNightInfo, roomNight: recorded('rn', roomNight), roomHangBlock: roomHangBlock, passportInfo: passportInfo, localsInfo: localsInfo, roomFee: roomFee, roomHang: recorded('rh', roomHang), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
-    challengeId: challengeId, challengeEntry: challengeEntry, verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
+    challengeId: challengeId, challengeEntry: challengeEntry, keepPlaying: recorded('kg', keepPlaying, true), verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
     CATEGORY_NAMES: CATEGORY_NAMES, category: category, SCHEMA: SCHEMA,
     _advance: advance, _post: post

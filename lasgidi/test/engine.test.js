@@ -3788,3 +3788,19 @@ test('rules 52: at your workplace, coffee, a snack, lunch and one power nap a da
   assert.ok(L.doAction(c, 'brk_lunch').ok); sane(c);
   assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(c)))).ok, 'replays');
 });
+
+test('keep playing after Weekly Lagos: the finished score still verifies, the life carries on with no end, and it replays', () => {
+  const s = L.newGame({ challenge: '2026-W43', origin: 'mid' }); while (s.pending.length) L.resolveChoice(s, 0);
+  for (let n = 0; n < 5000 && !s.over; n++) { L.wait(s, 720); while (s.pending.length && !s.over) L.resolveChoice(s, 0); }
+  assert.ok(s.over);
+  const done = JSON.parse(JSON.stringify(L.challengeEntry(s)));
+  assert.ok(L.verifyChallenge(done, '2026-W43').ok, 'the finished run verifies');
+  assert.ok(!L.wait(s, 60).ok, 'frozen until you choose');
+  const r = L.keepPlaying(s); assert.ok(r.ok, r.msg);
+  assert.equal(s.over, false); assert.equal(s.challenge, undefined); assert.equal(s.weeklyDone.id, '2026-W43');
+  for (let k = 0; k < 20; k++) { assert.ok(L.wait(s, 720).ok); while (s.pending.length) L.resolveChoice(s, 0); }
+  assert.ok(L.week(s) > 4, 'past the old end'); sane(s);
+  assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(s)))).ok, 'the continued life replays');
+  assert.ok(L.verifyChallenge(done, '2026-W43').ok, 'the saved weekly entry still verifies');
+  assert.ok(!L.keepPlaying(s).ok, 'only once, only for a finished run');
+});
