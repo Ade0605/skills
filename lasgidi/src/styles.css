@@ -1700,3 +1700,17 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .od-box { max-width: 100%; box-sizing: border-box; overflow-x: auto; min-width: 0; }
 .od-t td, .od-t th { overflow-wrap: anywhere; }
 .od-stats { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+
+/* Rows with one action button are tappable all over. */
+.item:has(> button[data-act]), .item:has(> button[data-minigame]), .item:has(> button[data-fly]), .item:has(> button[data-flyvia]), .item:has(> button[data-tripto]) { cursor: pointer; transition: background .12s; }
+.item:has(> button[data-act]):hover, .item:has(> button[data-minigame]):hover, .item:has(> button[data-fly]):hover, .item:has(> button[data-flyvia]):hover, .item:has(> button[data-tripto]):hover { background: rgba(242, 182, 0, .08); }
+.item:has(> button[data-act]:not([disabled])):active { background: rgba(242, 182, 0, .18); }
+
+/* Grouped Do lists */
+.act-grp { border: 1px solid var(--line); border-radius: 12px; margin: 8px 0; background: var(--surface); overflow: hidden; }
+.act-grp > summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; font-weight: 800; }
+.act-grp > summary::-webkit-details-marker { display: none; }
+.act-grp > summary::after { content: '▾'; color: var(--muted); transition: transform .15s; }
+.act-grp:not([open]) > summary::after { transform: rotate(-90deg); }
+.act-grp > summary small { margin-left: auto; font-weight: 600; color: var(--muted); font-size: 12px; }
+.act-grp > .list { padding: 0 8px 6px; }
