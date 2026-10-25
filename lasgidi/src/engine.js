@@ -108,7 +108,7 @@
   // 48 lets you change your lifetime dream (your goal) once a week, from the phone's Goals, and adds Gidi Bet: made-up
   // football leagues every 4 game hours and a High-Low card game, with a house edge and daily stake caps.
   // 49 lifts the caps: bets up to ₦500,000 each with no daily limit, gifts up to ₦1,000,000 with no daily limit.
-  var RULES = 50;
+  var RULES = 51;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -683,7 +683,7 @@
 
     var m = monthIndex(s);
     if (m !== prevMonth) {
-      if (s.rules >= 18) { var FN = { 1: 'The Eko City Marathon runs on the second Saturday this month, from TBS.', 3: 'Sallah is this month: Eid prayers, the ram market, meat for the neighbours.', 7: 'The New Yam festival is on Saturdays at the National Theatre this month.', 10: 'Eko Style Week is on at the Eko Convention Centre on weekday evenings.', 11: 'Christmas is at the end of the month: carols at the cathedral, and the mall needs a Father Christmas.' }[m]; if (FN) log(s, FN, 'story'); }
+      if (s.rules >= 18) { var FN = { 1: 'The Eko City Marathon runs on the second Saturday this month, from TBS.', 3: 'Sallah is this month: Eid prayers, the ram market, meat for the neighbours.', 7: 'The New Yam festival is on Saturdays at the National Theatre this month.', 10: 'Eko Style Week is on at the Eko Convention Centre on weekday evenings.', 11: 'Christmas is at the end of the month: carols at the cathedral, and the mall needs a Father Christmas.' }[m]; if (FN && m === 10 && s.rules >= 51) FN += ' And on the second weekend, Eko Fashion Weekend: free runway shows, designer masterclasses and a market of small labels.'; if (FN) log(s, FN, 'story'); }
       if (m === 11) log(s, 'Detty December is here. Prices are up, parties are everywhere, short-lets are booked out.', 'story');
       if (m === 0) {
         if (prevMonth === 11) unlock(s, 'detty');
@@ -915,7 +915,7 @@
   function noteLoss(s, amt, what) { if (s.rules >= 19 && amt > 0) s.lastLoss = { amt: amt, what: what, day: day(s), reported: false }; }
   function festivalActions(s) {
     var d = s.loc, all = FEST_AT[d] || (FEST_AT[d] = D.PLACES.filter(function (p) { return p.district === d && (D.FESTIVALS[p.id] || D.BRANCH_ACTS[p.id]); }).reduce(function (o, p) { return o.concat(D.FESTIVALS[p.id] || [], D.BRANCH_ACTS[p.id] || []); }, [])), m = monthIndex(s); // and the Pulse gym branches' acts
-    return all.filter(function (a) { return !a.when || !a.when.months || a.when.months.indexOf(m) >= 0; });
+    return all.filter(function (a) { return (!a.fw || s.rules >= 51) && (!a.when || !a.when.months || a.when.months.indexOf(m) >= 0); }); // rules 51: Eko Fashion Weekend
   }
   // Rules 31: the National Theatre programme. Week w shows THEATRE_SHOWS[w mod n]; the same for every life that week.
   function theatreShow(s, off) { var n = D.THEATRE_SHOWS.length, w = week(s) + (off || 0); if (w < 0) return null; var sh = D.THEATRE_SHOWS[w % n], K = D.TH_KIND[sh.kind]; return Object.assign({ week: w, kindName: K.name, icon: K.icon, cost: price(s, K.cost), when: { days: K.days, from: K.from, to: K.to }, whenLabel: windowLabel({ days: K.days, from: K.from, to: K.to }) }, sh); }

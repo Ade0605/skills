@@ -3751,3 +3751,18 @@ test('rules 50: fly from anywhere in the city (the cab to the airport is added),
   assert.match(L.intercityOptions(o, 'abuja')[0].disabled, /Leaves from/);
   assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(l2)))).ok, 'a rules-50 life replays');
 });
+
+test('rules 51: Eko Fashion Weekend runs the second weekend of November at Eko Convention Centre, free to enter', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 5101, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const s = mk(); s.loc = 'vi';
+  // set the clock to November, the second Saturday, 15:00
+  let t = 0; while (!(L.monthIndex(Object.assign({}, s, { t })) === 10)) t += 1440; s.t = t;
+  while (!(L.dow(s) === 5 && L.week(s) % 4 === 1)) s.t += 1440;
+  s.t = s.t - (s.t % 1440) + 15 * 60;
+  const acts = L.availableActions(s).filter(a => /^fw_/.test(a.id)).map(a => a.id);
+  assert.ok(acts.includes('fw_runway') && acts.includes('fw_market') && acts.includes('fw_master'), acts.join(','));
+  const r = L.doAction(s, 'fw_runway'); assert.ok(r.ok, r.msg);
+  const old = mk(50); old.loc = 'vi'; old.t = s.t - 180;
+  assert.ok(!L.availableActions(old).some(a => /^fw_/.test(a.id)), 'not in older lives');
+  for (const a of D.FESTIVALS.eko_convention.filter(a => a.fw)) { assert.ok(a.mins % 15 === 0, a.id); if (a.earn) assert.ok(a.earn <= 3000 && a.gig, a.id); }
+});

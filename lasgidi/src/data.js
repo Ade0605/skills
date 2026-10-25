@@ -3037,7 +3037,17 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     eko_convention: [
       { id: 'fest_style_watch', label: 'Watch the Eko Style Week runway', mins: 180, cost: 8000, fx: { fun: 14, social: 8 }, event: true, fest: true, when: { months: [10], days: [0, 1, 2, 3, 4], from: 18, to: 23 } },
       { id: 'fest_style_dresser', label: 'Work backstage as a dresser', mins: 300, earn: 3500, fx: { energy: -16 }, xp: { craft: 1 }, req: { craft: 1 }, gig: true, fest: true, when: { months: [10], days: [0, 1, 2, 3, 4], from: 14, to: 20 } },
-      { id: 'fest_style_casting', label: 'Go to the runway model casting', mins: 120, fx: { stress: 6, energy: -6 }, xp: { charisma: 1 }, req: { charisma: 2 }, special: 'casting', fest: true, when: { months: [10], days: [0, 2], from: 10, to: 16 } }
+      { id: 'fest_style_casting', label: 'Go to the runway model casting', mins: 120, fx: { stress: 6, energy: -6 }, xp: { charisma: 1 }, req: { charisma: 2 }, special: 'casting', fest: true, when: { months: [10], days: [0, 2], from: 10, to: 16 } },
+      // Rules 51: Eko Fashion Weekend (made-up, after Lagos's big free fashion weekend): the second weekend of November,
+      // free to enter: runway shows, masterclasses with designers, a market of small labels, a beauty village, and a
+      // closing concert on Sunday night.
+      { id: 'fw_runway', label: 'Eko Fashion Weekend: watch the runway shows (free entry)', mins: 180, fx: { fun: 18, social: 10 }, event: true, fest: true, fw: true, when: { months: [10], wk: [1], days: [5, 6], from: 14, to: 22 } },
+      { id: 'fw_master', label: 'Eko Fashion Weekend: a masterclass with a top designer', mins: 120, fx: { stress: -2, fun: 6 }, xp: { craft: 2, charisma: 1 }, fest: true, fw: true, when: { months: [10], wk: [1], days: [5, 6], from: 10, to: 15 } },
+      { id: 'fw_market', label: 'Eko Fashion Weekend: shop the market of 100 small labels', mins: 60, cost: 12000, fx: { fun: 14, social: 6 }, dec: true, fest: true, fw: true, when: { months: [10], wk: [1], days: [5, 6], from: 10, to: 21 } },
+      { id: 'fw_stall', label: 'Eko Fashion Weekend: sell your own designs at a market stall', mins: 360, earn: 3000, fx: { energy: -14, social: 8 }, xp: { craft: 1, hustle: 1 }, req: { craft: 2 }, gig: true, fest: true, fw: true, when: { months: [10], wk: [1], days: [5, 6], from: 10, to: 20 } },
+      { id: 'fw_beauty', label: 'Eko Fashion Weekend: a free makeover at the beauty village', mins: 45, fx: { hygiene: 20, fun: 8 }, fest: true, fw: true, when: { months: [10], wk: [1], days: [5, 6], from: 10, to: 19 } },
+      { id: 'fw_street', label: 'Eko Fashion Weekend: street-style photos outside', mins: 30, fx: { fun: 8, social: 6 }, xp: { charisma: 1 }, fest: true, fw: true, when: { months: [10], wk: [1], days: [5, 6], from: 11, to: 19 } },
+      { id: 'fw_concert', label: 'Eko Fashion Weekend: the closing night concert', mins: 180, fx: { fun: 26, social: 12, energy: -10 }, event: true, fest: true, fw: true, when: { months: [10], wk: [1], days: [6], from: 19, to: 24 } }
     ]
   };
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
