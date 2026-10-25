@@ -5077,6 +5077,14 @@
       '<table class="stmt od-t"><thead><tr><th>City</th><th class="n">Residents</th><th class="n">Online now</th></tr></thead><tbody>' +
       Object.keys(D.CITIES).concat(['other']).filter(function (c) { return byCity[c] || live[c]; }).map(function (c) { return goRow('contacts', '<td>' + esc(cn(c)) + ' ›</td><td class="n num">' + (byCity[c] || 0) + '</td><td class="n num">' + (live[c] || 0) + '</td>'); }).join('') +
       '</tbody></table>' + (res.length || online.room ? '' : '<p class="note">No one has joined online yet.</p>') + '</details>';
+    // Live now: everyone online this moment, with chat and talk.
+    var liveP = (online.peerList || []).filter(function (p) { return p.by && p.by !== online.me && !online.muted[p.by]; }).sort(function (a, b) { return handleOf(a.by).localeCompare(handleOf(b.by)); });
+    html += '<details class="od-box od-live" open><summary>🟢 Live now · ' + liveP.length + '</summary>' + (liveP.length ? '<div class="od-livelist">' + liveP.slice(0, 100).map(function (p) {
+      var where = p.d && D.DISTRICTS[p.d] ? D.DISTRICTS[p.d].name + ', ' + cn(cityOfD(p.d)) : 'somewhere in the game';
+      return '<div class="ct-row"><span class="ct-av">' + (photoImg(p.by) || '🙂') + '<i class="dot-live"></i></span><div><b>' + esc(handleOf(p.by)) + '</b><small>in ' + esc(where) + '</small></div>' +
+        (familyOn() ? '' : '<button type="button" class="ct-talk" data-talkto="' + esc(p.by) + '" aria-label="Talk to ' + esc(handleOf(p.by)) + '">🎤</button>') +
+        '<button type="button" class="ct-chat" data-chatopen="' + esc(p.by) + '" aria-label="Chat with ' + esc(handleOf(p.by)) + '">💬' + (online.unread[p.by] ? '<sup>' + online.unread[p.by] + '</sup>' : '') + '</button></div>';
+    }).join('') + (liveP.length > 100 ? '<p class="note">and ' + (liveP.length - 100) + ' more</p>' : '') + '</div>' : '<p class="note">' + (online.room ? 'Nobody else is online right now.' : 'Live players show here when online play is on.') + '</p>') + '</details>';
     // Net worth
     var rich = (online.fameAll || []).slice().sort(function (a, b) { return b.worth - a.worth; }).slice(0, 10);
     html += '<details class="od-box" open><summary>💰 Net worth leaders</summary>' + (rich.length ? '<table class="stmt od-t"><thead><tr><th>#</th><th>Player</th><th>City</th><th class="n">Net worth</th></tr></thead><tbody>' +
