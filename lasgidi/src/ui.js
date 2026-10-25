@@ -3787,10 +3787,11 @@
   function recapCard() {
     var ms = periodRecaps(4), ys = periodRecaps(48);
     if (!ms.length) return '<div class="section recap"><h3>📅 Monthly · 🗓️ Yearly</h3><p class="note">Your first monthly recap comes after 4 weeks, and a yearly one after 12 months. Your life keeps going with no end date.</p></div>';
-    var row = function (r) { return '<div class="item"><div><h3>' + esc(r.label) + '</h3><div class="meta"><span>' + N(r.start) + ' → ' + N(r.end) + '</span><span class="' + (r.delta >= 0 ? 'gain' : 'cost') + '">' + (r.delta >= 0 ? '+' : '') + N(r.delta) + '</span><span>' + r.sq + '</span></div></div></div>'; };
-    return '<div class="section recap"><h3>📅 Monthly recaps</h3><div class="list">' + ms.slice().reverse().map(row).join('') + '</div>' +
-      (ys.length ? '<h3>🗓️ Yearly recaps</h3><div class="list">' + ys.slice().reverse().map(row).join('') + '</div>' : '<p class="note">Your first yearly recap comes after 12 months (48 weeks).</p>') + '</div>';
+    var row = function (r, yr) { return '<div class="item"><div><h3>' + esc(r.label) + '</h3><div class="meta"><span>' + N(r.start) + ' → ' + N(r.end) + '</span><span class="' + (r.delta >= 0 ? 'gain' : 'cost') + '">' + (r.delta >= 0 ? '+' : '') + N(r.delta) + '</span><span>' + r.sq + '</span></div></div><button class="btn sm ghost" data-copytext="' + esc(recapShare(r, yr === true)) + '" aria-label="Copy to share">📋</button></div>'; };
+    return '<div class="section recap"><h3>📅 Monthly recaps</h3><div class="list">' + ms.slice().reverse().map(function (r) { return row(r, false); }).join('') + '</div>' +
+      (ys.length ? '<h3>🗓️ Yearly recaps</h3><div class="list">' + ys.slice().reverse().map(function (r) { return row(r, true); }).join('') + '</div>' : '<p class="note">Your first yearly recap comes after 12 months (48 weeks).</p>') + '</div>';
   }
+  function recapShare(r, yr) { return 'Lasgidi · ' + (yr ? '🗓️ ' : '📅 ') + r.label + ' · ' + N(r.start) + ' → ' + N(r.end) + ' (' + (r.delta >= 0 ? '+' : '') + N(r.delta) + ')\n' + r.sq + '\nIf you can make it in Lagos, you can make it anywhere.'; }
   // The recap sheet, once, when a month or a year ends.
   function recapModal() {
     var y = periodRecaps(48), m = periodRecaps(4), seen = S.recapSeen || {};
@@ -3801,7 +3802,7 @@
       '<p class="squares" aria-label="Net worth by ' + (yr ? 'month' : 'week') + '">' + r.sq + '</p>' +
       '<p>Net worth ' + N(r.start) + ' → <b>' + N(r.end) + '</b> <span class="' + (r.delta >= 0 ? 'gain' : 'cost') + '">(' + (r.delta >= 0 ? '+' : '') + N(r.delta) + ')</span></p>' +
       (S.weeklyDone ? '<p class="note">Started as Weekly Lagos ' + esc(S.weeklyDone.id) + ' (' + N(S.weeklyDone.worth) + ' after ' + S.weeklyDone.weeks + ' weeks). Still going.</p>' : '') +
-      '<div class="opts"><button class="btn go" id="rc-ok" data-recapok="' + pick[0] + ':' + r.k + '">Keep going</button></div></div></div>';
+      '<div class="opts"><button class="btn go" id="rc-ok" data-recapok="' + pick[0] + ':' + r.k + '">Keep going</button><button class="btn ghost" id="rc-share" data-copytext="' + esc(recapShare(r, yr)) + '">📋 Copy to share</button></div></div></div>';
   }
   function goalsHubView() {
     var lv = L.lagosLevel ? L.lagosLevel(S) : 1, xp = L.lagosXp ? L.lagosXp(S) : 0, lo = 10 * (lv - 1) * (lv - 1), hi = 10 * lv * lv, pctL = Math.max(0, Math.min(100, Math.round((xp - lo) / Math.max(1, hi - lo) * 100)));
