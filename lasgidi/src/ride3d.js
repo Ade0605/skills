@@ -42,7 +42,7 @@
       }
       else {
         var hgt = 4 + (i * 13) % 16, b = box3(g, 6, hgt, 6, M(0xffffff, 0.5, 0.1, { map: winT, emissiveMap: winT, emissive: 0xffd28c, emissiveIntensity: night ? 0.35 : 0 }), sd * 13, hgt / 2, 0); box3(g, 6.2, 0.3, 6.2, M([0xc44b3a, 0x2f6fa0, 0x9a8a78][i % 3]), sd * 13, hgt + 0.15, 0);
-        if (i % 2 === 0) { var tr = new T.Mesh(new T.CylinderGeometry(0.15, 0.22, 4, 6), M(0x6b4a2b)); tr.position.set(sd * 7.5, 2, 4); g.add(tr); for (var f = 0; f < 6; f++) { var fr = new T.Mesh(new T.BoxGeometry(2.2, 0.06, 0.5), M(0x3f8f3a, 0.8)); fr.position.set(sd * 7.5 + Math.cos(f) * 1, 4, 4 + Math.sin(f) * 1); fr.rotation.y = f; fr.rotation.z = 0.35; g.add(fr); } }
+        if (i % 2 === 0) { var tr = new T.Mesh(new T.CylinderGeometry(0.15, 0.22, 4, 6), M(0x6b4a2b)); tr.position.set(sd * 7.5, 2, 4); g.add(tr); if (LDN) { var lc = new T.Mesh(new T.SphereGeometry(1.7, 10, 8), M(0x4f7d3a, 0.9)); lc.position.set(sd * 7.5, 4.4, 4); g.add(lc); } else for (var f = 0; f < 6; f++) { var fr = new T.Mesh(new T.BoxGeometry(2.2, 0.06, 0.5), M(0x3f8f3a, 0.8)); fr.position.set(sd * 7.5 + Math.cos(f) * 1, 4, 4 + Math.sin(f) * 1); fr.rotation.y = f; fr.rotation.z = 0.35; g.add(fr); } }
         var lp = new T.Mesh(new T.CylinderGeometry(0.06, 0.06, 4, 6), M(0x2b2f36)); lp.position.set(sd * 6.6, 2, -4); g.add(lp); var bulb = new T.Mesh(new T.SphereGeometry(0.2, 8, 6), new T.MeshBasicMaterial({ color: night || dusk ? 0xffd27a : 0x8a8478 })); bulb.position.set(sd * 6.6, 4.1, -4); g.add(bulb);
         g.position.z = z;
       }
@@ -69,7 +69,7 @@
       }
       var KINDS = ['danfo', 'car', 'car', 'suv', 'danfo', 'bus', 'truck', 'okada', 'car', 'keke', 'okada', 'danfo'];
       for (var tv = 0; tv < (CITY ? 22 : 12); tv++) {
-        var kd = KINDS[tv % KINDS.length], onc = tv % 2 === 0, lane = onc ? (tv % 4 === 0 ? -1.7 : -4.6) : 4.6;
+        var kd = KINDS[tv % KINDS.length], onc = tv % 2 === 0, lane = (onc ? (tv % 4 === 0 ? -1.7 : -4.6) : 4.6) * (LDN ? -1 : 1); // London drives on the left
         traffic.push({ g: vehicle(kd), x: lane, z: -20 - tv * 14 - Math.random() * 6, rel: onc ? 14 + Math.random() * 6 : (Math.random() - 0.4) * 8, onc: onc });
       }
       if (CITY) {
@@ -135,7 +135,7 @@
       if (LDN && mode === 'danfo') { box3(V, 2, 2, long, body, 0, ht + 1.4, 0); box3(V, 2.02, 0.8, long * 0.85, glass, 0, ht + 1.6, -0.1); }
       if (LDN && mode === 'rail') { box3(V, 2.04, 0.3, long + 0.04, M(0xd8261c), 0, 0.75, 0); box3(V, 2.04, 0.14, long + 0.04, M(0x1f3a93), 0, ht + 0.35, 0); } if (mode === 'car' || mode === 'cab') box3(V, 1.8, 0.6, long * 0.5, body, 0, ht + 0.7, 0.2);
       [[-1, -long / 2 + 0.7], [1, -long / 2 + 0.7], [-1, long / 2 - 0.7], [1, long / 2 - 0.7]].forEach(function (q) { if (mode === 'keke' && q[1] < 0 && q[0] > 0) return; var wh = new T.Mesh(new T.CylinderGeometry(0.4, 0.4, 0.3, 12), M(0x111111)); wh.rotation.z = Math.PI / 2; wh.position.set(q[0] * (mode === 'keke' ? 0.65 : 1), 0.4, q[1]); V.add(wh); }); }
-    V.position.set(water || air ? 0 : 1.6, air ? 0 : 0, 0); V.traverse(function (x) { x.castShadow = true; });
+    V.position.set(water || air ? 0 : LDN ? -1.6 : 1.6, air ? 0 : 0, 0); V.traverse(function (x) { x.castShadow = true; });
     // The landmarks you pass, each with its green sign.
     (o.sights || []).forEach(function (name, i) {
       var g = new T.Group(), sd = i % 2 ? -1 : 1, h = air ? 34 + i * 6 : 14 + i * 4, y0 = air ? -60 : 0, lx = air ? sd * 24 : sd * 16; box3(g, 8, h, 8, M(0xe9e2d4, 0.6, 0, air && night ? { emissive: 0xffd28c, emissiveIntensity: 0.25 } : {}), lx, y0 + h / 2, 0); box3(g, 8.4, 1, 8.4, M(0x1d7a43), lx, y0 + h + 0.5, 0);
@@ -150,7 +150,7 @@
       var sign = new T.Mesh(new T.PlaneGeometry(7, 2.2), new T.MeshBasicMaterial({ map: st, side: T.DoubleSide })); sign.position.set(air ? lx : sd * 6.5, air ? y0 + h + 4.5 : 5, 0); if (air) sign.scale.setScalar(2.2); g.add(sign); [-3, 3].forEach(function (px) { if (!air) { var post = new T.Mesh(new T.CylinderGeometry(0.08, 0.08, 4, 6), M(0x9aa0a6)); post.position.set(sd * 6.5 + px, 2, 0); g.add(post); } });
       g.position.set(0, air ? 0 : 0, -400); world.add(g); sights.push({ g: g, at: secs * (0.12 + i * 0.8 / Math.max(1, o.sights.length)) });
     });
-    cam.position.set(air ? 10 : 6, air ? 5 : 4.5, air ? 16 : 11); cam.lookAt(0, air ? 0 : 1, -6);
+    cam.position.set(air ? 10 : LDN && !water ? -6 : 6, air ? 5 : 4.5, air ? 16 : 11); cam.lookAt(0, air ? 0 : 1, -6);
     var t0 = performance.now(), raf = 0, W = 0, H = 0;
     function frame(now) {
       if (!cv.isConnected) { if (root.LasgidiGL) root.LasgidiGL.free(renderer); else renderer.dispose(); return; }
@@ -167,7 +167,7 @@
       V.position.y = air ? Math.sin(t * 1.2) * 0.5 + (t < 1 ? -3 * (1 - t) : 0) : water ? Math.sin(t * 2) * 0.1 : Math.abs(Math.sin(t * 9)) * 0.03; V.rotation.z = water ? Math.sin(t * 1.6) * 0.03 : 0;
       if (V.userData.rotor) V.userData.rotor.rotation.y = t * 25; if (V.userData.tailRotor) V.userData.tailRotor.rotation.x = t * 40; if (V.userData.navs) V.userData.navs.forEach(function (l) { l.visible = Math.floor(t * 2) % 2 === 0; }); if (V.userData.wake) V.userData.wake.material.opacity = 0.35 + Math.sin(t * 5) * 0.1;
       if (V.userData.walker) { var lg = V.userData.walker.userData.legs, a = Math.sin(t * 7) * 0.5; lg[0].rotation.x = a; lg[1].rotation.x = -a; }
-      var cm = box.dataset.cam || 'chase'; if (!air && !water) { if (cm === 'side') { cam.position.set(V.position.x + 14, 3, 1); cam.lookAt(V.position.x, 1.5, -1); } else if (cm === 'inside') { cam.position.set(V.position.x + 0.6, 2.4, mode === 'coach' ? -1 : 0); cam.lookAt(V.position.x + 0.3, 2.2, -30); } else { cam.position.set(6, 4.5, 11); cam.lookAt(0, 1, -6); } }
+      var cm = box.dataset.cam || 'chase'; if (!air && !water) { if (cm === 'side') { cam.position.set(V.position.x + (LDN ? -14 : 14), 3, 1); cam.lookAt(V.position.x, 1.5, -1); } else if (cm === 'inside') { cam.position.set(V.position.x + 0.6, 2.4, mode === 'coach' ? -1 : 0); cam.lookAt(V.position.x + 0.3, 2.2, -30); } else { cam.position.set(LDN ? -6 : 6, 4.5, 11); cam.lookAt(0, 1, -6); } }
       renderer.render(S3, cam); raf = root.requestAnimationFrame(frame);
     }
     raf = root.requestAnimationFrame(frame);
