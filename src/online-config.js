@@ -1,0 +1,1 @@
+window.LASGIDI_ONLINE={url:"https://kthnihzjdrbridcfadwy.supabase.co/rest/v1/",anon:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0aG5paHpqZHJicmlkY2ZhZHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NjA5NjgsImV4cCI6MjEwODQzNjk2OH0.ZaylE1c0NOdm111SuQ_9P_I5xsrcIk1ASMdBaLH0H3k"};
