@@ -380,6 +380,7 @@
     h.classList.toggle('touch', isTouch());
     h.classList.toggle('big-text', !!prefs.big);
     h.classList.toggle('lite', liteOn());
+    h.classList.toggle('ultra', prefs.gfx === '4k' && !liteOn()); // 4K 3D (Settings)
     h.setAttribute('lang', prefs.lang === 'pcm' ? 'pcm' : 'en');
     if (prefs.theme === 'dark' || prefs.theme === 'light') h.setAttribute('data-theme', prefs.theme); else h.removeAttribute('data-theme');
   }
@@ -511,6 +512,7 @@
       '<h4 class="st-h">Display</h4>' +
       seg('night', '🌙 Night mode', 'Darker screens for the evening, easier on your eyes.', [['off', 'Off'], ['on', 'On'], ['auto', 'Auto']], prefs.theme === 'dark' ? 'on' : prefs.theme === 'light' ? 'off' : 'auto', 'Auto follows your phone\'s dark mode.') +
       seg('layout', '📐 Layout', 'Comfortable makes text and buttons bigger.', [['compact', 'Compact'], ['comfortable', 'Comfortable']], prefs.big ? 'comfortable' : 'compact') +
+      seg('gfx', '🖥️ 3D sharpness', 'How sharp the 3D walk-ins, rides, airport and home look. 4K draws at up to 3840 pixels across, with sharper shadows; best on a big screen or a fast computer, and it steps down by itself if your device slows.', [['std', 'Standard'], ['4k', '4K']], prefs.gfx === '4k' ? '4k' : 'std', liteOn() ? 'Turn Lite graphics off to use 4K. The page reloads.' : 'The page reloads.') +
       seg('lite', '🪶 Lite graphics', 'Skips the 3D extras so Lagos loads fast on a slow network. Your house, the map and every button stay.', [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], prefs.lite == null ? 'auto' : prefs.lite ? 'on' : 'off', 'Auto: turns on for small or slow phones. The page reloads.') +
       seg('lang', '🗣️ Language', 'Tabs, app names, headings and buttons. Story text stays in English.', [['en', 'English'], ['pcm', 'Naija Pidgin']], prefs.lang === 'pcm' ? 'pcm' : 'en') +
       seg('money', '💵 Money', 'Each city uses its own money. Add a dollar guide to every price.', [['local', 'Local only'], ['usd', '+ US dollars']], prefs.usd ? 'usd' : 'local') +
@@ -5849,6 +5851,7 @@
     if (ds.seg) { var sp2 = ds.seg.split(':'), sk = sp2[0], sv = sp2[1];
       if (sk === 'night') prefs.theme = sv === 'on' ? 'dark' : sv === 'off' ? 'light' : undefined;
       else if (sk === 'layout') prefs.big = sv === 'comfortable';
+      else if (sk === 'gfx') { prefs.gfx = sv === '4k' ? '4k' : 'std'; if (prefs.gfx === '4k' && liteOn()) prefs.lite = false; writeJSON(PREF_KEY, prefs); location.reload(); return; }
       else if (sk === 'lite') { prefs.lite = sv === 'auto' ? null : sv === 'on'; writeJSON(PREF_KEY, prefs); location.reload(); return; }
       else if (sk === 'lang') prefs.lang = sv;
       else if (sk === 'money') prefs.usd = sv === 'usd';

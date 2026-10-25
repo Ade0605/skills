@@ -17,17 +17,31 @@
   }
   // Low-end hardware, ignoring screen size and the user's setting (used to turn lite on by default).
   function lowEnd() { var n = root.navigator || {}; return (n.hardwareConcurrency || 8) <= 4 || (n.deviceMemory || 8) <= 4; }
+  // 4K (Settings → 3D sharpness): draw at up to 3840 px across on big screens, with bigger shadow maps. Never in lite.
+  function ultra() { var d = root.document && root.document.documentElement; return !!(d && d.classList.contains('ultra') && !d.classList.contains('lite')); } // the player's choice wins over the hardware guess
+  function ultraRatio() { var w = root.innerWidth || 1920, dpr = root.devicePixelRatio || 1; return Math.min(3, Math.max(dpr, 3840 / w)); }
   var made = [];
   function make(o) {
     var T = root.THREE; o = o || {}; if (!T) return null;
-    var L = lite(), r;
+    var U = ultra(), L = !U && lite(), r;
     try { r = new T.WebGLRenderer({ antialias: !L && o.antialias !== false, alpha: !!o.alpha, preserveDrawingBuffer: !!o.preserve }); } catch (e) { return null; }
-    var base = Math.min(L ? 1 : (o.maxRatio || 2), root.devicePixelRatio || 1);
-    r.setPixelRatio(base); r.userData = { base: base, ratio: base, ema: 16, last: 0, slow: 0, quick: 0 };
+    var base = U ? ultraRatio() : Math.min(L ? 1 : (o.maxRatio || 2), root.devicePixelRatio || 1);
+    r.setPixelRatio(base); r.userData = { ultra: U, base: base, ratio: base, ema: 16, last: 0, slow: 0, quick: 0 };
     if (o.shadows !== false) { r.shadowMap.enabled = true; if (T.PCFSoftShadowMap != null && !L) r.shadowMap.type = T.PCFSoftShadowMap; }
+    if (U) { // 4K: every so often, raise shadow maps to 4096 and texture filtering to the GPU's best
+      var draw = r.render.bind(r), maxA = r.capabilities && r.capabilities.getMaxAnisotropy ? r.capabilities.getMaxAnisotropy() : 8, n = 0;
+      var lift = function (scene) {
+        scene.traverse(function (o) {
+          if (o.isLight && o.castShadow && o.shadow && o.shadow.mapSize.x < 4096) { o.shadow.mapSize.set(4096, 4096); if (o.shadow.map) { o.shadow.map.dispose(); o.shadow.map = null; } }
+          var ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+          ms.forEach(function (m) { ['map', 'emissiveMap', 'normalMap', 'roughnessMap'].forEach(function (k) { var t = m[k]; if (t && t.anisotropy < maxA) { t.anisotropy = maxA; t.needsUpdate = true; } }); });
+        });
+      };
+      r.render = function (scene, cam) { if (scene && scene.traverse && n++ % 300 === 0) { try { lift(scene); } catch (e) {} } return draw(scene, cam); };
+    }
     made.push(r); return r;
   }
-  function shadow(n) { return lite() ? Math.min(n, 1024) : n; }
+  function shadow(n) { return ultra() ? Math.max(n, 4096) : lite() ? Math.min(n, 1024) : n; }
   function covered(el) {
     var doc = root.document; if (!doc) return false;
     var mine = el.closest ? el.closest(OVERLAYS) : null, all = doc.querySelectorAll(OVERLAYS);
@@ -49,5 +63,5 @@
     else if (u.quick > 4000 && u.ratio < u.base) { u.ratio = Math.min(u.base, +(u.ratio * 1.25).toFixed(2)); r.setPixelRatio(u.ratio); u.quick = 0; }
   }
   function free(r) { if (!r) return; try { r.dispose(); if (r.forceContextLoss) r.forceContextLoss(); } catch (e) {} var i = made.indexOf(r); if (i >= 0) made.splice(i, 1); }
-  root.LasgidiGL = { make: make, shadow: shadow, live: live, covered: covered, pace: pace, free: free, lite: lite, lowEnd: lowEnd, count: function () { return made.length; }, all: function () { return made.slice(); } };
+  root.LasgidiGL = { make: make, shadow: shadow, live: live, covered: covered, pace: pace, free: free, lite: lite, ultra: ultra, lowEnd: lowEnd, count: function () { return made.length; }, all: function () { return made.slice(); } };
 })(typeof window !== 'undefined' ? window : this);
