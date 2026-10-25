@@ -864,7 +864,7 @@ test('cities: districts on land in their own city; same-city travel only; fly an
     if (!D.CITIES[c].visit) assert.ok((D.PLACE_ACTIONS[k] || []).some(a => a.gig), k + ' has a gig, so nobody is stranded');
   }
   for (const c of Object.values(D.CITIES)) { assert.ok(D.DISTRICTS[c.airport] && D.DISTRICTS[c.park]); }
-  const s = L.newGame({ seed: 40, origin: 'nepo', goal: 'freestyle' });
+  const s = L.newGame({ seed: 40, origin: 'nepo', goal: 'freestyle', rules: 49 });
   assert.equal(L.cityOf(s), 'lagos');
   assert.ok(L.travelOptions(s, 'abj_wuse').every(o => o.disabled), 'no danfo to Abuja');
   assert.match(L.intercityOptions(s, 'abuja').find(o => o.mode === 'flight').disabled || '', /Leaves from Ikeja/);
@@ -3704,7 +3704,7 @@ test('rules 48: short courses at UNILAG: five lessons one a day, a CV certificat
 });
 
 test('rules 49: no caps: bets up to 500k with no daily limit, gifts up to 1m with no daily limit', () => {
-  const s = L.newGame({ seed: 4901, origin: 'nepo', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  const s = L.newGame({ seed: 4901, origin: 'nepo', goal: 'freestyle', rules: 49 }); while (s.pending.length) L.resolveChoice(s, 0);
   assert.equal(s.rules, 49); s.bank = 5e6;
   const f = L.betInfo(s).fixtures; assert.ok(L.placeBet(s, f[0].id, 0, 300000).ok); assert.ok(L.placeBet(s, f[1].id, 0, 300000).ok);
   assert.equal(L.placeBet(s, f[2].id, 0, 600000).ok, false);
@@ -3727,4 +3727,27 @@ test('rules 49: the birth lottery pays in the money of the city you start in, an
   const s = mk('lapo', 'ldn_pk_room'); while (s.pending.length) L.resolveChoice(s, 0);
   sane(s);
   assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(s)))).ok, 'a rules-49 London life replays');
+});
+
+test('rules 50: fly from anywhere in the city (the cab to the airport is added), and Departures books long-haul', () => {
+  const mk = (o) => { const s = L.newGame(Object.assign({ seed: 5001, goal: 'freestyle' }, o)); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const s = mk({ origin: 'nepo' }); s.bank = 5e7; s.cash = 0; s.loc = 'lekki';
+  const fl = L.intercityOptions(s, 'abuja').find(o => o.mode === 'flight');
+  assert.ok(!fl.disabled, fl.disabled); assert.ok(fl.cab > 0, 'the cab is added');
+  const bank0 = s.bank; const r = L.intercity(s, 'abuja', 'flight'); assert.ok(r.ok, r.msg);
+  assert.equal(L.cityOf(s), 'abuja'); assert.equal(bank0 - s.bank, fl.cost, 'paid from the bank, cab included');
+  // A London resident flies home from Peckham, through Travel or Departures in any cabin.
+  const l = mk({ origin: 'lapo', startHome: 'ldn_pk_room' }); l.bank = 5e7;
+  assert.ok(!L.intercityOptions(l, 'lagos')[0].disabled);
+  const q = L.flightQuote(l, 'lagos', 'business', false); assert.ok(!q.disabled, q.disabled); assert.ok(q.total > q.fare);
+  assert.ok(L.flyClass(l, 'lagos', 'business', false).ok); assert.equal(L.cityOf(l), 'lagos');
+  // With only the £1,000 you start with, the flight home from Peckham works and the life replays.
+  const l2 = mk({ origin: 'lapo', startHome: 'ldn_pk_room' }); assert.ok(L.intercity(l2, 'lagos', 'flight').ok); assert.equal(L.cityOf(l2), 'lagos'); sane(l2);
+  // To London still needs the visa, with a clear reason.
+  const v = mk({ origin: 'nepo' }); v.bank = 5e7;
+  assert.match(L.flightQuote(v, 'ldn', 'economy', false).disabled, /visa/);
+  // Older lives keep the old rule.
+  const o = mk({ origin: 'nepo', rules: 49 }); o.bank = 5e7; o.loc = 'lekki';
+  assert.match(L.intercityOptions(o, 'abuja')[0].disabled, /Leaves from/);
+  assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(l2)))).ok, 'a rules-50 life replays');
 });
