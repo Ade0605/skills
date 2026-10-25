@@ -3048,7 +3048,14 @@
     }
     if (tab === 'here') return bar + extra;
     return bar + '<p class="note">Tap a sign in the yard, or a person to hear them. Workers and visitors come in by ' + esc({ refinery: 'staff bus', airport: 'cab' }[venueSet(pl)] || 'danfo, keke and okada') + ' all day.</p>' +
-      (acts.length ? '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; }).join('') + '</div>' : '<p class="note">Nothing to do here yet. Try the other tabs.</p>');
+      (!acts.length ? '<p class="note">Nothing to do here yet. Try the other tabs.</p>' : (function () {
+        var closedRow = function (x) { return '<div class="item"><div><h3>' + esc(x.def.label) + '</h3><div class="meta"><span>' + esc(x.def.when ? whenText(x.def.when) : 'Not open now') + '</span></div></div></div>'; };
+        if (acts.length <= 5) return '<div class="list">' + acts.map(function (x) { return x.a ? actionRow(x.a) : closedRow(x); }).join('') + '</div>';
+        // Long walk-in lists are grouped like the Do tab; what is shut right now folds into its own section.
+        var live = acts.filter(function (x) { return x.a; }).map(function (x) { return x.a; }), shut = acts.filter(function (x) { return !x.a; }), key = 'venue:' + pl.id + ':shut';
+        var shutOpen = ui.actGrp && ui.actGrp[key] != null ? ui.actGrp[key] : false;
+        return groupedActs(live, 'venue:' + pl.id) + (shut.length ? '<details class="act-grp"' + (shutOpen ? ' open' : '') + '><summary data-actgrp="' + key + '"><span>🕒 Not open now</span><small>' + shut.length + '</small></summary><div class="list">' + shut.map(closedRow).join('') + '</div></details>' : '');
+      })());
   }
   // A walk-in always opens: "Opening…" shows at once while three.js loads, and if the 3D scene fails on this phone
   // (an old GPU, memory, a slow or stalled download) the drawn 2D yard opens instead.
