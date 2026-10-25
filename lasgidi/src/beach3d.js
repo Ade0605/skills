@@ -358,7 +358,7 @@
         if (!CB.open) { g.fillStyle = '#0d0f14'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '900 80px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(title, w / 2, h * 0.42, w - 60); g.font = '700 34px system-ui, sans-serif'; g.fillText('CLOSED · DOORS OPEN 10PM', w / 2, h * 0.72); return; }
         var gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, css(A)); gr.addColorStop(1, css(B)); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(0,0,0,' + (0.35 + 0.3 * Math.abs(Math.sin(t * 1.9))) + ')'; g.fillRect(0, 0, w, h);
         for (var b = 0; b < 64; b++) { var bh = (0.15 + 0.85 * Math.abs(Math.sin(t * 4 + b * 0.37) * Math.cos(t * 1.3 + b * 0.11))) * h * 0.5; g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(b * (w / 64) + 2, h - bh, w / 64 - 4, bh); }
-        g.fillStyle = '#fff'; g.font = '900 92px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(title, w / 2, h * 0.4, w - 60); g.font = '800 34px system-ui, sans-serif'; g.fillText('TONIGHT · ' + HEADLINERS[Math.floor(t / 8) % HEADLINERS.length], w / 2, h * 0.72);
+        g.fillStyle = '#fff'; g.font = '900 92px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(title, w / 2, h * 0.4, w - 60); g.font = '800 34px system-ui, sans-serif'; g.fillText(sc.fw && sc.placeId === 'eko_convention' ? ['EKO FASHION WEEKEND · FREE ENTRY', 'RUNWAY SHOWS ALL AFTERNOON', 'MARKET OF 100 SMALL LABELS'][Math.floor(t / 6) % 3] : 'TONIGHT · ' + HEADLINERS[Math.floor(t / 8) % HEADLINERS.length], w / 2, h * 0.72, w - 60);
       });
       var wm = new T.Mesh(new T.PlaneGeometry(36, 13.5), new T.MeshBasicMaterial({ map: wall })); wm.position.set(0, 9.6, RD / 2 - 0.3); wm.rotation.y = Math.PI; clubG.add(wm); CB.screens.push(wall);
       // The bar along the left wall, with a back-lit bottle shelf and stools.
@@ -2036,7 +2036,7 @@
     /* ---------- the season: a Christmas tree, Sallah rams, the marathon arch, the New Yam pile, Style Week's runway ---------- */
     var seasG = new T.Group(); world.add(seasG); var seasKey = '', SEAS = { bulbs: [] };
     function seasonal() {
-      var k = built + '|' + sc.month + '|' + (sc.placeId || ''); if (k === seasKey) return; seasKey = k; wipe(seasG); SEAS = { bulbs: [] };
+      var k = built + '|' + sc.month + '|' + (sc.placeId || '') + '|' + (sc.fw ? 'fw' : ''); if (k === seasKey) return; seasKey = k; wipe(seasG); SEAS = { bulbs: [] };
       var m = sc.month, q = SP(), cx = 0, cz = 0, x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; if (m == null) return; q.forEach(function (p) { cx += p[0] / q.length; cz += p[1] / q.length; x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); });
       var K = Math.max(1, Math.min(2.6, Math.max(x1 - x0, z1 - z0) / 22)), front = z1 + 3 * K; // bigger in the big squares, in front of the signs
       var at = function (dx, dz) { var x = cx + dx * K, z = front + dz * K - 6 * K; return [x, groundY(x, z), z]; }, id = sc.placeId || '';
@@ -2067,6 +2067,21 @@
       if (m === 7 && id === 'theatre') { // the New Yam pile
         var yg = big(new T.Group(), 1.8), py = at(-7, 6); yg.position.set(py[0], py[1], py[2]); seasG.add(yg); py = [0, 0, 0]; banner(yg, 'IRI JI · NEW YAM FESTIVAL', '#7a3a10', 2.8, 6); yg.add(mesh(new T.BoxGeometry(4, 0.9, 2), mat('yamTbl', { color: 0x7a5233 }), py[0], py[1] + 0.45, py[2]));
         for (var y2 = 0; y2 < 18; y2++) { var row = y2 < 8 ? 0 : y2 < 14 ? 1 : 2, yam = mesh(new T.CapsuleGeometry(0.16, 0.7, 4, 8), mat('yam', { color: 0x8a5a33, roughness: 1 }), py[0] - 1.4 + (y2 % (8 - row * 2)) * 0.4 + row * 0.4, py[1] + 1.05 + row * 0.3, py[2]); yam.rotation.z = Math.PI / 2; yg.add(yam); }
+      }
+      if (sc.fw && id === 'eko_convention') { // Eko Fashion Weekend: the banner, a market of small labels under white tents
+        var bnT = canvasTex(1024, 192, function (c, w, h) { var gr = c.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#e2611f'); gr.addColorStop(1, '#b8326b'); c.fillStyle = gr; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '900 78px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('EKO FASHION WEEKEND', w / 2, h * 0.42); c.font = '700 40px system-ui'; c.fillText('FREE ENTRY · RUNWAY · MASTERCLASSES · MARKET', w / 2, h * 0.8); });
+        var bp = at(0, -10); var bn = new T.Mesh(new T.PlaneGeometry(16 * K, 3 * K), new T.MeshBasicMaterial({ map: bnT, side: T.DoubleSide })); bn.position.set(bp[0], bp[1] + 6 * K, bp[2]); bn.rotation.y = Math.PI; bn.castShadow = false; seasG.add(bn);
+        [-8, 8].forEach(function (dx) { seasG.add(mesh(new T.CylinderGeometry(0.12 * K, 0.12 * K, 7.5 * K, 6), mat('fwPole', { color: 0x2b2f36 }), bp[0] + dx * K, bp[1] + 3.75 * K, bp[2])); });
+        var clothC = [0xe2611f, 0x2f6fd6, 0x16a34a, 0xf2b600, 0xb8326b, 0x7c3aed, 0xf4f3ec, 0x17181a];
+        for (var st = 0; st < 8; st++) {
+          var sp2 = at(-14 + (st % 4) * 9.3, st < 4 ? 10 : 16), tent = new T.Group(); tent.position.set(sp2[0], sp2[1], sp2[2]);
+          tent.add(mesh(new T.ConeGeometry(2.6 * K, 1.4 * K, 4), mat('fwTent', { color: 0xf8f8f4, roughness: 0.8 }), 0, 3.1 * K, 0)); tent.children[0].rotation.y = Math.PI / 4;
+          [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q2) { tent.add(mesh(new T.CylinderGeometry(0.05 * K, 0.05 * K, 2.4 * K, 6), mat('fwPole', {}), q2[0] * 1.7 * K, 1.2 * K, q2[1] * 1.7 * K)); });
+          tent.add(mesh(new T.BoxGeometry(2.8 * K, 0.06 * K, 0.06 * K), mat('fwRail', { color: 0x9aa0a6, metalness: 0.6 }), 0, 1.9 * K, -0.6 * K));
+          for (var cl = 0; cl < 6; cl++) tent.add(mesh(new T.BoxGeometry(0.34 * K, 0.9 * K, 0.08 * K), mat('fwCloth' + ((st + cl) % 8), { color: clothC[(st + cl) % 8], roughness: 0.9 }), -1.1 * K + cl * 0.44 * K, 1.4 * K, -0.6 * K));
+          tent.add(mesh(new T.BoxGeometry(2.6 * K, 0.8 * K, 0.9 * K), mat('fwTable', { color: 0x8a6a3a }), 0, 0.4 * K, 0.7 * K));
+          seasG.add(tent);
+        }
       }
       if (m === 10 && id === 'eko_convention') { // Eko Style Week's runway
         var pr = at(0, 4); pr[2] = cz; seasG.add(mesh(new T.BoxGeometry(2.4, 0.6, 18), mat('runway', { color: 0xf4f3ec, roughness: 0.25, metalness: 0.2 }), pr[0], pr[1] + 0.3, pr[2]));
@@ -2167,7 +2182,7 @@
         ST.towers.forEach(function (m) { m.emissiveIntensity = night ? 0.9 : 0; }); if (night && flood) hemi.intensity = 0.45;
         if (ST.board) redrawAt(ST.board, t, 2);
       } else if (CLUB) {
-        var open = !!(ROOF || night), A = CB.pal[0], B = CB.pal[1], kick = Math.pow(Math.abs(Math.sin(t * 3.9)), 3), cc = new T.Color(); CB.open = open;
+        var open = !!(ROOF || night || (sc.fw && sc.placeId === 'eko_convention')), A = CB.pal[0], B = CB.pal[1], kick = Math.pow(Math.abs(Math.sin(t * 3.9)), 3), cc = new T.Color(); CB.open = open;
         if (!ROOF) { hemi.intensity = open ? (DOLL ? 0.42 : 0.16) : 1.4; hemi.color.copy(open ? B : new T.Color(0xffffff)); sun.intensity = 0; S3.fog.color.copy(open ? CB.pal[2] : new T.Color(0x24262c)); S3.fog.density = open ? (DOLL ? 0.005 : 0.014) : 0.004; }
         else if (night) hemi.intensity = 0.4;
         if (CB.tiles) { for (var ti = 0; ti < CB.NT; ti++) for (var tj = 0; tj < CB.NT; tj++) { var wv = 0.5 + 0.5 * Math.sin(t * 2.4 - Math.hypot(ti - 3.5, tj - 3.5) * 0.9); if (open) cc.copy(A).lerp(B, 0.5 + 0.5 * Math.sin(t * 0.7 + ti * 0.5 + tj * 0.3)).multiplyScalar(0.25 + 0.95 * wv * (0.6 + 0.4 * kick)); else cc.set(0x1c1c1f); CB.tiles.setColorAt(ti * CB.NT + tj, cc); } CB.tiles.instanceColor.needsUpdate = true; }
