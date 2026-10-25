@@ -954,12 +954,57 @@
       [-10, 10].forEach(function (x) { plzG.add(mesh(new T.BoxGeometry(1.4, 8, 1.4), wall, x, 4, 18)); }); campusSign(CN[0], '#1f2a44', '#f2c200', 18, 0, 8.6, 18, Math.PI);
     }
     // London: the Elizabeth Tower (Big Ben) beside Parliament, and Tower Bridge over a river.
+    // Big Ben and the Palace of Westminster, after the photos: the Elizabeth Tower with its gold clock faces, belfry and
+    // slate spire; the long Gothic Parliament with rows of pinnacles, the central lantern and Victoria Tower; the Thames
+    // in front; Westminster Bridge with green railings, lamps, red buses and a black cab. Floodlit gold at night.
     function bigBen(x, z) {
-      var g = new T.Group(); g.position.set(x, 0, z); var st = mat('bbStone', { color: 0xd9c79a, roughness: 0.75 }), gold = mat('bbGold', { color: 0xc9a227, metalness: 0.7, roughness: 0.35 });
-      g.add(mesh(new T.BoxGeometry(9, 56, 9), st, 0, 28, 0)); for (var b = 1; b < 9; b++) g.add(mesh(new T.BoxGeometry(9.3, 0.6, 9.3), mat('bbBand', { color: 0xb8a578 }), 0, b * 6.5, 0));
-      var face = new T.MeshStandardMaterial({ color: 0xfff6dc, emissive: 0xfff1c0, emissiveIntensity: 0.35 }); [0, 1, 2, 3].forEach(function (k) { var fc = new T.Mesh(new T.CircleGeometry(3.4, 32), face); var a = k * Math.PI / 2; fc.position.set(Math.sin(a) * 4.7, 47, -Math.cos(a) * 4.7); fc.rotation.y = -a + Math.PI; g.add(fc); var hd = mesh(new T.BoxGeometry(0.25, 2.6, 0.1), mat('bbHand', { color: 0x17181a }), Math.sin(a) * 4.8, 47.8, -Math.cos(a) * 4.8); hd.rotation.y = -a; g.add(hd); });
-      g.add(mesh(new T.BoxGeometry(10, 4, 10), gold, 0, 58, 0)); var sp = mesh(new T.ConeGeometry(5.6, 18, 4), mat('bbSpire', { color: 0x3a4a3f, metalness: 0.4 }), 0, 69, 0); sp.rotation.y = Math.PI / 4; g.add(sp);
-      g.add(mesh(new T.BoxGeometry(90, 18, 12), st, -52, 9, 4)); for (var tw = 0; tw < 12; tw++) g.add(mesh(new T.ConeGeometry(1.2, 6, 4), st, -94 + tw * 7.4, 21, 4));
+      var g = new T.Group(); g.position.set(x, 0, z);
+      var gothic = canvasTex(256, 512, function (c, w, h) { c.fillStyle = '#d6bf86'; c.fillRect(0, 0, w, h); c.fillStyle = '#b59a60'; for (var gx = 8; gx < w; gx += 32) { c.fillRect(gx, 0, 4, h); } for (var gy = 0; gy < h; gy += 64) { c.fillRect(0, gy, w, 3); for (var lx = 14; lx < w; lx += 32) { c.fillStyle = '#5a4a2e'; c.fillRect(lx, gy + 14, 12, 34); c.beginPath(); c.moveTo(lx, gy + 14); c.lineTo(lx + 6, gy + 6); c.lineTo(lx + 12, gy + 14); c.fill(); c.fillStyle = '#b59a60'; } } }, [1, 1]);
+      var st = new T.MeshStandardMaterial({ map: gothic, roughness: 0.75, emissive: 0x7a4c10, emissiveIntensity: 0 }); PZ.towers.push(st);
+      var plain = new T.MeshStandardMaterial({ color: 0xd2bb82, roughness: 0.75, emissive: 0x7a4c10, emissiveIntensity: 0 }); PZ.towers.push(plain);
+      var gold = mat('bbGold', { color: 0xd4af37, metalness: 0.75, roughness: 0.3 }), slate = mat('bbSlate', { color: 0x3e4a52, roughness: 0.6, metalness: 0.3 });
+      // The Elizabeth Tower
+      var tw = new T.Group(); g.add(tw);
+      tw.add(mesh(new T.BoxGeometry(10, 52, 10), st, 0, 26, 0));
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { tw.add(mesh(new T.BoxGeometry(1.4, 54, 1.4), plain, q[0] * 5, 27, q[1] * 5)); tw.add(mesh(new T.ConeGeometry(0.9, 4, 4), gold, q[0] * 5, 56, q[1] * 5)); });
+      tw.add(mesh(new T.BoxGeometry(11.6, 12, 11.6), plain, 0, 58, 0));
+      var dial = canvasTex(256, 256, function (c, w, h) { c.fillStyle = '#fff8e6'; c.beginPath(); c.arc(w / 2, h / 2, 118, 0, Math.PI * 2); c.fill(); c.strokeStyle = '#1b1b1b'; c.lineWidth = 6; c.stroke(); c.fillStyle = '#1b1b1b'; for (var k = 0; k < 12; k++) { var a = k / 12 * Math.PI * 2; c.save(); c.translate(w / 2 + Math.sin(a) * 96, h / 2 - Math.cos(a) * 96); c.rotate(a); c.fillRect(-3, -11, 6, 22); c.restore(); } c.lineWidth = 7; c.lineCap = 'round'; c.beginPath(); c.moveTo(w / 2, h / 2); c.lineTo(w / 2 + 40, h / 2 - 30); c.moveTo(w / 2, h / 2); c.lineTo(w / 2 - 8, h / 2 - 86); c.stroke(); });
+      var faceM = new T.MeshStandardMaterial({ map: dial, emissive: 0xfff1c0, emissiveMap: dial, emissiveIntensity: 0.35 }); PZ.glow.push(faceM);
+      [0, 1, 2, 3].forEach(function (k) { var a = k * Math.PI / 2, fx = Math.sin(a) * 5.85, fz = -Math.cos(a) * 5.85; var fc = new T.Mesh(new T.CircleGeometry(4, 40), faceM); fc.position.set(fx, 58, fz); fc.rotation.y = -a + Math.PI; tw.add(fc); var ring = new T.Mesh(new T.TorusGeometry(4.2, 0.35, 8, 40), gold); ring.position.set(fx * 1.01, 58, fz * 1.01); ring.rotation.y = -a + Math.PI; tw.add(ring); var sq = new T.Mesh(new T.PlaneGeometry(10, 10), gold); sq.position.set(fx * 0.995, 58, fz * 0.995); sq.rotation.y = -a + Math.PI; tw.add(sq); });
+      // belfry with arched openings, then the steep slate spire with gold ribs and a finial
+      tw.add(mesh(new T.BoxGeometry(10.4, 7, 10.4), plain, 0, 67.5, 0));
+      [0, 1, 2, 3].forEach(function (k) { var a = k * Math.PI / 2; for (var o = -1; o <= 1; o++) { var op = new T.Mesh(new T.PlaneGeometry(1.8, 4.6), mat('bbDark', { color: 0x1b1b1b })); op.position.set(Math.sin(a) * 5.25 + Math.cos(a) * o * 3, 67.5, -Math.cos(a) * 5.25 + Math.sin(a) * o * 3); op.rotation.y = -a + Math.PI; tw.add(op); } });
+      tw.add(mesh(new T.BoxGeometry(11, 1, 11), gold, 0, 71.5, 0));
+      var spire = mesh(new T.ConeGeometry(7.6, 20, 4), slate, 0, 82, 0); spire.rotation.y = Math.PI / 4; tw.add(spire);
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { tw.add(mesh(new T.ConeGeometry(0.8, 7, 4), gold, q[0] * 4.6, 75.5, q[1] * 4.6)); });
+      for (var rb = 0; rb < 4; rb++) { var rib = mesh(new T.BoxGeometry(0.3, 21, 0.3), gold, 0, 82, 0); rib.rotation.y = rb * Math.PI / 2 + Math.PI / 4; rib.rotation.z = 0.33; rib.position.set(Math.cos(rb * Math.PI / 2 + Math.PI / 4) * 2.7, 81.5, Math.sin(rb * Math.PI / 2 + Math.PI / 4) * 2.7); }
+      tw.add(mesh(new T.CylinderGeometry(0.15, 0.4, 6, 8), gold, 0, 95, 0)); tw.add(mesh(new T.SphereGeometry(0.6, 10, 8), gold, 0, 92.2, 0));
+      // The Palace of Westminster along the river
+      var pal = new T.Group(); g.add(pal);
+      pal.add(mesh(new T.BoxGeometry(150, 24, 18), st, -82, 12, 6));
+      pal.add(mesh(new T.BoxGeometry(150, 6, 14), slate, -82, 27, 6));
+      for (var pn = 0; pn < 38; pn++) { var px = -155 + pn * 4; pal.add(mesh(new T.BoxGeometry(0.9, 6, 0.9), plain, px, 27, -3.2)); pal.add(mesh(new T.ConeGeometry(0.7, 4, 4), plain, px, 32, -3.2)); }
+      [-40, -82, -124].forEach(function (bx) { pal.add(mesh(new T.BoxGeometry(14, 30, 6), st, bx, 15, -4)); for (var pp = -1; pp <= 1; pp += 2) { pal.add(mesh(new T.BoxGeometry(1.5, 36, 1.5), plain, bx + pp * 7, 18, -6.5)); pal.add(mesh(new T.ConeGeometry(1.2, 6, 4), gold, bx + pp * 7, 39, -6.5)); } });
+      // the central lantern spire
+      pal.add(mesh(new T.CylinderGeometry(5, 5.5, 14, 8), plain, -82, 37, 8)); var lant = mesh(new T.ConeGeometry(5, 26, 8), slate, -82, 57, 8); pal.add(lant); pal.add(mesh(new T.ConeGeometry(0.6, 6, 6), gold, -82, 72, 8));
+      // Victoria Tower at the far end
+      pal.add(mesh(new T.BoxGeometry(18, 76, 18), st, -168, 38, 6)); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { pal.add(mesh(new T.BoxGeometry(2.4, 84, 2.4), plain, -168 + q[0] * 9, 42, 6 + q[1] * 9)); pal.add(mesh(new T.ConeGeometry(1.8, 8, 8), gold, -168 + q[0] * 9, 88, 6 + q[1] * 9)); });
+      pal.add(mesh(new T.CylinderGeometry(0.15, 0.15, 12, 6), mat('bbPole', { color: 0xdfe3e8 }), -168, 84, 6));
+      var ukT = canvasTex(96, 64, function (c, w, h) { c.fillStyle = '#012169'; c.fillRect(0, 0, w, h); c.strokeStyle = '#fff'; c.lineWidth = 12; c.beginPath(); c.moveTo(0, 0); c.lineTo(w, h); c.moveTo(w, 0); c.lineTo(0, h); c.stroke(); c.strokeStyle = '#c8102e'; c.lineWidth = 4; c.stroke(); c.fillStyle = '#fff'; c.fillRect(w / 2 - 10, 0, 20, h); c.fillRect(0, h / 2 - 10, w, 20); c.fillStyle = '#c8102e'; c.fillRect(w / 2 - 6, 0, 12, h); c.fillRect(0, h / 2 - 6, w, 12); });
+      var ukf = new T.Mesh(new T.PlaneGeometry(6, 4), new T.MeshBasicMaterial({ map: ukT, side: T.DoubleSide })); ukf.position.set(-165, 88, 6); pal.add(ukf);
+      // The Thames in front, with the embankment wall, lamps and a couple of river boats
+      var river = new T.Mesh(new T.PlaneGeometry(420, 34).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x2f5566, roughness: 0.08, clearcoat: 1, metalness: 0.2 })); river.position.set(-40, 0.15, -24); g.add(river);
+      g.add(mesh(new T.BoxGeometry(420, 1.6, 1.2), mat('bbWall', { color: 0xa9a39a }), -40, 0.8, -7.4));
+      var bulb = new T.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xffd27a, emissiveIntensity: 0.15 }); PZ.glow.push(bulb);
+      for (var lp = 0; lp < 16; lp++) { var lx2 = -170 + lp * 13; g.add(mesh(new T.CylinderGeometry(0.15, 0.2, 4, 6), mat('bbLamp', { color: 0x1f3b2a }), lx2, 3.2, -7.4)); g.add(mesh(new T.SphereGeometry(0.5, 8, 6), bulb, lx2, 5.4, -7.4)); }
+      [[-60, -26, 0xf4f3ec], [-120, -20, 0x1f5fa0]].forEach(function (b) { var bt = new T.Group(); bt.position.set(b[0], 0.2, b[1]); bt.add(mesh(new T.BoxGeometry(16, 1.6, 4.6), mat('bbBoat' + b[2], { color: b[2] }), 0, 0.8, 0)); bt.add(mesh(new T.BoxGeometry(10, 1.8, 3.6), mat('bbCabin', { color: 0x1d2a33, metalness: 0.4 }), 0, 2.4, 0)); g.add(bt); });
+      // Westminster Bridge: arches, green railings and lamps, with red buses and a black cab on it
+      var bg = new T.Group(); bg.position.set(26, 0, -24); g.add(bg); var green = mat('bbGreen', { color: 0x2e6b4a, roughness: 0.5 });
+      bg.add(mesh(new T.BoxGeometry(16, 1.2, 44), mat('bbDeck', { color: 0x4a4f57 }), 0, 4.2, 0));
+      for (var ar = -2; ar <= 2; ar++) bg.add(mesh(new T.BoxGeometry(16.4, 3.6, 1.6), green, 0, 1.8, ar * 9));
+      [-1, 1].forEach(function (sd) { bg.add(mesh(new T.BoxGeometry(0.4, 1.4, 44), green, sd * 8, 5.5, 0)); for (var bl = 0; bl < 5; bl++) { bg.add(mesh(new T.CylinderGeometry(0.15, 0.2, 4, 6), green, sd * 8, 6.8, -18 + bl * 9)); bg.add(mesh(new T.SphereGeometry(0.45, 8, 6), bulb, sd * 8, 9, -18 + bl * 9)); } });
+      [[-3.2, -8, 0], [3.2, 9, Math.PI]].forEach(function (b) { var bus = new T.Group(); bus.position.set(b[0], 4.8, b[1]); bus.rotation.y = b[2]; bus.add(mesh(new T.BoxGeometry(2.6, 4.2, 10), mat('ldnBusR', { color: 0xd8261c, roughness: 0.45 }), 0, 2.2, 0)); [1.6, 3.4].forEach(function (yy) { bus.add(mesh(new T.BoxGeometry(2.65, 0.9, 9), mat('ldnBusW', { color: 0x1d2a33, metalness: 0.4 }), 0, yy, 0)); }); bg.add(bus); });
+      var cab = new T.Group(); cab.position.set(3.2, 4.8, -12); cab.add(mesh(new T.BoxGeometry(2, 1.4, 4.4), mat('ldnCab', { color: 0x111214, roughness: 0.3, metalness: 0.5 }), 0, 1, 0)); cab.add(mesh(new T.BoxGeometry(1.8, 0.8, 2.4), mat('ldnBusW', {}), 0, 2, 0.2)); bg.add(cab);
       plzG.add(g);
     }
     // London shops and streets (a facade with rows of windows, a name sign, awnings) for the West End, Knightsbridge,
@@ -1135,7 +1180,7 @@
       else if (id === 'dxb_burj') burjKhalifa(0, 110);
       else if (id === 'cc_castle' || id === 'cc_elmina_castle') slaveCastle(0, 70, id === 'cc_elmina_castle');
       else if (id === 'dxb_safari') desertCamp();
-      else if (id === 'ldn_bigben') bigBen(20, 95);
+      else if (id === 'ldn_bigben') bigBen(15, 175);
       else if (id === 'ldn_towerbridge') towerBridge(0, 70);
       else if (id === 'ldn_canary') canaryWharf(0, 60);
       else if (id === 'ldn_harrods') harrods(0, 70);
