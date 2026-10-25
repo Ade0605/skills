@@ -108,7 +108,7 @@
   // 48 lets you change your lifetime dream (your goal) once a week, from the phone's Goals, and adds Gidi Bet: made-up
   // football leagues every 4 game hours and a High-Low card game, with a house edge and daily stake caps.
   // 49 lifts the caps: bets up to ₦500,000 each with no daily limit, gifts up to ₦1,000,000 with no daily limit.
-  var RULES = 49;
+  var RULES = 50;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -1866,11 +1866,14 @@
     var fl = { mode: 'flight', name: jet ? 'Your private jet' : F.name, mins: jet ? (far ? 480 : 120) : far ? UV.mins : F.mins, cost: jet ? 0 : price(s, far ? UV.fare : F.fare), from: from.airport, to: C.airport };
     var bus = { mode: 'bus', name: B.name, mins: B.mins[here + '-' + city], cost: price(s, B.fare), from: from.park, to: C.park };
     if (far && s.rules >= 29 && (C.noAir || from.noAir)) return []; // rules 29: no long-haul flights from a city with no airport (Cape Coast)
+    // Rules 50: from anywhere in the city, the cab to the airport or coach park is added to the trip, as Departures does.
+    var cabTo = function (o) { if (!(s.rules >= 50) || s.loc === o.from) return; var cb = cabLeg(s, o.from); if (cb) { o.cab = cb.cost; o.cost += cb.cost; o.mins += cb.mins; o.fromHere = true; } };
+    cabTo(fl); cabTo(bus);
     if (far) { if (city === 'ldn' && visaState(s).status !== 'valid') fl.disabled = 'You need a valid UK visa (Phone → Travel)'; else if (city === 'ldn' && !visaLasts(s, fl.mins)) fl.disabled = 'Your UK visa runs out before you land';
-      else if (city !== 'ldn' && C.visit && visaState(s, city).status !== 'valid') fl.disabled = 'You need a valid ' + UV.name + ' (Phone → Travel)'; else if (city !== 'ldn' && C.visit && !visaLasts(s, fl.mins, city)) fl.disabled = 'Your ' + UV.name + ' runs out before you land'; return [fl].map(function (o) { if (!o.disabled) { if (s.loc !== o.from) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name; else if (s.pending.length) o.disabled = 'Decide on the open event first'; else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost); } return o; }); }
+      else if (city !== 'ldn' && C.visit && visaState(s, city).status !== 'valid') fl.disabled = 'You need a valid ' + UV.name + ' (Phone → Travel)'; else if (city !== 'ldn' && C.visit && !visaLasts(s, fl.mins, city)) fl.disabled = 'Your ' + UV.name + ' runs out before you land'; return [fl].map(function (o) { if (!o.disabled) { if (s.loc !== o.from && !o.fromHere) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name; else if (s.pending.length) o.disabled = 'Decide on the open event first'; else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost); } return o; }); }
     var legs = C.noAir || from.noAir ? [bus] : [fl, bus]; // rules 28: Cape Coast has no airport, coaches only
     legs.forEach(function (o) {
-      if (s.loc !== o.from) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name;
+      if (s.loc !== o.from && !o.fromHere) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name;
       else if (o.mode === 'bus' && (h >= 20 || h < 5)) o.disabled = 'No night buses: the roads are not safe after dark';
       else if (s.pending.length) o.disabled = 'Decide on the open event first';
       else if (s.over) o.disabled = 'This Weekly Lagos is over';
@@ -2017,6 +2020,8 @@
   }
   function flightQuote(s, city, cabin, insure) {
     var here = cityOf(s), C = D.CITIES[city], K = D.CABINS[cabin], A = D.AIR;
+    var farX = s.rules >= 50 && C && K && cityOpen(s, city) && (city === 'ldn' || here === 'ldn' || !!C.visit || !!D.CITIES[here].visit);
+    if (farX) return longHaulQuote(s, city, cabin, insure);
     if (!C || !K || !cityOpen(s, city) || city === 'ldn' || cityOf(s) === 'ldn' || C.visit || D.CITIES[cityOf(s)].visit) return { disabled: C && (city === 'ldn' || cityOf(s) === 'ldn' || C.visit || D.CITIES[cityOf(s)].visit) ? (C.visit && city !== 'ldn' ? C.name : 'London') + ' flights: use the long-haul flight in Travel' : 'Pick a city and a cabin' };
     if (city === here) return { disabled: 'You are already in ' + C.name };
     if (C.noAir || D.CITIES[here].noAir) return { disabled: 'No airport in ' + (C.noAir ? C.name : D.CITIES[here].name) + ': take the coach' };
@@ -2031,13 +2036,32 @@
     else if (!canAfford(s, q.total)) q.disabled = 'You need ' + naira(q.total);
     return q;
   }
+  // Rules 50: a long-haul flight booked at Departures, in any cabin. The far end's visa sets the fare and time.
+  function longHaulQuote(s, city, cabin, insure) {
+    var here = cityOf(s), C = D.CITIES[city], K = D.CABINS[cabin], A = D.AIR, from = D.CITIES[here], UV = visaOf(C.visit ? city : here);
+    if (city === here) return { disabled: 'You are already in ' + C.name };
+    if (C.noAir || from.noAir) return { disabled: 'No airport in ' + (C.noAir ? C.name : from.name) + ': take the coach' };
+    var h = hour(s), rush = h >= A.rushFrom && h < A.rushTo ? A.rush : 1;
+    var fare = Math.round(price(s, UV.fare) * K.mult * rush / 100) * 100, cab = cabLeg(s, from.airport), ins = insure ? Math.round(fare * A.insure / 100) * 100 : 0;
+    var q = { city: city, cabin: cabin, fare: fare, rush: rush, cab: cab ? cab.cost : 0, insure: ins, mins: UV.mins + (cab ? cab.mins : 0), from: from.airport, to: C.airport, far: true };
+    q.total = fare + q.cab + ins;
+    var vc = C.visit ? city : null;
+    if (vc && visaState(s, vc).status !== 'valid') q.disabled = 'You need a valid ' + visaOf(vc).name + ' (Phone → Travel)';
+    else if (vc && !visaLasts(s, q.mins, vc)) q.disabled = 'Your ' + visaOf(vc).name + ' runs out before you land';
+    else if (!cab) q.disabled = 'Get to ' + D.DISTRICTS[from.airport].name + ' first';
+    else if (s.pending.length) q.disabled = 'Decide on the open event first';
+    else if (s.over) q.disabled = 'This Weekly Lagos is over';
+    else if (!canAfford(s, q.total)) q.disabled = 'You need ' + naira(q.total) + ' (you have ' + naira(s.cash + s.bank) + ')';
+    return q;
+  }
   function flyClass(s, city, cabin, insure) {
     var q = flightQuote(s, city, cabin, !!insure);
     if (q.disabled) return fail(q.disabled);
     s.alerts = [];
     var K = D.CABINS[cabin], C = D.CITIES[city];
     if (!pay(s, q.total, K.name + ' flight to ' + C.name + (q.cab ? ' (cab included)' : '') + (q.insure ? ', insured' : ''))) return fail('Not enough for the fare.');
-    advance(s, q.mins);
+    if (q.far) s.transit = true; // on the plane: the overstay check must not fly you home mid-air
+    advance(s, q.mins); delete s.transit;
     applyFx(s, K.fx);
     var msg = '';
     if (rand(s) < D.AIR.lostOdds) {

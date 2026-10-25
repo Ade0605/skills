@@ -3284,7 +3284,7 @@
         }).join('') + '</div>' +
         '<label class="dep-ins"><input type="checkbox" id="dep-insure" data-depinsure="1"' + (ins ? ' checked' : '') + '> 🛡️ Travel insurance (' + Math.round(D.AIR.insure * 100) + '% of the fare): covers a lost bag</label>' +
         '<div class="bpass"><div class="bp-top"><span>BOARDING PASS</span><span>' + esc(D.CABINS[cabin].name) + '</span></div>' +
-          '<div class="bp-route"><b>' + code[here] + '</b><span>✈︎ ' + dur(D.INTERCITY.flight.mins) + '</span><b>' + code[city] + '</b></div>' +
+          '<div class="bp-route"><b>' + code[here] + '</b><span>✈︎ ' + dur(q.far ? q.mins : D.INTERCITY.flight.mins) + '</span><b>' + code[city] + '</b></div>' +
           '<div class="bp-names"><span>' + esc(D.DISTRICTS[D.CITIES[here].airport].name) + '</span><span>' + esc(D.DISTRICTS[D.CITIES[city].airport].name) + '</span></div>' +
           '<div class="bp-lines"><div><span>Fare' + (q.rush > 1 ? ' (morning rush ×' + q.rush + ')' : '') + '</span><span>' + N(q.fare || 0) + '</span></div>' +
           '<div><span>🚕 Cab to the airport</span><span>' + (q.cab ? N(q.cab) : 'Included') + '</span></div>' +
@@ -3659,8 +3659,8 @@
       var opts = L.intercityOptions(S, c);
       html += '<div class="city-card"><h4>' + (CITY_ICON[c] || '') + ' ' + esc(D.CITIES[c].name) + (D.CITIES[c].visit ? ' <span class="muted">· visit only</span>' : '') + '</h4>' + (D.CITIES[c].visit && L.visaQuote ? visaCard(c) : '') + '<div class="list">' + opts.map(function (o) {
         var at = S.loc === o.from;
-        return '<div class="item"><div><h3>' + (o.mode === 'flight' ? '✈️ ' : '🚌 ') + esc(o.name) + '</h3><div class="meta"><span>' + dur(o.mins) + '</span><span class="cost num">' + (o.cost ? N(o.cost) : 'Free') + '</span>' + (o.disabled ? '<span class="why">' + esc(o.disabled) + '</span>' : '') + '</div></div>' +
-          (o.disabled && !at ? '<button class="btn sm ghost" id="go-' + c + '-' + o.mode + '" data-tripto="' + o.from + '">Go to ' + esc(D.DISTRICTS[o.from].name) + '</button>' : '<button class="btn sm go" id="fly-' + c + '-' + o.mode + '" data-fly="' + c + ':' + o.mode + '"' + (o.disabled ? ' disabled' : '') + '>Go</button>') + '</div>';
+        return '<div class="item"><div><h3>' + (o.mode === 'flight' ? '✈️ ' : '🚌 ') + esc(o.name) + '</h3><div class="meta"><span>' + dur(o.mins) + '</span><span class="cost num">' + (o.cost ? N(o.cost) : 'Free') + '</span>' + (o.cab ? '<span>🚕 incl. ' + N(o.cab) + ' cab to ' + esc(D.DISTRICTS[o.from].name) + '</span>' : '') + (o.disabled ? '<span class="why">' + esc(o.disabled) + '</span>' : '') + '</div></div>' +
+          (o.disabled && !at && /^Leaves from/.test(o.disabled) ? '<button class="btn sm ghost" id="go-' + c + '-' + o.mode + '" data-tripto="' + o.from + '">Go to ' + esc(D.DISTRICTS[o.from].name) + '</button>' : '<button class="btn sm go" id="fly-' + c + '-' + o.mode + '" data-fly="' + c + ':' + o.mode + '"' + (o.disabled ? ' disabled' : '') + '>Go</button>') + '</div>';
       }).join('') + '</div></div>';
     });
     return html + '</div>';
