@@ -3766,3 +3766,25 @@ test('rules 51: Eko Fashion Weekend runs the second weekend of November at Eko C
   assert.ok(!L.availableActions(old).some(a => /^fw_/.test(a.id)), 'not in older lives');
   for (const a of D.FESTIVALS.eko_convention.filter(a => a.fw)) { assert.ok(a.mins % 15 === 0, a.id); if (a.earn) assert.ok(a.earn <= 3000 && a.gig, a.id); }
 });
+
+test('rules 52: at your workplace, coffee, a snack, lunch and one power nap a day; the exhausted tip points to them', () => {
+  const s = L.newGame({ seed: 5201, origin: 'mid', goal: 'freestyle' }); while (s.pending.length) L.resolveChoice(s, 0);
+  s.loc = 'mushin'; assert.ok(L.applyJob(s, 'buka').ok);
+  const ids = L.availableActions(s).filter(a => /^brk_/.test(a.id)).map(a => a.id).sort();
+  assert.deepEqual(ids, ['brk_coffee', 'brk_lunch', 'brk_nap', 'brk_snack']);
+  s.needs.energy = 15;
+  assert.ok(L.advise(s).some(t => t.act && t.act.id === 'brk_nap'), 'the tip offers the nap at work');
+  const e0 = s.needs.energy; assert.ok(L.doAction(s, 'brk_nap').ok); assert.ok(s.needs.energy > e0);
+  assert.match(L.availableActions(s).find(a => a.id === 'brk_nap').disabled || '', /Once a day/);
+  const m0 = s.cash + s.bank; assert.ok(L.doAction(s, 'brk_coffee').ok); assert.ok(m0 - (s.cash + s.bank) > 0, 'the coffee costs money');
+  sane(s);
+  s.loc = 'yaba'; assert.ok(!L.availableActions(s).some(a => /^brk_/.test(a.id)), 'only at your workplace');
+  const old = L.newGame({ seed: 5201, origin: 'mid', goal: 'freestyle', rules: 51 }); while (old.pending.length) L.resolveChoice(old, 0);
+  old.loc = 'mushin'; L.applyJob(old, 'buka'); assert.ok(!L.availableActions(old).some(a => /^brk_/.test(a.id)), 'not in older lives');
+  // A clean life (no edits): a LAPO Baby starts in Mushin, takes the buka job there, buys lunch at work; it replays.
+  const c = L.newGame({ seed: 5202, origin: 'lapo', goal: 'freestyle' }); while (c.pending.length) L.resolveChoice(c, 0);
+  assert.equal(c.loc, 'mushin'); assert.ok(L.applyJob(c, 'buka').ok); while (c.pending.length) L.resolveChoice(c, 0);
+  const lunch = L.availableActions(c).find(a => a.id === 'brk_lunch'); assert.ok(lunch && !lunch.disabled, lunch && lunch.disabled);
+  assert.ok(L.doAction(c, 'brk_lunch').ok); sane(c);
+  assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(c)))).ok, 'replays');
+});

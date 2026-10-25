@@ -108,7 +108,7 @@
   // 48 lets you change your lifetime dream (your goal) once a week, from the phone's Goals, and adds Gidi Bet: made-up
   // football leagues every 4 game hours and a High-Low card game, with a house edge and daily stake caps.
   // 49 lifts the caps: bets up to ₦500,000 each with no daily limit, gifts up to ₦1,000,000 with no daily limit.
-  var RULES = 51;
+  var RULES = 52;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -815,6 +815,18 @@
     });
   }
 
+  // Rules 52: at or near your workplace, things to buy so a tired worker can carry on without going home.
+  var BREAK_ACTS = [
+    { id: 'brk_coffee', label: 'Coffee or an energy drink from the kiosk by work', mins: 15, cost: 800, fx: { energy: 16, stress: -2 }, brk: true },
+    { id: 'brk_snack', label: 'Pure water and a snack from the hawker outside work', mins: 15, cost: 400, fx: { hunger: 14, energy: 4 }, brk: true },
+    { id: 'brk_lunch', label: 'A plate of food at the canteen near work', mins: 30, cost: 2500, fx: { hunger: 45, energy: 6, stress: -3 }, brk: true },
+    { id: 'brk_nap', label: 'Power nap in the break room', mins: 45, fx: { energy: 22, stress: -5 }, brk: true, once: true }
+  ];
+  function breakActions(s) {
+    if (!s.job) return [];
+    var c = D.CAREERS[s.job.id]; if (!c || c.district !== s.loc) return [];
+    return BREAK_ACTS.map(function (a) { return Object.assign({}, a); });
+  }
   function shiftAction(s) {
     if (!s.job) return null;
     var c = D.CAREERS[s.job.id];
@@ -1137,6 +1149,7 @@
     if (s.rules >= 40) list = list.concat(leagueActions(s));
     if (s.rules >= 42) list = list.concat(studyActions(s));
     if (s.rules >= 48) list = list.concat(shortActions(s));
+    if (s.rules >= 52) list = list.concat(breakActions(s));
     if (s.rules >= 43) list = list.concat(lagoonActions(s));
     if (s.rules >= 44) list = list.concat(campusActions(s));
     if (s.rules >= 41) Object.keys(D.BIZ_LICENCES).forEach(function (c) { var B0 = D.BIZ_LICENCES[c]; if (s.loc === B0.district && !(s.bizLicence && s.bizLicence[c])) list.push({ id: 'bizlic_' + c, label: 'Apply for a ' + B0.name + ' (open businesses in ' + D.CITIES[c].name + ')', mins: 120, cost: B0.fee, fx: { stress: 8 }, special: 'bizlicence', city: c, minRules: 41 }); });
@@ -4258,6 +4271,11 @@
         out.push(am3 != null && am3 < 480
           ? { kind: 'warn', text: 'You are exhausted. Sleep with your alarm set so you do not miss work.', act: { type: 'act', id: 'home_alarm' } }
           : { kind: 'warn', text: 'You are exhausted. Sleep before you collapse.', act: { type: 'act', id: 'home_sleep' } });
+      }
+      else if (s.rules >= 52 && breakActions(s).length) { // rules 52: at work, recover here instead of going home
+        var napUsed = dayCount(s, 'o:brk_nap');
+        out.push(napUsed ? { kind: 'warn', text: 'You are exhausted. Grab a coffee or an energy drink from the kiosk by work (' + naira(price(s, 800)) + ').', act: { type: 'act', id: 'brk_coffee' } }
+          : { kind: 'warn', text: 'You are exhausted. Take a power nap in the break room at work (45 min, free).', act: { type: 'act', id: 'brk_nap' } });
       }
       else if ((lh0 = lodgeHint(s))) out.push(lh0);
       else {
