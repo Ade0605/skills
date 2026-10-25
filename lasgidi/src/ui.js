@@ -2090,6 +2090,8 @@
     street.el.id = 'street-view'; document.body.appendChild(street.el); street.start(); window.__street = street; play('tap');
   }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && street) closeStreet(); });
+  // Dashboard rows are focusable: Enter or Space opens them like a tap.
+  document.addEventListener('keydown', function (e) { var r = e.target && e.target.classList && e.target.classList.contains('od-row') ? e.target : null; if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); r.click(); } });
   function mountInterior() {
     if (!S || ui.tab !== 'home' || !window.LasgidiInterior) return;
     var slot = document.querySelector('.tab-body .iv-slot');
