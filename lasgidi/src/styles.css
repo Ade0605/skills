@@ -1695,3 +1695,8 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .tfl-line { display: flex; gap: 10px; align-items: center; }
 .tfl-line > div { flex: 1; min-width: 0; } .tfl-line small { display: block; color: var(--muted); font-size: 12px; }
 .tfl-bar { width: 6px; align-self: stretch; border-radius: 3px; }
+/* Dashboard on phones: boxes stay inside the screen; wide tables scroll inside their box. */
+.od { min-width: 0; max-width: 100%; }
+.od-box { max-width: 100%; box-sizing: border-box; overflow-x: auto; min-width: 0; }
+.od-t td, .od-t th { overflow-wrap: anywhere; }
+.od-stats { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
