@@ -2674,7 +2674,7 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       Object.assign(act('pr_beach', 'Beach club with the skyline across the water', 180, aed(250), 0, { fun: 26, social: 10, stress: -12 }, null, { from: 10, to: 19 }), { minRules: 41 })
     ]],
     // More London: the big shops of the West End and Knightsbridge, Oxford Circus, Shoreditch and Liverpool Street.
-    ['ldn_oxcircus', '⊖', 'Oxford Circus', 'outdoors', 'dome', 'ldn_oxford', 16.4, 7.2, 'oxcircus', 'The busiest crossing in London: the diagonal zebra, the Tube entrances, red buses and shoppers everywhere.', [
+    ['ldn_oxcircus', '🚇', 'Oxford Circus', 'outdoors', 'dome', 'ldn_oxford', 16.4, 7.2, 'oxcircus', 'The busiest crossing in London: the diagonal zebra, the Tube entrances, red buses and shoppers everywhere.', [
       act('oxc_cross', 'Cross the famous diagonal crossing', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 23 }),
       act('oxc_lights', 'See the Christmas lights on Regent Street', 45, 0, 0, { fun: 16, stress: -4 }, null, { months: [10, 11], from: 16, to: 23 }),
       act('oxc_regent', 'Window-shop down Regent Street', 60, 0, 0, { fun: 10 }, null, { from: 10, to: 21 }),

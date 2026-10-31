@@ -1230,13 +1230,15 @@
     }).join('') + '</div></div>';
   }
   function safetyCard() {
+    var site = window.claude && window.claude.online === 'supabase';
     return '<div class="section safety"><h3>🛡️ Safety and privacy</h3><ul class="note">' +
-      '<li><b>Who you are:</b> your claude.ai account. Lasgidi never asks for a password or an email. Players must be 18 or older.</li>' +
-      '<li><b>What other players see:</b> your display name and @handle, the district you are in, your avatar\'s look, a fixed activity label, and party, cruise or visit status.</li>' +
-      '<li><b>Chat:</b> one-to-one and deck chat are filtered for sexual content, insults, links, emails and numbers, both when sent and when received, and are never stored.</li>' +
+      '<li><b>Who you are:</b> ' + (site ? 'on this website, an anonymous id made for this browser (no sign-up). Lasgidi never asks for a password, an email or a phone number.' : 'your claude.ai account. Lasgidi never asks for a password, an email or a phone number.') + ' Players must be 18 or older; Family mode is for all ages and turns off chat and nightlife.</li>' +
+      '<li><b>What is stored on this device:</b> your saved lives, settings and a hashed Transaction PIN, in this browser only.</li>' +
+      '<li><b>What is shared online:</b> your display name and @handle, your district, your avatar\'s look, an activity label, and what you choose to post (Hall of Fame and weekly entries, ads, your home, your CV, votes, radio bookings). Your last voice note is kept so others can play it, until you send the next one. ' + (site ? 'On this website it is kept in the site owner\'s database (Supabase).' : 'On claude.ai it is kept in the artifact\'s storage.') + '</li>' +
+      '<li><b>Chat:</b> one-to-one, room and deck chat are filtered for sexual content, insults, links, emails and numbers, when sent and when received. Text chat is not kept after you close the game.</li>' +
       '<li><b>Block and report:</b> open a player\'s card to block them (hidden from you at once) or report them to the editors with a reason.</li>' +
-      '<li><b>Politics:</b> manifestos and mottos come from fixed lists, never free text, and candidates can be reported.</li>' +
-      '<li><b>Money:</b> in-game naira has no real value. There is no gambling, no betting, no real investments and no cash-out. Billboards are player ads, labelled as such.</li></ul></div>';
+      '<li><b>Money:</b> in-game naira has no real value and can never be cashed out. Gidi Bet, the casino and the stock market use game money only; they are 18+ and off in Family mode. Billboards are player ads, labelled as such.</li>' +
+      '<li><b>Your data:</b> to remove what you shared, clear this site\'s data in your browser and ask the site owner to delete your online records.</li></ul></div>';
   }
   // Everyone online in every city, so friends in Abuja or PH are one tap away.
   function peopleView() {
@@ -3879,7 +3881,7 @@
   }
   // London: Transport for London (TfL) runs the buses, the Tube and the Overground.
   function tflMode(m) { return L.cityOf(S) === 'ldn' && (m === 'danfo' || m === 'rail'); }
-  function tflRoundel(m) { return '<span class="tfl-r' + (m === 'rail' ? ' tube' : '') + '" aria-hidden="true"><i></i></span>'; }
+  function tflRoundel(m) { return '<span class="tfl-b" aria-hidden="true">' + (m === 'rail' ? '🚇' : '🚌') + '</span>'; } // a plain badge, not a copy of any transit logo
   function tflCard() {
     var lines = Object.keys(D.RAIL_LINES).filter(function (k) { var R = D.RAIL_LINES[k]; return R.rules && S.rules >= R.rules && R.stops.every(function (d) { return L.districtCity(d) === 'ldn'; }); });
     return '<details class="tfl-card"' + (ui.tflOpen ? ' open' : '') + '><summary>' + tflRoundel('rail') + '<b>TfL</b> · Transport for London</summary>' +

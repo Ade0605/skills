@@ -1021,7 +1021,7 @@
       ldnFacade(g, 110, 30, 18, terra, 0xffe8b0, 4, 22, 0, 0);
       var dome = mesh(new T.SphereGeometry(7, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat('hrdDome', { color: 0x7a8a6a, roughness: 0.5, metalness: 0.4 }), 0, 33, -2); g.add(dome); g.add(mesh(new T.BoxGeometry(16, 4, 16), terra, 0, 31, -2));
       for (var a = 0; a < 12; a++) { var aw = mesh(new T.BoxGeometry(7, 0.4, 3), green, -50 + a * 9, 5.2, -10.4); aw.rotation.x = -0.35; g.add(aw); }
-      ldnSign(g, ldnTex('Harrods', '#0f5a3a', '#d4af37', 1024, 160, 'italic 900 110px Georgia, serif'), 26, 4, 0, 26, -9.2);
+      ldnSign(g, ldnTex('HARRODS', '#17181a', '#ffffff', 1024, 160, '800 96px system-ui'), 26, 4, 0, 26, -9.2);
       for (var b = 0; b < 40; b++) g.add(mesh(new T.SphereGeometry(0.25, 6, 4), new T.MeshBasicMaterial({ color: 0xffd98a }), -54 + b * 2.8, 30.2, -9.2));
       [-8, 8].forEach(function (dx) { var dm = new T.Group(); dm.position.set(dx, 0, -12); dm.add(mesh(new T.CylinderGeometry(0.35, 0.35, 1.5, 8), green, 0, 0.75, 0)); dm.add(mesh(new T.SphereGeometry(0.28, 8, 6), mat('skin1', { color: 0x6b4a33 }), 0, 1.75, 0)); dm.add(mesh(new T.CylinderGeometry(0.3, 0.3, 0.4, 8), green, 0, 2.15, 0)); g.add(dm); });
       g.add(mesh(new T.BoxGeometry(10, 7, 0.4), gold, 0, 3.5, -9.3));
@@ -1031,7 +1031,7 @@
       var g = new T.Group(); g.position.set(x, 0, z); var stone = mat('sfrStone', { color: 0xe7dfc8, roughness: 0.7 });
       ldnFacade(g, 120, 28, 18, stone, 0xfff2c8, 3, 18, 0, 0);
       for (var c = 0; c < 18; c++) g.add(mesh(new T.CylinderGeometry(1, 1.1, 20, 12), stone, -57 + c * 6.7, 14, -9.8));
-      ldnSign(g, ldnTex('SELFRIDGES & Co', '#ffe500', '#111111', 1024, 128, '900 70px system-ui, sans-serif'), 30, 3.6, 0, 6.2, -10.6);
+      ldnSign(g, ldnTex('SELFRIDGES', '#17181a', '#ffffff', 1024, 128, '800 70px system-ui, sans-serif'), 30, 3.6, 0, 6.2, -10.6);
       var clk = new T.Group(); clk.position.set(0, 9.5, -11); clk.add(mesh(new T.BoxGeometry(5, 5, 1.2), mat('sfrBronze', { color: 0x6b4a2b, metalness: 0.6 }), 0, 0, 0)); var fc = new T.Mesh(new T.CircleGeometry(1.8, 24), new T.MeshStandardMaterial({ color: 0xfff6dc, emissive: 0xfff1c0, emissiveIntensity: 0.4 })); fc.position.set(0, 0, -0.65); fc.rotation.y = Math.PI; clk.add(fc); g.add(clk);
       for (var w = 0; w < 8; w++) { var win = mesh(new T.BoxGeometry(9, 5, 0.3), new T.MeshStandardMaterial({ color: [0xffe500, 0xff6b9a, 0x5fb3cf, 0x9ad15a][w % 4], emissive: [0xffe500, 0xff6b9a, 0x5fb3cf, 0x9ad15a][w % 4], emissiveIntensity: 0.3 }), -52 + w * 15, 3, -10.2); g.add(win); }
       for (var bg = 0; bg < 10; bg++) g.add(mesh(new T.BoxGeometry(0.8, 1, 0.4), mat('sfrBag', { color: 0xffe500 }), -30 + bg * 6, 0.5, -16 - (bg % 3)));
@@ -1045,8 +1045,8 @@
       var zt = canvasTex(256, 256, function (c, w, h) { c.fillStyle = '#3a3f46'; c.fillRect(0, 0, w, h); c.strokeStyle = '#f4f3ec'; c.lineWidth = 14; for (var k = -w; k < w * 2; k += 34) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k + h, h); c.stroke(); c.beginPath(); c.moveTo(k, h); c.lineTo(k + h, 0); c.stroke(); } });
       var road = mesh(new T.PlaneGeometry(30, 30).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: zt, roughness: 0.9 }), 0, 0.05, 5); road.castShadow = false; g.add(road);
       // Tube entrances with the roundel
-      var rt = canvasTex(256, 256, function (c, w, h) { c.clearRect(0, 0, w, h); c.strokeStyle = '#dc241f'; c.lineWidth = 34; c.beginPath(); c.arc(w / 2, h / 2, 90, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#1f3a93'; c.fillRect(10, h / 2 - 26, w - 20, 52); c.fillStyle = '#fff'; c.font = '900 26px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('UNDERGROUND', w / 2, h / 2 + 1); });
-      [[-18, -12], [18, -12], [-18, 22], [18, 22]].forEach(function (q) { g.add(mesh(new T.BoxGeometry(6, 1.2, 0.3), mat('oxcRail', { color: 0x2b2f36, metalness: 0.5 }), q[0], 0.6, q[1])); g.add(mesh(new T.CylinderGeometry(0.15, 0.15, 4, 6), mat('oxcPole', { color: 0x2b2f36 }), q[0] + 3, 2, q[1])); var rd = new T.Mesh(new T.PlaneGeometry(2.6, 2.6), new T.MeshBasicMaterial({ map: rt, transparent: true, side: T.DoubleSide })); rd.position.set(q[0] + 3, 4.6, q[1]); g.add(rd); });
+      var rt = canvasTex(256, 128, function (c, w, h) { c.fillStyle = '#1f3a93'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '900 30px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('UNDERGROUND', w / 2, h / 2); }); // a plain sign, not the transit logo
+      [[-18, -12], [18, -12], [-18, 22], [18, 22]].forEach(function (q) { g.add(mesh(new T.BoxGeometry(6, 1.2, 0.3), mat('oxcRail', { color: 0x2b2f36, metalness: 0.5 }), q[0], 0.6, q[1])); g.add(mesh(new T.CylinderGeometry(0.15, 0.15, 4, 6), mat('oxcPole', { color: 0x2b2f36 }), q[0] + 3, 2, q[1])); var rd = new T.Mesh(new T.PlaneGeometry(3, 1.5), new T.MeshBasicMaterial({ map: rt, side: T.DoubleSide })); rd.position.set(q[0] + 3, 4.6, q[1]); g.add(rd); });
       ldnSign(g, ldnTex('OXFORD CIRCUS', '#1f3a93', '#ffffff', 1024, 128, '900 74px system-ui, sans-serif'), 16, 2, 0, 7, -14);
       // two red buses
       [[-10, 12, 0], [10, 0, Math.PI]].forEach(function (b) { var bus = new T.Group(); bus.position.set(b[0], 0, b[1]); bus.rotation.y = b[2]; bus.add(mesh(new T.BoxGeometry(2.6, 4.2, 10), mat('ldnBusR', { color: 0xd8261c, roughness: 0.45 }), 0, 2.5, 0)); [1.8, 3.6].forEach(function (yy) { bus.add(mesh(new T.BoxGeometry(2.65, 0.9, 9), mat('ldnBusW', { color: 0x1d2a33, metalness: 0.4 }), 0, yy, 0)); }); g.add(bus); });
@@ -1069,9 +1069,9 @@
       for (var a = 0; a < 6; a++) { var arch = new T.Mesh(new T.TorusGeometry(22, 0.5, 6, 32, Math.PI), iron); arch.position.set(0, 14, 18 + a * 9); g.add(arch); }
       var glassRoof = new T.Mesh(new T.CylinderGeometry(22, 22, 50, 32, 1, true, -Math.PI / 2, Math.PI), new T.MeshPhysicalMaterial({ color: 0xcfe3ec, transparent: true, opacity: 0.35, roughness: 0.1, side: T.DoubleSide })); glassRoof.rotation.x = Math.PI / 2; glassRoof.rotation.z = Math.PI / 2; glassRoof.position.set(0, 14, 40); g.add(glassRoof);
       ldnSign(g, ldnTex('LIVERPOOL STREET', '#17181a', '#ffffff', 1024, 128, '900 76px system-ui'), 26, 3, 0, 16, -5.2);
-      var boardT = canvasTex(1024, 384, function (c, w, h) { c.fillStyle = '#0b0b0b'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffb000'; c.font = '700 40px monospace'; ['10:02  Cambridge        Plat 3', '10:05  Stansted Express Plat 7', '10:08  Norwich          Plat 9', '10:12  Shenfield        Plat 15', '10:15  Elizabeth line   ⊖'].forEach(function (l, i) { c.fillText(l, 30, 64 + i * 66); }); });
+      var boardT = canvasTex(1024, 384, function (c, w, h) { c.fillStyle = '#0b0b0b'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffb000'; c.font = '700 40px monospace'; ['10:02  Cambridge        Plat 3', '10:05  Airport train    Plat 7', '10:08  Norwich          Plat 9', '10:12  Shenfield        Plat 15', '10:15  Elizabeth line   Plat A'].forEach(function (l, i) { c.fillText(l, 30, 64 + i * 66); }); });
       ldnSign(g, boardT, 20, 7.5, 0, 9, -5.4);
-      var el = new T.Mesh(new T.PlaneGeometry(3.2, 3.2), new T.MeshBasicMaterial({ map: canvasTex(256, 256, function (c, w, h) { c.strokeStyle = '#6950a1'; c.lineWidth = 34; c.beginPath(); c.arc(w / 2, h / 2, 90, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#1f3a93'; c.fillRect(10, h / 2 - 26, w - 20, 52); c.fillStyle = '#fff'; c.font = '900 24px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ELIZABETH LINE', w / 2, h / 2 + 1); }), transparent: true, side: T.DoubleSide })); el.position.set(30, 5, -6); g.add(el);
+      var el = new T.Mesh(new T.PlaneGeometry(3.2, 3.2), new T.MeshBasicMaterial({ map: canvasTex(256, 96, function (c, w, h) { c.fillStyle = '#6950a1'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '900 26px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ELIZABETH LINE', w / 2, h / 2); }), transparent: true, side: T.DoubleSide })); el.position.set(30, 5, -6); g.add(el);
       plzG.add(g);
     }
     // Canary Wharf: One Canada Square (the pyramid top with its blinking light), glass bank towers, the dock, the DLR
@@ -1094,7 +1094,7 @@
       // Crossrail Place: the lattice wooden roof garden over the dock
       for (var rb = 0; rb < 10; rb++) { var rib = new T.Mesh(new T.TorusGeometry(9, 0.35, 6, 20, Math.PI), mat('cwTimber', { color: 0xc49a6c, roughness: 0.8 })); rib.position.set(-54 + rb * 3, 2, -6); rib.rotation.y = Math.PI / 2; g.add(rib); }
       for (var tr = 0; tr < 5; tr++) { var tt = mesh(new T.SphereGeometry(1.6, 8, 6), mat('cwTree', { color: 0x4f7d3a }), -54 + tr * 7, 4, -6); g.add(tt); }
-      var el = new T.Mesh(new T.PlaneGeometry(4, 4), new T.MeshBasicMaterial({ map: canvasTex(256, 256, function (c, w, h) { c.strokeStyle = '#6950a1'; c.lineWidth = 34; c.beginPath(); c.arc(w / 2, h / 2, 90, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#1f3a93'; c.fillRect(10, h / 2 - 26, w - 20, 52); c.fillStyle = '#fff'; c.font = '900 22px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('CANARY WHARF', w / 2, h / 2 + 1); }), transparent: true, side: T.DoubleSide })); el.position.set(-40, 6, -16); g.add(el);
+      var el = new T.Mesh(new T.PlaneGeometry(4, 4), new T.MeshBasicMaterial({ map: canvasTex(256, 96, function (c, w, h) { c.fillStyle = '#6950a1'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '900 24px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ELIZABETH LINE', w / 2, h / 2); }), transparent: true, side: T.DoubleSide })); el.position.set(-40, 6, -16); g.add(el);
       var sign = new T.Mesh(new T.PlaneGeometry(26, 3.4), new T.MeshBasicMaterial({ map: ldnTex('CANARY WHARF', '#17181a', '#ffffff', 1024, 128, '900 80px system-ui'), side: T.DoubleSide })); sign.position.set(0, 18, 20.8); sign.rotation.y = Math.PI; g.add(sign);
       plzG.add(g);
     }

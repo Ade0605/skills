@@ -68,3 +68,14 @@ Hall of Fame, the weekly board, chat, live players on the map, the governor race
 - **Names:** "Lagos Life" and lagoslife.app belong to someone else. Use your own name and domain.
 - **Updates:** a service worker caches the game. After an update, players get the new version on their next visit. Bump `CACHE` in `sw.js` with each release, as the build already does.
 - **The shop:** to sell real-money cosmetics on your own site, run the shop server (`server/`) on a Node host and serve the game from it. Read `server/terms.html` and the README's shop section first. Flutterwave and PayPal keys go in that host's environment, never in the game files.
+
+## Staying within GitHub's terms
+
+The free website (GitHub Pages) and the build (GitHub Actions) are used within GitHub's Terms of Service, Acceptable Use Policies and GitHub Pages rules:
+
+- **No selling on GitHub Pages.** GitHub Pages is not for running an online business or sites mainly for commercial transactions. The website is the free game only. In-game naira has no real value and cannot be cashed out. The optional real-money shop (`server/`) must run on your own Node host, never on GitHub Pages.
+- **No secrets in the repository.** Only the public Supabase anon key goes into the site (it is meant to be public; the database rules protect the data). Payment keys, the Supabase service key and admin tokens never go in the repository or the Actions variables used by the site.
+- **Others' work.** Third-party code keeps its licence: three.js (`vendor/THREE-LICENSE`, MIT) and supabase-js (`vendor/SUPABASE-LICENSE`, MIT). Real places keep their real names, but company logos are not copied: brands, banks, clubs and events in the game have made-up names, and transport and shop signs are plain text.
+- **Content.** Chat, names, ads and captions are filtered (no sexual content, harassment, threats, scams, links or personal details), pictures are reviewed before others see them, and players can block and report. Betting and the casino use game money only, are 18+ and are off in Family mode.
+- **Privacy.** The site collects only what the Safety and privacy card in the game lists (an anonymous id, a display name and what players choose to post, plus each player's last voice note). As the owner you are responsible for honouring deletion requests: delete a player's rows in the Supabase dashboard.
+- **Actions.** The workflow only builds and publishes this site. It does not mine, spam or run anything unrelated. If GitHub turns Actions off for the repository (Settings → Actions), the site stops updating until it is turned back on.
