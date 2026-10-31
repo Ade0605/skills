@@ -195,7 +195,7 @@
       // A red double-decker at the kerb, and the way to the Tube and the Elizabeth line.
       var dd = new T.Group(); dd.add(boxM(0.95, 0.34, 0.22, mat('ldnbus', 0xd8261c, { roughness: 0.45 }), 0, 0.2, 0)); dd.add(boxM(0.9, 0.05, 0.225, mat('cabin', 0x2a3a4a), 0, 0.17, 0, false)); dd.add(boxM(0.9, 0.05, 0.225, mat('cabin', 0x2a3a4a), 0, 0.31, 0, false)); dd.position.set(7.4, 0.02, 9.1); world.add(dd);
       var t5 = sprite('TERMINAL 5', '#4b2a7b', '#ffffff', 0.7); t5.position.set(11.1, 1.55, 8.6); world.add(t5);
-      var tube = sprite('⊖ Underground · Elizabeth line', '#1f3a93', '#ffffff', 0.55); tube.position.set(5.6, 0.95, 10.6); world.add(tube);
+      var tube = sprite('🚇 Underground · Elizabeth line', '#1f3a93', '#ffffff', 0.55); tube.position.set(5.6, 0.95, 10.6); world.add(tube);
       var bus = sprite('TfL buses', '#d8261c', '#ffffff', 0.45); bus.position.set(7.4, 0.75, 9.1); world.add(bus);
     }
     // Palms and shade trees.

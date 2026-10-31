@@ -1722,3 +1722,5 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .wk-card { border: 2px solid var(--danfo); border-radius: 14px; }
 .od-livelist .ct-row { padding: 8px 2px; }
 .ct-chat sup { font-size: 10px; margin-left: 2px; }
+
+.tfl-b { display: inline-block; margin-right: 6px; font-size: 15px; vertical-align: -1px; }
