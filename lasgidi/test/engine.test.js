@@ -3804,3 +3804,14 @@ test('keep playing after Weekly Lagos: the finished score still verifies, the li
   assert.ok(L.verifyChallenge(done, '2026-W43').ok, 'the saved weekly entry still verifies');
   assert.ok(!L.keepPlaying(s).ok, 'only once, only for a finished run');
 });
+
+test('gifts work in every life: an old life can send and accept; the old gift calls still refuse as before', () => {
+  const old = L.newGame({ seed: 4601, origin: 'lapo', goal: 'freestyle', rules: 40 }); while (old.pending.length) L.resolveChoice(old, 0);
+  assert.ok(!L.giftIn(old, 500, 'abcdef123456').ok, 'the old call keeps its old answer (replays stay the same)');
+  const r = L.giftInAny(old, 500, 'abcdef123457'); assert.ok(r.ok, r.msg); assert.ok(old.gifted);
+  assert.ok(!L.giftInAny(old, 500, 'abcdef123457').ok, 'the same gift twice is refused');
+  const s = L.newGame({ seed: 4602, origin: 'mid', goal: 'freestyle', rules: 40 }); while (s.pending.length) L.resolveChoice(s, 0);
+  const b0 = s.cash + s.bank; const o = L.giftOutAny(s, 1000); assert.ok(o.ok, o.msg); assert.equal(b0 - (s.cash + s.bank), 1000);
+  sane(s);
+  assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(s)))).ok, 'replays');
+});
