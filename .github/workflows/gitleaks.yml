@@ -1,0 +1,20 @@
+# Scan every push and pull request for leaked secrets (passwords, keys, tokens) with Gitleaks.
+# Known safe matches are listed in .gitleaks.toml.
+name: Gitleaks secret scan
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml

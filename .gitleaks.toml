@@ -1,0 +1,17 @@
+# Gitleaks settings for this repository: the default rules, plus a short list of known, safe matches.
+title = "skills gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known safe matches"
+regexTarget = "line"
+regexes = [
+  # Lasgidi's browser save slots (localStorage key names such as 'lasgidi.prefs.v1'), not secrets.
+  "_KEY\\s*=\\s*['\"]lasgidi\\.[a-z0-9.]+['\"]",
+]
+paths = [
+  # The website's public Supabase anon key (meant to be public: the database rules protect the data).
+  '''^src/online-config\.js$''',
+]
