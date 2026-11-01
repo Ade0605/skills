@@ -29,6 +29,7 @@ Many skills in this repo are open source (Apache 2.0). We've also included the d
 - [./template](./template): Skill template
 - [./plugins/linkedin-skills](./plugins/linkedin-skills): Third-party LinkedIn marketing skills (MIT, vendored from [sergebulaev/linkedin-skills](https://github.com/sergebulaev/linkedin-skills)); install with `/plugin install linkedin-skills@ade0605-skills`
 - [./plugins/social-sdk](./plugins/social-sdk): Third-party Social SDK integration skill (MIT, vendored from [opencoredev/social-sdk](https://github.com/opencoredev/social-sdk)); install with `/plugin install social-sdk@ade0605-skills`
+- `rea`: Third-party reverse engineering plugin (MIT, from [morluto/rea](https://github.com/morluto/rea)); not vendored, it installs the pinned `rea-agents@6.8.0` npm package. Install with `/plugin install rea@ade0605-skills`. Requires Node.js; native analysis needs Hopper, Ghidra, IDA or Kuna
 
 # Try in Claude Code, Claude.ai, and the API
 
