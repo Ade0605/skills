@@ -2,7 +2,8 @@
 (function () {
   'use strict';
   var L = window.Lasgidi, D = L.DATA;
-  var SAVE_KEY = 'lasgidi.save.v1', WEEKLY_KEY = 'lasgidi.weekly.v1';
+  var SAVE_KEY = 'lasgidi.save.v1', WEEKLY_KEY = 'lasgidi.weekly.v1', RUN_KEYS = { W: WEEKLY_KEY, M: 'lasgidi.monthly.v1', Y: 'lasgidi.yearly.v1' };
+  function runKey(id) { return RUN_KEYS[L.challengeKind ? L.challengeKind(id) : 'W']; }
   var app = document.getElementById('app');
   var ui = { tab: 'map', sel: null, place: null, placeCat: null, board: null, ad: { emoji: 0, slogan: 's0', color: 0, plan: 'day' }, toasts: [], draftOrigin: null, importMsg: '', flash: '' };
   var S = null;
@@ -11,7 +12,7 @@
   // Two slots: your life, and this week's Lagos. They never overwrite each other.
   function save() {
     if (!S) return;
-    try { localStorage.setItem(S.challenge ? WEEKLY_KEY : SAVE_KEY, L.serialize(S)); } catch (e) { /* storage unavailable */ }
+    try { localStorage.setItem(S.challenge ? runKey(S.challenge.id) : SAVE_KEY, L.serialize(S)); } catch (e) { /* storage unavailable */ }
     publishHome();
   }
   function load(key) {
@@ -22,16 +23,24 @@
     return null;
   }
   function thisWeek() { return L.challengeId(new Date()); }
+  // This week's, month's or year's shared Lagos.
+  function runId(kind) { var d = new Date(); return kind === 'M' ? L.monthChallengeId(d) : kind === 'Y' ? L.yearChallengeId(d) : L.challengeId(d); }
+  function runName(id) { return (L.challengeName ? L.challengeName(id) : 'Weekly') + ' Lagos'; }
+  function runPeriod(id) { var k = L.challengeKind ? L.challengeKind(id) : 'W'; return k === 'M' ? 'month' : k === 'Y' ? 'year' : 'week'; }
   // This week's run, if one is saved for the current week.
   function weeklyRun() {
-    var w = load(WEEKLY_KEY);
-    return w && w.challenge && w.challenge.id === thisWeek() ? w : null;
+    return runFor('W');
+  }
+  function runFor(kind) {
+    var id = runId(kind), w = load(RUN_KEYS[kind]);
+    return w && w.challenge && w.challenge.id === id ? w : null;
   }
   function setMode(mode) { prefs.mode = mode; writeJSON(PREF_KEY, prefs); }
-  function playWeekly(fresh) {
+  function playWeekly(fresh, kind) {
+    kind = kind || (S && S.challenge && fresh ? L.challengeKind(S.challenge.id) : 'W');
     if (S) save();
-    var w = fresh ? null : weeklyRun();
-    if (!w) w = L.newGame({ challenge: thisWeek(), name: (S && S.name) || ui.draftName || 'Ade' });
+    var w = fresh ? null : runFor(kind);
+    if (!w) w = L.newGame({ challenge: runId(kind), name: (S && S.name) || ui.draftName || 'Ade' });
     S = w; ui.tab = 'map'; ui.sel = null; ui.place = null; ui.board = null; online.wStatus = '';
     setMode('weekly'); save(); render(); subscribeWeekly();
   }
@@ -40,13 +49,14 @@
   var PREV_KEY = 'lasgidi.save.prev.v1';
   function weeklyEndBar() {
     if (!S || !S.challenge || !S.over) return '';
-    return '<div class="wk-end" role="region" aria-label="Weekly Lagos finished"><div><b>🏁 Weekly Lagos finished</b><small>Your life does not have to end here.</small></div><button type="button" class="btn go" id="wk-keep-bar" data-wkeep="1">▶ Keep playing</button></div>';
+    var nm = runName(S.challenge.id);
+    return '<div class="wk-end" role="region" aria-label="' + esc(nm) + ' finished"><div><b>🏁 ' + esc(nm) + ' finished</b><small>Your life does not have to end here.</small></div><button type="button" class="btn go" id="wk-keep-bar" data-wkeep="1">▶ Keep playing</button></div>';
   }
-  function keepCard() { return S && S.challenge && S.over ? '<div class="section wk-card"><h3>🏁 Your Weekly Lagos is finished</h3><p class="note">Final net worth ' + N(L.netWorth(S)) + '. Carry this same life on with no end date: same money, home, job and friends.</p><div class="inline"><button class="btn go" id="wk-keep-do" data-wkeep="1">▶ Keep playing this life</button><button class="btn ghost" id="wk-result" data-wresult="1">See the result</button></div></div>' : ''; }
+  function keepCard() { return S && S.challenge && S.over ? '<div class="section wk-card"><h3>🏁 Your ' + esc(runName(S.challenge.id)) + ' is finished</h3><p class="note">Final net worth ' + N(L.netWorth(S)) + '. Carry this same life on with no end date: same money, home, job and friends.</p><div class="inline"><button class="btn go" id="wk-keep-do" data-wkeep="1">▶ Keep playing this life</button><button class="btn ghost" id="wk-result" data-wresult="1">See the result</button></div></div>' : ''; }
   function keepPlayingWeekly() {
     if (!S || !S.challenge || !S.over) return;
     var main = load(SAVE_KEY);
-    if (main && !main.over && !main.japa && !window.confirm('Keep playing this Weekly Lagos life with no end date? It becomes your life. Your other life (' + (main.name || 'you') + ', ' + N(L.netWorth(main)) + ') is kept as a backup copy on this device.')) return;
+    if (main && !main.over && !main.japa && !window.confirm('Keep playing this ' + runName(S.challenge.id) + ' life with no end date? It becomes your life. Your other life (' + (main.name || 'you') + ', ' + N(L.netWorth(main)) + ') is kept as a backup copy on this device.')) return;
     var go = function () {
       try { var old = localStorage.getItem(SAVE_KEY); if (old) localStorage.setItem(PREV_KEY, old); } catch (e) {}
       var r = L.keepPlaying(S);
@@ -1310,6 +1320,7 @@
 
   /* ---------- Weekly Lagos board: same replay check, ranked by net worth ---------- */
   var weeklyUnsub = null, weeklyFor = null, rawWeekly = [], wVerifying = false;
+  function runColl(id) { var k = L.challengeKind ? L.challengeKind(id) : 'W'; return k === 'M' ? 'monthly' : k === 'Y' ? 'yearly' : 'weekly'; }
   function boardWeek() { return S && S.challenge ? S.challenge.id : thisWeek(); }
   function subscribeWeekly() {
     if (!online.db) return;
@@ -1318,7 +1329,7 @@
     if (weeklyUnsub) weeklyUnsub();
     weeklyFor = id; rawWeekly = []; online.weekly = [];
     try {
-      weeklyUnsub = online.db.collection('weekly').where('challenge', '==', id).limit(500).onSnapshot(function (snap) {
+      weeklyUnsub = online.db.collection(runColl(id)).where('challenge', '==', id).limit(500).onSnapshot(function (snap) {
         rawWeekly = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
         rankWeekly();
       }, function () { online.weekly = []; scheduleRender(); });
@@ -1342,7 +1353,7 @@
     pending.sort(function (a, b) { return b.raw.worth - a.raw.worth; });
     var next = pending[0];
     wVerifying = true;
-    online.db.doc('weekly/' + next.id + '/proof/log').get().then(function (snap) {
+    online.db.doc(runColl(id) + '/' + next.id + '/proof/log').get().then(function (snap) {
       var proof = snap.exists ? snap.data() : null;
       var v = proof && proof.seal === next.raw.seal ? L.verifyChallenge(Object.assign({}, next.raw, { replay: proof.replay }), id) : null;
       online.checked[next.key] = v && v.ok && v.entry ? 'ok' : 'bad'; if (v && v.ok && v.entry) { var en0 = Object.assign({}, v.entry); delete en0.replay; online.verified[next.key] = en0; }
@@ -1350,14 +1361,15 @@
   }
   function postWeekly() {
     if (!online.db || !online.me) return Promise.resolve('The weekly board works when the game is opened on claude.ai.');
-    if (!S || !S.challenge || !S.over) return Promise.resolve('Finish all 4 weeks first.');
+    if (!S || !S.challenge || !S.over) return Promise.resolve('Finish all ' + (S && S.challenge ? S.challenge.weeks : 4) + ' weeks first.');
     if (S.tampered || !S.replay) return Promise.resolve('This run cannot be verified, so it cannot be posted.');
     var e = L.challengeEntry(S);
     var mine = rawWeekly.filter(function (d) { return d.id === online.me; })[0];
-    if (mine && mine.raw.challenge === e.challenge && mine.raw.worth >= e.worth) return Promise.resolve('Your best this week (' + N(mine.raw.worth) + ') stays on the board.');
+    if (mine && mine.raw.challenge === e.challenge && mine.raw.worth >= e.worth) return Promise.resolve('Your best this ' + runPeriod(e.challenge) + ' (' + N(mine.raw.worth) + ') stays on the board.');
     var summary = { challenge: e.challenge, worth: e.worth, seal: e.seal, lines: e.lines, origin: e.origin, career: e.career, level: e.level, weeks: e.weeks, at: Date.now() };
-    return online.db.doc('weekly/' + online.me + '/proof/log').set({ seal: e.seal, lines: e.lines, replay: e.replay })
-      .then(function () { return online.db.doc('weekly/' + online.me).set(summary); })
+    var coll = runColl(e.challenge);
+    return online.db.doc(coll + '/' + online.me + '/proof/log').set({ seal: e.seal, lines: e.lines, replay: e.replay })
+      .then(function () { return online.db.doc(coll + '/' + online.me).set(summary); })
       .then(function () { return 'Posted ' + N(e.worth) + ' to the ' + e.challenge + ' board. Other players will replay it to check.'; },
         function (err) { return err && err.code === 'invalid_argument' ? 'You need Contributor access to post.' : 'Could not post right now. Try again shortly.'; });
   }
@@ -1367,7 +1379,7 @@
     var html = rows.length ? '<div class="stmt-wrap"><table class="stmt lives"><thead><tr><th>#</th><th>Lagosian</th><th>Ended as</th><th class="n">Net worth</th></tr></thead><tbody>' + rows.map(function (r, i) {
       var mine = r.id === online.me, p = online.names[r.id];
       return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + esc(mine ? 'You' : (p && p.name) || 'Someone') + ' <span class="ver">✓ replayed</span></td><td>' + esc(r.career ? D.CAREERS[r.career].titles[r.level] : 'Jobless') + '</td><td class="n num"><b>' + N(r.worth) + '</b></td></tr>';
-    }).join('') + '</tbody></table></div>' : '<p class="note">No verified runs yet this week. Be the first.</p>';
+    }).join('') + '</tbody></table></div>' : '<p class="note">No verified runs yet this ' + runPeriod(boardWeek()) + '. Be the first.</p>';
     if (online.wPending) html += '<p class="note">Checking ' + online.wPending + ' more…</p>';
     return html;
   }
@@ -1463,15 +1475,16 @@
   }
 
   function weeklyInviteView() {
-    var w = weeklyRun();
-    return '<div class="section"><h3>Weekly Lagos ' + esc(thisWeek()) + '</h3><p class="note">Everyone gets the same Lagos this week: same start, same events. 4 weeks, highest net worth wins. Your life here is saved and waits for you.</p>' +
-      '<div class="inline"><button class="btn sm go" id="w-play" data-wplay="1">' + (w ? (w.over ? 'See this week\'s result' : 'Resume this week\'s Lagos') : 'Play this week\'s Lagos') + '</button></div></div>';
+    var card = function (kind, blurb) { var id = runId(kind), w = runFor(kind), per = runPeriod(id);
+      return '<div class="item"><div><h3>' + esc(runName(id)) + ' · ' + esc(id) + '</h3><div class="meta"><span>' + esc(blurb) + '</span></div></div><button class="btn sm go" id="w-play-' + kind + '" data-wplay="' + kind + '">' + (w ? (w.over ? 'See the result' : 'Resume') : 'Play') + '</button></div>'; };
+    return '<div class="section"><h3>🏁 Shared Lagos</h3><p class="note">Everyone gets the same Lagos: same start, same events, and every run is replayed to check it. Highest net worth wins. Your life here is saved and waits for you.</p><div class="list">' +
+      card('W', '4 weeks · a new one every week') + card('M', '12 weeks · a new one every month') + card('Y', '48 weeks · a new one every year') + '</div></div>';
   }
   function weeklyMeView() {
-    return '<div class="section"><h3>Weekly Lagos ' + esc(S.challenge.id) + '</h3><p class="note">' + (S.over ? 'Finished with ' + N(L.netWorth(S)) + '.' : 'Week ' + (L.week(S) + 1) + ' of ' + L.CHALLENGE_WEEKS + '. Net worth so far ' + N(L.netWorth(S)) + '.') + ' Your main life is saved and waiting.</p>' +
+    return '<div class="section"><h3>' + esc(runName(S.challenge.id)) + ' ' + esc(S.challenge.id) + '</h3><p class="note">' + (S.over ? 'Finished with ' + N(L.netWorth(S)) + '.' : 'Week ' + (L.week(S) + 1) + ' of ' + S.challenge.weeks + '. Net worth so far ' + N(L.netWorth(S)) + '.') + ' Your main life is saved and waiting.</p>' +
       '<div class="inline"><button class="btn sm go" id="w-back" data-wlife="1">Back to your life</button>' + (S.over ? '<button class="btn sm" id="w-result" data-wresult="1">Show result</button><button class="btn sm go" id="w-keep2" data-wkeep="1">▶ Keep playing</button>' : '') +
-      '<button class="btn sm ghost" id="w-restart" data-wrestart="1">Restart this week</button></div>' +
-      '<h3>This week\'s board</h3>' + weeklyBoardView() + '</div>';
+      '<button class="btn sm ghost" id="w-restart" data-wrestart="1">Restart this ' + runPeriod(S.challenge.id) + '</button></div>' +
+      '<h3>This ' + runPeriod(S.challenge.id) + '\'s board</h3>' + weeklyBoardView() + '</div>';
   }
 
   function familyView() {
@@ -1552,7 +1565,7 @@
     if (e.flood) chips.push('<span class="chip off">Flooding on the Island</span>');
     if (L.isDecember(S)) chips.push('<span class="chip">Detty December</span>');
     if (e.policy) chips.push('<span class="chip">' + esc(D.POLICIES[e.policy].name) + ' · ' + e.policyWeeks + 'w</span>');
-    if (S.challenge) chips.unshift('<span class="chip off">Weekly Lagos ' + esc(S.challenge.id) + (S.over ? ' · finished' : ' · week ' + Math.min(L.CHALLENGE_WEEKS, L.week(S) + 1) + ' of ' + L.CHALLENGE_WEEKS) + '</span>');
+    if (S.challenge) chips.unshift('<span class="chip off">' + esc(runName(S.challenge.id)) + ' ' + esc(S.challenge.id) + (S.over ? ' · finished' : ' · week ' + Math.min(S.challenge.weeks, L.week(S) + 1) + ' of ' + S.challenge.weeks) + '</span>');
     if (S.rentRate) {
       var due = L.minutesUntilRent(S), short = S.cash + S.bank < S.rentRate;
       chips.push('<span class="chip' + (short && due <= 2880 ? ' off' : '') + '">Rent ' + N(S.rentRate) + ' in ' + dur(due) + '</span>');
@@ -1560,7 +1573,7 @@
     var pc = playerCount();
     return '<header class="strip"><div class="strip-in">' +
       '<div class="brand">LASGIDI</div>' +
-      '<div class="clock"><b>' + L.clockLabel(S) + '</b><span>' + L.dateLabel(S) + '</span></div>' +
+      '<div class="clock"><b>' + L.clockLabel(S) + '</b><span>' + 'Week ' + (L.week(S) + 1) + '</span></div>' +
       '<div class="live-users" title="Players to date, and people in the game right now"><span>👥 <b>' + fmtCount(Math.max(1, pc.total)) + '</b> player' + (Math.max(1, pc.total) === 1 ? '' : 's') + ' to date</span><span><i class="dot-live"></i> <b>' + fmtCount(Math.max(1, pc.now)) + '</b> live now</span></div>' +
       (S.challenge ? '' : '<button type="button" class="chip chip-btn wk-btn" id="wk-btn" data-wplay="1" title="Weekly Lagos: everyone plays the same week">🏁 Weekly Lagos</button>') +
       (isTouch() ? '<div class="chips-dd' + (ui.chipsOpen ? ' open' : '') + '"><button type="button" class="chip chip-btn" id="chips-dd" data-chipsdd="1" aria-expanded="' + !!ui.chipsOpen + '">' + (S.power ? '💡' : '🕯️') + ' ' + (S.rentRate ? 'Rent ' + dur(L.minutesUntilRent(S)) : 'Status') + ' ' + (ui.chipsOpen ? '▴' : '▾') + '</button><div class="chips">' + chips.join('') + '</div></div>' : '<div class="chips">' + chips.join('') + '</div>') +
@@ -1634,7 +1647,7 @@
   // Engine text (goal titles, action labels, reasons, toasts) is written in naira. Abroad, amounts like ₦100k or ₦2,500
   // read in the local money. Past log lines keep their naira, since they happened where they happened.
   function locText(t) {
-    if (typeof t === 'string' && t.indexOf('This Weekly Lagos is over') === 0) return 'Weekly Lagos finished: tap ▶ Keep playing to carry on.';
+    if (typeof t === 'string' && t.indexOf('This Weekly Lagos is over') === 0) return 'This run is finished: tap ▶ Keep playing to carry on.';
     if (typeof t !== 'string' || t.indexOf('₦') < 0) return t;
     var loc = localOf(S && L.cityOf(S)); if (!loc || loc.rate === 1) return t;
     return t.replace(/-?₦\s?(\d[\d,]*(?:\.\d+)?)(?:\s?(k|m)\b)?/gi, function (m, num, unit) { var v = parseFloat(num.replace(/,/g, '')) * (unit ? (unit.toLowerCase() === 'k' ? 1e3 : 1e6) : 1); return (m.charAt(0) === '-' ? '-' : '') + N(v).replace(/ ≈.*/, ''); });
@@ -3082,7 +3095,7 @@
         // Long walk-in lists are grouped like the Do tab; what is shut right now folds into its own section.
         var live = acts.filter(function (x) { return x.a; }).map(function (x) { return x.a; }), shut = acts.filter(function (x) { return !x.a; }), key = 'venue:' + pl.id + ':shut';
         var shutOpen = ui.actGrp && ui.actGrp[key] != null ? ui.actGrp[key] : false;
-        return groupedActs(live, 'venue:' + pl.id) + (shut.length ? '<details class="act-grp"' + (shutOpen ? ' open' : '') + '><summary data-actgrp="' + key + '"><span>🕒 Not open now</span><small>' + shut.length + '</small></summary><div class="list">' + shut.map(closedRow).join('') + '</div></details>' : '');
+        return groupedActs(live, 'venue:' + pl.id) + (shut.length ? '<details class="act-grp"' + (shutOpen ? ' open' : '') + '><summary data-actgrp="' + key + '"><span>🕒 Not open now</span><small>' + shut.length + '</small></summary><div class="list">' + (shutOpen ? shut.map(closedRow).join('') : '') + '</div></details>' : '');
       })());
   }
   // A walk-in always opens: "Opening…" shows at once while three.js loads, and if the 3D scene fails on this phone
@@ -3641,7 +3654,8 @@
       if (!city3d) want = false;
     }
     var on = want && !!city3d;
-    wrap.classList.toggle('pg-3d', on);
+    var was3d = wrap.classList.contains('pg-3d'); wrap.classList.toggle('pg-3d', on);
+    if (was3d && !on && playground) playground.update(sceneFor()); // back to the flat map: it was paused under the 3D one, so draw it again
     if (on) { if (city3d.el.parentNode !== wrap) wrap.insertBefore(city3d.el, wrap.firstChild.nextSibling); city3d.update(Object.assign(sceneFor(), { myLook: S.look, myOutfit: S.outfit })); city3d.start(); }
     else if (city3d && city3d.el.parentNode) { city3d.stop(); city3d.el.remove(); }
     var zb = wrap.querySelector('.pg-zoom');
@@ -3676,7 +3690,7 @@
       var items = by[G[0]].sort(sortOpen), open = items.filter(function (a) { return !a.disabled; }).length, key = where + ':' + G[0];
       if (open && !firstOpen) firstOpen = G[0];
       var isOpen = ui.actGrp[key] != null ? ui.actGrp[key] : open > 0 && (firstOpen === G[0] || G[0] === 'work' || G[0] === 'brk');
-      return '<details class="act-grp"' + (isOpen ? ' open' : '') + '><summary data-actgrp="' + key + '"><span>' + G[1] + ' ' + G[2] + '</span><small>' + (open ? open + ' open now' : 'nothing open now') + (items.length > open ? ' · ' + items.length + ' in all' : '') + '</small></summary><div class="list">' + items.map(actionRow).join('') + '</div></details>';
+      return '<details class="act-grp"' + (isOpen ? ' open' : '') + '><summary data-actgrp="' + key + '"><span>' + G[1] + ' ' + G[2] + '</span><small>' + (open ? open + ' open now' : 'nothing open now') + (items.length > open ? ' · ' + items.length + ' in all' : '') + '</small></summary><div class="list">' + (isOpen ? items.map(actionRow).join('') : '') + '</div></details>'; // folded sections build their rows only when opened (fewer elements, faster screens)
     }).join('');
   }
   function mapDoHtml() {
@@ -3814,7 +3828,7 @@
     return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="rc-title"><div class="sheet"><span class="label">' + (yr ? '🗓️ Yearly recap' : '📅 Monthly recap') + '</span><h2 id="rc-title">' + esc(r.label) + '</h2>' +
       '<p class="squares" aria-label="Net worth by ' + (yr ? 'month' : 'week') + '">' + r.sq + '</p>' +
       '<p>Net worth ' + N(r.start) + ' → <b>' + N(r.end) + '</b> <span class="' + (r.delta >= 0 ? 'gain' : 'cost') + '">(' + (r.delta >= 0 ? '+' : '') + N(r.delta) + ')</span></p>' +
-      (S.weeklyDone ? '<p class="note">Started as Weekly Lagos ' + esc(S.weeklyDone.id) + ' (' + N(S.weeklyDone.worth) + ' after ' + S.weeklyDone.weeks + ' weeks). Still going.</p>' : '') +
+      (S.weeklyDone ? '<p class="note">Started as ' + esc(runName(S.weeklyDone.id)) + ' ' + esc(S.weeklyDone.id) + ' (' + N(S.weeklyDone.worth) + ' after ' + S.weeklyDone.weeks + ' weeks). Still going.</p>' : '') +
       '<div class="opts"><button class="btn go" id="rc-ok" data-recapok="' + pick[0] + ':' + r.k + '">Keep going</button><button class="btn ghost" id="rc-share" data-copytext="' + esc(recapShare(r, yr)) + '">📋 Copy to share</button></div></div></div>';
   }
   function goalsHubView() {
@@ -4854,7 +4868,7 @@
   // Calendar: festivals and dated events this month, at their places.
   function calendarView() {
     var m = L.monthIndex(S), rows = [];
-    var add = function (pid, a) { if (a.fw && (!(S.rules >= 51) || !a.event)) return; if (!a.when || (a.when.months && a.when.months.indexOf(m) < 0) || !(a.event || a.fest || a.dec)) return; rows.push({ a: a, where: pid }); };
+    var add = function (pid, a) { if (a.fw && (!(S.rules >= 51) || !a.event)) return; if (a.minRules && !(S.rules >= a.minRules)) return; if (!a.when || (a.when.months && a.when.months.indexOf(m) < 0) || !(a.event || a.fest || a.dec)) return; rows.push({ a: a, where: pid }); };
     Object.keys(D.PLACE_ACTIONS).forEach(function (d) { if (L.districtCity(d) !== L.cityOf(S)) return; D.PLACE_ACTIONS[d].forEach(function (a) { if (!a.retired) add(D.DISTRICTS[d].name, a); }); });
     if (S.rules >= 18) Object.keys(D.FESTIVALS).forEach(function (pid) { D.FESTIVALS[pid].forEach(function (a) { add(placeName(pid), a); }); });
     var wk = function (w) { var p = []; if (w.wk) p.push(w.wk.map(function (k) { return ['1st', '2nd', '3rd', 'last'][k]; }).join('/') + ' week'); if (w.days) p.push(w.days.map(function (d) { return D.DAYS[d]; }).join('/')); if (w.from != null) p.push(pad(w.from) + ':00–' + pad(w.to) + ':00'); return p.join(' · '); };
@@ -5543,11 +5557,11 @@
     }
     if (S.over && !S.overSeen) {
       var text = L.challengeShareText(S).split('\n');
-      return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ch-title"><div class="sheet"><span class="label">Weekly Lagos ' + esc(S.challenge.id) + ' · time up</span><h2 id="ch-title">' + N(L.netWorth(S)) + '</h2>' +
+      return '<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="ch-title"><div class="sheet"><span class="label">' + esc(runName(S.challenge.id)) + ' ' + esc(S.challenge.id) + ' · time up</span><h2 id="ch-title">' + N(L.netWorth(S)) + '</h2>' +
         '<p class="squares" aria-label="Net worth by week">' + text[1] + '</p>' +
-        '<p>' + esc(D.ORIGINS[S.origin].name) + ', ' + esc(S.job ? D.CAREERS[S.job.id].titles[S.job.level] : 'job hunting') + '. Everyone played this same Lagos this week.</p>' +
-        shareBlock() + '<h3>This week\'s board</h3>' + weeklyBoardView() +
-        '<div class="opts"><button class="btn go" id="w-post" data-wpost="1">Post to this week\'s board</button>' + (online.wStatus ? '<p class="note">' + esc(online.wStatus) + '</p>' : '') +
+        '<p>' + esc(D.ORIGINS[S.origin].name) + ', ' + esc(S.job ? D.CAREERS[S.job.id].titles[S.job.level] : 'job hunting') + '. Everyone played this same Lagos this ' + runPeriod(S.challenge.id) + '.</p>' +
+        shareBlock() + '<h3>This ' + runPeriod(S.challenge.id) + '\'s board</h3>' + weeklyBoardView() +
+        '<div class="opts"><button class="btn go" id="w-post" data-wpost="1">Post to this ' + runPeriod(S.challenge.id) + '\'s board</button>' + (online.wStatus ? '<p class="note">' + esc(online.wStatus) + '</p>' : '') +
         '<button class="btn go" id="w-keep" data-wkeep="1">▶ Keep playing this life (no end date)</button>' +
         '<button class="btn ghost" id="w-life" data-wlife="1">Back to your life</button><button class="btn ghost" id="w-close" data-wclose="1">Look around</button></div></div></div>';
     }
@@ -5772,7 +5786,7 @@
       } catch (err) { ui.importMsg = err.message; render(); }
       return;
     }
-    if (ds.wplay) { introState(); playWeekly(false); return; }
+    if (ds.wplay) { introState(); playWeekly(false, /^[WMY]$/.test(ds.wplay) ? ds.wplay : 'W'); return; }
     if (!S) return;
     if (ds.wlife) { backToLife(); return; }
     if (ds.wkeep) { keepPlayingWeekly(); return; }
@@ -5780,7 +5794,7 @@
     if (ds.wclose) { S.overSeen = true; save(); render(); return; }
     if (ds.wresult) { S.overSeen = false; render(); return; }
     if (ds.wrestart) {
-      if (!ui.confirmRestart) { ui.confirmRestart = true; ui.flash = 'Tap "Restart this week" again to start this week\'s Lagos over.'; render(); return; }
+      if (!ui.confirmRestart) { ui.confirmRestart = true; ui.flash = 'Tap "Restart" again to start this run over.'; render(); return; }
       ui.confirmRestart = false; ui.flash = ''; playWeekly(true); return;
     }
     if (ds.wpost) { t.disabled = true; postWeekly().then(function (m) { online.wStatus = m; render(); }); return; }
