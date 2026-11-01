@@ -29,6 +29,7 @@ Many skills in this repo are open source (Apache 2.0). We've also included the d
 - [./template](./template): Skill template
 - [./plugins/linkedin-skills](./plugins/linkedin-skills): Third-party LinkedIn marketing skills (MIT, vendored from [sergebulaev/linkedin-skills](https://github.com/sergebulaev/linkedin-skills)); install with `/plugin install linkedin-skills@ade0605-skills`
 - [./plugins/social-sdk](./plugins/social-sdk): Third-party Social SDK integration skill (MIT, vendored from [opencoredev/social-sdk](https://github.com/opencoredev/social-sdk)); install with `/plugin install social-sdk@ade0605-skills`
+- `openmontage`: Third-party agentic video production system (AGPL-3.0, from [calesthio/openmontage](https://github.com/calesthio/openmontage)); not vendored and not a plugin, it runs as its own project. See [Installing OpenMontage](#installing-openmontage) below
 - `rea`: Third-party reverse engineering plugin (MIT, from [morluto/rea](https://github.com/morluto/rea)); not vendored, it installs the pinned `rea-agents@6.8.0` npm package. See [Installing rea](#installing-rea) below
 
 # Try in Claude Code, Claude.ai, and the API
@@ -88,6 +89,34 @@ Some targets need extra tools:
 | SQLite databases | Node.js 24.x (>=24.15) or 26+ |
 
 `npx rea-agents setup` detects which tools you have and can install Hopper with your approval. See the [REA docs](https://rea.tools/guides/) for details.
+
+### Installing OpenMontage
+
+[OpenMontage](https://github.com/calesthio/openmontage) turns Claude Code into a video production studio: research, script, asset generation, editing and rendering. It is a full project with its own Python and Node.js setup and agent instructions (`CLAUDE.md`, `AGENT_GUIDE.md`), so you install it as a separate folder and open Claude Code inside it. It is not a plugin from this marketplace.
+
+1. Clone it and run setup:
+   ```bash
+   git clone https://github.com/calesthio/OpenMontage.git
+   cd OpenMontage
+   make setup
+   ```
+   `make setup` creates a `.venv`, installs the Python requirements, the Remotion composer (`npm install`), Piper offline TTS, and copies `.env.example` to `.env`.
+2. Optional: add API keys to `.env` (FAL, Pexels, ElevenLabs, OpenAI, Google and others). Every key is optional; more keys unlock more providers.
+3. Start Claude Code in the `OpenMontage` folder and describe the video, for example: "Make a 60-second animated explainer about how neural networks learn."
+
+No `make`? On macOS/Linux run:
+```bash
+python3 -m venv .venv && source .venv/bin/activate && python -m pip install -r requirements.txt && (cd remotion-composer && npm install) && python -m pip install piper-tts && cp .env.example .env
+```
+
+**Requirements**
+
+- Python 3.10+
+- FFmpeg (`brew install ffmpeg` or `sudo apt install ffmpeg`)
+- Node.js 18+
+- Optional: an NVIDIA GPU, then `make install-gpu` for free local video generation
+
+OpenMontage is licensed AGPL-3.0. Last checked at commit `195eab2`.
 
 ## Claude.ai
 
