@@ -29,7 +29,7 @@ Many skills in this repo are open source (Apache 2.0). We've also included the d
 - [./template](./template): Skill template
 - [./plugins/linkedin-skills](./plugins/linkedin-skills): Third-party LinkedIn marketing skills (MIT, vendored from [sergebulaev/linkedin-skills](https://github.com/sergebulaev/linkedin-skills)); install with `/plugin install linkedin-skills@ade0605-skills`
 - [./plugins/social-sdk](./plugins/social-sdk): Third-party Social SDK integration skill (MIT, vendored from [opencoredev/social-sdk](https://github.com/opencoredev/social-sdk)); install with `/plugin install social-sdk@ade0605-skills`
-- `rea`: Third-party reverse engineering plugin (MIT, from [morluto/rea](https://github.com/morluto/rea)); not vendored, it installs the pinned `rea-agents@6.8.0` npm package. Install with `/plugin install rea@ade0605-skills`. Requires Node.js; native analysis needs Hopper, Ghidra, IDA or Kuna
+- `rea`: Third-party reverse engineering plugin (MIT, from [morluto/rea](https://github.com/morluto/rea)); not vendored, it installs the pinned `rea-agents@6.8.0` npm package. See [Installing rea](#installing-rea) below
 
 # Try in Claude Code, Claude.ai, and the API
 
@@ -52,6 +52,42 @@ Alternatively, directly install either Plugin via:
 ```
 
 After installing the plugin, you can use the skill by just mentioning it. For instance, if you install the `document-skills` plugin from the marketplace, you can ask Claude Code to do something like: "Use the PDF skill to extract the form fields from `path/to/some-file.pdf`"
+
+### Installing rea
+
+[REA (Reverse Engineer Anything)](https://github.com/morluto/rea) runs an MCP server, so it works in Claude Code only, not as a Claude.ai upload.
+
+1. Add this repository as a marketplace (once):
+   ```
+   /plugin marketplace add Ade0605/skills
+   ```
+   If you added it earlier, refresh it instead with `/plugin marketplace update ade0605-skills`.
+2. Install the plugin:
+   ```
+   /plugin install rea@ade0605-skills
+   ```
+   Or run `/plugin` and choose `Browse and install plugins` → `ade0605-skills` → `rea` → `Install now`.
+3. Restart Claude Code, then run `/mcp` and check that `rea` is listed.
+
+The first start downloads the `rea-agents` npm package (version 6.8.0, about 49 MB).
+
+**Requirements**
+
+- Claude Code (CLI, desktop app or IDE extension)
+- Node.js 22.x (>=22.23.4), 24.x (>=24.22.1) or 26.12.1+, plus npm. Check with `node --version`
+
+Some targets need extra tools:
+
+| To analyze | You also need |
+|---|---|
+| JavaScript / Electron apps, websites | Nothing extra (on Linux, a procps-compatible `ps`) |
+| Native binaries | Hopper, Ghidra, IDA or Kuna |
+| Android apps | Headless JADX and a full JDK |
+| Firmware | Binwalk or Unblob (Linux) |
+| Network or packet captures | mitmproxy or TShark, depending on the format |
+| SQLite databases | Node.js 24.x (>=24.15) or 26+ |
+
+`npx rea-agents setup` detects which tools you have and can install Hopper with your approval. See the [REA docs](https://rea.tools/guides/) for details.
 
 ## Claude.ai
 
