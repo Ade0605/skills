@@ -42,7 +42,7 @@
     var w = fresh ? null : runFor(kind);
     if (!w) w = L.newGame({ challenge: runId(kind), name: (S && S.name) || ui.draftName || 'Ade' });
     S = w; ui.tab = 'map'; ui.sel = null; ui.place = null; ui.board = null; online.wStatus = '';
-    setMode('weekly'); save(); render(); subscribeWeekly();
+    prefs.run = kind; setMode('weekly'); save(); render(); subscribeWeekly();
   }
   // A finished Weekly Lagos run carries on as your life, with no end date. Its score is posted to the board first
   // (a continued life no longer replays to that end). An existing life is kept as a backup before it is replaced.
@@ -6567,7 +6567,7 @@
       .catch(function () { ui.toasts.push({ msg: 'The shop is not reachable right now.', ok: false }); renderToasts(); });
   }
   function start(data) {
-    S = (data && data.state) ? L.migrate(data.state) : (prefs.mode === 'weekly' && weeklyRun()) || load(SAVE_KEY);
+    S = (data && data.state) ? L.migrate(data.state) : (prefs.mode === 'weekly' && (runFor(/^[MY]$/.test(prefs.run) ? prefs.run : 'W') || weeklyRun())) || load(SAVE_KEY);
     if (S && !(data && data.state) && !(navigator.webdriver && !/welcome/.test(location.hash))) ui.welcome = true; // welcome back on a saved life (automated test browsers skip it unless #welcome)
     if (data && data.ui) Object.assign(ui, data.ui, { toasts: [] });
     render();
