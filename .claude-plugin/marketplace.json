@@ -61,6 +61,12 @@
       "description": "Social SDK integration skill by OpenCore (vendored from github.com/opencoredev/social-sdk @ a76fb61): mock-first publishing, account connection flow, delivery outcome rendering, verified webhooks, integration tests.",
       "source": "./plugins/social-sdk",
       "strict": true
+    },
+    {
+      "name": "voicestudio",
+      "description": "VoiceStudio skill by Palash Debnath (vendored from github.com/debpalash/VoiceStudio @ 40c5e3c, AGPL-3.0): local text-to-speech, transcription, voice cloning and design, dubbing, and MCP automation through a running VoiceStudio backend.",
+      "source": "./plugins/voicestudio",
+      "strict": true
     }
   ]
 }

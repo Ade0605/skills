@@ -29,6 +29,7 @@ Many skills in this repo are open source (Apache 2.0). We've also included the d
 - [./template](./template): Skill template
 - [./plugins/linkedin-skills](./plugins/linkedin-skills): Third-party LinkedIn marketing skills (MIT, vendored from [sergebulaev/linkedin-skills](https://github.com/sergebulaev/linkedin-skills)); install with `/plugin install linkedin-skills@ade0605-skills`
 - [./plugins/social-sdk](./plugins/social-sdk): Third-party Social SDK integration skill (MIT, vendored from [opencoredev/social-sdk](https://github.com/opencoredev/social-sdk)); install with `/plugin install social-sdk@ade0605-skills`
+- [./plugins/voicestudio](./plugins/voicestudio): Third-party VoiceStudio skill for local speech generation, transcription, cloning and dubbing (AGPL-3.0, vendored from [debpalash/VoiceStudio](https://github.com/debpalash/VoiceStudio)); install with `/plugin install voicestudio@ade0605-skills`
 
 # Try in Claude Code, Claude.ai, and the API
 

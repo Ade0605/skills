@@ -1,0 +1,12 @@
+{
+  "name": "voicestudio",
+  "version": "1.0.0",
+  "description": "Skill for driving a local VoiceStudio backend: text-to-speech with saved or designed voices, transcription, cloning, dubbing and MCP automation via its REST API.",
+  "author": {
+    "name": "Palash Debnath and VoiceStudio contributors",
+    "url": "https://github.com/debpalash"
+  },
+  "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/debpalash/VoiceStudio",
+  "keywords": ["voice", "tts", "speech", "transcription", "dubbing", "mcp"]
+}
