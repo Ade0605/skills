@@ -61,6 +61,16 @@
       "description": "Social SDK integration skill by OpenCore (vendored from github.com/opencoredev/social-sdk @ a76fb61): mock-first publishing, account connection flow, delivery outcome rendering, verified webhooks, integration tests.",
       "source": "./plugins/social-sdk",
       "strict": true
+    },
+    {
+      "name": "rea",
+      "description": "REA: Reverse Engineer Anything by morluto (MIT, from github.com/morluto/rea, installed from the rea-agents npm package @ 6.8.0): MCP server plus skills for inspecting native binaries, JavaScript/Electron apps, .NET assemblies, and websites. Native analysis uses an existing Hopper, Ghidra, IDA, or Kuna install.",
+      "source": {
+        "source": "npm",
+        "package": "rea-agents",
+        "version": "6.8.0"
+      },
+      "category": "development"
     }
   ]
 }
