@@ -46,7 +46,7 @@ Hall of Fame, the weekly board, chat, live players on the map, the governor race
 
 1. **Create a project.** At supabase.com, make a free account and a new project. Any region near your players is fine, for example London or Frankfurt for Lagos.
 2. **Turn on anonymous sign-in.** In **Authentication → Sign In / Providers**, switch **Anonymous sign-ins** on.
-3. **Create the tables and rules.** Open the **SQL editor**, paste all of `lasgidi/supabase/schema.sql`, and click **Run**. It is safe to run again later.
+3. **Create the tables and rules.** Open the **SQL editor**, paste all of `lasgidi/supabase/schema.sql`, and click **Run**. It is safe to run again later. Re-run it after updating the game: newer versions add collections (for example `monthly` and `yearly` for the Monthly and Yearly Lagos boards).
 4. **Copy two values.** In **Project Settings → API**, copy the **Project URL** and the **anon public** key. The anon key is meant to be public: the database rules are what protect the data. Never use the `service_role` key in the game.
 5. **Add them to the repository.** In **Settings → Secrets and variables → Actions → Variables**, add `LASGIDI_SUPABASE_URL` and `LASGIDI_SUPABASE_ANON`.
 6. **Deploy.** Run the **Lasgidi on GitHub Pages** workflow. The site now has online features.

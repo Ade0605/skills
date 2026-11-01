@@ -331,8 +331,10 @@
 
     /* ---------- frame ---------- */
     function size() { var w = el.clientWidth || 360, h = el.clientHeight || 400; if (w === W && h === H) return; W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cam.aspect = W / H; cam.updateProjectionMatrix(); }
+    var LOW = !!(root.LasgidiGL && root.LasgidiGL.lite && root.LasgidiGL.lite());
     function frame(now) {
       if (root.LasgidiGL && !root.LasgidiGL.live(el)) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // hidden or under another view: skip the frame
+      if (LOW && last && now - last < 32) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // lite and low-end phones: about 30 frames a second is plenty for the map
       root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var t = reduce ? 5 : now / 1000, dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
       var hr = sc.hour == null ? 12 : sc.hour, night = hr >= 19 || hr < 6, dusk = hr >= 17 && hr < 19, w = sc.weather, wet = w === 'rain' || w === 'storm';

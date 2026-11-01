@@ -3815,3 +3815,35 @@ test('gifts work in every life: an old life can send and accept; the old gift ca
   sane(s);
   assert.ok(L.verifyFame(JSON.parse(JSON.stringify(L.fameEntry(s)))).ok, 'replays');
 });
+
+test('rules 53: five more Lagos places and two festivals (Felabration, Eyo), only in new lives', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 5301, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  for (const id of ['nike_gallery', 'terra_kulture', 'third_mainland', 'lufasi', 'jhalobia']) assert.ok(D.PLACES.find(p => p.id === id && p.nogem), id);
+  const s = mk(); s.loc = 'lekki'; s.t = s.t - (s.t % 1440) + 1440 * 5 + 12 * 60; // a Saturday noon
+  assert.ok(L.availableActions(s).some(a => a.id === 'nike_walk'), 'gallery open in a new life');
+  const old = mk(52); old.loc = 'lekki'; old.t = s.t;
+  assert.ok(!L.availableActions(old).some(a => /^nike_/.test(a.id)), 'not in older lives');
+  // Felabration: October, the third week; Eyo: May, the fourth week, Saturday
+  const f = mk(); f.loc = 'ikeja'; let t = 0; while (L.monthIndex(Object.assign({}, f, { t })) !== 9 || L.week(Object.assign({}, f, { t })) % 4 !== 2) t += 1440; f.t = t + 21 * 60;
+  assert.ok(L.availableActions(f).some(a => a.id === 'felab_night'), 'Felabration on');
+  const o2 = mk(52); o2.loc = 'ikeja'; o2.t = f.t; assert.ok(!L.availableActions(o2).some(a => /^felab_/.test(a.id)));
+  for (const list of [D.FESTIVALS.shrine, D.FESTIVALS.tbs]) for (const a of list) assert.ok(a.mins % 15 === 0, a.id);
+});
+
+test('Monthly (12 weeks) and Yearly (48 weeks) Lagos: shared seeds, run to their end, verify, keep playing; weekly unchanged', () => {
+  const d = new Date(Date.UTC(2026, 10, 1));
+  assert.equal(L.monthChallengeId(d), '2026-M11'); assert.equal(L.yearChallengeId(d), '2026-Y');
+  assert.equal(L.challengeWeeks('2026-W44'), 4); assert.equal(L.challengeWeeks('2026-M11'), 12); assert.equal(L.challengeWeeks('2026-Y'), 48);
+  const a = L.newGame({ challenge: '2026-M11', origin: 'mid' }), b = L.newGame({ challenge: '2026-M11', origin: 'mid' });
+  assert.equal(L.serialize(a), L.serialize(b), 'everyone gets the same month');
+  const s = L.newGame({ challenge: '2026-M11', origin: 'mid' }); while (s.pending.length) L.resolveChoice(s, 0);
+  for (let n = 0; n < 9000 && !s.over; n++) { L.wait(s, 720); while (s.pending.length && !s.over) L.resolveChoice(s, 0); }
+  assert.ok(s.over); assert.equal(L.week(s), 12, 'ends after 12 weeks');
+  const e = JSON.parse(JSON.stringify(L.challengeEntry(s)));
+  assert.ok(L.verifyChallenge(e, '2026-M11').ok, 'a finished month verifies');
+  assert.ok(!L.verifyChallenge(e, '2026-M10').ok, 'not for another month');
+  assert.match(L.challengeShareText(s), /Lasgidi Monthly 2026-M11/);
+  assert.ok(L.keepPlaying(s).ok); assert.ok(!s.over);
+  assert.throws(() => L.newGame({ challenge: '2026-Q4' }), /Bad challenge id/);
+  const y = L.newGame({ challenge: '2026-Y', origin: 'mid' }); assert.equal(y.challenge.weeks, 48);
+});

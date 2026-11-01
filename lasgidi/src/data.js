@@ -2673,6 +2673,32 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       Object.assign(act('pr_aqua', 'The lost-chambers aquarium', 60, aed(140), 0, { fun: 18 }, null, { from: 10, to: 22 }), { minRules: 41 }),
       Object.assign(act('pr_beach', 'Beach club with the skyline across the water', 180, aed(250), 0, { fun: 26, social: 10, stress: -12 }, null, { from: 10, to: 19 }), { minRules: 41 })
     ]],
+    // Rules 53: more of Lagos (activities open in new lives).
+    ['nike_gallery', '🖼️', 'Adire Art Gallery', 'culture', 'frame', 'lekki', 29.4, 23.2, null, 'Five floors of Nigerian art: adire, batik, beads and paintings, in one of West Africa\'s biggest galleries.', [
+      Object.assign(act('nike_walk', 'Walk the five floors of art', 90, 0, 0, { fun: 16, stress: -6 }, { charisma: 1 }, { from: 10, to: 18 }), { minRules: 53 }),
+      Object.assign(act('nike_adire', 'Take an adire (tie-dye) workshop', 180, 15000, 0, { fun: 18 }, { craft: 2 }, { days: [5], from: 10, to: 16 }), { minRules: 53 }),
+      Object.assign(act('nike_buy', 'Buy a small painting for your wall', 30, 45000, 0, { fun: 14, social: 4 }, null, { from: 10, to: 18 }), { minRules: 53 })
+    ]],
+    ['terra_kulture', '🎭', 'Kulture House arts centre', 'culture', 'frame', 'vi', 20.2, 24.2, null, 'An arts centre: a theatre for Nigerian plays, a bookshop, an art gallery and a restaurant.', [
+      Object.assign(act('tk_play', 'See a Nigerian play at the theatre', 150, 10000, 0, { fun: 24, social: 8 }, null, { days: [4, 5, 6], from: 16, to: 22 }), { minRules: 53 }),
+      Object.assign(act('tk_lang', 'A Yoruba language class', 90, 5000, 0, { social: 6 }, { charisma: 1 }, { days: [5], from: 10, to: 14 }), { minRules: 53 }),
+      Object.assign(act('tk_books', 'Browse the bookshop and read in the café', 60, 2500, 0, { fun: 8, stress: -8 }, null, { from: 9, to: 20 }), { minRules: 53 })
+    ]],
+    ['third_mainland', '🌉', 'Third Mainland Bridge lookout', 'outdoors', 'tree', 'yaba', 15.6, 16.6, null, 'Where the long bridge leaves the mainland: the lagoon, Makoko\'s stilt houses and the Island skyline.', [
+      Object.assign(act('tmb_sunset', 'Watch the sunset over the lagoon and the bridge', 45, 0, 0, { fun: 12, stress: -10 }, null, { from: 17, to: 20 }), { minRules: 53 }),
+      Object.assign(act('tmb_jog', 'Sunday morning jog on the bridge (cars kept off)', 60, 0, 0, { energy: -12, stress: -8 }, { fitness: 2 }, { days: [6], from: 6, to: 9 }), { minRules: 53 }),
+      Object.assign(act('tmb_fish', 'Buy fresh fish from the canoes below', 30, 3000, 0, { hunger: 20, social: 4 }, null, { from: 6, to: 11 }), { minRules: 53 })
+    ]],
+    ['lufasi', '🌳', 'Lufasi Nature Park', 'outdoors', 'tree', 'ajah', 37.2, 24.4, null, 'A green park on the Lekki–Epe road: trails through the trees, a lake with paddle boats and picnic spots.', [
+      Object.assign(act('luf_trail', 'Walk the forest trail', 90, 2000, 0, { fun: 12, stress: -14 }, { fitness: 1 }, { from: 8, to: 18 }), { minRules: 53 }),
+      Object.assign(act('luf_boat', 'Paddle a boat on the lake', 45, 3000, 0, { fun: 16, energy: -6 }, null, { from: 9, to: 17 }), { minRules: 53 }),
+      Object.assign(act('luf_picnic', 'A picnic with friends under the trees', 120, 6000, 0, { hunger: 30, social: 20, fun: 10 }, null, { days: [5, 6], from: 11, to: 17 }), { minRules: 53 })
+    ]],
+    ['jhalobia', '🎡', 'Jhalobia Recreation Park', 'outdoors', 'tree', 'ikeja', 9.0, 5.0, null, 'A garden park in Ikeja GRA: lawns, a small lake, gazebos, and photographers busy every weekend.', [
+      Object.assign(act('jha_photo', 'A photoshoot in the gardens', 60, 8000, 0, { fun: 12, social: 6 }, { charisma: 1 }, { days: [5, 6], from: 9, to: 18 }), { minRules: 53 }),
+      Object.assign(act('jha_relax', 'Relax by the lake', 60, 1500, 0, { stress: -12, fun: 6 }, null, { from: 8, to: 19 }), { minRules: 53 }),
+      Object.assign(act('jha_party', 'Go to a garden birthday party', 180, 5000, 0, { fun: 22, social: 18, hunger: 20 }, null, { days: [5], from: 14, to: 21 }), { minRules: 53 })
+    ]],
     // More London: the big shops of the West End and Knightsbridge, Oxford Circus, Shoreditch and Liverpool Street.
     ['ldn_oxcircus', '🚇', 'Oxford Circus', 'outdoors', 'dome', 'ldn_oxford', 16.4, 7.2, 'oxcircus', 'The busiest crossing in London: the diagonal zebra, the Tube entrances, red buses and shoppers everywhere.', [
       act('oxc_cross', 'Cross the famous diagonal crossing', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 23 }),
@@ -3028,11 +3054,18 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       { id: 'fest_yam_dance', label: 'Dance to the ogene drums', mins: 60, fx: { fun: 10, energy: -8 }, xp: { fitness: 1 }, fest: true, when: { months: [7], days: [5], from: 10, to: 18 } }
     ],
     tbs: [
+      { id: 'eyo_watch', label: 'Eyo Festival: watch the white-robed masquerades (no shoes, no sandals)', mins: 180, fx: { fun: 26, social: 12 }, event: true, fest: true, minRules: 53, when: { months: [4], wk: [3], days: [5], from: 8, to: 17 } },
+      { id: 'eyo_cap', label: 'Eyo Festival: buy an Eyo hat and white cloth', mins: 30, cost: 6000, fx: { fun: 10, social: 6 }, dec: true, fest: true, minRules: 53, when: { months: [4], wk: [3], days: [4, 5], from: 9, to: 18 } },
       { id: 'fest_marathon_run', label: 'Run the Eko City Marathon', mins: 300, cost: 5000, fx: { energy: -45, stress: -10, fun: 10, hygiene: -20 }, xp: { fitness: 3 }, special: 'marathon', event: true, sport: 'marathon', fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 9 } }
     ],
     link_bridge: [
       { id: 'fest_marathon_water', label: 'Hand out water at a marathon station', mins: 240, fx: { social: 12, energy: -10 }, xp: { charisma: 1 }, fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 12 } },
       { id: 'fest_marathon_cheer', label: 'Cheer the runners on the bridge', mins: 60, fx: { fun: 6, social: 4 }, fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 12 } }
+    ],
+    shrine: [
+      { id: 'felab_night', label: 'Felabration: Afrobeat all night at the Shrine', mins: 240, cost: 5000, fx: { fun: 30, social: 18, energy: -16 }, event: true, fest: true, minRules: 53, when: { months: [9], wk: [2], from: 20, to: 24 } },
+      { id: 'felab_talk', label: 'Felabration: a debate on music and politics', mins: 120, fx: { fun: 8, social: 10 }, xp: { charisma: 1 }, fest: true, minRules: 53, when: { months: [9], wk: [2], from: 12, to: 17 } },
+      { id: 'felab_art', label: 'Felabration: the art and costume show', mins: 60, cost: 1000, fx: { fun: 12 }, fest: true, minRules: 53, when: { months: [9], wk: [2], from: 10, to: 19 } }
     ],
     eko_convention: [
       { id: 'fest_style_watch', label: 'Watch the Eko Style Week runway', mins: 180, cost: 8000, fx: { fun: 14, social: 8 }, event: true, fest: true, when: { months: [10], days: [0, 1, 2, 3, 4], from: 18, to: 23 } },

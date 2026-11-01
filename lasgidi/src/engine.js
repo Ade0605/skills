@@ -108,7 +108,7 @@
   // 48 lets you change your lifetime dream (your goal) once a week, from the phone's Goals, and adds Gidi Bet: made-up
   // football leagues every 4 game hours and a High-Low card game, with a house edge and daily stake caps.
   // 49 lifts the caps: bets up to ₦500,000 each with no daily limit, gifts up to ₦1,000,000 with no daily limit.
-  var RULES = 52;
+  var RULES = 53;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -501,7 +501,7 @@
     s.stats.weekStartWorth = netWorth(s);
     // Everything needed to rebuild this life from scratch: the seed, the
     // starting choices, and every player call in order (see recorded()).
-    if (opts.challenge) { s.challenge = { id: opts.challenge, weeks: CHALLENGE_WEEKS }; s.over = false; s.goal = 'freestyle'; }
+    if (opts.challenge) { s.challenge = { id: opts.challenge, weeks: challengeWeeks(opts.challenge) }; s.over = false; s.goal = 'freestyle'; }
     s.replay = { seed: seed, goal: s.goal, origin: opts.origin || null, rules: s.rules, challenge: opts.challenge || null, acts: [] };
     if (heir) s.replay.heir = heir;
     if (traits) s.replay.traits = traits;
@@ -927,7 +927,7 @@
   function noteLoss(s, amt, what) { if (s.rules >= 19 && amt > 0) s.lastLoss = { amt: amt, what: what, day: day(s), reported: false }; }
   function festivalActions(s) {
     var d = s.loc, all = FEST_AT[d] || (FEST_AT[d] = D.PLACES.filter(function (p) { return p.district === d && (D.FESTIVALS[p.id] || D.BRANCH_ACTS[p.id]); }).reduce(function (o, p) { return o.concat(D.FESTIVALS[p.id] || [], D.BRANCH_ACTS[p.id] || []); }, [])), m = monthIndex(s); // and the Pulse gym branches' acts
-    return all.filter(function (a) { return (!a.fw || s.rules >= 51) && (!a.when || !a.when.months || a.when.months.indexOf(m) >= 0); }); // rules 51: Eko Fashion Weekend
+    return all.filter(function (a) { return (!a.fw || s.rules >= 51) && (!a.minRules || s.rules >= a.minRules) && (!a.when || !a.when.months || a.when.months.indexOf(m) >= 0); }); // rules 51: Eko Fashion Weekend
   }
   // Rules 31: the National Theatre programme. Week w shows THEATRE_SHOWS[w mod n]; the same for every life that week.
   function theatreShow(s, off) { var n = D.THEATRE_SHOWS.length, w = week(s) + (off || 0); if (w < 0) return null; var sh = D.THEATRE_SHOWS[w % n], K = D.TH_KIND[sh.kind]; return Object.assign({ week: w, kindName: K.name, icon: K.icon, cost: price(s, K.cost), when: { days: K.days, from: K.from, to: K.to }, whenLabel: windowLabel({ days: K.days, from: K.from, to: K.to }) }, sh); }
@@ -5675,7 +5675,14 @@
     return finish(s, ok('Keep going! This life now runs with no end date.'));
   }
 
-  var CHALLENGE_ID = /^\d{4}-W\d{2}$/;
+  // Weekly Lagos (2026-W44, 4 game weeks), Monthly Lagos (2026-M11, 12 game weeks) and Yearly Lagos (2026-Y, 48 game
+  // weeks): everybody plays the same seed for that real week, month or year.
+  var CHALLENGE_ID = /^(\d{4}-W\d{2}|\d{4}-M\d{2}|\d{4}-Y)$/;
+  function challengeKind(id) { return /-M\d{2}$/.test(id) ? 'M' : /-Y$/.test(id) ? 'Y' : 'W'; }
+  function challengeWeeks(id) { var k = challengeKind(id); return k === 'M' ? 12 : k === 'Y' ? 48 : CHALLENGE_WEEKS; }
+  function challengeName(id) { var k = challengeKind(id); return k === 'M' ? 'Monthly' : k === 'Y' ? 'Yearly' : 'Weekly'; }
+  function monthChallengeId(date) { return date.getUTCFullYear() + '-M' + String(date.getUTCMonth() + 1).padStart(2, '0'); }
+  function yearChallengeId(date) { return date.getUTCFullYear() + '-Y'; }
   var CHALLENGE_WEEKS = 4;
 
   // ISO-8601 week id for a real-world date, e.g. "2026-W41".
@@ -5723,7 +5730,7 @@
 
   function challengeShareText(s) {
     var title = s.job ? D.CAREERS[s.job.id].titles[s.job.level] : 'job hunting';
-    return 'Lasgidi Weekly ' + s.challenge.id + ' · ' + naira(netWorth(s)) + ' · ' + D.ORIGINS[s.origin].name + ', ' + title + '\n' + challengeSquares(s) + (s.over ? '' : ' (in progress)');
+    return 'Lasgidi ' + challengeName(s.challenge.id) + ' ' + s.challenge.id + ' · ' + naira(netWorth(s)) + ' · ' + D.ORIGINS[s.origin].name + ', ' + title + '\n' + challengeSquares(s) + (s.over ? '' : ' (in progress)');
   }
 
   function shareText(s) {
@@ -5940,7 +5947,7 @@
     weatherOn: weatherOn, weatherNow: weatherNow, weatherForecast: weatherForecast,
     districtCity: districtCity, cityOf: cityOf, monthIndex: monthIndex, inWindow: inWindow, intercityOptions: intercityOptions, intercity: recorded('ic', intercity), flightQuote: flightQuote, flyClass: recorded('fc', flyClass), clubMember: clubMember, clubQuote: clubQuote, joinClub: recorded('jc', joinClub), clubActOptions: clubActOptions, clubAct: recorded('ca', clubAct), hpInfo: hpInfo, hpBuild: recorded('hb', hpBuild), roomIn: roomIn, roomBlock: roomBlock, roomEnter: recorded('rme', roomEnter), roomSpot: recorded('rms', roomSpot), roomLeave: recorded('rml', roomLeave), roomNightInfo: roomNightInfo, roomNight: recorded('rn', roomNight), roomHangBlock: roomHangBlock, passportInfo: passportInfo, localsInfo: localsInfo, roomFee: roomFee, roomHang: recorded('rh', roomHang), fishInfo: fishInfo, buyRod: recorded('fr', buyRod), fish: recorded('fi', fish), sellFish: recorded('fsl', sellFish), cookFish: recorded('fk', cookFish), cruiseAboard: cruiseAboard, cruiseFare: cruiseFare, cruiseBlock: cruiseBlock, cruiseBoard: recorded('cb', cruiseBoard), cruiseSpot: recorded('cs', cruiseSpot), cruiseLeave: recorded('cl', cruiseLeave), wwQuote: wwQuote, planWhiteWedding: recorded('ww', planWhiteWedding), wwDayBlock: wwDayBlock, holdWhiteWedding: recorded('wh', holdWhiteWedding), jetQuote: jetQuote, flyJet: recorded('fj', flyJet), chopperQuote: chopperQuote, chopperTo: recorded('ch', chopperTo), ownsJet: ownsJet,
     gemDayId: gemDayId, gemsFor: gemsFor, gemsFound: gemsFound, nextGemPrize: nextGemPrize, collectGem: recorded('gm', collectGem), GEM_COUNT: GEM_COUNT,
-    challengeId: challengeId, challengeEntry: challengeEntry, keepPlaying: recorded('kg', keepPlaying, true), verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
+    challengeId: challengeId, challengeKind: challengeKind, challengeWeeks: challengeWeeks, challengeName: challengeName, monthChallengeId: monthChallengeId, yearChallengeId: yearChallengeId, challengeEntry: challengeEntry, keepPlaying: recorded('kg', keepPlaying, true), verifyChallenge: verifyChallenge, challengeShareText: challengeShareText, CHALLENGE_WEEKS: CHALLENGE_WEEKS,
     migrate: migrate, advise: advise, lifeSummary: lifeSummary, fameEntry: fameEntry, checkFame: checkFame, scoreOf: scoreOf, nextShiftStart: nextShiftStart, alarmMins: alarmMins, minutesUntilRent: minutesUntilRent, shareText: shareText, route: route,
     CATEGORY_NAMES: CATEGORY_NAMES, category: category, SCHEMA: SCHEMA,
     _advance: advance, _post: post
