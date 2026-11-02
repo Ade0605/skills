@@ -39,6 +39,7 @@ jobs:
           cp -r src vendor ../_site/
           if [ -d img ]; then cp -r img ../_site/; fi
           cp dist/lasgidi.html ../_site/play.html
+          node tools/build-guide.js ../_site/guide.html
           touch ../_site/.nojekyll
           if [ -n "${{ vars.LASGIDI_DOMAIN }}" ]; then echo "${{ vars.LASGIDI_DOMAIN }}" > ../_site/CNAME; fi
           # Online features (optional): your Supabase project's URL and public anon key, from repository variables.
