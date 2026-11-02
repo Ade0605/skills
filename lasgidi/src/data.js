@@ -2762,6 +2762,32 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       Object.assign(act('bot_canopy', 'Do the canopy walk in the trees', 60, 4000, 0, { fun: 18, stress: -8 }, { fitness: 1 }, { from: 8, to: 17 }), { minRules: 54 }),
       Object.assign(act('bot_walk', 'Walk the shady trails', 60, 1000, 0, { stress: -14, fun: 6 }, null, { from: 7, to: 18 }), { minRules: 54 }),
       Object.assign(act('bot_picnic', 'A picnic on the lawns', 120, 5000, 0, { hunger: 26, social: 16, fun: 10 }, null, { days: [5, 6], from: 11, to: 17 }), { minRules: 54 })
+    ]],
+    // Rules 55: more Dubai and Cape Town.
+    ['dxb_motf', '⭕', 'Museum of the Future', 'outdoors', 'dome', 'dxb_downtown', 18.6, 14.6, 'motf', 'A silver ring of a building wrapped in Arabic calligraphy, with the future of cities, space and health inside.', [
+      Object.assign(act('mof_visit', 'Tour the museum\'s floors of the future', 120, aed(149), 0, { fun: 24, stress: -4 }, { tech: 1 }, { from: 10, to: 21 }), { minRules: 55 }),
+      Object.assign(act('mof_photo', 'Photograph the calligraphy on the ring at night', 30, 0, 0, { fun: 10 }, null, { from: 18, to: 24 }), { minRules: 55 }),
+      Object.assign(act('mof_garden', 'Walk the green hill round the base', 30, 0, 0, { stress: -6, fun: 4 }, null, { from: 7, to: 23 }), { minRules: 55 })
+    ]],
+    ['dxb_fahidi', '🕌', 'Al Fahidi old quarter', 'outdoors', 'dome', 'dxb_creek', 21.2, 6.2, 'fahidi', 'Old Dubai by the creek: sand-coloured houses, wind towers, quiet lanes, small museums and cafés.', [
+      Object.assign(act('fah_walk', 'Wander the lanes under the wind towers', 60, 0, 0, { fun: 12, stress: -10 }, null, { from: 8, to: 22 }), { minRules: 55 }),
+      Object.assign(act('fah_coffee', 'Arabic coffee and dates in a courtyard café', 30, aed(25), 0, { hunger: 12, fun: 8 }, null, { from: 9, to: 22 }), { minRules: 55 }),
+      Object.assign(act('fah_museum', 'Visit the old fort museum', 60, aed(3), 0, { fun: 10 }, { charisma: 1 }, { days: [0, 1, 2, 3, 5, 6], from: 9, to: 20 }), { minRules: 55 })
+    ]],
+    ['ctn_goodhope', '🏰', 'Castle of Good Hope', 'culture', 'frame', 'ctn_citybowl', 18.2, 6.6, 'castle', 'The old five-pointed stone fort in the city centre, the oldest building in South Africa. Its museum tells the hard history too.', [
+      Object.assign(act('cgh_tour', 'A guided tour of the castle and its museum', 90, zar(50), 0, { fun: 8, stress: 4 }, { charisma: 1 }, { from: 9, to: 16 }), { minRules: 55 }),
+      Object.assign(act('cgh_guard', 'Watch the changing of the guard and the key ceremony', 30, 0, 0, { fun: 12 }, null, { days: [0, 1, 2, 3, 4], from: 10, to: 12 }), { minRules: 55 }),
+      Object.assign(act('cgh_walls', 'Walk the walls and the bastions', 45, zar(50), 0, { fun: 8, stress: -6 }, null, { from: 9, to: 16 }), { minRules: 55 })
+    ]],
+    ['ctn_signal', '🌅', 'Signal Hill lookout', 'outdoors', 'frame', 'ctn_bokaap', 10.8, 6.2, null, 'The low hill above the city: sunset over the sea, picnics on the grass and the noon gun.', [
+      Object.assign(act('sig_sunset', 'Watch the sunset over the Atlantic', 60, 0, 0, { fun: 16, stress: -12 }, null, { from: 17, to: 21 }), { minRules: 55 }),
+      Object.assign(act('sig_gun', 'Hear the noon gun fire', 30, 0, 0, { fun: 8 }, null, { days: [0, 1, 2, 3, 4, 5], from: 11, to: 13 }), { minRules: 55 }),
+      Object.assign(act('sig_picnic', 'A picnic on the hill with friends', 120, zar(120), 0, { hunger: 24, social: 16, fun: 10 }, null, { from: 15, to: 21 }), { minRules: 55 })
+    ]],
+    ['ctn_greenpoint', '🏟️', 'Green Point Park', 'outdoors', 'frame', 'ctn_waterfront', 12.8, 3.8, null, 'A big urban park beside the stadium: a lake, a biodiversity garden, outdoor gyms and kids\' play areas.', [
+      Object.assign(act('gpp_run', 'Run round the lake and the stadium', 45, 0, 0, { energy: -10, stress: -10 }, { fitness: 1 }, { from: 6, to: 20 }), { minRules: 55 }),
+      Object.assign(act('gpp_garden', 'Walk the biodiversity garden', 45, 0, 0, { fun: 8, stress: -8 }, null, { from: 7, to: 19 }), { minRules: 55 }),
+      Object.assign(act('gpp_braai', 'A weekend braai with friends on the lawns', 150, zar(200), 0, { hunger: 36, social: 20, fun: 12 }, null, { days: [5, 6], from: 11, to: 19 }), { minRules: 55 })
     ]]
   ].forEach(function (q) {
     var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^cc_/.test(q[5]) ? 'capecoast' : /^ldn_/.test(q[5]) ? 'london' : /^dxb_/.test(q[5]) ? 'dubai' : /^ctn_/.test(q[5]) ? 'capetown' : 'lagos'), text: q[9] };
@@ -3093,6 +3119,30 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     link_bridge: [
       { id: 'fest_marathon_water', label: 'Hand out water at a marathon station', mins: 240, fx: { social: 12, energy: -10 }, xp: { charisma: 1 }, fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 12 } },
       { id: 'fest_marathon_cheer', label: 'Cheer the runners on the bridge', mins: 60, fx: { fun: 6, social: 4 }, fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 12 } }
+    ],
+    // Rules 55: festival days in Dubai, Cape Town, Kumasi and Cape Coast (traditional festivals keep their names; others are generic).
+    dxb_burj: [
+      { id: 'nye_burj', label: 'New Year\'s Eve: fireworks off the tower and the fountain show', mins: 180, fx: { fun: 34, social: 14, stress: -8 }, event: true, fest: true, minRules: 55, when: { months: [11], wk: [3], days: [2, 3, 4, 5, 6], from: 20, to: 24 } }
+    ],
+    dxb_gold: [
+      { id: 'dws_deals', label: 'Winter shopping festival: hunt for gold deals and raffle tickets', mins: 90, cost: aed(60), fx: { fun: 16, social: 6 }, event: true, fest: true, minRules: 55, when: { months: [0], wk: [0, 1, 2], from: 10, to: 23 } },
+      { id: 'dws_fireworks', label: 'Winter shopping festival: fireworks over the creek', mins: 45, fx: { fun: 18, social: 6 }, event: true, fest: true, minRules: 55, when: { months: [0], wk: [0, 1, 2], days: [3, 4, 5], from: 20, to: 23 } }
+    ],
+    ctn_bokaap_st: [
+      { id: 'mnp_watch', label: 'New Year minstrel parade: troupes in satin and sequins dance through the city', mins: 180, fx: { fun: 30, social: 16 }, event: true, fest: true, minRules: 55, when: { months: [0], wk: [0], from: 10, to: 19 } },
+      { id: 'mnp_join', label: 'New Year minstrel parade: march and dance with a troupe', mins: 180, cost: zar(150), fx: { fun: 32, social: 20, energy: -16 }, fest: true, minRules: 55, when: { months: [0], wk: [0], days: [5, 6], from: 11, to: 18 } }
+    ],
+    ctn_vawf: [
+      { id: 'cjz_night', label: 'Cape jazz weekend: two nights of jazz on the waterfront', mins: 210, cost: zar(450), fx: { fun: 34, social: 14, energy: -8 }, event: true, fest: true, minRules: 55, when: { months: [2], wk: [3], days: [4, 5], from: 19, to: 24 } },
+      { id: 'cjz_free', label: 'Cape jazz weekend: the free concert in the square', mins: 120, fx: { fun: 22, social: 10 }, event: true, fest: true, minRules: 55, when: { months: [2], wk: [3], days: [3], from: 17, to: 21 } }
+    ],
+    kum_culture: [
+      { id: 'kcf_fair', label: 'Kente and crafts fair: weavers, carvers and adinkra printers', mins: 90, cost: 3000, fx: { fun: 18, social: 8 }, xp: { craft: 1 }, event: true, fest: true, minRules: 55, when: { months: [7], wk: [1], from: 9, to: 18 } },
+      { id: 'kcf_stall', label: 'Kente and crafts fair: help on a weaver\'s stall', mins: 300, earn: 2400, fx: { energy: -14, social: 8 }, xp: { craft: 1 }, gig: true, fest: true, minRules: 55, when: { months: [7], wk: [1], days: [4, 5], from: 9, to: 18 } }
+    ],
+    cc_elmina_castle: [
+      { id: 'bkt_regatta', label: 'Bakatue: the chiefs\' procession and the canoe regatta on the lagoon', mins: 180, fx: { fun: 30, social: 18 }, event: true, fest: true, minRules: 55, when: { months: [6], wk: [0], days: [1], from: 9, to: 17 } },
+      { id: 'bkt_sell', label: 'Bakatue: sell kenkey and fried fish to the crowds', mins: 240, earn: 2400, fx: { energy: -14, social: 8 }, gig: true, fest: true, minRules: 55, when: { months: [6], wk: [0], days: [1], from: 8, to: 17 } }
     ],
     // Rules 54: festival weeks in Abuja and Port Harcourt (names made up or generic).
     abj_eagle: [
