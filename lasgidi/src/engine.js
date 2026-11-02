@@ -113,7 +113,9 @@
   // 54 adds festival weeks in Abuja and Port Harcourt, and new places in London and Accra.
   // 55 adds festival days in Dubai, Cape Town, Kumasi and Cape Coast, and new places in Dubai and Cape Town.
   // 56 adds five dream cars at the dealers: a 6x6, a V12 roadster, a sharper hypercar, a V12 coupé and an electric coupé.
-  var RULES = 56;
+  // 57 adds everyday life: moodlets, groceries and home cooking from recipes, wall and floor finishes, daily wishes with
+  // points and perks.
+  var RULES = 57;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -125,6 +127,7 @@
   var AJO_MEMBERS = 6;
 
   var ACHIEVEMENTS = {
+    home_chef: 'Home chef: cooked 20 meals from your own pantry',
     first_pay:   'First alert: got paid for a shift',
     millionaire: 'Millionaire: ₦1m net worth',
     sharp:       'Sharp guy: ignored a scam text',
@@ -386,16 +389,19 @@
     if (!fx) return;
     scale = scale == null ? 1 : scale;
     Object.keys(fx).forEach(function (k) {
-      s.needs[k] = clamp(s.needs[k] + fx[k] * scale, 0, 100);
+      var v = fx[k] * scale; if (k === 'stress' && v > 0 && perkOn(s, 'calm')) v *= 0.5;
+      s.needs[k] = clamp(s.needs[k] + v, 0, 100);
     });
   }
   function mood(s) {
     var sum = 0;
     NEEDS.forEach(function (k) { sum += s.needs[k]; });
-    return sum / NEEDS.length;
+    var m = sum / NEEDS.length;
+    if (s.rules >= 57) m = clamp(m + moodletSum(s), 0, 100);
+    return m;
   }
   function performance(s) {
-    return clamp((mood(s) / 100 * (1 - s.needs.stress / 250) + 0.25) * (s.sick ? 0.8 : 1), 0.3, 1.15);
+    return clamp((mood(s) / 100 * (1 - s.needs.stress / 250) + 0.25) * (s.sick ? 0.8 : 1) * (perkOn(s, 'sharp') ? 1.1 : 1), 0.3, 1.15);
   }
 
   /* ---------- world state ---------- */
@@ -571,6 +577,7 @@
     if (hd.daily) applyFx(s, hd.daily); // perks of homes added after v0.6
     var fd = furnitureDaily(s);
     if (fd) applyFx(s, fd);
+    if (s.rules >= 57 && s.decor) { var dc = (D.WALLS[s.decor.wall] || {}).calm + (D.FLOORS[s.decor.floor] || {}).calm; if (dc) applyFx(s, { stress: -dc }); }
     (s.staff || []).forEach(function (id) { var St = D.STAFF[id]; if (!St.needsCar || rideCar(s)) applyFx(s, St.daily); });
     (s.pets || []).forEach(function (id) { applyFx(s, D.PETS[id].daily); });
     matureBonds(s);
@@ -715,6 +722,7 @@
   function collectRent(s) {
     if (!s.rentRate) return;
     var due = rentShare(s);
+    if (s.rules >= 57 && s.perks && s.perks.rentcut) { due = roundTo(due * 0.85, 50); s.perks.rentcut = 0; }
     if (pay(s, due, 'Rent: ' + homeDef(s).name + (due < s.rentRate ? ' (your half)' : ''))) {
       s.rentLate = 0;
       log(s, 'Rent paid. Landlord is smiling.', 'info');
@@ -1305,7 +1313,7 @@
     var a = availableActions(s, true).filter(function (x) { return x.id === id; })[0];
     if (!a) return fail('You cannot do that here.');
     if (a.disabled) return fail(a.disabled);
-    if (a.special === 'shift') return workShift(s, a);
+    if (a.special === 'shift') { var wr = workShift(s, a); if (wr && wr.ok && s.rules >= 57) { wishCheck(s, '__shift'); if (s.job) addMoodlet(s, 'alert'); } return wr; }
     if (a.minigame) return fail('Play the run first.');
     if (a.alarm) a.label = 'Sleep';
     if (a.price && !pay(s, a.price, a.label + (a.gen ? ' (incl. gen fuel)' : ''))) return fail('Not enough money.');
@@ -1328,6 +1336,7 @@
     if (a.sport) { var sp = s.stats.sports = s.stats.sports || {}; sp[a.sport] = (sp[a.sport] || 0) + 1; if (Object.keys(sp).length >= 8) unlock(s, 'allrounder'); }
     if (a.dec && s.rules >= 14 && (s.rules >= 34 ? m0 === 11 : isDecember(s))) { s.stats.decEvents = (s.stats.decEvents || 0) + 1; if (s.stats.decEvents >= 6) unlock(s, 'detty_legend'); }
     addXp(s, a.xp);
+    if (s.rules >= 57) life57(s, a);
     if (a.xp && a.xp.fitness && outfitTags(s).gym) addXp(s, { fitness: 1 }); // gym kit
 
     if (a.earn) {
@@ -2210,7 +2219,7 @@
       }
       o.traffic = Math.round(f * 10) / 10;
       var spd = ride ? Math.max(m.speed, ride.speed) : m.speed;
-      o.mins = Math.max(STEP, ceilTo(m.wait + km / spd * 60 * f, STEP));
+      o.mins = Math.max(STEP, ceilTo(m.wait + km / spd * 60 * f * (perkOn(s, 'fastride') ? 0.8 : 1), STEP));
       var RL = m.stops === 'rail' ? D.RAIL_LINES[railLine(from, dest, s)] : null, rh = RL && RL.hours || [6, 21];
       if (m.stops === 'rail' && !o.disabled && (hour(s) < rh[0] || minuteOfDay(s) + o.mins > rh[1] * 60)) o.disabled = RL && RL.hours ? 'The Tube runs ' + rh[0] + ':00 to midnight' : 'Trains run 06:00 to 21:00';
       var fare;
@@ -2236,6 +2245,9 @@
   }
 
   function travel(s, dest, mode) {
+    var t0 = s.t, tr = travel0(s, dest, mode); if (tr && tr.ok && s.rules >= 57 && /^(cab|danfo|keke|car|okada|brt)$/.test(mode) && s.t - t0 >= 60) addMoodlet(s, 'go_slow'); return tr;
+  }
+  function travel0(s, dest, mode) {
     s.alerts = []; var d0 = day(s);
     if (!D.DISTRICTS[dest]) return fail('Unknown place.');
     var o = travelOptions(s, dest).filter(function (x) { return x.mode === mode; })[0];
@@ -2673,6 +2685,7 @@
     if (!(amt > 0) || amt > s.cash) return fail('You only have ' + naira(s.cash) + ' in cash.');
     s.alerts = [];
     post(s, 'cash', -amt, 'Transfer'); post(s, 'bank', amt, 'Transfer');
+    if (s.rules >= 57) wishCheck(s, '__deposit');
     return ok('Deposited ' + naira(amt) + '.');
   }
   function withdraw(s, amt) {
@@ -3699,6 +3712,7 @@
     var t = 0;
     (s.wardrobe || []).forEach(function (w) { t += D.CLOTHES[w.id].status || 0; });
     (s.items || []).forEach(function (it) { t += D.FURNITURE[it.id].status || 0; });
+    if (s.rules >= 57 && s.decor) t += ((D.WALLS[s.decor.wall] || {}).status || 0) + ((D.FLOORS[s.decor.floor] || {}).status || 0);
     (s.vehicles || []).forEach(function (v) { t += D.VEHICLES[v.id].status || 0; });
     if (s.phone) t += D.PHONES[s.phone].status;
     (s.properties || []).forEach(function (p) { t += (D.PROPERTIES[p.id] && D.PROPERTIES[p.id].status) || 0; });
@@ -3706,6 +3720,100 @@
     return t;
   }
 
+  /* ---------- rules 57: moodlets, groceries and cooking, decor, wishes and perks ---------- */
+  function perkOn(s, id) { return s.rules >= 57 && !!s.perks && (id === 'rentcut' ? !!s.perks.rentcut : (s.perks[id] || 0) > s.t); }
+  function addMoodlet(s, id) {
+    var M = D.MOODLETS[id]; if (!M || !(s.rules >= 57) || !M.hrs) return;
+    s.moodlets = (s.moodlets || []).filter(function (m) { return m.id !== id && m.until > s.t; }); s.moodlets.push({ id: id, until: s.t + M.hrs * 60 });
+  }
+  // Active moodlets, including the ones that come from the state of things (late rent, no light at home).
+  function moodlets(s) {
+    if (!(s.rules >= 57)) return [];
+    var out = (s.moodlets || []).filter(function (m) { return m.until > s.t && D.MOODLETS[m.id]; }).map(function (m) { return { id: m.id, left: m.until - s.t }; });
+    if (s.rentLate > 0) out.push({ id: 'rent_worry', left: 0 });
+    if (!s.power && s.loc === homeDistrict(s) && !furnitureGen(s)) out.push({ id: 'no_light', left: 0 });
+    return out;
+  }
+  function moodletSum(s) { var t = 0; moodlets(s).forEach(function (m) { t += D.MOODLETS[m.id].mood; }); return t; }
+  // After any action: moodlets and wishes.
+  function life57(s, a) {
+    var lbl = String(a.label || '').toLowerCase();
+    if (a.special === 'sleep') addMoodlet(s, s.power || furnitureGen(s) ? 'well_rested' : 'bad_night');
+    if (a.fx && a.fx.hunger >= 50) addMoodlet(s, 'belle_full');
+    if (a.xp && a.xp.fitness) addMoodlet(s, 'workout');
+    if (/owambe|wedding|party/.test(lbl)) addMoodlet(s, 'owambe');
+    if (a.earn && a.earn >= 15000) addMoodlet(s, 'alert');
+    if (a.special === 'sleep' || a.special === 'nap') wishCheck(s, '__sleep');
+    if (a.special === 'cook') wishCheck(s, 'cook');
+    wishCheck(s, lbl);
+  }
+  function wishHash(s, d, n) { var h = 2166136261, str = String(s.seed) + ':wish:' + d + ':' + n; for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0; return h; }
+  function wishesToday(s) {
+    if (!(s.rules >= 57)) return [];
+    var d = day(s), picks = [], done = (s.wishDone && s.wishDone.d === d) ? s.wishDone.ids : [];
+    for (var n = 0; picks.length < 3 && n < 40; n++) { var w = D.WISHES[wishHash(s, d, n) % D.WISHES.length]; if (picks.indexOf(w) < 0) picks.push(w); }
+    return picks.map(function (w) { return { id: w.id, text: w.text, icon: w.icon, pts: w.pts, done: done.indexOf(w.id) >= 0 }; });
+  }
+  function wishCheck(s, what) {
+    if (!(s.rules >= 57)) return;
+    var d = day(s); if (!s.wishDone || s.wishDone.d !== d) s.wishDone = { d: d, ids: [] };
+    wishesToday(s).forEach(function (w) {
+      if (w.done) return; var W = D.WISHES.filter(function (x) { return x.id === w.id; })[0];
+      var hit = W.match.charAt(0) === '_' ? what === W.match : W.match.split('|').some(function (p) { return what.indexOf(p) >= 0; });
+      if (!hit) return;
+      s.wishDone.ids.push(w.id); s.points = (s.points || 0) + w.pts; log(s, '✨ Wish come true: ' + w.text + ' (+' + w.pts + ' points).', 'good');
+      if (s.wishDone.ids.length === 3) { addMoodlet(s, 'wishes_met'); s.points += 20; log(s, '✨ All three wishes today: +20 bonus points.', 'ach'); }
+    });
+  }
+  function redeemPerk(s, id) {
+    var P = D.PERKS[id]; if (!P || !(s.rules >= 57)) return fail('No such perk.');
+    if ((s.points || 0) < P.pts) return fail('You need ' + P.pts + ' points (you have ' + (s.points || 0) + ').');
+    s.perks = s.perks || {}; if (id === 'rentcut') { if (s.perks.rentcut) return fail('You already have a rent discount waiting.'); s.perks.rentcut = 1; }
+    else s.perks[id] = Math.max(s.perks[id] || 0, s.t) + P.days * 1440;
+    s.points -= P.pts; s.alerts = [];
+    return ok(P.icon + ' ' + P.name + ': ' + P.text);
+  }
+  // Groceries: at a market (cheaper) or a supermarket, the places that sell foodstuff.
+  var GROC_AT = null;
+  function groceryShop(s) {
+    if (!(s.rules >= 57)) return null;
+    if (!GROC_AT) { GROC_AT = {}; Object.keys(D.PLACE_ACTIONS).forEach(function (d) { (D.PLACE_ACTIONS[d] || []).forEach(function (a) { if (a.special === 'pantry7') GROC_AT[d] = /super|mall/i.test(a.label) ? 'super' : 'market'; }); }); }
+    var k = GROC_AT[s.loc]; return k ? { kind: k, mult: k === 'market' ? 0.8 : 1.15 } : null;
+  }
+  function groceryPrice(s, id) { var G = D.GROCERIES[id], sh = groceryShop(s); return G && sh ? Math.max(50, roundTo(price(s, G.price) * sh.mult, 50)) : null; }
+  function buyGroceries(s, id, n) {
+    var G = D.GROCERIES[id]; n = Math.max(1, Math.min(10, n | 0));
+    if (!G) return fail('No such item.'); var sh = groceryShop(s); if (!sh) return fail('Go to a market or a supermarket to buy foodstuff.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    var cost = groceryPrice(s, id) * n; s.alerts = [];
+    if (!pay(s, cost, 'Groceries: ' + n + ' × ' + G.name)) return fail(n + ' × ' + G.pack + ' of ' + G.name.toLowerCase() + ' costs ' + naira(cost) + '.');
+    s.groc = s.groc || {}; s.groc[id] = (s.groc[id] || 0) + G.portions * n; advance(s, 15); wishCheck(s, 'market');
+    return finish(s, ok(G.icon + ' ' + n + ' × ' + G.pack + ' of ' + G.name.toLowerCase() + ' (' + G.portions * n + ' portions) is in your kitchen.'));
+  }
+  function canCook(s, rid) {
+    var R = D.RECIPES[rid]; if (!R) return 'No such recipe.'; if (!(s.rules >= 57)) return 'Not in this life.';
+    if (s.loc !== homeDistrict(s)) return 'Cook at home.'; if (s.pending.length) return 'Decide on the open event first.';
+    var miss = Object.keys(R.needs).filter(function (k) { return ((s.groc || {})[k] || 0) < R.needs[k]; });
+    return miss.length ? 'You need ' + miss.map(function (k) { return D.GROCERIES[k].name.toLowerCase(); }).join(', ') : null;
+  }
+  function cookRecipe(s, rid) {
+    var why = canCook(s, rid); if (why) return fail(why); var R = D.RECIPES[rid]; s.alerts = [];
+    Object.keys(R.needs).forEach(function (k) { s.groc[k] -= R.needs[k]; });
+    advance(s, R.mins); applyFx(s, R.fx); addXp(s, R.xp); addMoodlet(s, 'home_cooked'); if (R.fx.hunger >= 50) addMoodlet(s, 'belle_full'); wishCheck(s, 'cook');
+    s.stats.cooked = (s.stats.cooked || 0) + 1; if (s.stats.cooked >= 20) unlock(s, 'home_chef');
+    return finish(s, ok(R.icon + ' ' + R.name + ' is ready. ' + (R.fx.hunger >= 60 ? 'Belle don full.' : 'That will hold you.')));
+  }
+  // Walls and floors: priced by the size of your home.
+  function decorPrice(s, kind, id) { var T = kind === 'wall' ? D.WALLS : D.FLOORS, X = T[id], ht = D.HOME_TYPES && D.HOME_TYPES[homeDef(s).type], sz = homeDef(s).type === 'room' || homeDef(s).type === 'share' ? 0.6 : homeDef(s).type === 'selfcon' ? 0.8 : homeDef(s).type === 'duplex' || homeDef(s).type === 'mansion' ? 2.2 : 1.2; return X ? roundTo(price(s, X.price) * sz, 100) : null; }
+  function setDecor(s, kind, id) {
+    if (!(s.rules >= 57)) return fail('Not in this life.'); var T = kind === 'wall' ? D.WALLS : kind === 'floor' ? D.FLOORS : null; if (!T || !T[id]) return fail('No such finish.');
+    s.decor = s.decor || { wall: 'plain', floor: 'cement' }; if (s.decor[kind] === id) return fail('That is what you have.');
+    var cost = decorPrice(s, kind, id); s.alerts = [];
+    if (cost && !pay(s, cost, (kind === 'wall' ? 'Walls: ' : 'Floor: ') + T[id].name)) return fail(T[id].name + ' costs ' + naira(cost) + ' for your place.');
+    s.decor[kind] = id; advance(s, 60);
+    return finish(s, ok((kind === 'wall' ? '🎨 New walls: ' : '🧱 New floor: ') + T[id].name + '.'));
+  }
+  function life57Info(s) { return s.rules >= 57 ? { moodlets: moodlets(s), wishes: wishesToday(s), points: s.points || 0, perks: s.perks || {}, groc: s.groc || {}, shop: groceryShop(s), decor: s.decor || { wall: 'plain', floor: 'cement' } } : null; }
   function buyItem(s, id) {
     var f = D.FURNITURE[id];
     if (!f) return fail('No such item.');
@@ -5938,7 +6046,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost, rentSeaPlots: recorded('sr', rentSeaPlots), seaRentCost: seaRentCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    adoptBaby: recorded('ab', adoptBaby), shortState: shortState, placeBet: recorded('bt', placeBet), highLow: recorded('hz', highLow), betInfo: betInfo, BET_LEAGUES: BET_LEAGUES, changeGoal: recorded('cg', changeGoal), giftOut: recorded('go', giftOut), giftMax: giftMax, giftOutAny: recorded('gq', giftOutAny), giftInAny: recorded('gj', giftInAny), startCashFor: startCashFor, originText: originText, drivenVehicle: drivenVehicle, giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
+    adoptBaby: recorded('ab', adoptBaby), shortState: shortState, placeBet: recorded('bt', placeBet), highLow: recorded('hz', highLow), betInfo: betInfo, BET_LEAGUES: BET_LEAGUES, changeGoal: recorded('cg', changeGoal), giftOut: recorded('go', giftOut), giftMax: giftMax, giftOutAny: recorded('gq', giftOutAny), giftInAny: recorded('gj', giftInAny), startCashFor: startCashFor, originText: originText, drivenVehicle: drivenVehicle, moodlets: moodlets, wishesToday: wishesToday, redeemPerk: recorded('pk', redeemPerk), buyGroceries: recorded('gr', buyGroceries), cookRecipe: recorded('ck', cookRecipe), canCook: canCook, groceryShop: groceryShop, groceryPrice: groceryPrice, setDecor: recorded('dc', setDecor), decorPrice: decorPrice, life57Info: life57Info, perkOn: perkOn, giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
     buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
     decRates: decRates, luxuryCar: luxuryCar, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), stageShow: recorded('st', stageShow), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,

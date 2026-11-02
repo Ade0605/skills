@@ -3262,9 +3262,97 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     craft: [{ icon: '🧵', title: 'A rush order for aso-ebi', text: 'Twenty outfits for Saturday, and it is Wednesday.', risky: 'Take it and work late', safe: 'Take only ten' }, { icon: '🔧', title: 'The machine broke down', text: 'The job is due tomorrow.', risky: 'Fix it yourself', safe: 'Wait for the mechanic' }],
     hustle: [{ icon: '📦', title: 'A big buyer wants credit', text: 'They promise to pay next week.', risky: 'Give them the goods', safe: 'Cash only' }, { icon: '🚚', title: 'Your supplier raised prices', text: 'Overnight, by 20%.', risky: 'Negotiate hard', safe: 'Pay and move on' }]
   };
+  // ---- Rules 57: everyday life ----
+  // Moodlets: short feelings that lift or drag your mood for a few hours (mood is the average of your needs, plus these).
+  var MOODLETS = {
+    belle_full:  { name: 'Belle full', icon: '😋', mood: 6, hrs: 4, text: 'A proper meal. Life is sweet.' },
+    go_slow:     { name: 'Go-slow wahala', icon: '🚗', mood: -6, hrs: 3, text: 'An hour or more in traffic.' },
+    well_rested: { name: 'Well rested', icon: '😴', mood: 5, hrs: 8, text: 'A full night with light and a fan.' },
+    bad_night:   { name: 'Bad night', icon: '🦟', mood: -6, hrs: 6, text: 'No light, heat and mosquitoes.' },
+    alert:       { name: 'Bank alert!', icon: '💸', mood: 8, hrs: 6, text: 'Money entered. You are smiling.' },
+    owambe:      { name: 'Owambe high', icon: '💃🏾', mood: 8, hrs: 6, text: 'You danced, you ate, you were sprayed.' },
+    workout:     { name: 'Endorphins', icon: '💪🏾', mood: 4, hrs: 4, text: 'A good sweat clears the head.' },
+    home_cooked: { name: 'Mama\'s recipe', icon: '🍲', mood: 5, hrs: 6, text: 'You cooked it yourself, and it slapped.' },
+    wishes_met:  { name: 'All wishes met', icon: '✨', mood: 8, hrs: 12, text: 'Today went exactly how you wanted.' },
+    rent_worry:  { name: 'Rent worry', icon: '😟', mood: -8, hrs: 0, text: 'The rent is late. The landlord knows your face.' },
+    no_light:    { name: 'NEPA took light', icon: '🕯️', mood: -3, hrs: 0, text: 'The house is dark and hot.' }
+  };
+  // Groceries: foodstuff in packs of portions (a portion feeds one meal's share). Markets sell for less than supermarkets.
+  var GROCERIES = {
+    rice:     { name: 'Rice', icon: '🍚', pack: '5 kg bag', portions: 10, price: 9000 },
+    beans:    { name: 'Beans (oloyin)', icon: '🫘', pack: 'Paint bucket', portions: 8, price: 6000 },
+    garri:    { name: 'Garri', icon: '🥣', pack: 'Paint bucket', portions: 10, price: 4000 },
+    yam:      { name: 'Yam', icon: '🍠', pack: '2 tubers', portions: 6, price: 6000 },
+    noodles:  { name: 'Instant noodles', icon: '🍜', pack: 'Carton of 40', portions: 40, price: 14000 },
+    plantain: { name: 'Plantain', icon: '🍌', pack: 'Bunch', portions: 6, price: 3000 },
+    eggs:     { name: 'Eggs', icon: '🥚', pack: 'Crate of 30', portions: 15, price: 5500 },
+    tomato:   { name: 'Tomato and pepper', icon: '🍅', pack: 'Basket', portions: 8, price: 5000 },
+    oil:      { name: 'Palm or groundnut oil', icon: '🫙', pack: '2 litres', portions: 12, price: 4500 },
+    egusi:    { name: 'Egusi and leaves', icon: '🥬', pack: 'Bag', portions: 6, price: 4500 },
+    fish:     { name: 'Dried fish and stockfish', icon: '🐟', pack: 'Wrap', portions: 6, price: 6000 },
+    chicken:  { name: 'Chicken', icon: '🍗', pack: 'Whole bird', portions: 6, price: 8500 },
+    bread:    { name: 'Bread', icon: '🍞', pack: 'Agege loaf', portions: 4, price: 1500 },
+    spice:    { name: 'Seasoning and spices', icon: '🧂', pack: 'Pack', portions: 20, price: 2000 }
+  };
+  // Recipes cooked at home from the pantry: what goes in, how long it takes and how it feeds you.
+  var RECIPES = {
+    jollof:   { name: 'Party jollof', icon: '🍛', mins: 90, needs: { rice: 2, tomato: 1, oil: 1, spice: 1 }, fx: { hunger: 70, fun: 8 }, xp: { cooking: 3 } },
+    beans:    { name: 'Beans and dodo', icon: '🫘', mins: 75, needs: { beans: 2, plantain: 1, oil: 1 }, fx: { hunger: 70, fun: 4 }, xp: { cooking: 2 } },
+    eba:      { name: 'Eba and egusi soup', icon: '🥣', mins: 90, needs: { garri: 1, egusi: 1, fish: 1, oil: 1, tomato: 1 }, fx: { hunger: 80, fun: 6 }, xp: { cooking: 3 } },
+    yam_egg:  { name: 'Yam and egg sauce', icon: '🍳', mins: 45, needs: { yam: 1, eggs: 2, tomato: 1, oil: 1 }, fx: { hunger: 60, fun: 3 }, xp: { cooking: 2 } },
+    noodles:  { name: 'Noodles and egg', icon: '🍜', mins: 15, needs: { noodles: 2, eggs: 1 }, fx: { hunger: 40 }, xp: { cooking: 1 } },
+    pepsoup:  { name: 'Chicken pepper soup', icon: '🍲', mins: 60, needs: { chicken: 1, spice: 1, tomato: 1 }, fx: { hunger: 55, stress: -8 }, xp: { cooking: 2 } },
+    breakfast:{ name: 'Bread and fried egg', icon: '🍞', mins: 15, needs: { bread: 1, eggs: 1, oil: 1 }, fx: { hunger: 35 }, xp: { cooking: 1 } }
+  };
+  // Walls and floors for your home (the price grows with the size of the place); a small daily calm.
+  var WALLS = {
+    plain:   { name: 'Plain white paint', price: 0, color: '#eceae4', calm: 0 },
+    cream:   { name: 'Warm cream emulsion', price: 25000, color: '#efe2c6', calm: 1 },
+    sky:     { name: 'Sky blue emulsion', price: 25000, color: '#cfe0ea', calm: 1 },
+    sage:    { name: 'Sage green', price: 30000, color: '#c9d8c2', calm: 1 },
+    ankara:  { name: 'Ankara print wallpaper', price: 90000, color: '#e3a03a', calm: 2, pattern: 'ankara', status: 1 },
+    adire:   { name: 'Adire indigo wallpaper', price: 95000, color: '#3a5a8f', calm: 2, pattern: 'adire', status: 1 },
+    marble:  { name: 'Marble-effect panels', price: 240000, color: '#e9e6e0', calm: 2, status: 3 },
+    wood:    { name: 'Wood panelling', price: 300000, color: '#8a5a32', calm: 3, status: 3 }
+  };
+  var FLOORS = {
+    cement:   { name: 'Bare cement', price: 0, color: '#9a958c', calm: 0 },
+    rug:      { name: 'Rug over cement', price: 18000, color: '#a8584a', calm: 1 },
+    tiles:    { name: 'Ceramic tiles', price: 80000, color: '#d8d2c4', calm: 1 },
+    terrazzo: { name: 'Terrazzo', price: 140000, color: '#c9c1b2', calm: 2, status: 1 },
+    marble:   { name: 'Marble floor', price: 420000, color: '#ece9e2', calm: 3, status: 3 },
+    oak:      { name: 'Oak wood floor', price: 360000, color: '#a8784a', calm: 3, status: 2 }
+  };
+  // Daily wishes: three a day, picked from these by the date (the same for everyone on the same game day). Each has a
+  // pattern matched against what you do, and points you spend on perks.
+  var WISHES = [
+    { id: 'suya', text: 'Eat suya', icon: '🍢', match: 'suya', pts: 10 },
+    { id: 'cook', text: 'Cook at home', icon: '🍲', match: 'cook', pts: 15 },
+    { id: 'film', text: 'Watch a film', icon: '🎬', match: 'film|cinema|movie|nollywood|naijaflix', pts: 10 },
+    { id: 'pray', text: 'Go to church or the mosque', icon: '🙏🏾', match: 'church|mosque|service|jumat|worship|pray', pts: 10 },
+    { id: 'ball', text: 'Play or watch football', icon: '⚽', match: 'football|match|5-a-side|pitch', pts: 15 },
+    { id: 'market', text: 'Go to the market', icon: '🧺', match: 'market|foodstuff|grocer', pts: 10 },
+    { id: 'study', text: 'Learn something', icon: '📚', match: 'library|read|study|lesson|class|course|coding', pts: 15 },
+    { id: 'gym', text: 'Work out', icon: '🏋🏾', match: 'gym|jog|run |workout|fitness|swim', pts: 15 },
+    { id: 'dance', text: 'Go out dancing', icon: '💃🏾', match: 'dance|club|owambe|party|rave', pts: 15 },
+    { id: 'beach', text: 'Go to the beach', icon: '🏖️', match: 'beach|elegushi|tarkwa|coconut', pts: 15 },
+    { id: 'work', text: 'Do a full shift at work', icon: '💼', match: '__shift', pts: 20 },
+    { id: 'friends', text: 'Hang out with friends', icon: '🫂', match: 'friend|hang out|gist|chat with|visit', pts: 10 },
+    { id: 'save', text: 'Put money in the bank', icon: '🏦', match: '__deposit', pts: 10 },
+    { id: 'rest', text: 'Take a nap or a good sleep', icon: '😴', match: '__sleep', pts: 5 }
+  ];
+  // Perks bought with wish points.
+  var PERKS = {
+    fastride: { name: 'Shortcut king', icon: '🛣️', pts: 60, days: 7, text: 'Every ride in town is 20% quicker for 7 days.' },
+    rentcut:  { name: 'Landlord\'s favourite', icon: '🏠', pts: 90, text: 'Your next rent is 15% off.' },
+    sharp:    { name: 'On top of your game', icon: '🎯', pts: 70, days: 7, text: 'Work goes 10% better for 7 days.' },
+    calm:     { name: 'Peace of mind', icon: '🧘🏾', pts: 40, days: 3, text: 'Stress builds half as fast for 3 days.' }
+  };
+
   var DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   var DATA = {
+    MOODLETS: MOODLETS, GROCERIES: GROCERIES, RECIPES: RECIPES, WALLS: WALLS, FLOORS: FLOORS, WISHES: WISHES, PERKS: PERKS,
     SHORT_COURSES: SHORT_COURSES, WORK_DILEMMAS: WORK_DILEMMAS, DISTRICTS: DISTRICTS, ROADS: ROADS, FERRY_STOPS: FERRY_STOPS, BRT_STOPS: BRT_STOPS, RAIL_LINES: RAIL_LINES,
     OKADA_BAN: OKADA_BAN, MODES: MODES, HOMES: HOMES, HOME_TYPES: HOME_TYPES, SKILLS: SKILLS, SKILL_XP: SKILL_XP,
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,
