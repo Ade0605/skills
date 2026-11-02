@@ -120,7 +120,8 @@
   // 59 opens two Nigerian cities: Ibadan (coaches and the train, no airport) with UI, Bodija, Mapo Hall, Bower's
   // Tower, Cocoa House and Agodi Gardens; and Enugu, the Coal City, with Ogbete Market, Milliken Hill, the Ngwo pine
   // forest, Nike Lake and UNN at Nsukka. Each has homes, two careers, gigs, a hospital, a hotel and a festival.
-  var RULES = 59;
+  // 60 adds the Lagos–Ibadan standard-gauge train: Ebute-Metta (Yaba) to Moniya, morning and afternoon departures.
+  var RULES = 60;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -1904,9 +1905,11 @@
     if (far) { if (city === 'ldn' && visaState(s).status !== 'valid') fl.disabled = 'You need a valid UK visa (Phone → Travel)'; else if (city === 'ldn' && !visaLasts(s, fl.mins)) fl.disabled = 'Your UK visa runs out before you land';
       else if (city !== 'ldn' && C.visit && visaState(s, city).status !== 'valid') fl.disabled = 'You need a valid ' + UV.name + ' (Phone → Travel)'; else if (city !== 'ldn' && C.visit && !visaLasts(s, fl.mins, city)) fl.disabled = 'Your ' + UV.name + ' runs out before you land'; return [fl].map(function (o) { if (!o.disabled) { if (s.loc !== o.from && !o.fromHere) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name; else if (s.pending.length) o.disabled = 'Decide on the open event first'; else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost); } return o; }); }
     var legs = C.noAir || from.noAir ? [bus] : [fl, bus]; // rules 28: Cape Coast has no airport, coaches only
+    if (s.rules >= 60 && ((here === 'lagos' && city === 'ibadan') || (here === 'ibadan' && city === 'lagos'))) { var tr = { mode: 'train', name: 'Standard-gauge train', mins: 165, cost: price(s, 6000), from: here === 'lagos' ? 'yaba' : 'ib_ui', to: here === 'lagos' ? 'ib_ui' : 'yaba' }; cabTo(tr); legs = legs.concat([tr]); }
     legs.forEach(function (o) {
       if (s.loc !== o.from && !o.fromHere) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name;
       else if (o.mode === 'bus' && (h >= 20 || h < 5)) o.disabled = 'No night buses: the roads are not safe after dark';
+      else if (o.mode === 'train' && !(h === 7 || h === 15)) o.disabled = 'Trains leave at 8:00 and 16:00 (board from 7:00 and 15:00)';
       else if (s.pending.length) o.disabled = 'Decide on the open event first';
       else if (s.over) o.disabled = 'This Weekly Lagos is over';
       else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost);
@@ -1938,6 +1941,10 @@
         advance(s, mins);
         applyFx(s, { energy: -25, hygiene: -25, stress: 12, hunger: -20 });
       }
+    } else if (mode === 'train') {
+      // Rules 60: on time, air-conditioned, with a snack trolley. No checkpoints and no breakdowns.
+      advance(s, mins); applyFx(s, { energy: -6, stress: -4, fun: 6 });
+      msg = 'Air-conditioned and right on time. You watched Ogun State roll past the window.';
     } else {
       if (s.rules >= 24) s.transit = true; // already on the plane: the overstay check must not fly you home a second time
       advance(s, mins); delete s.transit;
