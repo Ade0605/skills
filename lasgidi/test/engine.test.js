@@ -3074,7 +3074,7 @@ test('rules 29: passport stamps the first time you are in each city; travel achi
   assert.ok(s.ach.ghana_tour); assert.ok(!s.ach.globetrotter);
   for (const c of ['ldn', 'dxb']) { s.loc = D.CITIES[c].airport; L.wait(s, 15); }
   assert.ok(s.ach.globetrotter); assert.ok(!s.ach.every_city);
-  for (const c of ['abuja', 'ph', 'ctn', 'ibadan', 'enugu']) { s.loc = D.CITIES[c].park; L.wait(s, 15); }
+  for (const c of ['abuja', 'ph', 'ctn', 'ibadan', 'enugu', 'calabar']) { s.loc = D.CITIES[c].park; L.wait(s, 15); }
   assert.ok(s.ach.every_city); const day0 = s.stamps.accra; s.loc = D.CITIES.accra.park; s.t += 1440; L.wait(s, 15); assert.equal(s.stamps.accra, day0, 'a stamp is kept from the first visit');
   const old = L.newGame({ seed: 2900, origin: 'nepo', goal: 'freestyle', rules: 28 }); while (old.pending.length) L.resolveChoice(old, 0); L.wait(old, 60);
   assert.equal(old.stamps, undefined); assert.equal(L.passport(old), null);
@@ -3965,5 +3965,20 @@ test('rules 60: the Lagos–Ibadan train runs at 8:00 and 16:00, on time, and re
   const r = L.intercity(s, 'ibadan', 'train'); assert.ok(r.ok, r.msg); while (s.pending.length) L.resolveChoice(s, 0);
   assert.equal(s.loc, 'ib_ui'); assert.ok(s.t - t0 >= 165);
   L.wait(s, 60); assert.ok(L.intercityOptions(s, 'lagos').find(o => o.mode === 'train').disabled, 'no train at 11:00');
+  const rp = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.equal(rp.loc, s.loc); assert.equal(rp.t, s.t); assert.equal(rp.cash + rp.bank, s.cash + s.bank);
+});
+
+test('rules 61: Calabar opens to new lives (fly or coach), with places, homes, careers and gigs; a trip replays; closed in rules 60', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 6101, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  assert.ok(!L.cityOpen(mk(60), 'calabar'));
+  const s = mk(); assert.deepEqual(L.intercityOptions(s, 'calabar').map(o => o.mode).sort(), ['bus', 'flight']);
+  const ds = Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === 'calabar'); assert.equal(ds.length, 7);
+  assert.ok(Object.values(D.CAREERS).filter(x => ds.includes(x.district)).length >= 2);
+  assert.ok(Object.values(D.HOMES).filter(h => !h.hidden && ds.includes(h.district)).length >= 4);
+  const pl = D.PLACES.filter(p => ds.includes(p.district)); assert.ok(pl.length >= 12);
+  for (const p of pl) assert.ok((D.CIVIC_ACTS[p.id] || []).length >= 3, p.id + ' has 3 things to do');
+  while (L.intercityOptions(s, 'calabar').find(o => o.mode === 'bus').disabled && s.t < 40 * 1440) L.wait(s, 60);
+  const r = L.intercity(s, 'calabar', 'bus'); assert.ok(r.ok, r.msg); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(L.cityOf(s), 'calabar');
   const rp = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.equal(rp.loc, s.loc); assert.equal(rp.t, s.t); assert.equal(rp.cash + rp.bank, s.cash + s.bank);
 });

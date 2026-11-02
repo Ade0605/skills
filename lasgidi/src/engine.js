@@ -121,7 +121,9 @@
   // Tower, Cocoa House and Agodi Gardens; and Enugu, the Coal City, with Ogbete Market, Milliken Hill, the Ngwo pine
   // forest, Nike Lake and UNN at Nsukka. Each has homes, two careers, gigs, a hospital, a hotel and a festival.
   // 60 adds the Lagos–Ibadan standard-gauge train: Ebute-Metta (Yaba) to Moniya, morning and afternoon departures.
-  var RULES = 60;
+  // 61 opens Calabar, the Cross River capital: the Old Residency (in 3D), the Marina, the Slave History Museum,
+  // Mary Slessor's grave, Watt Market, UNICAL, Tinapa and a drill monkey sanctuary; Efik food; a December carnival.
+  var RULES = 61;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
