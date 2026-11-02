@@ -1740,3 +1740,11 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 /* Ride card: the 3D icon of your vehicle beside its name */
 .rv-mode { display: inline-flex; align-items: center; gap: 6px; }
 .rv-ic { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,.25)); }
+
+/* Board games */
+.bg-seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.bg-status { font-weight: 800; margin: 6px 0; }
+.bg-wrap { display: flex; justify-content: center; }
+.bg-canvas { display: block; max-width: 100%; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.18); touch-action: manipulation; }
+.bg-dice { margin-top: 8px; align-items: center; }
+.bg-die { font-size: 44px; line-height: 1; }

@@ -3883,3 +3883,19 @@ test('Monthly (12 weeks) and Yearly (48 weeks) Lagos: shared seeds, run to their
   assert.throws(() => L.newGame({ challenge: '2026-Q4' }), /Bad challenge id/);
   const y = L.newGame({ challenge: '2026-Y', origin: 'mid' }); assert.equal(y.challenge.weeks, 48);
 });
+
+test('board games: Ludo, Ayo and draughts play to the end, replay identically, and refuse illegal moves', () => {
+  const B = require('../src/boards.js');
+  for (const [game, seats] of [['ayo', 2], ['draughts', 2], ['ludo', 2], ['ludo', 4]]) {
+    for (let g = 0; g < 4; g++) {
+      let s = B.start(game, seats, 'k' + g); const list = [];
+      for (let k = 0; k < 3000 && !s.over; k++) { const m = B.ai(s, 'easy'); const n = B.play(s, m); assert.ok(n, game + ' AI move is legal'); list.push(m); s = n; }
+      assert.ok(s.over, game + ' finishes');
+      assert.deepEqual(B.replay(game, seats, 'k' + g, list), s, game + ' replays to the same state');
+      if (game === 'ayo') assert.equal(s.store[0] + s.store[1] + s.pits.reduce((a, b) => a + b, 0), 48, 'no seeds lost');
+    }
+  }
+  const a = B.start('ayo', 2); assert.equal(B.play(a, 7), null, 'cannot sow from the other side');
+  const d = B.start('draughts', 2); assert.equal(B.play(d, [40, 32]), null, 'cannot move onto a light square'); assert.ok(B.play(d, [40, 33]), 'a diagonal step forward is fine');
+  const l = B.start('ludo', 2, 'x'); const r = B.roll(l); assert.ok(r >= 1 && r <= 6); assert.equal(B.roll(B.start('ludo', 2, 'x')), r, 'dice come from the seed');
+});
