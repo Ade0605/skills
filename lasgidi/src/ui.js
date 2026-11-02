@@ -1994,7 +1994,7 @@
   function bgRefresh() {
     online.bgOpen = (online.bgDocs || []).filter(function (d) { var r = d.raw; return r.kind === 'host' && r.open && BGL() && BGL().INFO[r.game] && Date.now() - (r.at || 0) < 3 * 3600e3; });
     if (!bgFor && online.bgMine && !bgRefresh.done) { bgRefresh.done = true; var r = online.bgMine; if ((r.kind === 'host' || r.kind === 'join') && Date.now() - (r.moved || r.at || 0) < 24 * 3600e3) { ui.bgOnline = true; bgFor = r.kind === 'host' ? online.me : r.table; } }
-    bgBuild(); if (ui.app === 'tables') scheduleRender();
+    bgBuild(); bgNotice(); if (ui.app === 'tables') scheduleRender(); else if (bgMyMove()) scheduleRender();
   }
   function bgSubscribeTable(host) { bgFor = host || null; bgBuild(); }
   function bgBuild() {
@@ -2036,7 +2036,27 @@
     if (online.db && online.me && online.bgMine) bgWrite({ kind: 'left', table: '-', at: Date.now(), moves: [] });
     ui.bgOnline = false; bgSubscribeTable(null); render();
   }
+  // For automated tests only: play the computer's choice for whoever's turn it is on this phone (online tables too).
+  if (navigator.webdriver) window.__bgTestMove = function () { var c = bgCurrent(), B = BGL(); if (!c || !B || !myTurn(c)) return false; var m = B.ai(c.state, 'easy'); if (m == null) return false; bgMove(m); return true; };
   function bgRestore() {}
+  // Your move on an online table (the 🎲 app shows a badge; a toast says so once per turn when you are elsewhere).
+  function bgMyMove() { var t = online.bgTable; return !!(t && t.started && !t.state.over && t.state.turn === t.me); }
+  function bgNotice() {
+    var t = online.bgTable; if (!t || !t.started) return;
+    var key = t.host + ':' + t.state.n;
+    if (bgMyMove() && bgNotice.key !== key && !(ui.tab === 'phone' && ui.app === 'tables')) { bgNotice.key = key; var who = t.seats.filter(function (id) { return id !== online.me; }).map(function (id) { return bgName(id); }).join(', '); ui.toasts.push({ msg: '🎲 Your move in ' + BGL().INFO[t.game].name + ' against ' + who + '.', ok: true }); renderToasts(); }
+    bgTally(t);
+  }
+  // Wins, losses and draws, per game, kept on this phone.
+  var BG_STATS = 'lasgidi.bgstats.v1';
+  function bgTally(cur) {
+    if (!cur || !cur.state.over) return; var id = (cur.offline ? 'cpu:' : 'net:') + cur.seed + ':' + cur.seats.length, st = readJSON(BG_STATS, {}) || {};
+    if ((st.seen || []).indexOf(id) >= 0) return;
+    var me = cur.offline ? 0 : cur.me; if (me < 0) return; var w = cur.state.winner, g = st[cur.game] = st[cur.game] || { w: 0, l: 0, d: 0 };
+    if (w === -1) g.d++; else if (w === me) g.w++; else g.l++;
+    st.seen = (st.seen || []).concat([id]).slice(-60); writeJSON(BG_STATS, st);
+  }
+  function bgRecord() { var st = readJSON(BG_STATS, {}) || {}, B = BGL(); return ['ludo', 'ayo', 'draughts'].filter(function (k) { return st[k]; }).map(function (k) { var g = st[k]; return B.INFO[k].icon + ' ' + B.INFO[k].name + ': ' + g.w + ' won · ' + g.l + ' lost' + (g.d ? ' · ' + g.d + ' drawn' : ''); }).join('  ·  '); }
   function bgName(id, me) { if (id === 'me') return 'You'; if (id === 'cpu') return 'Computer'; if (id === online.me) return 'You'; var p = online.names[id]; return (p && p.name) || 'Player'; }
   // ---- the view
   function bgStatus(cur) {
@@ -2051,8 +2071,9 @@
   function tablesView() {
     var B = BGL(); if (!B) return '<div class="section"><p class="note">Board games are loading…</p></div>';
     bgSubscribeLobby();
-    var cur0 = bgCurrent(); if (cur0 && cur0.offline && cur0.seats[cur0.state.turn] === 'cpu') bgAiTurn();
+    var cur0 = bgCurrent(); if (cur0 && cur0.offline && cur0.seats[cur0.state.turn] === 'cpu') bgAiTurn(); if (cur0) bgTally(cur0);
     var cur = bgCurrent(), top = '', html = '<div class="section"><h3>🎲 Board games</h3><div class="seg bg-seg">' + ['ludo', 'ayo', 'draughts'].map(function (g) { return '<button type="button" class="seg-b' + (ui.bgGame === g ? ' sel' : '') + '" id="bg-pick-' + g + '" data-bgpick="' + g + '">' + B.INFO[g].icon + ' ' + esc(B.INFO[g].name) + '</button>'; }).join('') + '</div><p class="note">' + esc(B.INFO[ui.bgGame].text) + '</p>';
+    var rec = bgRecord(); if (rec) html += '<p class="note">Your record: ' + esc(rec) + '</p>';
     html += '<div class="inline">' + (ui.bgGame === 'ludo' ? [2, 3, 4].map(function (k) { return '<button type="button" class="btn sm' + (k === 2 ? ' go' : '') + '" id="bg-cpu-' + k + '" data-bgcpu="' + k + '">🤖 You vs ' + (k - 1) + ' computer' + (k > 2 ? 's' : '') + '</button>'; }).join('') : '<button type="button" class="btn sm go" id="bg-cpu-2" data-bgcpu="2">🤖 Play the computer</button><button type="button" class="btn sm ghost" id="bg-level" data-bglevel="1">Level: ' + (ui.bgLevel === 'easy' ? 'easy' : 'hard') + '</button>') +
       (online.db && online.me ? '<button type="button" class="btn sm" id="bg-host" data-bghost="' + ui.bgGame + '">🌍 Open an online table</button>' : '') + '</div>';
     if (!online.db) html += '<p class="note">Playing other people needs the game opened on claude.ai or a self-hosted copy; the computer is always here.</p>';
@@ -5772,7 +5793,7 @@
     var unread = unreadCount(), id = gemToday(), found = L.gemsFound(S, id).length;
     var onNow = 0;
     Object.keys(D.PLACE_ACTIONS).forEach(function (d) { D.PLACE_ACTIONS[d].forEach(function (a) { if (a.event && L.districtCity(d) === L.cityOf(S) && (!a.when.months || a.when.months.indexOf(L.monthIndex(S)) >= 0) && L.inWindow(S, a.when)) onNow++; }); });
-    var badge = { quests: L.activeQuests(S, 99).filter(function (q) { return q.done; }).length, messages: unread, gems: L.GEM_COUNT - found, events: onNow };
+    var badge = { quests: L.activeQuests(S, 99).filter(function (q) { return q.done; }).length, messages: unread, gems: L.GEM_COUNT - found, events: onNow, tables: bgMyMove() ? 1 : 0 };
     // The home screen sits in a phone frame: status bar, a lock-screen clock, a news ticker and the apps.
     var h = L.hour(S), mins = S.t % 60, news = S.log.filter(function (l) { return l.kind !== 'info'; }).slice(0, 4);
     var batt = Math.max(5, Math.round(S.needs.energy)), net = S.power ? '4G' : 'E';
