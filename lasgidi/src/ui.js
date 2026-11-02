@@ -717,6 +717,7 @@
     drawHudAvatar();
     mountWelcome();
     mountHuntFound();
+    mountBoards();
     mountInterior();
     try { applyFolds(); } catch (e) {}
     drawAvatar();
@@ -919,6 +920,7 @@
       db.collection('huntfin').limit(500).onSnapshot(function (snap) { online.huntfin = snap.docs.map(function (d) { var r = d.data() || {}; return { id: d.id, hunt: typeof r.hunt === 'string' ? r.hunt : '', week: typeof r.week === 'number' ? r.week : -1, at: typeof r.at === 'number' ? r.at : 0 }; }); scheduleRender(); }, function () { online.huntfin = []; });
       db.collection('residents').limit(500).onSnapshot(function (snap) {
         online.residents = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, home: r && typeof r.home === 'string' ? r.home : null, links: cleanLinks(r && r.links) }; });
+        online.bgDocs = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, raw: r && r.bg && typeof r.bg === 'object' ? r.bg : null }; }).filter(function (d) { return d.raw; }); if (online.me && !online.bgMine) { var mine0 = online.bgDocs.filter(function (d) { return d.id === online.me; })[0]; if (mine0) online.bgMine = mine0.raw; } bgRefresh();
         var ids = online.residents.map(function (r) { return r.id; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
@@ -1940,6 +1942,224 @@
     ui.toasts.push({ msg: done ? '🏅 You found all of ' + h.title + '! The ' + h.title + ' crew badge is yours.' : 'You caught the ' + pc.ch + ' of ' + h.title + ' (' + st.found.length + '/' + h.pieces.length + '). Your next riddle is in the 🔤 app.', ok: true });
     render();
   }
+  /* ---------- Board games: Ludo, Ayò Ọlọ́pọ́n and draughts, against the computer or other players online ----------
+     A game is its seats, seed and move list (LasgidiBoards replays them). Offline games are kept on this device.
+     Online, each player writes only their own record (the bg field of residents/<id>): the host's holds the table (game, seats,
+     seed, open/started) and the host's moves; each guest's doc says which table they joined and holds their moves.
+     Every phone merges the move lists in turn order and replays them, so an illegal move simply never counts. */
+  var BG_KEY = 'lasgidi.boards.v1', bgFor = null;
+  ui.bgGame = ui.bgGame || 'ludo';
+  function BGL() { return window.LasgidiBoards; }
+  function bgLocal() { return readJSON(BG_KEY, null); }
+  function bgSaveLocal(g) { writeJSON(BG_KEY, g); }
+  // The live game: an offline game (seats: 'me' or 'cpu') or the online table we sit at.
+  function bgCurrent() {
+    var B = BGL(); if (!B) return null;
+    if (ui.bgOnline && online.bgTable) return online.bgTable;
+    var g = bgLocal(); if (!g) return null;
+    var st = B.replay(g.game, g.seats.length, g.seed, g.moves || []); return { offline: true, game: g.game, seats: g.seats, seed: g.seed, moves: g.moves || [], state: st, me: 0, level: g.level || 'hard' };
+  }
+  function bgNewOffline(game, players) {
+    var seats = ['me']; for (var i = 1; i < players; i++) seats.push('cpu');
+    bgSaveLocal({ game: game, seats: seats, seed: String(Date.now()) + ':' + Math.floor(Math.random() * 1e9), moves: [], level: ui.bgLevel || 'hard', at: Date.now() });
+    ui.bgOnline = false; ui.bgSel = null; ui.bgRolled = false; render(); bgAiTurn();
+  }
+  function bgMove(m) {
+    var B = BGL(), cur = bgCurrent(); if (!B || !cur || cur.state.over) return;
+    var n = B.play(cur.state, m); if (!n) { ui.toasts.push({ msg: 'That move is not allowed.', ok: false }); renderToasts(); return; }
+    ui.bgSel = null; ui.bgRolled = false; bgSound(cur.game, n);
+    if (cur.offline) { var g = bgLocal(); g.moves.push(m); bgSaveLocal(g); render(); bgAiTurn(); }
+    else bgPostMove(cur, m);
+  }
+  function bgSound(game, n) { try { if (window.LasgidiMusic && window.LasgidiMusic.sfx) window.LasgidiMusic.sfx(n.last && (n.last.took || n.last.cap) ? 'coin' : 'tap'); } catch (e) {} }
+  // The computer plays its turns one after another, with a short pause so you can follow.
+  function bgAiTurn() {
+    var B = BGL(), cur = bgCurrent(); if (!B || !cur || !cur.offline || cur.state.over) return;
+    if (cur.seats[cur.state.turn] !== 'cpu') return;
+    clearTimeout(bgAiTurn.t); bgAiTurn.t = setTimeout(function () {
+      var c2 = bgCurrent(); if (!c2 || !c2.offline || c2.state.over || c2.seats[c2.state.turn] !== 'cpu') return;
+      var m = B.ai(c2.state, c2.level); if (m == null) return; var n = B.play(c2.state, m); if (!n) return;
+      var g = bgLocal(); g.moves.push(m); bgSaveLocal(g); bgSound(c2.game, n); if (ui.tab === 'phone' && ui.app === 'tables') render(); bgAiTurn();
+    }, cur.game === 'ludo' ? 750 : 650);
+  }
+  // ---- online tables: each player's board record rides on their own residents/<id> doc (field bg), which every
+  // player already follows; so no extra database rules are needed.
+  function bgWrite(rec) {
+    if (!online.db || !online.me) return Promise.reject(new Error('offline'));
+    online.bgMine = rec;
+    return online.db.doc('residents/' + online.me).set({ home: online.lastHome || (S && !S.challenge ? S.home : null), at: Date.now(), links: myLinks(), bg: rec });
+  }
+  function bgMineRaw() { return online.bgMine ? { id: online.me, raw: online.bgMine } : null; }
+  function bgSubscribeLobby() {}
+  function bgRefresh() {
+    online.bgOpen = (online.bgDocs || []).filter(function (d) { var r = d.raw; return r.kind === 'host' && r.open && BGL() && BGL().INFO[r.game] && Date.now() - (r.at || 0) < 3 * 3600e3; });
+    if (!bgFor && online.bgMine && !bgRefresh.done) { bgRefresh.done = true; var r = online.bgMine; if ((r.kind === 'host' || r.kind === 'join') && Date.now() - (r.moved || r.at || 0) < 24 * 3600e3) { ui.bgOnline = true; bgFor = r.kind === 'host' ? online.me : r.table; } }
+    bgBuild(); if (ui.app === 'tables') scheduleRender();
+  }
+  function bgSubscribeTable(host) { bgFor = host || null; bgBuild(); }
+  function bgBuild() {
+    var B = BGL(), host = bgFor, docs = (online.bgDocs || []).map(function (d) { return d.id === online.me && online.bgMine ? { id: d.id, raw: online.bgMine } : d; });
+    if (online.bgMine && !docs.some(function (d) { return d.id === online.me; })) docs.push({ id: online.me, raw: online.bgMine });
+    var H = docs.filter(function (d) { return d.id === host && d.raw && d.raw.kind === 'host'; })[0];
+    if (!B || !host || !H || !B.INFO[H.raw.game]) { online.bgTable = null; return; }
+    var info = B.INFO[H.raw.game], guests = docs.filter(function (d) { return d.id !== host && d.raw && d.raw.kind === 'join' && d.raw.table === host; }).sort(function (a, b) { return (a.raw.at || 0) - (b.raw.at || 0); });
+    var seats = H.raw.started && Array.isArray(H.raw.seats) ? H.raw.seats.slice(0, info.max) : [host].concat(guests.map(function (g) { return g.id; })).slice(0, info.max);
+    var byId = {}; docs.forEach(function (d) { byId[d.id] = d.raw; });
+    var moves = [], st = B.start(H.raw.game, seats.length, H.raw.seed);
+    if (H.raw.started) for (var n = 0; n < 4000 && !st.over; n++) {
+      var who = seats[st.turn], list = (byId[who] && byId[who].table === host && Array.isArray(byId[who].moves)) ? byId[who].moves : [], e = list.filter(function (x) { return x && x.n === n; })[0];
+      if (!e) break; var nx = B.play(st, e.m); if (!nx) break; st = nx; moves.push(e.m);
+    }
+    online.bgTable = { offline: false, game: H.raw.game, host: host, seats: seats, seed: H.raw.seed, started: !!H.raw.started, open: !!H.raw.open, moves: moves, state: st, me: seats.indexOf(online.me), guests: guests.length };
+  }
+  function bgHost(game) {
+    if (!online.db || !online.me) return; var info = BGL().INFO[game];
+    bgWrite({ kind: 'host', game: game, table: online.me, max: info.max, seed: String(Date.now()) + ':' + Math.floor(Math.random() * 1e9), open: true, started: false, at: Date.now(), moves: [] }).then(function () { ui.bgOnline = true; bgSubscribeTable(online.me); render(); }, function () { ui.toasts.push({ msg: 'Could not open a table right now.', ok: false }); renderToasts(); });
+    ui.bgOnline = true; bgSubscribeTable(online.me);
+  }
+  function bgJoin(host) {
+    if (!online.db || !online.me || host === online.me) return;
+    bgWrite({ kind: 'join', table: host, at: Date.now(), moves: [] }).then(function () { ui.bgOnline = true; bgSubscribeTable(host); render(); }, function () { ui.toasts.push({ msg: 'Could not join that table.', ok: false }); renderToasts(); });
+    ui.bgOnline = true; bgSubscribeTable(host);
+  }
+  function bgStart() {
+    var t = online.bgTable; if (!t || t.host !== online.me) return;
+    if (t.seats.length < BGL().INFO[t.game].min) { ui.toasts.push({ msg: 'Wait for at least one more player.', ok: false }); renderToasts(); return; }
+    bgWrite(Object.assign({}, online.bgMine || {}, { open: false, started: true, seats: t.seats, startedAt: Date.now(), moves: [] })); bgBuild(); render();
+  }
+  function bgPostMove(t, m) {
+    var mine = online.bgMine; if (!mine) return;
+    var list = (mine.moves || []).filter(function (x) { return x.n < t.state.n; }).concat([{ n: t.state.n, m: m }]).slice(-400);
+    bgWrite(Object.assign({}, mine, { moves: list, moved: Date.now() })); bgBuild(); render();
+  }
+  function bgLeave() {
+    if (online.db && online.me && online.bgMine) bgWrite({ kind: 'left', table: '-', at: Date.now(), moves: [] });
+    ui.bgOnline = false; bgSubscribeTable(null); render();
+  }
+  function bgRestore() {}
+  function bgName(id, me) { if (id === 'me') return 'You'; if (id === 'cpu') return 'Computer'; if (id === online.me) return 'You'; var p = online.names[id]; return (p && p.name) || 'Player'; }
+  // ---- the view
+  function bgStatus(cur) {
+    var B = BGL(), s = cur.state, info = B.INFO[cur.game], mineTurn = cur.offline ? cur.seats[s.turn] === 'me' : s.turn === cur.me;
+    if (s.over) { var w = s.winner; return w === -1 ? 'It is a draw.' : (cur.offline ? (cur.seats[w] === 'me' ? '🏆 You win!' : 'The computer wins this one.') : (w === cur.me ? '🏆 You win!' : bgName(cur.seats[w]) + ' wins.')); }
+    var who = mineTurn ? 'Your turn' : (cur.offline ? 'The computer is thinking…' : bgName(cur.seats[s.turn]) + '\'s turn');
+    if (cur.game === 'ludo') { var col = s.colors[s.turn]; who += ' · ' + col.charAt(0).toUpperCase() + col.slice(1) + (mineTurn && !ui.bgRolled ? ' · tap 🎲 to roll' : ' · rolled ' + B.roll(s)); }
+    if (cur.game === 'ayo') who += ' · seeds: you ' + s.store[cur.offline ? 0 : Math.max(0, cur.me)] + ', them ' + s.store[cur.offline ? 1 : 1 - Math.max(0, cur.me)];
+    if (cur.game === 'draughts') who += mineTurn && B.legal(s).some(function (m) { return m.length > 2 || Math.abs(m[1] - m[0]) > 9; }) ? ' · you must jump' : '';
+    return who;
+  }
+  function tablesView() {
+    var B = BGL(); if (!B) return '<div class="section"><p class="note">Board games are loading…</p></div>';
+    bgSubscribeLobby();
+    var cur0 = bgCurrent(); if (cur0 && cur0.offline && cur0.seats[cur0.state.turn] === 'cpu') bgAiTurn();
+    var cur = bgCurrent(), top = '', html = '<div class="section"><h3>🎲 Board games</h3><div class="seg bg-seg">' + ['ludo', 'ayo', 'draughts'].map(function (g) { return '<button type="button" class="seg-b' + (ui.bgGame === g ? ' sel' : '') + '" id="bg-pick-' + g + '" data-bgpick="' + g + '">' + B.INFO[g].icon + ' ' + esc(B.INFO[g].name) + '</button>'; }).join('') + '</div><p class="note">' + esc(B.INFO[ui.bgGame].text) + '</p>';
+    html += '<div class="inline">' + (ui.bgGame === 'ludo' ? [2, 3, 4].map(function (k) { return '<button type="button" class="btn sm' + (k === 2 ? ' go' : '') + '" id="bg-cpu-' + k + '" data-bgcpu="' + k + '">🤖 You vs ' + (k - 1) + ' computer' + (k > 2 ? 's' : '') + '</button>'; }).join('') : '<button type="button" class="btn sm go" id="bg-cpu-2" data-bgcpu="2">🤖 Play the computer</button><button type="button" class="btn sm ghost" id="bg-level" data-bglevel="1">Level: ' + (ui.bgLevel === 'easy' ? 'easy' : 'hard') + '</button>') +
+      (online.db && online.me ? '<button type="button" class="btn sm" id="bg-host" data-bghost="' + ui.bgGame + '">🌍 Open an online table</button>' : '') + '</div>';
+    if (!online.db) html += '<p class="note">Playing other people needs the game opened on claude.ai or a self-hosted copy; the computer is always here.</p>';
+    html += '</div>';
+    var open = (online.bgOpen || []).filter(function (d) { return d.id !== online.me; });
+    if (online.db && !(ui.bgOnline && online.bgTable)) html += '<div class="section"><h3>🌍 Open tables</h3>' + (open.length ? '<div class="list">' + open.slice(0, 12).map(function (d) { var info = B.INFO[d.raw.game]; return '<div class="item"><div><h3>' + info.icon + ' ' + esc(info.name) + ' · ' + esc(bgName(d.id)) + '\'s table</h3><div class="meta"><span>Up to ' + info.max + ' players</span></div></div><button type="button" class="btn sm go" id="bg-join-' + d.id + '" data-bgjoin="' + esc(d.id) + '">Join</button></div>'; }).join('') + '</div>' : '<p class="note">No open tables right now. Open one and share the game with a friend.</p>') + '</div>';
+    if (cur) {
+      var s = cur.state, info2 = B.INFO[cur.game], waiting = !cur.offline && !cur.started;
+      var th = '<div class="section bg-table"><div class="inline" style="justify-content:space-between"><h3>' + info2.icon + ' ' + esc(info2.name) + (cur.offline ? ' · vs computer' : ' · online') + '</h3><button type="button" class="btn sm ghost" id="bg-leave" data-bgleave="1">' + (cur.offline ? 'Close' : 'Leave table') + '</button></div>';
+      if (!cur.offline) th += '<p class="note">Players: ' + cur.seats.map(function (id, k) { return esc(bgName(id)) + (cur.game === 'ludo' && cur.started ? ' (' + B.colors(cur.seats.length)[k] + ')' : ''); }).join(', ') + '</p>';
+      if (waiting) th += '<p class="note">' + (cur.host === online.me ? 'Waiting for players to join. Start when everyone is in.' : 'Waiting for the host to start.') + '</p>' + (cur.host === online.me ? '<div class="inline"><button type="button" class="btn go" id="bg-start" data-bgstart="1"' + (cur.seats.length < info2.min ? ' disabled' : '') + '>▶ Start (' + cur.seats.length + ' player' + (cur.seats.length > 1 ? 's' : '') + ')</button></div>' : '');
+      else {
+        var mineTurn = cur.offline ? cur.seats[s.turn] === 'me' : s.turn === cur.me;
+        th += '<p class="bg-status" aria-live="polite">' + esc(bgStatus(cur)) + '</p><div class="bg-wrap"><canvas id="bg-canvas" class="bg-canvas" aria-label="' + esc(info2.name) + ' board"></canvas></div>';
+        if (cur.game === 'ludo' && !s.over) th += '<div class="inline bg-dice">' + (mineTurn ? (ui.bgRolled ? '<span class="bg-die">' + dieFace(B.roll(s)) + '</span>' + (B.legal(s)[0] === -1 ? '<button type="button" class="btn sm" id="bg-pass" data-bgpass="1">No move: pass</button>' : '<span class="muted">Tap a glowing token</span>') : '<button type="button" class="btn go" id="bg-roll" data-bgroll="1">🎲 Roll</button>') : (s.last ? '<span class="bg-die">' + dieFace(s.last.dice) + '</span>' : '')) + '</div>';
+        if (s.over) th += '<div class="inline"><button type="button" class="btn go" id="bg-again" data-bgagain="1">↻ Play again</button></div>';
+      }
+      th += '</div>';
+      html = th + html;
+    }
+    return html;
+  }
+  function dieFace(n) { return ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][n - 1] || '🎲'; }
+  // ---- drawing
+  function mountBoards() {
+    var cv = document.getElementById('bg-canvas'), cur = cv && bgCurrent(); if (!cv || !cur) return;
+    var w = Math.min(cv.parentNode.clientWidth || 340, 460), h = cur.game === 'ayo' ? Math.round(w * 0.42) : w, dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.width = w + 'px'; cv.style.height = h + 'px'; }
+    var g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    var hits = [];
+    if (cur.game === 'ayo') drawAyo(g, w, h, cur, hits); else if (cur.game === 'ludo') drawLudo(g, w, cur, hits); else drawDraughts(g, w, cur, hits);
+    cv.onclick = function (ev) { var r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top; for (var i = 0; i < hits.length; i++) { var H = hits[i]; if (Math.hypot(x - H.x, y - H.y) <= H.r) { H.fn(); return; } } if (cur.game === 'draughts' && ui.bgSel != null) { ui.bgSel = null; render(); } };
+  }
+  function myTurn(cur) { var s = cur.state; return !s.over && (cur.offline ? cur.seats[s.turn] === 'me' : s.turn === cur.me); }
+  function wood(g, x, y, w, h, r, c1, c2) { var gr = g.createLinearGradient(x, y, x + w, y + h); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; rr(g, x, y, w, h, r); g.fill(); g.save(); g.clip(); g.globalAlpha = 0.12; g.strokeStyle = '#3a2210'; for (var i = 0; i < 26; i++) { g.lineWidth = 0.6 + (i % 3) * 0.5; g.beginPath(); var yy = y + (i + 0.5) * h / 26; g.moveTo(x, yy); g.bezierCurveTo(x + w * 0.3, yy + 3 * Math.sin(i), x + w * 0.6, yy - 3 * Math.cos(i), x + w, yy + 2); g.stroke(); } g.restore(); }
+  function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  function ball(g, x, y, r, c) { var gr = g.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.15, x, y, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.25, c); gr.addColorStop(1, '#0d1a1f'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+  function drawAyo(g, w, h, cur, hits) {
+    var s = cur.state, me = cur.offline ? 0 : Math.max(0, cur.me), can = myTurn(cur), legal = can ? BGL().legal(s) : [];
+    wood(g, 2, 2, w - 4, h - 4, 18, '#b87a46', '#7a4a24');
+    var sw = w * 0.11, pitR = Math.min((w - sw * 2 - 30) / 12, h / 4.6), x0 = 12 + sw + 8, step = (w - 2 * (12 + sw + 8)) / 6;
+    var rowPits = function (bottom) { var arr = []; for (var k = 0; k < 6; k++) { var idx = bottom ? me * 6 + k : (me === 0 ? 11 - k : 5 - k); arr.push(idx); } return arr; };
+    var pitPos = {}; [true, false].forEach(function (bottom) { rowPits(bottom).forEach(function (idx, k) { pitPos[idx] = { x: x0 + step * (k + 0.5), y: bottom ? h * 0.72 : h * 0.28 }; }); });
+    // the two stores
+    [[12 + 4, 0], [w - 12 - sw - 4, 1]].forEach(function (q) { var sx = q[0], seat = q[1] === 1 ? me : 1 - me; var gr = g.createLinearGradient(sx, 0, sx + sw, 0); gr.addColorStop(0, '#5a3418'); gr.addColorStop(0.5, '#8a5a32'); gr.addColorStop(1, '#5a3418'); g.fillStyle = gr; rr(g, sx, 12, sw, h - 24, sw / 2); g.fill();
+      var n = s.store[seat]; for (var i = 0; i < Math.min(n, 30); i++) ball(g, sx + sw * (0.3 + ((i * 37) % 10) / 25), 22 + ((i * 53) % 100) / 100 * (h - 44), pitR * 0.22, '#3f8f9a');
+      g.fillStyle = '#fff'; g.font = '800 13px system-ui'; g.textAlign = 'center'; g.fillText(String(n), sx + sw / 2, h - 18); g.font = '600 9px system-ui'; g.fillText(seat === me ? 'YOU' : 'THEM', sx + sw / 2, 24); });
+    Object.keys(pitPos).forEach(function (k) {
+      var i = +k, p = pitPos[i], n = s.pits[i], lastHit = s.last && (s.last.to === i || (s.last.caps || []).indexOf(i) >= 0);
+      var gr = g.createRadialGradient(p.x, p.y - pitR * 0.3, pitR * 0.1, p.x, p.y, pitR); gr.addColorStop(0, '#4a2a12'); gr.addColorStop(0.75, '#8a5530'); gr.addColorStop(1, '#a8703e'); g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, pitR, 0, Math.PI * 2); g.fill();
+      if (legal.indexOf(i) >= 0) { g.strokeStyle = '#ffd400'; g.lineWidth = 3; g.stroke(); hits.push({ x: p.x, y: p.y, r: pitR, fn: function () { bgMove(i); } }); }
+      else if (lastHit) { g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.stroke(); }
+      for (var b = 0; b < Math.min(n, 18); b++) { var a = b * 2.4, rad = pitR * (0.18 + 0.5 * Math.sqrt(b / 18)); ball(g, p.x + Math.cos(a) * rad, p.y + Math.sin(a) * rad, pitR * 0.2, '#4fa3ae'); }
+      g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '700 10px system-ui'; g.textAlign = 'center'; g.fillText(String(n), p.x, p.y + pitR + (p.y > h / 2 ? 11 : -pitR * 2 - 3));
+    });
+  }
+  // Ludo board: 15×15 squares, yards in the corners (red top-left, green top-right, yellow bottom-right, blue bottom-left).
+  var LUDO_PATH = (function () { var p = [], add = function (c, r) { p.push([c, r]); }, k;
+    for (k = 1; k <= 5; k++) add(k, 6); for (k = 5; k >= 0; k--) add(6, k); add(7, 0); for (k = 0; k <= 5; k++) add(8, k); for (k = 9; k <= 14; k++) add(k, 6); add(14, 7); for (k = 14; k >= 9; k--) add(k, 8);
+    for (k = 9; k <= 14; k++) add(8, k); add(7, 14); for (k = 14; k >= 9; k--) add(6, k); for (k = 5; k >= 0; k--) add(k, 8); add(0, 7); add(0, 6); return p; })();
+  var LUDO_HOME = { red: function (i) { return [1 + i, 7]; }, green: function (i) { return [7, 1 + i]; }, yellow: function (i) { return [13 - i, 7]; }, blue: function (i) { return [7, 13 - i]; } };
+  var LUDO_YARD = { red: [0, 0], green: [9, 0], yellow: [9, 9], blue: [0, 9] }, LUDO_HEX = { red: '#e0463a', green: '#3fb05a', yellow: '#f2c200', blue: '#2f7fd8' };
+  function drawLudo(g, w, cur, hits) {
+    var B = BGL(), s = cur.state, cs = (w - 8) / 15, ox = 4, oy = 4, can = myTurn(cur) && ui.bgRolled, legal = can ? B.legal(s) : [];
+    var cell = function (c, r, col) { g.fillStyle = col; g.fillRect(ox + c * cs + 0.5, oy + r * cs + 0.5, cs - 1, cs - 1); };
+    g.fillStyle = '#f4f1e8'; rr(g, 0, 0, w, w, 10); g.fill();
+    for (var r = 0; r < 15; r++) for (var c = 0; c < 15; c++) if ((r >= 6 && r <= 8) || (c >= 6 && c <= 8)) cell(c, r, '#ffffff');
+    LUDO_PATH.forEach(function (q, i) { var startCol = ['red', 'green', 'yellow', 'blue'].filter(function (k) { return B.START[k] === i; })[0]; if (startCol) cell(q[0], q[1], LUDO_HEX[startCol]); else if (B.SAFE.indexOf(i) >= 0) { cell(q[0], q[1], '#e9e4d8'); g.fillStyle = '#9a8f78'; g.font = Math.round(cs * 0.7) + 'px system-ui'; g.textAlign = 'center'; g.fillText('★', ox + (q[0] + 0.5) * cs, oy + (q[1] + 0.75) * cs); } });
+    Object.keys(LUDO_HOME).forEach(function (k) { for (var i = 0; i < 5; i++) { var q = LUDO_HOME[k](i); cell(q[0], q[1], LUDO_HEX[k]); } var y0 = LUDO_YARD[k]; g.fillStyle = LUDO_HEX[k]; rr(g, ox + y0[0] * cs + 1, oy + y0[1] * cs + 1, cs * 6 - 2, cs * 6 - 2, 8); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(ox + (y0[0] + 3) * cs, oy + (y0[1] + 3) * cs, cs * 2.2, 0, Math.PI * 2); g.fill(); });
+    var cx = ox + 7.5 * cs, cy = oy + 7.5 * cs, tri = function (ax, ay, bx, by, col) { g.fillStyle = col; g.beginPath(); g.moveTo(cx, cy); g.lineTo(ax, ay); g.lineTo(bx, by); g.closePath(); g.fill(); };
+    tri(ox + 6 * cs, oy + 6 * cs, ox + 6 * cs, oy + 9 * cs, LUDO_HEX.red); tri(ox + 6 * cs, oy + 6 * cs, ox + 9 * cs, oy + 6 * cs, LUDO_HEX.green); tri(ox + 9 * cs, oy + 6 * cs, ox + 9 * cs, oy + 9 * cs, LUDO_HEX.yellow); tri(ox + 6 * cs, oy + 9 * cs, ox + 9 * cs, oy + 9 * cs, LUDO_HEX.blue);
+    // tokens
+    var stackAt = {};
+    s.colors.forEach(function (col, seat) {
+      s.tokens[seat].forEach(function (p, k) {
+        var x, y;
+        if (p === -1) { var y0 = LUDO_YARD[col]; x = ox + (y0[0] + 3 + (k % 2 ? 0.9 : -0.9)) * cs; y = oy + (y0[1] + 3 + (k < 2 ? -0.9 : 0.9)) * cs; }
+        else if (p === 56) { x = cx + ({ red: -0.8, green: 0, yellow: 0.8, blue: 0 }[col]) * cs + (k - 1.5) * cs * 0.18; y = cy + ({ red: 0, green: -0.8, yellow: 0, blue: 0.8 }[col]) * cs; }
+        else { var q = p <= 50 ? LUDO_PATH[(B.START[col] + p) % 52] : LUDO_HOME[col](p - 51), key = q[0] + ',' + q[1], nst = stackAt[key] = (stackAt[key] || 0) + 1; x = ox + (q[0] + 0.5) * cs + (nst - 1) * cs * 0.16; y = oy + (q[1] + 0.5) * cs - (nst - 1) * cs * 0.16; }
+        var tr = cs * 0.38; g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x + 1.5, y + 2.5, tr, tr * 0.7, 0, 0, Math.PI * 2); g.fill();
+        var gr = g.createRadialGradient(x - tr * 0.3, y - tr * 0.4, tr * 0.1, x, y, tr); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.35, LUDO_HEX[col]); gr.addColorStop(1, '#222'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, tr, 0, Math.PI * 2); g.fill();
+        if (seat === s.turn && legal.indexOf(k) >= 0) { g.strokeStyle = '#17181a'; g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, tr + 3, 0, Math.PI * 2); g.stroke(); hits.push({ x: x, y: y, r: tr + 8, fn: function () { bgMove(k); } }); }
+      });
+    });
+  }
+  function drawDraughts(g, w, cur, hits) {
+    var B = BGL(), s = cur.state, me = cur.offline ? 0 : Math.max(0, cur.me), flip = me === 1, bw = w - 24, cs = bw / 8, ox = 12, oy = 12, can = myTurn(cur), legal = can ? B.legal(s) : [];
+    wood(g, 0, 0, w, w, 12, '#8a4a22', '#5a2c12');
+    var pos = function (i) { var r = Math.floor(i / 8), c = i % 8; if (flip) { r = 7 - r; c = 7 - c; } return { x: ox + c * cs, y: oy + r * cs }; };
+    for (var i = 0; i < 64; i++) { var p = pos(i), dark = (Math.floor(i / 8) + i % 8) % 2 === 1; g.fillStyle = dark ? '#8a4f2a' : '#ecd9b0'; g.fillRect(p.x, p.y, cs, cs); }
+    g.globalAlpha = 0.1; g.strokeStyle = '#000'; for (var gl = 0; gl < 40; gl++) { g.beginPath(); g.moveTo(ox, oy + gl * bw / 40); g.lineTo(ox + bw, oy + gl * bw / 40 + 2); g.stroke(); } g.globalAlpha = 1;
+    var sel = ui.bgSel, prefix = sel ? sel : null, starts = {}, nexts = {};
+    legal.forEach(function (m) { starts[m[0]] = 1; if (prefix && m.length > prefix.length && prefix.every(function (x, k) { return m[k] === x; })) nexts[m[prefix.length]] = m; });
+    if (s.last && s.last.path) s.last.path.forEach(function (q) { var p = pos(q); g.fillStyle = 'rgba(255,212,0,.22)'; g.fillRect(p.x, p.y, cs, cs); });
+    s.board.forEach(function (pc, i) {
+      if (!pc) return; var p = pos(i), x = p.x + cs / 2, y = p.y + cs / 2, r = cs * 0.4, light = pc.toLowerCase() === 'w', king = pc === pc.toUpperCase();
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(x + 2, y + 3, r, r * 0.9, 0, 0, Math.PI * 2); g.fill();
+      var gr = g.createRadialGradient(x - r * 0.3, y - r * 0.35, r * 0.1, x, y, r); gr.addColorStop(0, light ? '#fff8e8' : '#c48a5a'); gr.addColorStop(1, light ? '#cdb58a' : '#5a2c12'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = light ? 'rgba(120,90,50,.55)' : 'rgba(40,18,6,.6)'; g.lineWidth = 1.5; [0.72, 0.45].forEach(function (f) { g.beginPath(); g.arc(x, y, r * f, 0, Math.PI * 2); g.stroke(); });
+      if (king) { g.fillStyle = '#ffd400'; g.font = '900 ' + Math.round(cs * 0.42) + 'px system-ui'; g.textAlign = 'center'; g.fillText('♛', x, y + cs * 0.15); }
+      if (starts[i] && !prefix) { g.strokeStyle = '#ffd400'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r + 2, 0, Math.PI * 2); g.stroke(); hits.push({ x: x, y: y, r: cs / 2, fn: function () { ui.bgSel = [i]; render(); } }); }
+      if (prefix && prefix[0] === i) { g.strokeStyle = '#2fa36b'; g.lineWidth = 3.5; g.beginPath(); g.arc(x, y, r + 2, 0, Math.PI * 2); g.stroke(); }
+    });
+    Object.keys(nexts).forEach(function (k) { var i = +k, p = pos(i), x = p.x + cs / 2, y = p.y + cs / 2; g.fillStyle = 'rgba(47,163,107,.55)'; g.beginPath(); g.arc(x, y, cs * 0.18, 0, Math.PI * 2); g.fill();
+      hits.push({ x: x, y: y, r: cs / 2, fn: function () { var np = prefix.concat([i]), full = legal.filter(function (m) { return m.length === np.length && np.every(function (x2, k2) { return m[k2] === x2; }); })[0]; if (full) { ui.bgSel = null; bgMove(full); } else { ui.bgSel = np; render(); } } }); });
+    if (prefix) legal.forEach(function (m) { if (m[0] !== prefix[0] && !nexts[m[0]]) { var p = pos(m[0]); hits.push({ x: p.x + cs / 2, y: p.y + cs / 2, r: cs / 2, fn: function () { ui.bgSel = [m[0]]; render(); } }); } });
+  }
   function mountHuntFound() {
     var ov = document.getElementById('hunt-found'), f = ui.huntFound;
     if (!f) { if (ov) ov.remove(); return; }
@@ -2437,7 +2657,7 @@
     var key = S.home + ':' + L.myPlot(S) + ':' + JSON.stringify(myLinks());
     if (online.sentHome === key) return;
     online.sentHome = key;
-    online.db.doc('residents/' + online.me).set({ home: S.home, at: Date.now(), links: myLinks() }).catch(function () {});
+    online.lastHome = S.home; online.db.doc('residents/' + online.me).set({ home: S.home, at: Date.now(), links: myLinks(), bg: online.bgMine || null }).catch(function () {});
   }
 
   /* ---------- places ---------- */
@@ -4722,7 +4942,7 @@
   // More apps: each opens a part of the game you already have, plus Pay Index (all salaries) and Invite. Names are made up.
   var MORE_APPS = [['support', '🎧', 'Support'], ['tickets', '🎫', 'TixLagos'], ['fixam', '🛠️', 'FixAm'], ['dokita', '🩹', 'Dokita'], ['linkup', '💞', 'LinkUp'], ['payindex', '💹', 'Pay Index'],
     ['flix', '🎬', 'NaijaFlix'], ['glow', '💄', 'Glow Beauty'], ['spaces', '🎙️', 'Spaces'], ['hangout', '🧺', 'Hangout'], ['contacts', '📞', 'Contacts'], ['chop', '🛵', 'ChopDash'],
-    ['boutique', '👠', 'Boutique'], ['gadgets', '📱', 'Gadgets'], ['richlist', '👑', 'Rich List'], ['boards', '🏁', 'Leaderboards'], ['invite', '🔗', 'Invite'], ['invest', '💼', 'Invest'], ['assurance', '🛡️', 'Assurance'],
+    ['boutique', '👠', 'Boutique'], ['gadgets', '📱', 'Gadgets'], ['richlist', '👑', 'Rich List'], ['boards', '🏁', 'Leaderboards'], ['tables', '🎲', 'Board games'], ['invite', '🔗', 'Invite'], ['invest', '💼', 'Invest'], ['assurance', '🛡️', 'Assurance'],
     ['family', '👨‍👩‍👧', 'Family'], ['staff', '🧹', 'Staff'], ['hustle', '🧰', 'Hustle'], ['busco', '🚌', 'Bus Co.'], ['company', '🏢', 'Company'], ['give', '🤲', 'Give'], ['police', '🚓', 'Police'], ['court', '⚖️', 'Court'], ['ads', '📣', 'My Ads'], ['feed', '🌍', 'Feed'], ['gidibet', '⚽', 'Gidi Bet']];
   APPS.splice.apply(APPS, [APPS.length - 2, 0].concat(MORE_APPS));
   var NEW_APPS = { radio: 1, hunt: 1, news: 1, music: 1, calendar: 1, courses: 1, health: 1, ride: 1 };
@@ -5508,6 +5728,7 @@
       else if (app === 'govt') body = '<div class="panel-b">' + govtView() + '</div>';
       else if (app === 'owner') body = '<div class="panel-b">' + (online.isOwner ? ownerView() : '<p class="note">This page is only for the game\'s owner.</p>') + '</div>';
       else if (app === 'boards') body = '<div class="panel-b">' + boardsView() + '</div>';
+      else if (app === 'tables') body = '<div class="panel-b">' + tablesView() + '</div>';
       else if (app === 'nysc') body = '<div class="panel-b">' + nyscView() + '</div>';
       else if (app === 'sports') body = '<div class="panel-b">' + sportsView() + '</div>';
       else if (app === 'sights') body = '<div class="panel-b">' + sightsView() + '</div>';
@@ -5804,7 +6025,7 @@
     b.click();
   }, true);
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok],[data-pinok],[data-pincancel],[data-pinset],[data-pinoff],[data-pinsetup],[data-shtask],[data-shskip],[data-shleave],[data-roompeer],[data-roomhome],[data-talkto],[data-voiceplay],[data-flyvia],[data-actgrp],[data-wkeep],[data-recapok],[data-notifyask]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok],[data-pinok],[data-pincancel],[data-pinset],[data-pinoff],[data-pinsetup],[data-shtask],[data-shskip],[data-shleave],[data-roompeer],[data-roomhome],[data-talkto],[data-voiceplay],[data-flyvia],[data-actgrp],[data-wkeep],[data-recapok],[data-notifyask],[data-bgpick],[data-bgcpu],[data-bglevel],[data-bghost],[data-bgjoin],[data-bgstart],[data-bgleave],[data-bgroll],[data-bgpass],[data-bgagain]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     // Transaction PIN: money-out buttons ask for it first (then it stays unlocked for 5 minutes).
@@ -5875,6 +6096,16 @@
       return;
     }
     if (ds.notifyask) { askNotify(); return; }
+    if (ds.bgpick) { ui.bgGame = ds.bgpick; render(); return; }
+    if (ds.bgcpu) { bgNewOffline(ui.bgGame, +ds.bgcpu); return; }
+    if (ds.bglevel) { ui.bgLevel = ui.bgLevel === 'easy' ? 'hard' : 'easy'; render(); return; }
+    if (ds.bghost) { bgHost(ds.bghost); return; }
+    if (ds.bgjoin) { bgJoin(ds.bgjoin); return; }
+    if (ds.bgstart) { bgStart(); return; }
+    if (ds.bgleave) { var lc = bgCurrent(); if (lc && lc.offline) { writeJSON(BG_KEY, null); render(); } else bgLeave(); return; }
+    if (ds.bgroll) { ui.bgRolled = true; var rc = bgCurrent(); if (rc && BGL()) { var lg = BGL().legal(rc.state); if (lg.length === 1 && lg[0] !== -1) { render(); setTimeout(function () { bgMove(lg[0]); }, 500); return; } } render(); return; }
+    if (ds.bgpass) { bgMove(-1); return; }
+    if (ds.bgagain) { var ac = bgCurrent(); if (ac && ac.offline) bgNewOffline(ac.game, ac.seats.length); else { bgLeave(); } return; }
     if (ds.wplay) { introState(); playWeekly(false, /^[WMY]$/.test(ds.wplay) ? ds.wplay : 'W'); return; }
     if (!S) return;
     if (ds.wlife) { backToLife(); return; }
