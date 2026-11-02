@@ -2612,65 +2612,100 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     // Ibadan and Enugu (rules 59): real landmarks keep their names; the businesses are made up.
     ['ib_ui_uni', '🎓', 'University of Ibadan', 'learn', 'cap', 'ib_ui', 6.4, 3.4, null, "Nigeria's first university: Trenchard Hall, the Kenneth Dike Library and halls named after heroes.", 'uib_'],
     ['ib_zoo', '🦁', 'University of Ibadan Zoo', 'outdoors', 'tree', 'ib_ui', 8.6, 2.6, null, 'Lions, crocodiles, ostriches and a snake house under the campus trees.', [
-      act('ibz_visit', 'Walk round the zoo', 60, 1500, 0, { fun: 16, stress: -6 }, null, { from: 9, to: 17 })
+      act('ibz_visit', 'Walk round the zoo', 60, 1500, 0, { fun: 16, stress: -6 }, null, { from: 9, to: 17 }),
+      act('ibz_feed', 'Watch the lions at feeding time', 30, 0, 0, { fun: 10 }, null, { from: 10, to: 12 }),
+      act('ibz_nuts', 'Groundnuts on a bench by the zoo lake', 30, 300, 0, { hunger: 6, fun: 4, stress: -4 }, null, { from: 9, to: 17 })
     ]],
     ['ib_station', '🚆', 'Obafemi Awolowo Station (Moniya)', 'transport', 'bus', 'ib_ui', 4.6, 1.0, null, 'The station for the standard-gauge train to Lagos: a big hall, ticket gates and a long platform.', [
-      act('ibs_snack', 'Puff-puff and a cold drink at the station', 15, 700, 0, { hunger: 14 }, null, { from: 6, to: 20 })
+      act('ibs_snack', 'Puff-puff and a cold drink at the station', 15, 700, 0, { hunger: 14 }, null, { from: 6, to: 20 }),
+      act('ibs_watch', 'Watch the train pull in', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 19 }),
+      act('ibs_wait', 'Read the paper in the cool station hall', 30, 500, 0, { fun: 4, stress: -4 }, null, { from: 6, to: 20 })
     ]],
-    ['ib_mapo_hall', '🏛️', 'Mapo Hall', 'culture', 'frame', 'ib_mapo', 13.6, 14.2, null, 'The colonial town hall on Mapo hill, white columns above the old city.', [
-      act('mph_view', 'Look out over the old city from the steps', 30, 0, 0, { fun: 8, stress: -6 }, null, { from: 8, to: 18 })
+    ['ib_mapo_hall', '🏛️', 'Mapo Hall', 'culture', 'frame', 'ib_mapo', 13.6, 14.2, 'landmark', 'The colonial town hall on Mapo hill, white columns above the old city.', [
+      act('mph_view', 'Look out over the old city from the steps', 30, 0, 0, { fun: 8, stress: -6 }, null, { from: 8, to: 18 }),
+      act('mph_photos', 'Look at the old photographs of Ibadan in the hall', 30, 0, 0, { fun: 6 }, { charisma: 1 }, { from: 9, to: 17 }),
+      act('mph_pic', 'Take a picture by the white columns', 15, 0, 0, { fun: 6, social: 4 }, null, { from: 8, to: 18 })
     ]],
-    ['ib_bowers', '🗼', "Bower's Tower", 'culture', 'frame', 'ib_mapo', 15.4, 16.2, null, 'The 1936 tower on Oke Are, the highest point in Ibadan.', [
-      act('bwt_climb', 'Climb the tower and see all seven hills', 45, 500, 0, { fun: 14, energy: -6 }, { fitness: 1 }, { from: 9, to: 17 })
+    ['ib_bowers', '🗼', "Bower's Tower", 'culture', 'frame', 'ib_mapo', 15.4, 16.2, 'landmark', 'The 1936 tower on Oke Are, the highest point in Ibadan.', [
+      act('bwt_climb', 'Climb the tower and see all seven hills', 45, 500, 0, { fun: 14, energy: -6 }, { fitness: 1 }, { from: 9, to: 17 }),
+      act('bwt_plaque', 'Read the plaque about Captain Bower', 15, 0, 0, { fun: 4 }, null, { from: 9, to: 17 }),
+      act('bwt_picnic', 'A picnic on Oke Are hill', 60, 1500, 0, { hunger: 20, fun: 10, social: 6 }, null, { from: 10, to: 17 })
     ]],
-    ['ib_cocoa_house', '🏢', 'Cocoa House', 'culture', 'frame', 'ib_dugbe', 6.6, 17.4, null, 'Built with cocoa money in 1965, once the tallest building in tropical Africa.', [
-      act('cch_look', 'Stand under Cocoa House and look up', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 19 })
+    ['ib_cocoa_house', '🏢', 'Cocoa House', 'culture', 'frame', 'ib_dugbe', 6.6, 17.4, 'landmark', 'Built with cocoa money in 1965, once the tallest building in tropical Africa.', [
+      act('cch_look', 'Stand under Cocoa House and look up', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 19 }),
+      act('cch_gallery', 'Visit the heritage gallery on the ground floor', 45, 1000, 0, { fun: 10 }, { charisma: 1 }, { from: 9, to: 17 }),
+      act('cch_lift', 'Ride the lift up for the view over Dugbe', 30, 500, 0, { fun: 10 }, null, { from: 9, to: 17 })
     ]],
     ['ib_agodi_gardens', '🌳', 'Agodi Gardens', 'outdoors', 'tree', 'ib_agodi', 22.6, 11.4, null, 'Gardens with a lake, swings, a small zoo and a pool.', [
       act('agd_walk', 'Walk round the lake', 45, 500, 0, { fun: 10, stress: -8 }, null, { from: 8, to: 18 }),
-      act('agd_picnic', 'A family picnic on the lawns', 120, 3000, 0, { fun: 16, social: 14, hunger: 20 }, null, { days: [5, 6], from: 10, to: 17 })
+      act('agd_picnic', 'A family picnic on the lawns', 120, 3000, 0, { fun: 16, social: 14, hunger: 20 }, null, { days: [5, 6], from: 10, to: 17 }),
+      act('agd_swim', 'Swim in the Agodi pool', 60, 2000, 0, { fun: 14, energy: -8 }, { fitness: 1 }, { from: 9, to: 17 })
     ]],
     ['ib_stadium', '🏟️', 'Obafemi Awolowo Stadium', 'outdoors', 'stadium', 'ib_ringroad', 14.8, 24.2, null, "Nigeria's first stadium, opened in 1960, at Oke-Ado.", [
-      act('ibst_match', 'Watch the home side play on Sunday', 120, 1500, 0, { fun: 24, social: 10 }, null, { days: [6], from: 15, to: 19 })
+      act('ibst_match', 'Watch the home side play on Sunday', 120, 1500, 0, { fun: 24, social: 10 }, null, { days: [6], from: 15, to: 19 }),
+      act('ibst_jog', 'Jog round the track in the morning', 45, 0, 0, { energy: -10, stress: -8 }, { fitness: 1 }, { from: 6, to: 9 }),
+      act('ibst_train', 'Watch the athletes train', 30, 0, 0, { fun: 6 }, null, { from: 16, to: 18 })
     ]],
     ['ib_buka', '🍲', "Iya Basira's Amala Spot", 'food', 'bowl', 'ib_bodija', 15.6, 8.0, null, 'Hot amala, gbegiri and ewedu, with goat meat and ponmo, served on the bench.', [
       act('iyb_amala', 'Amala, gbegiri and ewedu with goat meat', 30, 2200, 0, { hunger: 44, fun: 6 }, null, { from: 10, to: 20 }),
-      act('iyb_ofada', 'Ofada rice with ayamase stew', 30, 2400, 0, { hunger: 42 }, null, { from: 11, to: 20 })
+      act('iyb_ofada', 'Ofada rice with ayamase stew', 30, 2400, 0, { hunger: 42 }, null, { from: 11, to: 20 }),
+      act('iyb_agoyin', 'Ewa agoyin and bread', 30, 1200, 0, { hunger: 34 }, null, { from: 7, to: 12 })
     ]],
     ['ib_iwo_park', '🚌', 'Iwo Road Motor Park', 'transport', 'bus', 'ib_iwo', 26.4, 18.4, null, 'Buses to Lagos, Abuja, Enugu and the north, and hawkers at every window.', [
-      act('iwp_bread', 'Bread and akara at the park', 15, 800, 0, { hunger: 18 }, null, { from: 5, to: 21 })
+      act('iwp_bread', 'Bread and akara at the park', 15, 800, 0, { hunger: 18 }, null, { from: 5, to: 21 }),
+      act('iwp_road', 'Buy biscuits and a cold drink for the road', 15, 600, 0, { hunger: 10 }, null, { from: 5, to: 21 }),
+      act('iwp_shade', 'Sit in the shade and watch the buses load', 30, 0, 0, { stress: -4, fun: 4 }, null, { from: 6, to: 20 })
     ]],
     ['en_unn', '🎓', 'University of Nigeria, Nsukka', 'learn', 'cap', 'en_nsukka', 15.6, -0.4, null, 'The Lion of Nsukka: the gate, the Nnamdi Azikiwe Library and the hill campus.', 'unn_'],
     ['en_airport_pl', '✈️', 'Akanu Ibiam International Airport', 'transport', 'plane', 'en_emene', 28.4, 8.2, null, 'Flights to Lagos and Abuja, and pilgrims flying out in season.', [
-      act('enap_snack', 'Meat pie and a soft drink at the terminal', 15, 1500, 0, { hunger: 14 }, null, { from: 6, to: 21 })
+      act('enap_snack', 'Meat pie and a soft drink at the terminal', 15, 1500, 0, { hunger: 14 }, null, { from: 6, to: 21 }),
+      act('enap_watch', 'Watch the planes from the terminal windows', 30, 0, 0, { fun: 8 }, null, { from: 7, to: 19 }),
+      act('enap_lounge', 'Charge your phone in the lounge', 30, 1000, 0, { stress: -6 }, null, { from: 6, to: 21 })
     ]],
     ['en_ogbete_mkt', '🧺', 'Ogbete Main Market', 'food', 'basket', 'en_ogbete', 9.6, 15.4, null, 'One of the biggest markets in the east: cloth, spare parts, foodstuff and electronics.', [
-      act('ogm_cloth', 'Buy george wrapper and isiagu cloth', 30, 9000, 0, { fun: 8 }, null, { from: 8, to: 18 })
+      act('ogm_cloth', 'Buy george wrapper and isiagu cloth', 30, 9000, 0, { fun: 8 }, null, { from: 8, to: 18 }),
+      act('ogm_phone', 'Buy a phone case and screen guard', 30, 2500, 0, { fun: 4 }, null, { from: 8, to: 18 }),
+      act('ogm_shoes', 'Haggle for shoes in the shoe line', 45, 6000, 0, { fun: 8, social: 4 }, null, { from: 8, to: 18 })
     ]],
     ['en_milliken', '⛰️', 'Milliken Hill', 'outdoors', 'tree', 'en_ngwo', 5.6, 11.6, null, 'The winding road up the escarpment, with the whole Coal City below.', [
-      act('mkh_view', 'Watch the sunset over the city from the hill', 45, 0, 0, { fun: 12, stress: -8 }, null, { from: 16, to: 19 })
+      act('mkh_view', 'Watch the sunset over the city from the hill', 45, 0, 0, { fun: 12, stress: -8 }, null, { from: 16, to: 19 }),
+      act('mkh_walk', 'Walk up the old Milliken road', 60, 0, 0, { energy: -10, stress: -6 }, { fitness: 1 }, { from: 7, to: 17 }),
+      act('mkh_corn', 'Roasted corn and ube by the roadside', 15, 600, 0, { hunger: 12 }, null, { from: 10, to: 19 })
     ]],
     ['en_ngwo_forest', '🌲', 'Ngwo Pine Forest', 'outdoors', 'tree', 'en_ngwo', 3.4, 8.8, null, 'Tall pines, a stream and a cave with a waterfall running through it.', [
-      act('ngf_cave', 'Climb down to the waterfall cave', 90, 1500, 0, { fun: 22, energy: -12 }, { fitness: 1 }, { from: 9, to: 16 })
+      act('ngf_cave', 'Climb down to the waterfall cave', 90, 1500, 0, { fun: 22, energy: -12 }, { fitness: 1 }, { from: 9, to: 16 }),
+      act('ngf_picnic', 'A picnic under the pines', 90, 2500, 0, { hunger: 24, fun: 12, social: 10 }, null, { from: 10, to: 17 }),
+      act('ngf_photo', 'Take photos among the pines', 30, 0, 0, { fun: 8 }, null, { from: 8, to: 17 })
     ]],
     ['en_nike_lake', '🏞️', 'Nike Lake', 'outdoors', 'wave', 'en_independence', 23.6, 5.2, null, 'A quiet lake on the edge of town, with boats and a lakeside resort.', [
-      act('nkl_boat', 'Take a boat out on the lake', 60, 4000, 0, { fun: 16, stress: -8 }, null, { from: 9, to: 18 })
+      act('nkl_boat', 'Take a boat out on the lake', 60, 4000, 0, { fun: 16, stress: -8 }, null, { from: 9, to: 18 }),
+      act('nkl_walk', 'Walk round the lake shore', 45, 0, 0, { fun: 8, stress: -8 }, null, { from: 7, to: 18 }),
+      act('nkl_soup', 'Catfish pepper soup by the water', 30, 2500, 0, { hunger: 30, fun: 4 }, null, { from: 12, to: 21 })
     ]],
-    ['en_okpara', '🏛️', 'Michael Okpara Square', 'culture', 'frame', 'en_independence', 19.4, 7.8, null, 'The big parade ground for rallies, carnivals and the Mmanwu festival.', [
-      act('oks_walk', 'Evening walk round the square', 30, 0, 0, { fun: 6, stress: -6 }, null, { from: 16, to: 20 })
+    ['en_okpara', '🏛️', 'Michael Okpara Square', 'culture', 'frame', 'en_independence', 19.4, 7.8, 'landmark', 'The big parade ground for rallies, carnivals and the Mmanwu festival.', [
+      act('oks_walk', 'Evening walk round the square', 30, 0, 0, { fun: 6, stress: -6 }, null, { from: 16, to: 20 }),
+      act('oks_fit', 'Join the evening keep-fit group on the square', 45, 0, 0, { energy: -10, social: 8, stress: -6 }, { fitness: 1 }, { from: 17, to: 19 }),
+      act('oks_suya', 'Suya from the stand at the edge of the square', 15, 1000, 0, { hunger: 14 }, null, { from: 17, to: 22 })
     ]],
     ['en_stadium', '🏟️', 'Nnamdi Azikiwe Stadium', 'outdoors', 'stadium', 'en_newhaven', 18.6, 17.4, null, 'The home of football in the Coal City, loud on match days.', [
-      act('enst_match', 'Watch the home side play on Sunday', 120, 1500, 0, { fun: 24, social: 10 }, null, { days: [6], from: 15, to: 19 })
+      act('enst_match', 'Watch the home side play on Sunday', 120, 1500, 0, { fun: 24, social: 10 }, null, { days: [6], from: 15, to: 19 }),
+      act('enst_jog', 'Jog round the track in the morning', 45, 0, 0, { energy: -10, stress: -8 }, { fitness: 1 }, { from: 6, to: 9 }),
+      act('enst_train', 'Watch the team train', 30, 0, 0, { fun: 6 }, null, { from: 16, to: 18 })
     ]],
     ['en_coal_camp', '⛏️', 'Coal Camp and Iva Valley', 'culture', 'frame', 'en_ogbete', 7.4, 18.2, null, "Where the Coal City began: the old miners' quarters and the memorial to the Iva Valley miners shot in 1949.", [
-      act('cvc_memorial', 'Read the Iva Valley memorial', 30, 0, 0, { stress: 4, social: 2 }, { charisma: 1 }, { from: 8, to: 18 })
+      act('cvc_memorial', 'Read the Iva Valley memorial', 30, 0, 0, { stress: 4, social: 2 }, { charisma: 1 }, { from: 8, to: 18 }),
+      act('cvc_walk', 'Walk the old miners\' streets', 45, 0, 0, { fun: 6 }, null, { from: 8, to: 18 }),
+      act('cvc_talk', 'Hear an old miner talk about the pits', 30, 0, 0, { social: 8 }, { charisma: 1 }, { from: 10, to: 17 })
     ]],
     ['en_chopbar', '🍲', "Nne Ada's Kitchen", 'food', 'bowl', 'en_uwani', 12.6, 21.4, null, 'Bitter leaf soup, ofe nsala and abacha, with fufu or pounded yam.', [
       act('nad_onugbu', 'Bitter leaf soup (ofe onugbu) with fufu', 30, 2200, 0, { hunger: 42, fun: 6 }, null, { from: 11, to: 21 }),
-      act('nad_abacha', 'Abacha and ugba with fried fish', 30, 1600, 0, { hunger: 34 }, null, { from: 10, to: 21 })
+      act('nad_abacha', 'Abacha and ugba with fried fish', 30, 1600, 0, { hunger: 34 }, null, { from: 10, to: 21 }),
+      act('nad_okpa', 'Okpa and a cold drink', 15, 800, 0, { hunger: 20 }, null, { from: 7, to: 12 })
     ]],
     ['en_park', '🚌', 'Holy Ghost Motor Park', 'transport', 'bus', 'en_ogbete', 11.4, 14.4, null, 'Buses to Lagos, Abuja, Port Harcourt and Onitsha, and hawkers with okpa and boiled eggs.', [
-      act('hgp_okpa', 'Hot okpa wrapped in leaves', 15, 800, 0, { hunger: 22 }, null, { from: 6, to: 20 })
+      act('hgp_okpa', 'Hot okpa wrapped in leaves', 15, 800, 0, { hunger: 22 }, null, { from: 6, to: 20 }),
+      act('hgp_eggs', 'Boiled eggs and groundnuts for the road', 15, 600, 0, { hunger: 10 }, null, { from: 6, to: 20 }),
+      act('hgp_shade', 'Wait in the shade for the bus to fill', 30, 0, 0, { stress: -2, fun: 2 }, null, { from: 6, to: 20 })
     ]],
     // Kumasi (rules 25): real landmarks keep their names; the businesses are made up.
     ['kum_kejetia_mkt', '🧺', 'Kejetia Market', 'food', 'basket', 'kum_kejetia', 12.4, 11.6, null, 'Thousands of stalls under new roofs: kente, beads, shea butter, tomatoes and car parts.', [
