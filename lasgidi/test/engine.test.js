@@ -3074,7 +3074,7 @@ test('rules 29: passport stamps the first time you are in each city; travel achi
   assert.ok(s.ach.ghana_tour); assert.ok(!s.ach.globetrotter);
   for (const c of ['ldn', 'dxb']) { s.loc = D.CITIES[c].airport; L.wait(s, 15); }
   assert.ok(s.ach.globetrotter); assert.ok(!s.ach.every_city);
-  for (const c of ['abuja', 'ph', 'ctn']) { s.loc = D.CITIES[c].park; L.wait(s, 15); }
+  for (const c of ['abuja', 'ph', 'ctn', 'ibadan', 'enugu']) { s.loc = D.CITIES[c].park; L.wait(s, 15); }
   assert.ok(s.ach.every_city); const day0 = s.stamps.accra; s.loc = D.CITIES.accra.park; s.t += 1440; L.wait(s, 15); assert.equal(s.stamps.accra, day0, 'a stamp is kept from the first visit');
   const old = L.newGame({ seed: 2900, origin: 'nepo', goal: 'freestyle', rules: 28 }); while (old.pending.length) L.resolveChoice(old, 0); L.wait(old, 60);
   assert.equal(old.stamps, undefined); assert.equal(L.passport(old), null);
@@ -3932,4 +3932,25 @@ test('rules 58: car papers expire and renew, offences are recorded, FM stations 
   assert.ok(fined > 0 && fined < 40, 'one-way shortcuts are sometimes caught (' + fined + '/40)');
   assert.ok(D.FM.length >= 5);
   const ids = new Set(); for (const st of D.FM) { assert.ok(!ids.has(st.id), st.id); ids.add(st.id); assert.ok(st.name && st.freq && st.style && st.shows.length, st.id); for (const sh of st.shows) assert.ok(sh[0] < sh[1] && sh[1] <= 24 && sh[2] && sh[3], st.id + ' ' + sh[2]); }
+});
+
+test('rules 59: Ibadan (coach only) and Enugu (fly or coach) open to new lives; a trip there replays; closed in rules 58', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 5901, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const old = mk(58); assert.ok(!L.cityOpen(old, 'ibadan') && !L.cityOpen(old, 'enugu')); assert.deepEqual(L.intercityOptions(old, 'enugu'), []);
+  const s = mk(); assert.ok(L.cityOpen(s, 'ibadan') && L.cityOpen(s, 'enugu'));
+  assert.deepEqual(L.intercityOptions(s, 'ibadan').map(o => o.mode), ['bus'], 'no airport in Ibadan');
+  assert.deepEqual(L.intercityOptions(s, 'enugu').map(o => o.mode).sort(), ['bus', 'flight']);
+  for (const c of ['ibadan', 'enugu']) {
+    const ds = Object.keys(D.DISTRICTS).filter(k => D.DISTRICTS[k].city === c); assert.ok(ds.length >= 7, c);
+    assert.ok(Object.values(D.CAREERS).filter(x => ds.includes(x.district)).length >= 2, c + ' careers');
+    assert.ok(Object.values(D.HOMES).filter(h => !h.hidden && ds.includes(h.district)).length >= 4, c + ' homes');
+    assert.ok(D.PLACES.filter(p => ds.includes(p.district)).length >= 10, c + ' places');
+    for (const d of ds) for (const a of D.PLACE_ACTIONS[d] || []) { assert.ok(a.mins % 15 === 0, a.id); if (a.earn) assert.ok(a.earn <= 3000, a.id); }
+  }
+  // A real trip: take the coach from Lagos to Ibadan and back to replay it.
+  const o = L.intercityOptions(s, 'ibadan')[0]; if (o.disabled) { s.cash += 0; }
+  while (L.intercityOptions(s, 'ibadan')[0].disabled && s.t < 40 * 1440) L.wait(s, 60);
+  const r = L.intercity(s, 'ibadan', 'bus'); assert.ok(r.ok, r.msg); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(L.cityOf(s), 'ibadan'); assert.ok(L.groceryShop(Object.assign({}, s, { loc: 'ib_bodija' })), 'Bodija sells foodstuff');
+  const rp = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.equal(rp.loc, s.loc); assert.equal(rp.t, s.t); assert.equal(rp.cash, s.cash);
 });

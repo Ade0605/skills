@@ -117,7 +117,10 @@
   // points and perks.
   // 58 adds minor offences: a tempting one-way shortcut when you drive, and car papers that need renewing yearly
   // (checkpoints fine expired papers); a record of fines in your profile.
-  var RULES = 58;
+  // 59 opens two Nigerian cities: Ibadan (coaches and the train, no airport) with UI, Bodija, Mapo Hall, Bower's
+  // Tower, Cocoa House and Agodi Gardens; and Enugu, the Coal City, with Ogbete Market, Milliken Hill, the Ngwo pine
+  // forest, Nike Lake and UNN at Nsukka. Each has homes, two careers, gigs, a hospital, a hotel and a festival.
+  var RULES = 59;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
