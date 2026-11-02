@@ -920,6 +920,7 @@
       db.collection('huntfin').limit(500).onSnapshot(function (snap) { online.huntfin = snap.docs.map(function (d) { var r = d.data() || {}; return { id: d.id, hunt: typeof r.hunt === 'string' ? r.hunt : '', week: typeof r.week === 'number' ? r.week : -1, at: typeof r.at === 'number' ? r.at : 0 }; }); scheduleRender(); }, function () { online.huntfin = []; });
       db.collection('residents').limit(500).onSnapshot(function (snap) {
         online.residents = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, home: r && typeof r.home === 'string' ? r.home : null, links: cleanLinks(r && r.links) }; });
+        online.bgDocs = snap.docs.map(function (d) { var r = d.data(); return { id: d.id, raw: r && r.bg && typeof r.bg === 'object' ? r.bg : null }; }).filter(function (d) { return d.raw; }); if (online.me && !online.bgMine) { var mine0 = online.bgDocs.filter(function (d) { return d.id === online.me; })[0]; if (mine0) online.bgMine = mine0.raw; } bgRefresh();
         var ids = online.residents.map(function (r) { return r.id; });
         if (online.user && ids.length) online.user.profiles(ids).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
         scheduleRender();
@@ -1943,10 +1944,10 @@
   }
   /* ---------- Board games: Ludo, Ayò Ọlọ́pọ́n and draughts, against the computer or other players online ----------
      A game is its seats, seed and move list (LasgidiBoards replays them). Offline games are kept on this device.
-     Online, each player writes only their own doc boardgames/<id>: the host's doc holds the table (game, seats,
+     Online, each player writes only their own record (the bg field of residents/<id>): the host's holds the table (game, seats,
      seed, open/started) and the host's moves; each guest's doc says which table they joined and holds their moves.
      Every phone merges the move lists in turn order and replays them, so an illegal move simply never counts. */
-  var BG_KEY = 'lasgidi.boards.v1', bgUnsub = null, bgFor = null, bgLobbyUnsub = null;
+  var BG_KEY = 'lasgidi.boards.v1', bgFor = null;
   ui.bgGame = ui.bgGame || 'ludo';
   function BGL() { return window.LasgidiBoards; }
   function bgLocal() { return readJSON(BG_KEY, null); }
@@ -1981,51 +1982,58 @@
       var g = bgLocal(); g.moves.push(m); bgSaveLocal(g); bgSound(c2.game, n); if (ui.tab === 'phone' && ui.app === 'tables') render(); bgAiTurn();
     }, cur.game === 'ludo' ? 750 : 650);
   }
-  // ---- online tables
-  function bgDoc() { return online.db && online.me ? online.db.doc('boardgames/' + online.me) : null; }
-  function bgMineRaw() { return (online.bgRaw || []).filter(function (d) { return d.id === online.me; })[0]; }
-  function bgSubscribeLobby() {
-    if (!online.db || bgLobbyUnsub) return;
-    try { bgLobbyUnsub = online.db.collection('boardgames').where('open', '==', true).limit(40).onSnapshot(function (snap) { online.bgOpen = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }).filter(function (d) { var r = d.raw; return r && r.kind === 'host' && BGL() && BGL().INFO[r.game] && Date.now() - (r.at || 0) < 3 * 3600e3; }); if (ui.app === 'tables') scheduleRender(); }, function () { online.bgOpen = []; }); } catch (e) { bgLobbyUnsub = null; }
+  // ---- online tables: each player's board record rides on their own residents/<id> doc (field bg), which every
+  // player already follows; so no extra database rules are needed.
+  function bgWrite(rec) {
+    if (!online.db || !online.me) return Promise.reject(new Error('offline'));
+    online.bgMine = rec;
+    return online.db.doc('residents/' + online.me).set({ home: online.lastHome || (S && !S.challenge ? S.home : null), at: Date.now(), links: myLinks(), bg: rec });
   }
-  function bgSubscribeTable(host) {
-    if (!online.db || bgFor === host) return; if (bgUnsub) { try { bgUnsub(); } catch (e) {} } bgFor = host; online.bgRaw = []; online.bgTable = null;
-    if (!host) return;
-    try { bgUnsub = online.db.collection('boardgames').where('table', '==', host).limit(12).onSnapshot(function (snap) { online.bgRaw = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; }); bgBuild(); if (ui.app === 'tables') scheduleRender(); }, function () {}); } catch (e) { bgUnsub = null; }
+  function bgMineRaw() { return online.bgMine ? { id: online.me, raw: online.bgMine } : null; }
+  function bgSubscribeLobby() {}
+  function bgRefresh() {
+    online.bgOpen = (online.bgDocs || []).filter(function (d) { var r = d.raw; return r.kind === 'host' && r.open && BGL() && BGL().INFO[r.game] && Date.now() - (r.at || 0) < 3 * 3600e3; });
+    if (!bgFor && online.bgMine && !bgRefresh.done) { bgRefresh.done = true; var r = online.bgMine; if ((r.kind === 'host' || r.kind === 'join') && Date.now() - (r.moved || r.at || 0) < 24 * 3600e3) { ui.bgOnline = true; bgFor = r.kind === 'host' ? online.me : r.table; } }
+    bgBuild(); if (ui.app === 'tables') scheduleRender();
   }
+  function bgSubscribeTable(host) { bgFor = host || null; bgBuild(); }
   function bgBuild() {
-    var B = BGL(), host = bgFor, docs = online.bgRaw || [], H = docs.filter(function (d) { return d.id === host && d.raw && d.raw.kind === 'host'; })[0];
-    if (!B || !H || !B.INFO[H.raw.game]) { online.bgTable = null; return; }
+    var B = BGL(), host = bgFor, docs = (online.bgDocs || []).map(function (d) { return d.id === online.me && online.bgMine ? { id: d.id, raw: online.bgMine } : d; });
+    if (online.bgMine && !docs.some(function (d) { return d.id === online.me; })) docs.push({ id: online.me, raw: online.bgMine });
+    var H = docs.filter(function (d) { return d.id === host && d.raw && d.raw.kind === 'host'; })[0];
+    if (!B || !host || !H || !B.INFO[H.raw.game]) { online.bgTable = null; return; }
     var info = B.INFO[H.raw.game], guests = docs.filter(function (d) { return d.id !== host && d.raw && d.raw.kind === 'join' && d.raw.table === host; }).sort(function (a, b) { return (a.raw.at || 0) - (b.raw.at || 0); });
     var seats = H.raw.started && Array.isArray(H.raw.seats) ? H.raw.seats.slice(0, info.max) : [host].concat(guests.map(function (g) { return g.id; })).slice(0, info.max);
     var byId = {}; docs.forEach(function (d) { byId[d.id] = d.raw; });
     var moves = [], st = B.start(H.raw.game, seats.length, H.raw.seed);
     if (H.raw.started) for (var n = 0; n < 4000 && !st.over; n++) {
-      var who = seats[st.turn], list = (byId[who] && Array.isArray(byId[who].moves)) ? byId[who].moves : [], e = list.filter(function (x) { return x && x.n === n; })[0];
+      var who = seats[st.turn], list = (byId[who] && byId[who].table === host && Array.isArray(byId[who].moves)) ? byId[who].moves : [], e = list.filter(function (x) { return x && x.n === n; })[0];
       if (!e) break; var nx = B.play(st, e.m); if (!nx) break; st = nx; moves.push(e.m);
     }
     online.bgTable = { offline: false, game: H.raw.game, host: host, seats: seats, seed: H.raw.seed, started: !!H.raw.started, open: !!H.raw.open, moves: moves, state: st, me: seats.indexOf(online.me), guests: guests.length };
   }
   function bgHost(game) {
-    var d = bgDoc(); if (!d) return; var info = BGL().INFO[game];
-    d.set({ kind: 'host', game: game, table: online.me, max: info.max, seed: String(Date.now()) + ':' + Math.floor(Math.random() * 1e9), open: true, started: false, at: Date.now(), moves: [] }).then(function () { ui.bgOnline = true; bgSubscribeTable(online.me); render(); }, function () { ui.toasts.push({ msg: 'Could not open a table right now.', ok: false }); renderToasts(); });
+    if (!online.db || !online.me) return; var info = BGL().INFO[game];
+    bgWrite({ kind: 'host', game: game, table: online.me, max: info.max, seed: String(Date.now()) + ':' + Math.floor(Math.random() * 1e9), open: true, started: false, at: Date.now(), moves: [] }).then(function () { ui.bgOnline = true; bgSubscribeTable(online.me); render(); }, function () { ui.toasts.push({ msg: 'Could not open a table right now.', ok: false }); renderToasts(); });
+    ui.bgOnline = true; bgSubscribeTable(online.me);
   }
   function bgJoin(host) {
-    var d = bgDoc(); if (!d || host === online.me) return;
-    d.set({ kind: 'join', table: host, at: Date.now(), moves: [] }).then(function () { ui.bgOnline = true; bgSubscribeTable(host); render(); }, function () { ui.toasts.push({ msg: 'Could not join that table.', ok: false }); renderToasts(); });
+    if (!online.db || !online.me || host === online.me) return;
+    bgWrite({ kind: 'join', table: host, at: Date.now(), moves: [] }).then(function () { ui.bgOnline = true; bgSubscribeTable(host); render(); }, function () { ui.toasts.push({ msg: 'Could not join that table.', ok: false }); renderToasts(); });
+    ui.bgOnline = true; bgSubscribeTable(host);
   }
   function bgStart() {
-    var t = online.bgTable, d = bgDoc(); if (!t || t.host !== online.me || !d) return;
+    var t = online.bgTable; if (!t || t.host !== online.me) return;
     if (t.seats.length < BGL().INFO[t.game].min) { ui.toasts.push({ msg: 'Wait for at least one more player.', ok: false }); renderToasts(); return; }
-    var mine = bgMineRaw(); d.set(Object.assign({}, mine ? mine.raw : {}, { open: false, started: true, seats: t.seats, startedAt: Date.now(), moves: [] }));
+    bgWrite(Object.assign({}, online.bgMine || {}, { open: false, started: true, seats: t.seats, startedAt: Date.now(), moves: [] })); bgBuild(); render();
   }
   function bgPostMove(t, m) {
-    var d = bgDoc(), mine = bgMineRaw(); if (!d || !mine) return;
-    var list = (mine.raw.moves || []).filter(function (x) { return x.n < t.state.n; }).concat([{ n: t.state.n, m: m }]).slice(-400);
-    d.set(Object.assign({}, mine.raw, { moves: list, at: mine.raw.kind === 'host' ? mine.raw.at : mine.raw.at, moved: Date.now() }));
+    var mine = online.bgMine; if (!mine) return;
+    var list = (mine.moves || []).filter(function (x) { return x.n < t.state.n; }).concat([{ n: t.state.n, m: m }]).slice(-400);
+    bgWrite(Object.assign({}, mine, { moves: list, moved: Date.now() })); bgBuild(); render();
   }
   function bgLeave() {
-    var d = bgDoc(); if (d && online.bgTable) d.set({ kind: 'left', table: '-', at: Date.now(), moves: [] });
+    if (online.db && online.me && online.bgMine) bgWrite({ kind: 'left', table: '-', at: Date.now(), moves: [] });
     ui.bgOnline = false; bgSubscribeTable(null); render();
   }
   function bgRestore() {}
@@ -2043,7 +2051,6 @@
   function tablesView() {
     var B = BGL(); if (!B) return '<div class="section"><p class="note">Board games are loading…</p></div>';
     bgSubscribeLobby();
-    if (online.db && online.me && !bgRestore.done) { bgRestore.done = true; try { online.db.doc('boardgames/' + online.me).get().then(function (snap) { var r = snap && snap.exists ? snap.data() : null; if (r && (r.kind === 'host' || r.kind === 'join') && Date.now() - (r.moved || r.at || 0) < 24 * 3600e3) { ui.bgOnline = true; bgSubscribeTable(r.kind === 'host' ? online.me : r.table); } }, function () {}); } catch (e) {} }
     var cur0 = bgCurrent(); if (cur0 && cur0.offline && cur0.seats[cur0.state.turn] === 'cpu') bgAiTurn();
     var cur = bgCurrent(), top = '', html = '<div class="section"><h3>🎲 Board games</h3><div class="seg bg-seg">' + ['ludo', 'ayo', 'draughts'].map(function (g) { return '<button type="button" class="seg-b' + (ui.bgGame === g ? ' sel' : '') + '" id="bg-pick-' + g + '" data-bgpick="' + g + '">' + B.INFO[g].icon + ' ' + esc(B.INFO[g].name) + '</button>'; }).join('') + '</div><p class="note">' + esc(B.INFO[ui.bgGame].text) + '</p>';
     html += '<div class="inline">' + (ui.bgGame === 'ludo' ? [2, 3, 4].map(function (k) { return '<button type="button" class="btn sm' + (k === 2 ? ' go' : '') + '" id="bg-cpu-' + k + '" data-bgcpu="' + k + '">🤖 You vs ' + (k - 1) + ' computer' + (k > 2 ? 's' : '') + '</button>'; }).join('') : '<button type="button" class="btn sm go" id="bg-cpu-2" data-bgcpu="2">🤖 Play the computer</button><button type="button" class="btn sm ghost" id="bg-level" data-bglevel="1">Level: ' + (ui.bgLevel === 'easy' ? 'easy' : 'hard') + '</button>') +
@@ -2650,7 +2657,7 @@
     var key = S.home + ':' + L.myPlot(S) + ':' + JSON.stringify(myLinks());
     if (online.sentHome === key) return;
     online.sentHome = key;
-    online.db.doc('residents/' + online.me).set({ home: S.home, at: Date.now(), links: myLinks() }).catch(function () {});
+    online.lastHome = S.home; online.db.doc('residents/' + online.me).set({ home: S.home, at: Date.now(), links: myLinks(), bg: online.bgMine || null }).catch(function () {});
   }
 
   /* ---------- places ---------- */
