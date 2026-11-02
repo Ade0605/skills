@@ -1149,6 +1149,68 @@
       var river = new T.Mesh(new T.PlaneGeometry(400, 40).rotateX(-Math.PI / 2), new T.MeshPhysicalMaterial({ color: 0x5f7a86, roughness: 0.1, clearcoat: 1 })); river.position.set(0, 0.1, 86); parkG.add(river);
     }
     // Accra's Independence Arch: a wide white gate with the black star on top, and the stands of the square either side.
+    // Ibadan and Enugu (rules 59): Mapo Hall on its hill, Cocoa House, Bower's Tower and Michael Okpara Square.
+    function sign3d(g, text, w, y, z, bg, fg) {
+      var tx = canvasTex(1024, 128, function (c, W, H) { c.fillStyle = bg; c.fillRect(0, 0, W, H); c.fillStyle = fg; c.font = '800 58px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, W / 2, H / 2, W - 30); });
+      var tm = new T.Mesh(new T.PlaneGeometry(w, w / 8), new T.MeshBasicMaterial({ map: tx })); tm.position.set(0, y, z); tm.rotation.y = Math.PI; g.add(tm);
+    }
+    function brownRoofs(g, n, r0, r1, seed) {
+      // The old city's rusty zinc roofs, crowded round the hill.
+      var r = rnd(seed), wall = mat('ibWall', { color: 0xcdb89a, roughness: 0.9 }), roofs = [0x7a4a2e, 0x8a5a3a, 0x6e4128, 0x9a6440].map(function (c, i) { return mat('ibRoof' + i, { color: c, roughness: 0.85, metalness: 0.2 }); });
+      for (var i = 0; i < n; i++) { var a = r() * Math.PI * 2, d = r0 + r() * (r1 - r0), x = Math.cos(a) * d, z = Math.sin(a) * d; if (z < -20) continue; var w = 5 + r() * 4, dp = 5 + r() * 4, h = 3 + r() * 3;
+        g.add(mesh(new T.BoxGeometry(w, h, dp), wall, x, h / 2, z)); var rf = mesh(new T.BoxGeometry(w + 0.8, 0.4, dp + 0.8), roofs[i % 4], x, h + 0.3, z); rf.rotation.z = (r() - 0.5) * 0.3; g.add(rf); }
+    }
+    function mapoHall(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var wm = mat('mpWhite', { color: 0xf3efe6, roughness: 0.6 }), hill = mat('mpHill', { color: 0x8a7a52, roughness: 1 });
+      g.add(mesh(new T.CylinderGeometry(34, 60, 8, 32), hill, 0, 4, 10));
+      g.add(mesh(new T.BoxGeometry(48, 14, 20), wm, 0, 15, 14)); g.add(mesh(new T.BoxGeometry(50, 1.2, 22), mat('mpRoof', { color: 0x9a6a44, roughness: 0.7 }), 0, 22.6, 14));
+      for (var c = 0; c < 8; c++) g.add(mesh(new T.CylinderGeometry(0.9, 1, 13, 14), wm, -15.75 + c * 4.5, 14.5, 2.6));
+      var ped = mesh(new T.CylinderGeometry(4, 4, 36, 3), wm, 0, 24, 2.6); ped.rotation.z = Math.PI / 2; ped.rotation.y = Math.PI / 2; ped.scale.set(1, 1, 0.45); g.add(ped);
+      g.add(mesh(new T.BoxGeometry(38, 1, 3), wm, 0, 21.4, 2.6));
+      for (var st = 0; st < 6; st++) g.add(mesh(new T.BoxGeometry(36, 0.7, 2), wm, 0, 8.35 - st * 0.0 + st * 0.0, -1.2 - st * 2).translateY(-st * 0.7));
+      sign3d(g, 'MAPO HALL · IBADAN · 1929', 26, 24.2, 0.6, '#f3efe6', '#3a2a1c');
+      [-1, 1].forEach(function (sd) { var fp = mesh(new T.CylinderGeometry(0.15, 0.15, 12, 6), mat('pole', { color: 0x9aa0a6 }), sd * 28, 14, 0); g.add(fp); [0x008751, 0xffffff, 0x008751].forEach(function (cl, i) { g.add(mesh(new T.BoxGeometry(1.4, 2.6, 0.1), mat('ngflag' + i, { color: cl }), sd * 28 + 0.7 + i * 1.4, 18.6, 0)); }); });
+      brownRoofs(g, 70, 50, 110, 29);
+      plzG.add(g);
+    }
+    function cocoaHouse(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var wm = mat('chWall', { color: 0xe9e4d8, roughness: 0.6 }), band = mat('chBand', { color: 0x3a4652, roughness: 0.2, metalness: 0.4 });
+      g.add(mesh(new T.BoxGeometry(44, 8, 30), wm, 0, 4, 6));
+      g.add(mesh(new T.BoxGeometry(20, 84, 20), wm, 0, 50, 8));
+      for (var f = 0; f < 26; f++) [[0, -2.06], [0, 18.06]].forEach(function (q) { g.add(mesh(new T.BoxGeometry(19.4, 1.4, 0.3), band, 0, 11 + f * 3.1, q[1])); });
+      for (var f2 = 0; f2 < 26; f2++) [-10.06, 10.06].forEach(function (sx) { g.add(mesh(new T.BoxGeometry(0.3, 1.4, 19.4), band, sx, 11 + f2 * 3.1, 8)); });
+      g.add(mesh(new T.BoxGeometry(14, 6, 14), wm, 0, 95, 8)); g.add(mesh(new T.CylinderGeometry(0.3, 0.3, 12, 6), mat('chMast', { color: 0xc0392b }), 0, 104, 8));
+      sign3d(g, 'COCOA HOUSE · 1965', 18, 6.2, -9.2, '#3a2a1c', '#f2d39a');
+      // A cocoa pod sculpture out front.
+      var pod = mesh(new T.SphereGeometry(2.2, 16, 12), mat('chPod', { color: 0xb5651d, roughness: 0.5 }), -14, 4.4, -16); pod.scale.set(0.8, 1.6, 0.8); g.add(pod); g.add(mesh(new T.BoxGeometry(4, 2, 4), wm, -14, 1, -16));
+      brownRoofs(g, 40, 45, 100, 65);
+      plzG.add(g);
+    }
+    function bowersTower(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var stone = mat('bwStone', { color: 0xb8b2a4, roughness: 0.85 }), hill = mat('bwHill', { color: 0x6f8a4a, roughness: 1 });
+      g.add(mesh(new T.CylinderGeometry(26, 56, 14, 32), hill, 0, 7, 10));
+      g.add(mesh(new T.BoxGeometry(7, 30, 7), stone, 0, 29, 10));
+      g.add(mesh(new T.BoxGeometry(10, 1.2, 10), stone, 0, 44.6, 10));
+      [[-4.6, 0], [4.6, 0], [0, -4.6], [0, 4.6]].forEach(function (q) { g.add(mesh(new T.BoxGeometry(q[0] ? 0.4 : 9.6, 1.4, q[0] ? 9.6 : 0.4), stone, q[0], 45.9, 10 + q[1])); });
+      g.add(mesh(new T.BoxGeometry(5, 4, 5), stone, 0, 47.2, 10)); g.add(mesh(new T.ConeGeometry(4.2, 3.4, 4), mat('bwCap', { color: 0x7a6a5a }), 0, 50.9, 10).rotateY(Math.PI / 4));
+      for (var k = 0; k < 9; k++) g.add(mesh(new T.BoxGeometry(1.2, 2, 0.2), mat('bwSlot', { color: 0x2b2f36 }), 0, 17 + k * 3.2, 6.4));
+      sign3d(g, "BOWER'S TOWER · OKE ARE · 1936", 22, 15.6, -16, '#f3efe6', '#2b2f36');
+      g.add(mesh(new T.BoxGeometry(24, 6, 0.6), mat('bwBoard', { color: 0x5a4632 }), 0, 15.6, -15.6));
+      brownRoofs(g, 90, 58, 130, 36);
+      plzG.add(g);
+    }
+    function okparaSquare(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var st = mat('okStand', { color: 0xf1ece0, roughness: 0.7 }), grn = mat('okGreen', { color: 0x1f8a4c, roughness: 0.6 });
+      g.add(mesh(new T.BoxGeometry(150, 0.2, 80), mat('okPave', { color: 0xcfc8b8, roughness: 0.9 }), 0, 0.1, 0));
+      for (var t = 0; t < 7; t++) g.add(mesh(new T.BoxGeometry(70, 1.2, 3), st, 0, 0.6 + t * 1.2, 30 + t * 3));
+      g.add(mesh(new T.BoxGeometry(76, 0.8, 26), grn, 0, 15, 40)); [-36, -12, 12, 36].forEach(function (px) { g.add(mesh(new T.CylinderGeometry(0.4, 0.4, 15, 8), st, px, 7.5, 28)); });
+      sign3d(g, 'MICHAEL OKPARA SQUARE · ENUGU', 34, 17.4, 26.8, '#1f8a4c', '#ffffff');
+      g.add(mesh(new T.BoxGeometry(6, 6, 6), st, 0, 3, -6)); var body = mesh(new T.CylinderGeometry(0.9, 1.2, 4.4, 12), mat('okBronze', { color: 0x5a4632, metalness: 0.6, roughness: 0.4 }), 0, 8.2, -6); g.add(body); g.add(mesh(new T.SphereGeometry(0.8, 12, 10), mat('okBronze', {}), 0, 11, -6));
+      [-60, -48, 48, 60].forEach(function (px) { g.add(mesh(new T.CylinderGeometry(0.2, 0.2, 14, 6), mat('pole', { color: 0x9aa0a6 }), px, 7, 10)); [0x008751, 0xffffff, 0x008751].forEach(function (cl, i) { g.add(mesh(new T.BoxGeometry(1.6, 3, 0.1), mat('ngflag' + i, { color: cl }), px + 0.8 + i * 1.6, 12.4, 10)); }); });
+      // The hills of the Udi escarpment behind the city.
+      for (var h = 0; h < 6; h++) g.add(mesh(new T.ConeGeometry(30 + h * 4, 22 + (h % 3) * 8, 7), mat('okHill', { color: 0x5f7f4a, roughness: 1 }), -110 + h * 44, 11, 130 + (h % 2) * 20));
+      plzG.add(g);
+    }
     function blackStarGate(x, z) {
       var g = new T.Group(); g.position.set(x, 0, z); var wm = mat('bsgWhite', { color: 0xf4f1ea, roughness: 0.6 }), dk = mat('bsgStar', { color: 0x17181a, roughness: 0.4 });
       [-14, -5, 5, 14].forEach(function (px) { g.add(mesh(new T.BoxGeometry(5, 22, 6), wm, px, 11, 0)); }); g.add(mesh(new T.BoxGeometry(40, 6, 7), wm, 0, 25, 0));
@@ -1239,6 +1301,10 @@
       else if (id === 'theatre') { theatre(0, 70); if (sc.th) theatreBoard(0, 20); }
       else if (/abj_tower/.test(id)) millenniumTower(0, 80);
       else if (id === 'acc_blackstar') blackStarGate(0, 60);
+      else if (id === 'ib_mapo_hall') mapoHall(0, 80);
+      else if (id === 'ib_cocoa_house') cocoaHouse(0, 90);
+      else if (id === 'ib_bowers') bowersTower(0, 90);
+      else if (id === 'en_okpara') okparaSquare(0, 40);
       else if (id === 'dxb_burj') burjKhalifa(0, 110);
       else if (id === 'cc_castle' || id === 'cc_elmina_castle' || id === 'acc_osucastle' || id === 'ctn_goodhope') slaveCastle(0, 70, id === 'cc_elmina_castle');
       else if (id === 'dxb_safari') desertCamp();
@@ -1269,7 +1335,7 @@
       PZ.spray = []; for (var sp2 = 0; sp2 < (dune ? 0 : 50); sp2++) { var d = mesh(new T.SphereGeometry(0.14, 6, 4), mat('sprayM', { color: 0xf4fbff, roughness: 0.2, transparent: true, opacity: 0.8 }), 0, 1, -4); d.castShadow = false; plzG.add(d); PZ.spray.push(d); }
       for (var lp = 0; lp < (dune ? 0 : 12); lp++) { var lx = (lp % 2 ? 1 : -1) * 22, lz = -36 + Math.floor(lp / 2) * 10; plzG.add(mesh(new T.CylinderGeometry(0.12, 0.14, 5, 6), frameM, lx, 2.5, lz)); var lb = new T.MeshBasicMaterial({ color: 0x6b6458 }), bl = new T.Mesh(new T.SphereGeometry(0.35, 8, 6), lb); bl.position.set(lx, 5.2, lz); plzG.add(bl); PZ.lamps.push(lb); }
       (dune ? [] : [[-34, -20], [34, -20], [-34, 0], [34, 0]]).forEach(function (q, i) { palm(q[0], q[1], 10 + i % 2, i % 2 ? -0.15 : 0.15); });
-      var rs = rnd(91); for (var tb = 0; tb < (dune ? 0 : 20); tb++) { var ta = -1.3 + rs() * 2.6, td = 190 + rs() * 120; towerBlock(Math.sin(ta) * td, Math.cos(ta) * td + 60, 14 + rs() * 12, 20 + rs() * 70, 14 + rs() * 10, plzG, 0, PZ.towers); }
+      var rs = rnd(91); for (var tb = 0; tb < (dune || /^(ib_mapo_hall|ib_bowers|en_okpara)$/.test(id) ? 0 : 20); tb++) { var ta = -1.3 + rs() * 2.6, td = 190 + rs() * 120; towerBlock(Math.sin(ta) * td, Math.cos(ta) * td + 60, 14 + rs() * 12, 20 + rs() * 70, 14 + rs() * 10, plzG, 0, PZ.towers); }
       PZ.flood = []; [[-40, 12, 10], [40, 12, 10], [0, 12, 20]].forEach(function (q) { var L0 = new T.SpotLight(0xfff1d6, 0, 200, 0.7, 0.6, 1.2); L0.position.set(q[0], q[1], q[2]); L0.target.position.set(q[0] * 0.6, 20, 60); plzG.add(L0, L0.target); PZ.flood.push(L0); });
       // People crossing the plaza; a crowd on worship days (Friday at the mosque, Sunday at the church).
       var NW = 140, wr = rnd(43), wb = []; for (var w = 0; w < NW; w++) wb.push([-40 + wr() * 80, -36 + wr() * 70, (wr() - 0.5) * 2, (wr() - 0.5) * 2, wr() * 6]);
