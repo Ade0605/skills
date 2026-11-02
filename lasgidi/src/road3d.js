@@ -232,5 +232,16 @@
     if (!o.night) for (var c = 0; c < (o.lite ? 4 : 9); c++) { var cl = cloud(T, c); cl.position.set(-500 + c * 120 + (c % 2) * 40, 120 + (c % 3) * 40, -420 - (c % 4) * 50); scene.add(cl); }
     return dir;
   }
-  root.LasgidiRoad3D = { block: block, strip: strip, hwStrip: hwStrip, horizon: horizon, grass: grassTex, asphalt: asphalt, sky: sky, palm: palm };
+  // A reflection map from the same sky over a grey road and a band of city, so car paint and glass mirror the
+  // world (made once per lighting).
+  function envMap(T, renderer, o) {
+    var k = 'env' + (o.night ? 'N' : o.dusk ? 'D' : ''); if (C[k]) return C[k];
+    try {
+      var sc = new T.Scene(); sc.add(skyDome(T, o.night, o.dusk));
+      var gnd = new T.Mesh(new T.PlaneGeometry(2000, 2000).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: o.night ? 0x14161c : 0x5a5d62 })); gnd.position.y = -2; sc.add(gnd);
+      for (var b = 0; b < 16; b++) { var a = b / 16 * Math.PI * 2, bl = new T.Mesh(new T.BoxGeometry(60, 40 + (b * 37) % 80, 60), new T.MeshBasicMaterial({ color: o.night ? 0x2a2f3c : [0xd8cdb8, 0xb9c3cc, 0xe0c9a8, 0x8fa3b3][b % 4] })); bl.position.set(Math.cos(a) * 300, 10, Math.sin(a) * 300); sc.add(bl); }
+      var pm = new T.PMREMGenerator(renderer), rt = pm.fromScene(sc, 0.02); pm.dispose(); return (C[k] = rt.texture);
+    } catch (e) { return null; }
+  }
+  root.LasgidiRoad3D = { envMap: envMap, block: block, strip: strip, hwStrip: hwStrip, horizon: horizon, grass: grassTex, asphalt: asphalt, sky: sky, palm: palm };
 })(typeof window !== 'undefined' ? window : globalThis);

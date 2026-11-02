@@ -23,6 +23,7 @@
       S3.background = new T.Color(hz); S3.fog = new T.Fog(hz, 70, RLITE ? 200 : 300);
       sun.position.copy(sdir).multiplyScalar(90); sun.intensity = night ? 0.25 : dusk ? 1.6 : 2.4; sun.color.set(night ? 0x8fa8ff : dusk ? 0xffb070 : 0xfff3e0);
       var sc0 = sun.shadow.camera; sc0.left = -40; sc0.right = 40; sc0.top = 40; sc0.bottom = -40; sc0.near = 1; sc0.far = 260; sun.shadow.mapSize.set(RLITE ? 1024 : 2048, RLITE ? 1024 : 2048); sun.shadow.bias = -0.0004;
+      var envT = (ROAD || HWR).envMap(T, renderer, { night: night, dusk: dusk }); if (envT) { S3.environment = envT; if ('environmentIntensity' in S3) S3.environmentIntensity = night ? 0.35 : 0.8; }
       renderer.toneMappingExposure = night ? 1.25 : 1.05; if (night || dusk) S3.add(new T.AmbientLight(night ? 0x8a96c8 : 0xffd2a0, night ? 0.9 : 0.35));
       if (night) { var glowM = new T.MeshBasicMaterial({ color: 0xffc870, transparent: true, opacity: 0.16, depthWrite: false }); [-1, 1].forEach(function (gs) { var gl2 = new T.Mesh(new T.PlaneGeometry(4, 400).rotateX(-Math.PI / 2), glowM); gl2.position.set(gs * 4.6, 0.02, -150); S3.add(gl2); }); }
     }

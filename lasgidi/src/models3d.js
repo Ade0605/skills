@@ -18,7 +18,7 @@
     r = Math.min(r || 0.05, w / 2 - 0.001, h / 2 - 0.001); var s = new T.Shape(), x = -w / 2 + r, y = -h / 2 + r, W = w - 2 * r, H = h - 2 * r;
     s.moveTo(x, y - r); s.lineTo(x + W, y - r); s.quadraticCurveTo(x + W + r, y - r, x + W + r, y); s.lineTo(x + W + r, y + H); s.quadraticCurveTo(x + W + r, y + H + r, x + W, y + H + r);
     s.lineTo(x, y + H + r); s.quadraticCurveTo(x - r, y + H + r, x - r, y + H); s.lineTo(x - r, y); s.quadraticCurveTo(x - r, y - r, x, y - r);
-    var bev = Math.min(r, d / 4), geo = new T.ExtrudeGeometry(s, { depth: d - 2 * bev, bevelEnabled: true, bevelSize: bev * 0.9, bevelThickness: bev, bevelSegments: 2, curveSegments: 4 });
+    var bev = Math.min(r, d / 4, w / 4, h / 4), geo = new T.ExtrudeGeometry(s, { depth: d - 2 * bev, bevelEnabled: true, bevelSize: bev * 0.9, bevelOffset: -bev * 0.9, bevelThickness: bev, bevelSegments: 2, curveSegments: 4 });
     geo.translate(0, 0, -(d - 2 * bev) / 2); return geo;
   }
   // A wheel: tyre, rim, hub; spokes for motorbikes. Axis along x.
@@ -131,8 +131,15 @@
     }
     slopeGlass(T, g, P.wind[0], P.wind[1], P.w * 0.84, -0.012);
     [-1, 1].forEach(function (sd) {
-      axles.forEach(function (zz) { var arch = mesh(T, g, new T.CylinderGeometry(P.r + 0.06, P.r + 0.06, 0.06, 16, 1, false, 0, Math.PI), trim, sd * (P.w / 2 + 0.005), P.r, zz); arch.rotation.z = Math.PI / 2; arch.rotation.x = Math.PI / 2; wheel(T, g, sd * (P.w / 2 - 0.12), P.r, zz, P.r, P.r > 0.45 ? 0.36 : 0.26, { lite: o.lite, rim: P.rim }); });
-      light(T, g, sd * P.w * 0.34, nose[1] - 0.06, nose[0] - 0.01, kind === 'boxy' ? 0.1 : 0.075, 0xfff4cc, 'disc'); light(T, g, sd * P.w * 0.36, tail[1] - 0.06, tail[0] + 0.02, 0.06, 0xd8261c, 'disc');
+      axles.forEach(function (zz) { var arch = mesh(T, g, new T.TorusGeometry(P.r + 0.06, 0.035, 6, 18, Math.PI), trim, sd * (P.w / 2 + 0.005), P.r, zz); arch.rotation.y = Math.PI / 2; wheel(T, g, sd * (P.w / 2 - 0.12), P.r, zz, P.r, P.r > 0.45 ? 0.36 : 0.26, { lite: o.lite, rim: P.rim }); });
+      if (kind === 'boxy' || kind === 'boxy6') { var hl = mesh(T, g, new T.CylinderGeometry(0.1, 0.1, 0.05, 18), new T.MeshStandardMaterial({ color: 0xfff6dc, emissive: 0xfff1c0, emissiveIntensity: 0.8, roughness: 0.1 }), sd * P.w * 0.34, nose[1] - 0.1, nose[0] - 0.02); hl.rotation.x = Math.PI / 2; }
+      else lamp(T, g, sd * P.w * 0.33, nose[1] - 0.07, nose[0] - 0.01, P.w * 0.2, 0.08, 0xfff4cc);
+      lamp(T, g, sd * P.w * 0.36, tail[1] - 0.08, tail[0] + 0.015, P.w * 0.16, 0.08, 0xd8261c, true);
+      if (!P.open && !o.lite) { // door seams and handles
+        var seamM = mat(T, 'seam', { color: 0x111214, roughness: 0.8 }), wb = P.win[0][1], zs = kind === 'wedge' || kind === 'curvy' || kind === 'hyper' || kind === 'gt' || kind === 'roadster' ? [P.win[0][0], P.win[3][0] - 0.05] : [P.win[0][0], (P.win[1][0] + P.win[2][0]) / 2 - 0.05, P.win[3][0] - 0.1];
+        zs.forEach(function (zz) { mesh(T, g, new T.BoxGeometry(0.008, Math.max(0.2, wb - P.pts[0][1] - 0.12), 0.012), seamM, sd * (P.w / 2 + 0.002), (wb + P.pts[0][1]) / 2 + 0.03, zz); });
+        zs.slice(0, -1).forEach(function (zz, k) { mesh(T, g, rbox(T, 0.02, 0.03, 0.14, 0.01), chrome, sd * (P.w / 2 + 0.01), wb - 0.12, (zz + zs[k + 1]) / 2 + 0.25); });
+      }
       if (!o.lite && !P.open) { var mir = mesh(T, g, rbox(T, 0.05, 0.1, 0.16, 0.02), paint, sd * (P.w / 2 + 0.05), P.wind[0][1] + 0.08, P.wind[0][0] + 0.12); mir.rotation.y = sd * 0.2; }
       if (P.intakes) { var ik = mesh(T, g, new T.BoxGeometry(0.02, 0.26, 0.6), trim, sd * (P.w / 2 + 0.005), 0.62, 0.55); ik.rotation.x = 0.35; }
     });
@@ -148,7 +155,7 @@
     if (P.spare) { var sp = wheel(T, g, 0, 1.0, P.pts[P.pts.length - 1][0] + 0.18, 0.36, 0.22, { lite: true }); sp.rotation.y = Math.PI / 2; sp.userData.wheel = false; }
     if (P.rollbar) { [-1, 1].forEach(function (sd) { tube(T, g, [sd * 0.9, 1.5, 0.75], [sd * 0.9, 2.15, 0.85], 0.04, chrome); }); tube(T, g, [-0.9, 2.15, 0.85], [0.9, 2.15, 0.85], 0.04, chrome); }
     mesh(T, g, new T.BoxGeometry(P.w + 0.02, 0.12, 0.06), trim, 0, P.pts[0][1] + 0.05, P.pts[0][0] + 0.02); mesh(T, g, new T.BoxGeometry(P.w + 0.02, 0.12, 0.06), trim, 0, P.pts[P.pts.length - 1][1] + 0.05, P.pts[P.pts.length - 1][0] - 0.02);
-    mesh(T, g, new T.BoxGeometry(0.4, 0.11, 0.02), mat(T, 'plate', { color: 0xf4f3ec, roughness: 0.6 }), 0, P.pts[P.pts.length - 1][1] + 0.2, P.pts[P.pts.length - 1][0] + 0.06);
+    plate(T, g, 0, P.pts[P.pts.length - 1][1] + 0.2, P.pts[P.pts.length - 1][0] + 0.06, 0, !!o.london); var fp = plate(T, g, 0, P.pts[0][1] + 0.2, P.pts[0][0] - 0.06, Math.PI, !!o.london);
     if (o.taxiSign) { mesh(T, g, rbox(T, 0.5, 0.14, 0.2, 0.04), new T.MeshStandardMaterial({ color: 0xfff2a8, emissive: 0xffd84a, emissiveIntensity: 0.5 }), 0, P.win[1][1] + 0.12, (P.win[1][0] + P.win[2][0]) / 2); }
     if (o.stripe != null) [-1, 1].forEach(function (sd) { mesh(T, g, new T.BoxGeometry(0.01, 0.1, Math.abs(P.pts[0][0]) * 1.8), mat(T, 'stripe', { color: o.stripe, roughness: 0.5 }), sd * (P.w / 2 + 0.07), 0.62, 0); });
     if (o.rider) { var seatY = P.open || /wedge|curvy|hyper/.test(kind) ? 0.32 : kind === 'boxy' || kind === 'boxy6' ? 0.85 : 0.42; if (!P.open) mesh(T, g, rbox(T, 0.5, 0.1, 0.5, 0.05), mat(T, 'carseat', { color: 0x2b2f36, roughness: 0.8 }), -0.38, seatY, 0.1); var dv = seatFig(T, g, o.rider, -0.38, seatY + 0.06 - 0.71, 0.12, Math.PI, 'drive'); if (dv) dv.scale.setScalar(0.85); }
@@ -164,23 +171,86 @@
     if (b === 'keke' || b === 'okada' || b === 'danfo') return vehicle(T, b, o);
     return vehicle(T, 'lux:' + b, o);
   }
-  // ---- Danfo: the yellow minibus with black stripes and a row of windows; London gets a red double-decker instead.
+  // Canvas textures for plates, route boards and adverts (made-up text only).
+  var TX = {};
+  function textTex(T, key, w, h, draw) { if (TX[key]) return TX[key]; var c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return (TX[key] = t); }
+  function plateTex(T, london) { return textTex(T, 'plate' + (london ? 'U' : ''), 256, 64, function (g, w, h) { g.fillStyle = london ? '#f2c200' : '#f4f3ec'; g.fillRect(0, 0, w, h); g.strokeStyle = '#17181a'; g.lineWidth = 4; g.strokeRect(2, 2, w - 4, h - 4); if (!london) { g.fillStyle = '#1d7a43'; g.font = '700 13px system-ui'; g.textAlign = 'center'; g.fillText('LAGOS · CENTRE OF EXCELLENCE', w / 2, 15); } g.fillStyle = london ? '#17181a' : '#1f3b63'; g.font = '900 ' + (london ? 40 : 34) + 'px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText(london ? 'LD12 GDI' : 'KJA 482 XA', w / 2, london ? 46 : 52); }); }
+  function plate(T, g, x, y, z, ry, london) { var p = mesh(T, g, new T.PlaneGeometry(0.42, 0.11), new T.MeshStandardMaterial({ map: plateTex(T, london), roughness: 0.5 }), x, y, z); p.rotation.y = ry; return p; }
+  // A rounded lamp unit (head or tail) set into the body.
+  function lamp(T, g, x, y, z, w, h, color, back) { var m = mesh(T, g, rbox(T, w, h, 0.05, Math.min(w, h) * 0.4), new T.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: back ? 0.6 : 0.85, roughness: 0.15, metalness: 0.2 }), x, y, z); return m; }
+
+  // ---- Danfo: the yellow van of Lagos. Flat front with a black grille band and round headlamps, a steep windscreen,
+  // two black stripes down each side, a row of windows, the sliding door open with the conductor hanging out, and
+  // sometimes a wrapped load roped on the roof. London gets the classic red double-decker instead.
   function danfo(T, o) {
-    var g = new T.Group(), c = o.color != null ? o.color : 0xf2c200, paint = bodyM(T, c, 0.45), black = mat(T, 'dfblack', { color: 0x17181a, roughness: 0.6 });
-    var pts = [[-2.3, 0.42], [-2.36, 1.0], [-2.18, 1.35], [-1.8, 2.15], [2.25, 2.2], [2.32, 2.05], [2.32, 0.42]];
-    var body = new T.Mesh(profileZ(T, pts, 1.95, 0.08), paint); body.castShadow = true; g.add(body);
+    var g = new T.Group(), c = o.color != null ? o.color : 0xf5a30c, paint = bodyM(T, c, 0.42), black = mat(T, 'dfblack', { color: 0x17181a, roughness: 0.6 }), chrome = mat(T, 'chrome', { color: 0xdfe3e8, roughness: 0.18, metalness: 0.95 }), steel = mat(T, 'dfsteel', { color: 0x8a9099, roughness: 0.4, metalness: 0.7 });
+    var W = 1.86, pts = [[-2.26, 0.42], [-2.31, 0.98], [-2.29, 1.16], [-2.04, 1.96], [-1.86, 2.06], [2.16, 2.07], [2.3, 1.95], [2.31, 0.42]];
+    var body = new T.Mesh(profileZ(T, pts, W, 0.09), paint); body.castShadow = true; body.receiveShadow = true; g.add(body);
+    // Windscreen (with wipers) and the black front panel with round headlamps.
+    slopeGlass(T, g, [-2.29, 1.18], [-2.05, 1.93], W * 0.86, -0.012);
+    [-1, 1].forEach(function (sd) { var wp = mesh(T, g, new T.BoxGeometry(0.5, 0.02, 0.02), black, sd * 0.3, 1.24, -2.3); wp.rotation.z = sd * 0.4; });
+    mesh(T, g, rbox(T, W * 0.9, 0.26, 0.05, 0.04), black, 0, 0.88, -2.32);
+    for (var gr = 0; gr < 4; gr++) mesh(T, g, new T.BoxGeometry(W * 0.5, 0.018, 0.02), steel, 0, 0.8 + gr * 0.05, -2.35);
+    [-1, 1].forEach(function (sd) { mesh(T, g, new T.CylinderGeometry(0.1, 0.1, 0.05, 18), new T.MeshStandardMaterial({ color: 0xfff6dc, emissive: 0xfff1c0, emissiveIntensity: 0.8, roughness: 0.1 }), sd * 0.68, 0.88, -2.36).rotation.x = Math.PI / 2; lamp(T, g, sd * 0.86, 0.66, -2.33, 0.12, 0.06, 0xf2a900); });
+    mesh(T, g, rbox(T, 0.4, 0.12, 0.04, 0.03), black, 0, 0.62, -2.33); mesh(T, g, new T.BoxGeometry(0.3, 0.14, 0.02), mat(T, 'dfplate', { color: 0xf4f3ec, roughness: 0.5 }), 0.42, 1.08, -2.32);
+    mesh(T, g, rbox(T, W + 0.06, 0.16, 0.18, 0.05), black, 0, 0.5, -2.36); mesh(T, g, rbox(T, W + 0.06, 0.16, 0.18, 0.05), black, 0, 0.52, 2.36);
+    // Two black stripes, wheel arches, steel wheels with hubcaps, mirrors.
     [-1, 1].forEach(function (sd) {
-      [0.95, 1.22].forEach(function (yy) { mesh(T, g, new T.BoxGeometry(0.012, 0.09, 4.55), black, sd * 0.99, yy, 0.02); });
-      for (var w = 0; w < 4; w++) mesh(T, g, rbox(T, 0.02, 0.5, 0.82, 0.06), glassM(T), sd * 0.985, 1.68, -1.3 + w * 0.98);
-      [-1.45, 1.5].forEach(function (zz) { wheel(T, g, sd * 0.84, 0.38, zz, 0.38, 0.26, { lite: o.lite }); });
-      light(T, g, sd * 0.68, 0.85, -2.37, 0.09, 0xfff4cc, 'disc'); light(T, g, sd * 0.7, 0.95, 2.36, 0.07, 0xd8261c, 'disc');
+      [1.0, 1.1].forEach(function (yy) { mesh(T, g, new T.BoxGeometry(0.012, 0.05, 4.5), black, sd * (W / 2 + 0.006), yy, 0.02); });
+      [-1.42, 1.48].forEach(function (zz) { var arch = mesh(T, g, new T.TorusGeometry(0.44, 0.035, 6, 18, Math.PI), black, sd * (W / 2 + 0.004), 0.36, zz); arch.rotation.y = Math.PI / 2; wheel(T, g, sd * (W / 2 - 0.14), 0.36, zz, 0.36, 0.25, { lite: o.lite, rim: 0x9aa0a6 }); });
+      var mr = mesh(T, g, rbox(T, 0.05, 0.16, 0.12, 0.02), black, sd * (W / 2 + 0.1), 1.45, -1.95); tube(T, g, [sd * W / 2, 1.42, -1.95], [sd * (W / 2 + 0.08), 1.45, -1.95], 0.012, black);
+      lamp(T, g, sd * 0.8, 0.95, 2.33, 0.1, 0.3, 0xd8261c, true);
     });
-    slopeGlass(T, g, [-2.18, 1.38], [-1.82, 2.1], 1.7, -0.012);
-    mesh(T, g, new T.BoxGeometry(1.96, 0.16, 0.08), black, 0, 0.52, -2.36); mesh(T, g, new T.BoxGeometry(1.96, 0.16, 0.08), black, 0, 0.52, 2.36);
-    if (!o.lite) { mesh(T, g, new T.BoxGeometry(1.5, 0.08, 3.6), black, 0, 2.28, 0.2); for (var b = 0; b < 5; b++) mesh(T, g, new T.BoxGeometry(1.5, 0.06, 0.05), black, 0, 2.34, -1.4 + b * 0.8); }
+    // Windows: the cab doors, the middle and the back, each a dark pane with a rubber frame.
+    var win = function (x, z, len) { mesh(T, g, rbox(T, 0.03, 0.56, len, 0.07), glassM(T), x, 1.62, z); mesh(T, g, rbox(T, 0.02, 0.62, len + 0.06, 0.08), black, x - Math.sign(x) * 0.006, 1.62, z); };
+    [-1, 1].forEach(function (sd) { win(sd * (W / 2 + 0.008), -1.45, 0.7); win(sd * (W / 2 + 0.008), 1.15, 1.2); });
+    win(-(W / 2 + 0.008), 0.0, 1.2);
+    // The sliding door is open on the kerb side (+x): a dark doorway, the door slid back over the rear window.
+    mesh(T, g, new T.BoxGeometry(0.05, 1.5, 1.15), mat(T, 'dfinside', { color: 0x221d18, roughness: 0.9 }), W / 2 - 0.02, 1.18, -0.05);
+    mesh(T, g, rbox(T, 0.05, 1.5, 1.1, 0.06), paint, W / 2 + 0.06, 1.2, 1.1);
+    mesh(T, g, new T.BoxGeometry(0.4, 0.05, 1.1), black, W / 2 - 0.18, 0.46, -0.05); // the step
+    // Rear: window, plate, ladder hooks.
+    mesh(T, g, rbox(T, 1.3, 0.5, 0.03, 0.06), glassM(T), 0, 1.6, 2.33); plate(T, g, 0, 0.68, 2.36, 0, false);
+    // Seats inside and the people.
     for (var sr = 0; sr < 3; sr++) mesh(T, g, rbox(T, 1.7, 0.12, 0.45, 0.05), mat(T, 'dfseat', { color: 0x5a3a2a, roughness: 0.8 }), 0, 0.92, -0.55 + sr * 0.92);
     (o.seated || []).slice(0, 6).forEach(function (who, i) { seatFig(T, g, who, i % 2 ? 0.42 : -0.42, 0.15, -0.5 + Math.floor(i / 2) * 0.92, Math.PI, 'sit'); });
     if (o.rider) seatFig(T, g, o.rider, -0.48, 0.15, -1.55, Math.PI, 'drive');
+    var A = root.LasgidiAvatar3D;
+    if (o.conductor !== false && A) { // the conductor stands on the step, one hand on the roof, shouting the route
+      var cd = A.figure(T, (o.conductor && o.conductor.look) || { skin: 3, hair: 0, shape: 1 }, (o.conductor && o.conductor.outfit) || { top: 'jersey', bottom: 'trousers', shoes: 'slides' }, null);
+      cd.position.set(W / 2 + 0.05, 0.48, -0.1); cd.rotation.y = Math.PI / 2 + 0.5; cd.scale.setScalar(0.92); var u = cd.userData;
+      if (u.arms && u.arms[0]) { u.arms[0].rotation.z = -2.6; u.arms[0].rotation.x = 0.2; } if (u.legs && u.legs[1]) { u.legs[1].rotation.x = 0.35; u.knees[1].rotation.x = 0.4; }
+      g.add(cd);
+    }
+    if (o.load) { var ld = mesh(T, g, rbox(T, 1.3, 0.75, 1.6, 0.3), mat(T, 'dfload', { color: 0xe58a12, roughness: 0.6 }), 0, 2.45, -0.1); mesh(T, g, new T.BoxGeometry(1.34, 0.77, 0.12), mat(T, 'dftape', { color: 0x3a9a4a, roughness: 0.6 }), 0, 2.45, -0.1); [-0.5, 0.5].forEach(function (zz) { mesh(T, g, new T.BoxGeometry(1.36, 0.03, 0.03), black, 0, 2.84, zz); }); }
+    else if (!o.lite) { mesh(T, g, new T.BoxGeometry(1.5, 0.06, 3.2), black, 0, 2.12, 0.1); for (var b = 0; b < 5; b++) mesh(T, g, new T.BoxGeometry(1.5, 0.05, 0.05), black, 0, 2.17, -1.4 + b * 0.75); }
+    return g;
+  }
+  // ---- The classic London double-decker: rounded front and back, two decks of windows, a cream band, an open
+  // platform at the back on the kerb side, a route board and a side advert (made-up text).
+  function routemaster(T, o) {
+    var g = new T.Group(), red = bodyM(T, o.color != null ? o.color : 0xc8102e, 0.35), cream = mat(T, 'rmcream', { color: 0xf1e3b8, roughness: 0.6 }), black = mat(T, 'rmblack', { color: 0x17181a, roughness: 0.6 }), L2 = 8.4, W = 2.4;
+    var lower = mesh(T, g, rbox(T, W, 1.95, L2, 0.18), red, 0, 1.35, 0), upper = mesh(T, g, rbox(T, W, 1.8, L2 - 0.2, 0.42), red, 0, 3.2, 0.1);
+    mesh(T, g, new T.BoxGeometry(W + 0.012, 0.13, L2 - 0.3), cream, 0, 2.33, 0.1);
+    [-1, 1].forEach(function (sd) {
+      for (var w = 0; w < 6; w++) { mesh(T, g, rbox(T, 0.03, 0.62, 1.05, 0.08), glassM(T), sd * (W / 2 + 0.01), 3.3, -3.0 + w * 1.2); if (w < 5) mesh(T, g, rbox(T, 0.03, 0.66, 1.05, 0.08), glassM(T), sd * (W / 2 + 0.01), 1.7, -2.4 + w * 1.2); }
+      [-2.75, 2.55].forEach(function (zz) { var arch = mesh(T, g, new T.TorusGeometry(0.58, 0.035, 6, 18, Math.PI), black, sd * (W / 2 + 0.004), 0.5, zz); arch.rotation.y = Math.PI / 2; wheel(T, g, sd * (W / 2 - 0.18), 0.5, zz, 0.5, 0.32, { lite: o.lite, rim: 0xc8102e }); });
+      lamp(T, g, sd * 0.85, 0.75, -L2 / 2 - 0.02, 0.18, 0.18, 0xfff4cc); lamp(T, g, sd * 0.95, 0.9, L2 / 2 + 0.02, 0.1, 0.2, 0xd8261c, true);
+    });
+    // The side advert between the decks and the route board up front.
+    var ad = textTex(T, 'rmad', 512, 64, function (gg, w, h) { gg.fillStyle = '#f6c58a'; gg.fillRect(0, 0, w, h); gg.fillStyle = '#3a1a10'; gg.font = 'italic 700 40px Georgia, serif'; gg.textAlign = 'center'; gg.fillText('Visit Lagos', w / 2, 46); });
+    [-1, 1].forEach(function (sd) { var ap = mesh(T, g, new T.PlaneGeometry(4.2, 0.5), new T.MeshStandardMaterial({ map: ad, roughness: 0.6 }), sd * (W / 2 + 0.02), 2.7, -0.6); ap.rotation.y = sd * Math.PI / 2; });
+    var rb = textTex(T, 'rmroute', 256, 64, function (gg, w, h) { gg.fillStyle = '#111'; gg.fillRect(0, 0, w, h); gg.fillStyle = '#fff'; gg.font = '800 34px system-ui'; gg.fillText('8', 14, 44); gg.font = '700 22px system-ui'; gg.fillText('VICTORIA', 54, 30); gg.font = '500 14px system-ui'; gg.fillText('via Oxford Circus', 54, 50); });
+    var rbm = mesh(T, g, new T.PlaneGeometry(1.2, 0.3), new T.MeshBasicMaterial({ map: rb }), 0, 3.85, -L2 / 2 + 0.08); rbm.rotation.y = Math.PI;
+    // Front: the cab window, the radiator grille, the upper-deck windscreen.
+    mesh(T, g, rbox(T, 2.0, 0.7, 0.03, 0.12), glassM(T), 0, 3.25, -L2 / 2 + 0.08); mesh(T, g, rbox(T, 0.9, 0.8, 0.03, 0.08), glassM(T), -0.6, 1.75, -L2 / 2 - 0.01);
+    mesh(T, g, rbox(T, 0.7, 0.55, 0.06, 0.06), black, 0.35, 0.95, -L2 / 2 - 0.03); for (var gl = 0; gl < 6; gl++) mesh(T, g, new T.BoxGeometry(0.62, 0.02, 0.02), mat(T, 'chrome', { color: 0xdfe3e8, roughness: 0.18, metalness: 0.95 }), 0.35, 0.75 + gl * 0.08, -L2 / 2 - 0.07);
+    // The open platform at the back on the kerb side, with its pole.
+    mesh(T, g, new T.BoxGeometry(1.0, 1.8, 1.1), mat(T, 'rminside', { color: 0x3a2a28, roughness: 0.9 }), -W / 2 + 0.49, 1.4, L2 / 2 - 0.52);
+    tube(T, g, [-W / 2 + 0.05, 0.45, L2 / 2 - 0.05], [-W / 2 + 0.05, 2.3, L2 / 2 - 0.05], 0.025, mat(T, 'pole', { color: 0xe8d9a8, roughness: 0.3, metalness: 0.6 }));
+    mesh(T, g, new T.BoxGeometry(W + 0.04, 0.1, L2), black, 0, 0.42, 0); plate(T, g, 0.5, 0.75, L2 / 2 + 0.04, 0, true);
+    (o.seated || []).slice(0, 4).forEach(function (who, i) { seatFig(T, g, who, i % 2 ? 0.55 : -0.55, 2.07, -1.5 + Math.floor(i / 2) * 1.2, Math.PI, 'sit'); });
+    if (o.rider) seatFig(T, g, o.rider, -0.6, 0.35, -L2 / 2 + 0.7, Math.PI, 'drive');
     return g;
   }
   function bus(T, o) {
@@ -235,8 +305,9 @@
     else if (kind === 'suv' || kind === 'jeep') g = car(T, o, 'suv');
     else if (/^lux:/.test(kind)) g = car(T, o, kind.slice(4));
     else if (kind === 'cab' || kind === 'taxi') g = o.london ? car(T, Object.assign({ color: 0x111214 }, o), 'ldncab') : car(T, Object.assign({ color: 0xf2c200, stripe: 0x17181a, taxiSign: true }, o), 'car');
-    else if (kind === 'danfo') g = o.london ? bus(T, Object.assign({ color: 0xd8261c, london: true, len: 10 }, o)) : danfo(T, o);
-    else if (kind === 'bus' || kind === 'brt' || kind === 'coach') g = bus(T, o);
+    else if (kind === 'danfo') g = o.london ? routemaster(T, o) : danfo(T, o);
+    else if (kind === 'routemaster') g = routemaster(T, o);
+    else if (kind === 'bus' || kind === 'brt' || kind === 'coach') g = o.london && kind !== 'coach' ? routemaster(T, o) : bus(T, o);
     else g = car(T, o, 'car');
     g.userData.wheels = []; g.traverse(function (x) { if (x.userData && x.userData.wheel) g.userData.wheels.push(x); });
     if (o.bake !== false) { if (o.roll === false) { merge(T, g); g.userData.wheels = []; } else { merge(T, g, g.userData.wheels); g.userData.wheels.forEach(function (w) { merge(T, w); }); } }
