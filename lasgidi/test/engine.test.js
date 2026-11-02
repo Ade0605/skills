@@ -3845,6 +3845,20 @@ test('rules 54: Abuja and Port Harcourt festival weeks, more London and Accra pl
   }
 });
 
+test('rules 55: festival days in Dubai, Cape Town, Kumasi and Cape Coast, more Dubai and Cape Town places, only in new lives', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 5501, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const seenAt = (rules, place, id) => { const s = mk(rules), pl = D.PLACES.find(p => p.id === place); s.loc = pl.district; s.residence = L.districtCity(pl.district); for (let d = 0; d < 48 * 7; d++) for (const h of [12, 19, 21]) { s.t = d * 1440 + h * 60; if (L.availableActions(s).some(a => a.id === id && !a.disabled)) return true; } return false; };
+  for (const [place, id] of [['dxb_burj', 'nye_burj'], ['dxb_gold', 'dws_deals'], ['ctn_bokaap_st', 'mnp_watch'], ['ctn_vawf', 'cjz_night'], ['kum_culture', 'kcf_fair'], ['cc_elmina_castle', 'bkt_regatta']]) {
+    assert.ok(seenAt(undefined, place, id), id + ' happens in a new life');
+    assert.ok(!seenAt(54, place, id), id + ' never in a rules-54 life');
+  }
+  for (const k of ['dxb_burj', 'dxb_gold', 'ctn_bokaap_st', 'ctn_vawf', 'kum_culture', 'cc_elmina_castle']) for (const a of D.FESTIVALS[k]) { assert.ok(a.mins % 15 === 0 && a.minRules === 55, a.id); if (a.earn) assert.ok(a.gig && a.earn <= 3000 && !/^(dxb|ctn)_/.test(k), a.id); }
+  for (const id of ['dxb_motf', 'dxb_fahidi', 'ctn_goodhope', 'ctn_signal', 'ctn_greenpoint']) {
+    const p = D.PLACES.find(x => x.id === id); assert.ok(p && p.nogem, id);
+    for (const a of D.CIVIC_ACTS[id]) assert.ok(a.minRules === 55 && a.mins % 15 === 0 && !a.earn, a.id);
+  }
+});
+
 test('Monthly (12 weeks) and Yearly (48 weeks) Lagos: shared seeds, run to their end, verify, keep playing; weekly unchanged', () => {
   const d = new Date(Date.UTC(2026, 10, 1));
   assert.equal(L.monthChallengeId(d), '2026-M11'); assert.equal(L.yearChallengeId(d), '2026-Y');

@@ -111,7 +111,8 @@
   // 50–53: cab-added flights from anywhere, Eko Fashion Weekend, breaks near work, five more Lagos places and two
   // Lagos festival weeks.
   // 54 adds festival weeks in Abuja and Port Harcourt, and new places in London and Accra.
-  var RULES = 54;
+  // 55 adds festival days in Dubai, Cape Town, Kumasi and Cape Coast, and new places in Dubai and Cape Town.
+  var RULES = 55;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },

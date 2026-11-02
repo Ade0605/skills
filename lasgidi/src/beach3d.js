@@ -1179,6 +1179,34 @@
       plzG.add(g);
     }
     // Dubai (rules 26): the Burj Khalifa in stepped glass tiers with its spire, and the fountain lake in front.
+    // Rules 55: the Museum of the Future (a silver ring wrapped in calligraphy-like windows on a green mound) and the
+    // Al Fahidi old quarter (sand-coloured courtyard houses with wind towers).
+    function museumFuture(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z);
+      var skin = canvasTex(1024, 256, function (c, W, H) { c.fillStyle = '#c9ced6'; c.fillRect(0, 0, W, H); c.strokeStyle = '#1d2733'; c.lineCap = 'round'; var r = rnd(55); for (var i = 0; i < 70; i++) { c.lineWidth = 3 + r() * 6; c.beginPath(); var x0 = r() * W, y0 = 30 + r() * (H - 60); c.moveTo(x0, y0); c.bezierCurveTo(x0 + 20 + r() * 40, y0 - 30 * r(), x0 + 40 + r() * 60, y0 + 30 * r(), x0 + 70 + r() * 90, y0 + (r() - 0.5) * 40); c.stroke(); } }, [3, 1]);
+      var ring = new T.Mesh(new T.TorusGeometry(22, 9, 24, 64), new T.MeshStandardMaterial({ map: skin, metalness: 0.75, roughness: 0.28, emissive: 0x223344, emissiveIntensity: 0.15 }));
+      ring.scale.set(1, 1.15, 0.8); ring.position.set(0, 36, 0); ring.castShadow = true; g.add(ring);
+      var hill = mesh(new T.SphereGeometry(30, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat('motfHill', { color: 0x5f8f3e, roughness: 0.95 }), 0, -16, 0); hill.scale.set(1.2, 1, 0.9); g.add(hill);
+      g.add(mesh(new T.BoxGeometry(14, 2, 40), mat('motfPath', { color: 0xd9d2c3, roughness: 0.8 }), 0, 1, -30));
+      for (var p = 0; p < 10; p++) { var palm = new T.Group(); palm.position.set(p % 2 ? 12 : -12, 0, -48 + p * 4); palm.add(mesh(new T.CylinderGeometry(0.35, 0.45, 7, 6), mat('motfTrunk', { color: 0x8a6a45 }), 0, 3.5, 0)); palm.add(mesh(new T.SphereGeometry(2.2, 8, 6), mat('motfLeaf', { color: 0x3f7f3a }), 0, 7.4, 0)); g.add(palm); }
+      plzG.add(g);
+    }
+    function alFahidi(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var sand = mat('fahSand', { color: 0xd9bf8f, roughness: 0.95 }), wood = mat('fahWood', { color: 0x6b4a2b, roughness: 0.8 });
+      var r = rnd(77);
+      for (var i = 0; i < 9; i++) {
+        var hx = -64 + i * 16, hz = (i % 2) * 8, w = 12 + r() * 3, h = 7 + r() * 3, house = new T.Group(); house.position.set(hx, 0, hz);
+        house.add(mesh(new T.BoxGeometry(w, h, 12), sand, 0, h / 2, 0));
+        for (var c = 0; c < 6; c++) house.add(mesh(new T.BoxGeometry(1, 0.8, 0.6), sand, -w / 2 + 1 + c * (w - 2) / 5, h + 0.4, -6));
+        house.add(mesh(new T.BoxGeometry(2.2, 3.2, 0.3), wood, 0, 1.6, -6.1));
+        if (i % 2 === 0 || r() > 0.5) { var tw = new T.Group(); tw.position.set(w / 4, h, 2); tw.add(mesh(new T.BoxGeometry(3.4, 6, 3.4), sand, 0, 3, 0)); for (var sdx = 0; sdx < 4; sdx++) { var slot = mesh(new T.BoxGeometry(0.5, 4, 0.2), mat('fahDark', { color: 0x3a2c1c }), 0, 3.2, 0); slot.position.set([0, 0, -1.75, 1.75][sdx], 3.4, [-1.75, 1.75, 0, 0][sdx]); if (sdx > 1) slot.rotation.y = Math.PI / 2; tw.add(slot); } tw.add(mesh(new T.BoxGeometry(3.8, 0.4, 3.8), sand, 0, 6.2, 0)); house.add(tw); }
+        g.add(house);
+      }
+      for (var l = 0; l < 12; l++) { var lan = mesh(new T.SphereGeometry(0.4, 8, 6), new T.MeshBasicMaterial({ color: 0xffc56b }), -60 + l * 11, 4, -7.5); lan.castShadow = false; g.add(lan); }
+      for (var b = 0; b < 3; b++) { var boat = new T.Group(); boat.position.set(-30 + b * 30, 0.4, -40); boat.add(mesh(new T.BoxGeometry(3, 1, 10), wood, 0, 0, 0)); boat.add(mesh(new T.BoxGeometry(2.6, 0.2, 4), mat('fahCanopy', { color: 0xe8e1d2 }), 0, 2, 0)); for (var q = 0; q < 4; q++) boat.add(mesh(new T.CylinderGeometry(0.08, 0.08, 1.8, 4), wood, q < 2 ? -1.2 : 1.2, 1, q % 2 ? -1.8 : 1.8)); g.add(boat); }
+      var creek = new T.Mesh(new T.PlaneGeometry(220, 26).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ color: 0x3f7f8f, roughness: 0.2, metalness: 0.2 })); creek.position.set(0, 0.05, -40); creek.receiveShadow = true; g.add(creek);
+      plzG.add(g);
+    }
     function burjKhalifa(x, z) {
       var g = new T.Group(); g.position.set(x, 0, z); var gl = mat('bkGlass', { color: 0x9fb8c8, metalness: 0.7, roughness: 0.18 }), st = mat('bkSteel', { color: 0xdfe6ea, metalness: 0.8, roughness: 0.25 });
       var tiers = [[16, 40], [13, 34], [10.5, 30], [8, 26], [6, 22], [4.2, 18], [2.8, 14]], y = 0;
@@ -1212,7 +1240,7 @@
       else if (/abj_tower/.test(id)) millenniumTower(0, 80);
       else if (id === 'acc_blackstar') blackStarGate(0, 60);
       else if (id === 'dxb_burj') burjKhalifa(0, 110);
-      else if (id === 'cc_castle' || id === 'cc_elmina_castle' || id === 'acc_osucastle') slaveCastle(0, 70, id === 'cc_elmina_castle');
+      else if (id === 'cc_castle' || id === 'cc_elmina_castle' || id === 'acc_osucastle' || id === 'ctn_goodhope') slaveCastle(0, 70, id === 'cc_elmina_castle');
       else if (id === 'dxb_safari') desertCamp();
       else if (id === 'ldn_bigben') bigBen(15, 175);
       else if (id === 'ldn_towerbridge') towerBridge(0, 70);
@@ -1223,6 +1251,8 @@
       else if (id === 'ldn_shoreditch') shoreditch(0, 60);
       else if (id === 'ldn_livst') liverpoolStreet(0, 60);
       else if (id === 'ldn_trafalgar') trafalgar(0, 120);
+      else if (id === 'dxb_motf') museumFuture(0, 90);
+      else if (id === 'dxb_fahidi') alFahidi(0, 70);
       else if (id === 'ldn_stpauls') stPauls(0, 80);
       else if (/mosque/.test(id)) mosque(0, 50, 1.15);
       else if (/ecumenical/.test(id)) cathedral(0, 50, 1.2);
@@ -1233,7 +1263,7 @@
       } else if (/^(unilag|ph_uniport|abj_uni|abj_chu|ph_rsu|lag_lasu|lag_yabatech|acc_ug|kum_knust_uni|cc_ucc_uni)$/.test(id)) { campusBuild(); }
       else stateHouse(0, 60, /threearms/.test(id));
       // Flags along the plaza, a fountain at its heart, lamps, palms, and the city behind.
-      var gh = /^(acc|kum|cc)_/.test(id), uk = /^ldn_/.test(id), ae = /^dxb_/.test(id), za = /^ctn_/.test(id), castle = /^cc_.*castle$|^acc_osucastle$/.test(id), dune = id === 'dxb_safari' || castle, flagT = canvasTex(96, 64, function (c, w, h) { if (za) { c.fillStyle = '#e03c31'; c.fillRect(0, 0, w, h / 2); c.fillStyle = '#001489'; c.fillRect(0, h / 2, w, h / 2); c.fillStyle = '#fff'; c.fillRect(0, h * 0.3, w, h * 0.4); c.fillStyle = '#007749'; c.fillRect(0, h * 0.38, w, h * 0.24); c.fillStyle = '#ffb81c'; c.beginPath(); c.moveTo(0, h * 0.12); c.lineTo(w * 0.42, h / 2); c.lineTo(0, h * 0.88); c.fill(); c.fillStyle = '#000'; c.beginPath(); c.moveTo(0, h * 0.22); c.lineTo(w * 0.32, h / 2); c.lineTo(0, h * 0.78); c.fill(); return; } if (ae) { ['#00732f', '#ffffff', '#000000'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#ff0000'; c.fillRect(0, 0, w / 4, h); return; } if (uk) { c.fillStyle = '#012169'; c.fillRect(0, 0, w, h); c.strokeStyle = '#fff'; c.lineWidth = 12; c.beginPath(); c.moveTo(0, 0); c.lineTo(w, h); c.moveTo(w, 0); c.lineTo(0, h); c.stroke(); c.strokeStyle = '#c8102e'; c.lineWidth = 4; c.stroke(); c.fillStyle = '#fff'; c.fillRect(w / 2 - 9, 0, 18, h); c.fillRect(0, h / 2 - 9, w, 18); c.fillStyle = '#c8102e'; c.fillRect(w / 2 - 5, 0, 10, h); c.fillRect(0, h / 2 - 5, w, 10); return; } if (gh) { ['#ce1126', '#fcd116', '#006b3f'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#000'; c.font = '700 22px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('★', w / 2, h / 2 + 1); return; } c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
+      var gh = /^(acc|kum|cc)_/.test(id), uk = /^ldn_/.test(id), ae = /^dxb_/.test(id), za = /^ctn_/.test(id), castle = /^cc_.*castle$|^acc_osucastle$|^ctn_goodhope$/.test(id), dune = id === 'dxb_safari' || castle, flagT = canvasTex(96, 64, function (c, w, h) { if (za) { c.fillStyle = '#e03c31'; c.fillRect(0, 0, w, h / 2); c.fillStyle = '#001489'; c.fillRect(0, h / 2, w, h / 2); c.fillStyle = '#fff'; c.fillRect(0, h * 0.3, w, h * 0.4); c.fillStyle = '#007749'; c.fillRect(0, h * 0.38, w, h * 0.24); c.fillStyle = '#ffb81c'; c.beginPath(); c.moveTo(0, h * 0.12); c.lineTo(w * 0.42, h / 2); c.lineTo(0, h * 0.88); c.fill(); c.fillStyle = '#000'; c.beginPath(); c.moveTo(0, h * 0.22); c.lineTo(w * 0.32, h / 2); c.lineTo(0, h * 0.78); c.fill(); return; } if (ae) { ['#00732f', '#ffffff', '#000000'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#ff0000'; c.fillRect(0, 0, w / 4, h); return; } if (uk) { c.fillStyle = '#012169'; c.fillRect(0, 0, w, h); c.strokeStyle = '#fff'; c.lineWidth = 12; c.beginPath(); c.moveTo(0, 0); c.lineTo(w, h); c.moveTo(w, 0); c.lineTo(0, h); c.stroke(); c.strokeStyle = '#c8102e'; c.lineWidth = 4; c.stroke(); c.fillStyle = '#fff'; c.fillRect(w / 2 - 9, 0, 18, h); c.fillRect(0, h / 2 - 9, w, 18); c.fillStyle = '#c8102e'; c.fillRect(w / 2 - 5, 0, 10, h); c.fillRect(0, h / 2 - 5, w, 10); return; } if (gh) { ['#ce1126', '#fcd116', '#006b3f'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#000'; c.font = '700 22px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('★', w / 2, h / 2 + 1); return; } c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
       for (var fp = 0; fp < (dune ? 0 : 10); fp++) { var fx = -45 + fp * 10, fz = 18; plzG.add(mesh(new T.CylinderGeometry(0.15, 0.18, 14, 6), mat('fpole2', { color: 0xdfe3e8, metalness: 0.6 }), fx, 7, fz)); var fg = new T.PlaneGeometry(4, 2.6, 12, 1); fg.translate(2, 0, 0); var flag = new T.Mesh(fg, new T.MeshStandardMaterial({ map: flagT, side: T.DoubleSide, roughness: 0.8 })); flag.position.set(fx, 12.6, fz); flag.userData.base = Float32Array.from(fg.attributes.position.array); plzG.add(flag); PZ.flags.push(flag); }
       if (!dune) plzG.add(mesh(new T.CylinderGeometry(9, 9.5, 1.2, 40), mat('basin', { color: 0xc9ccd1, roughness: 0.6 }), 0, 0.6, -4)); if (!dune) plzG.add(mesh(new T.CylinderGeometry(8.4, 8.4, 0.2, 40), new T.MeshPhysicalMaterial({ color: 0x5fb3cf, roughness: 0.05, clearcoat: 1 }), 0, 1.15, -4));
       PZ.spray = []; for (var sp2 = 0; sp2 < (dune ? 0 : 50); sp2++) { var d = mesh(new T.SphereGeometry(0.14, 6, 4), mat('sprayM', { color: 0xf4fbff, roughness: 0.2, transparent: true, opacity: 0.8 }), 0, 1, -4); d.castShadow = false; plzG.add(d); PZ.spray.push(d); }
