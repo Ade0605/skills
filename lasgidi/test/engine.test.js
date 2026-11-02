@@ -3937,7 +3937,7 @@ test('rules 58: car papers expire and renew, offences are recorded, FM stations 
 test('rules 59: Ibadan (coach only) and Enugu (fly or coach) open to new lives; a trip there replays; closed in rules 58', () => {
   const mk = (rules) => { const s = L.newGame({ seed: 5901, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
   const old = mk(58); assert.ok(!L.cityOpen(old, 'ibadan') && !L.cityOpen(old, 'enugu')); assert.deepEqual(L.intercityOptions(old, 'enugu'), []);
-  const s = mk(); assert.ok(L.cityOpen(s, 'ibadan') && L.cityOpen(s, 'enugu'));
+  const s = mk(59); assert.ok(L.cityOpen(s, 'ibadan') && L.cityOpen(s, 'enugu'));
   assert.deepEqual(L.intercityOptions(s, 'ibadan').map(o => o.mode), ['bus'], 'no airport in Ibadan');
   assert.deepEqual(L.intercityOptions(s, 'enugu').map(o => o.mode).sort(), ['bus', 'flight']);
   for (const c of ['ibadan', 'enugu']) {
@@ -3953,4 +3953,17 @@ test('rules 59: Ibadan (coach only) and Enugu (fly or coach) open to new lives; 
   const r = L.intercity(s, 'ibadan', 'bus'); assert.ok(r.ok, r.msg); while (s.pending.length) L.resolveChoice(s, 0);
   assert.equal(L.cityOf(s), 'ibadan'); assert.ok(L.groceryShop(Object.assign({}, s, { loc: 'ib_bodija' })), 'Bodija sells foodstuff');
   const rp = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.equal(rp.loc, s.loc); assert.equal(rp.t, s.t); assert.equal(rp.cash, s.cash);
+});
+
+test('rules 60: the Lagos–Ibadan train runs at 8:00 and 16:00, on time, and replays; not in rules 59 lives', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 6001, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  assert.ok(!L.intercityOptions(mk(59), 'ibadan').some(o => o.mode === 'train'));
+  const s = mk(); assert.ok(!L.intercityOptions(s, 'enugu').some(o => o.mode === 'train'), 'only Lagos–Ibadan');
+  const tr = () => L.intercityOptions(s, 'ibadan').find(o => o.mode === 'train'); assert.ok(tr());
+  while (Math.floor((s.t % 1440) / 60) !== 7) L.wait(s, 60);
+  assert.ok(!tr().disabled, tr().disabled); const t0 = s.t;
+  const r = L.intercity(s, 'ibadan', 'train'); assert.ok(r.ok, r.msg); while (s.pending.length) L.resolveChoice(s, 0);
+  assert.equal(s.loc, 'ib_ui'); assert.ok(s.t - t0 >= 165);
+  L.wait(s, 60); assert.ok(L.intercityOptions(s, 'lagos').find(o => o.mode === 'train').disabled, 'no train at 11:00');
+  const rp = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.equal(rp.loc, s.loc); assert.equal(rp.t, s.t); assert.equal(rp.cash + rp.bank, s.cash + s.bank);
 });
