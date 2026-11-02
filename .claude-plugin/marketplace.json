@@ -23,7 +23,7 @@
     },
     {
       "name": "example-skills",
-      "description": "Collection of example skills demonstrating various capabilities including skill creation, MCP building, visual design, algorithmic art, internal communications, web testing, artifact building, Slack GIFs, and theme styling",
+      "description": "Collection of example skills demonstrating various capabilities including skill creation, MCP building, visual design, algorithmic art, internal communications, web testing, artifact building, Slack GIFs, theme styling, and VoiceStudio local voice generation",
       "source": "./",
       "strict": false,
       "skills": [
@@ -38,7 +38,8 @@
         "./skills/slack-gif-creator",
         "./skills/theme-factory",
         "./skills/web-artifacts-builder",
-        "./skills/webapp-testing"
+        "./skills/webapp-testing",
+        "./skills/voicestudio"
       ]
     },
     {

@@ -25,6 +25,7 @@ Many skills in this repo are open source (Apache 2.0). We've also included the d
 
 # Skill Sets
 - [./skills](./skills): Skill examples for Creative & Design, Development & Technical, Enterprise & Communication, and Document Skills
+  - [./skills/voicestudio](./skills/voicestudio): Third-party skill for local speech generation, transcription, cloning and dubbing with [VoiceStudio](https://github.com/debpalash/VoiceStudio) (AGPL-3.0, copied unchanged from upstream @ 40c5e3c); included in `example-skills`
 - [./spec](./spec): The Agent Skills specification
 - [./template](./template): Skill template
 - [./plugins/linkedin-skills](./plugins/linkedin-skills): Third-party LinkedIn marketing skills (MIT, vendored from [sergebulaev/linkedin-skills](https://github.com/sergebulaev/linkedin-skills)); install with `/plugin install linkedin-skills@ade0605-skills`
