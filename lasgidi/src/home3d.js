@@ -95,7 +95,7 @@
       HOMEW = w; HOMED = d;
       var _w = 0, wallC = view.paint ? hexN(view.paint) : WALLS[type] || 0xe2dccd;
       // Floor tiles, room floors, the two walls with windows and a door, skirting.
-      var tileM = [M(FLOORS[type] || 0xd8ccb4, 0.55), M(((FLOORS[type] || 0xd8ccb4) & 0xfefefe) - 0x0a0a0a, 0.55)], rooms = roomsFor(type, sz);
+      var fl0 = view.floor ? hexN(view.floor) : (FLOORS[type] || 0xd8ccb4), tileM = [M(fl0, 0.5), M((fl0 & 0xfefefe) - 0x0a0a0a > 0 ? (fl0 & 0xfefefe) - 0x0a0a0a : fl0, 0.5)], rooms = roomsFor(type, sz);
       for (var x = 0; x < w; x++) for (var y = 0; y < d; y++) { var rm = rooms.filter(function (r) { return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.d; })[0], fm = rm && ROOM_FLOORS[rm.name] ? M(ROOM_FLOORS[rm.name], 0.4) : tileM[(x + y) % 2]; var t = new T.Mesh(new T.BoxGeometry(0.98, 0.06, 0.98), fm); t.position.set(x + 0.5, -0.03, y + 0.5); t.receiveShadow = true; t.userData.tile = [x, y]; home.add(t); }
       var wm = M(wallC, 0.85), WH = 2.8;
       box(home, w, WH, 0.12, wm, w / 2, WH / 2, -0.06); box(home, 0.12, WH, d, wm, -0.06, WH / 2, d / 2);

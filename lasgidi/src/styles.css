@@ -1757,3 +1757,18 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .ln-card { display: grid; gap: 6px; padding: 14px; border-radius: 16px; background: var(--card, rgba(127,127,127,.08)); border: 1px solid rgba(127,127,127,.18); }
 .ln-l { font: 600 13px var(--font-body); opacity: .8; }
 .ln-n { font: 800 26px var(--font-body); letter-spacing: -.01em; }
+
+/* Rules 57: moodlets, power bar, decor, kitchen, wishes */
+.moodlets { display: flex; flex-wrap: wrap; gap: 6px; grid-column: 1 / -1; margin-top: 4px; }
+.moodlet { display: inline-flex; align-items: center; gap: 4px; font: 600 12px var(--font-body); padding: 4px 9px; border-radius: 999px; background: rgba(47,163,107,.14); color: inherit; }
+.moodlet.neg { background: rgba(224,70,58,.14); }
+.moodlet b { font-weight: 800; } .moodlet small { opacity: .7; }
+.gen-bar { display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 10px 12px; border-radius: 14px; background: #1d2433; color: #f4f1e8; }
+.gen-bar div { flex: 1; display: grid; gap: 2px; } .gen-bar small { opacity: .8; } .gen-ic { font-size: 24px; }
+.gen-bar .link-btn { color: #f4f1e8; }
+.decor-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.decor-sw { flex: 0 0 auto; width: 104px; display: grid; gap: 4px; padding: 6px; border-radius: 12px; border: 1px solid rgba(127,127,127,.25); background: transparent; color: inherit; text-align: left; cursor: pointer; font: 600 11px var(--font-body); }
+.decor-sw i { display: block; height: 44px; border-radius: 8px; border: 1px solid rgba(0,0,0,.1); }
+.decor-sw.on { outline: 2px solid var(--ok, #2fa36b); } .decor-sw small { opacity: .75; }
+.pantry { display: flex; flex-wrap: wrap; gap: 6px; }
+.wishes .item.done h3 { opacity: .65; }

@@ -3899,3 +3899,21 @@ test('board games: Ludo, Ayo and draughts play to the end, replay identically, a
   const d = B.start('draughts', 2); assert.equal(B.play(d, [40, 32]), null, 'cannot move onto a light square'); assert.ok(B.play(d, [40, 33]), 'a diagonal step forward is fine');
   const l = B.start('ludo', 2, 'x'); const r = B.roll(l); assert.ok(r >= 1 && r <= 6); assert.equal(B.roll(B.start('ludo', 2, 'x')), r, 'dice come from the seed');
 });
+
+test('rules 57: moodlets, groceries and cooking, decor, wishes and perks; replays; nothing in a rules-56 life', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 5701, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const old = mk(56); assert.deepEqual(L.moodlets(old), []); assert.deepEqual(L.wishesToday(old), []); assert.equal(L.groceryShop(old), null);
+  const s = mk(); assert.equal(L.wishesToday(s).length, 3);
+  const home = D.HOMES[s.home].district;
+  // Markets are cheaper than supermarkets.
+  s.loc = 'mushin'; const market = L.groceryPrice(s, 'rice'); s.loc = 'ikeja'; const superP = L.groceryPrice(s, 'rice'); assert.ok(market < superP, 'market ' + market + ' < supermarket ' + superP);
+  s.loc = 'mushin'; for (const g of ['rice', 'tomato', 'oil', 'spice']) assert.ok(L.buyGroceries(s, g, 1).ok, g);
+  s.loc = 'yaba'; if (home !== 'yaba') assert.ok(!L.buyGroceries(s, 'rice', 1).ok || L.groceryShop(s), 'needs a shop');
+  s.loc = home; const h0 = s.needs.hunger; s.needs.hunger = 10; assert.ok(L.cookRecipe(s, 'jollof').ok); assert.ok(s.needs.hunger > 60);
+  assert.ok(L.moodlets(s).some(m => m.id === 'home_cooked'));
+  assert.ok(!L.cookRecipe(s, 'eba').ok, 'missing ingredients');
+  assert.ok(L.setDecor(s, 'floor', 'tiles').ok); assert.equal(s.decor.floor, 'tiles');
+  s.points = 0; assert.ok(!L.redeemPerk(s, 'sharp').ok, 'needs points');
+  const r = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.deepEqual(r.groc, s.groc); assert.equal(r.decor.floor, 'tiles'); assert.equal(r.points, s.points === 0 ? r.points : r.points);
+  for (const R of Object.values(D.RECIPES)) { assert.ok(R.mins % 15 === 0, R.name); for (const k of Object.keys(R.needs)) assert.ok(D.GROCERIES[k], k); }
+});
