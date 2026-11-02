@@ -3917,3 +3917,19 @@ test('rules 57: moodlets, groceries and cooking, decor, wishes and perks; replay
   const r = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.deepEqual(r.groc, s.groc); assert.equal(r.decor.floor, 'tiles'); assert.equal(r.points, s.points === 0 ? r.points : r.points);
   for (const R of Object.values(D.RECIPES)) { assert.ok(R.mins % 15 === 0, R.name); for (const k of Object.keys(R.needs)) assert.ok(D.GROCERIES[k], k); }
 });
+
+test('rules 58: car papers expire and renew, offences are recorded, FM stations are well formed; nothing in a rules-57 life', () => {
+  const mk = (rules, seed) => { const s = L.newGame({ seed: seed || 5801, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const old = mk(57); old.cash = 1e9; assert.ok(L.buyVehicle(old, 'tokunbo').ok); assert.deepEqual(L.papersInfo(old), []); assert.equal(old.vehicles[old.vehicles.length - 1].papers, undefined, 'no papers before rules 58');
+  const s = mk(); s.cash = 1e9; assert.ok(L.buyVehicle(s, 'tokunbo').ok);
+  const i = s.vehicles.length - 1, v = s.vehicles[i]; assert.ok(v.papers > s.t, 'new car comes with papers');
+  assert.equal(L.papersInfo(s).length, 1);
+  v.papers = s.t - 1; const m0 = s.cash + s.bank; const r = L.renewPapers(s, i); assert.ok(r.ok, r.msg); assert.ok(s.cash + s.bank < m0, 'renewing costs money'); assert.ok(v.papers > s.t);
+  assert.ok(!L.renewPapers(s, 99).ok, 'no such car');
+  // Offences: a one-way shortcut either fines, holds, or goes unseen, and fines get recorded.
+  let fined = 0;
+  for (let k = 0; k < 40; k++) { const t = mk(undefined, 5900 + k); t.cash = 1e7; t.pending = [{ id: 'oneway', title: 'One way', text: '', options: ['Take it', 'Stay'] }]; L.resolveChoice(t, 0); if ((t.offences || []).length) fined++; }
+  assert.ok(fined > 0 && fined < 40, 'one-way shortcuts are sometimes caught (' + fined + '/40)');
+  assert.ok(D.FM.length >= 5);
+  const ids = new Set(); for (const st of D.FM) { assert.ok(!ids.has(st.id), st.id); ids.add(st.id); assert.ok(st.name && st.freq && st.style && st.shows.length, st.id); for (const sh of st.shows) assert.ok(sh[0] < sh[1] && sh[1] <= 24 && sh[2] && sh[3], st.id + ' ' + sh[2]); }
+});

@@ -3262,6 +3262,17 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     craft: [{ icon: '🧵', title: 'A rush order for aso-ebi', text: 'Twenty outfits for Saturday, and it is Wednesday.', risky: 'Take it and work late', safe: 'Take only ten' }, { icon: '🔧', title: 'The machine broke down', text: 'The job is due tomorrow.', risky: 'Fix it yourself', safe: 'Wait for the mechanic' }],
     hustle: [{ icon: '📦', title: 'A big buyer wants credit', text: 'They promise to pay next week.', risky: 'Give them the goods', safe: 'Cash only' }, { icon: '🚚', title: 'Your supplier raised prices', text: 'Overnight, by 20%.', risky: 'Negotiate hard', safe: 'Pay and move on' }]
   };
+  // FM stations (all made up): what is on air at each hour, and the music style the in-game player uses for it.
+  var FM = [
+    { id: 'gbedu', name: 'Eko Gbedu FM', freq: '99.1', style: 'afro', blurb: 'Afrobeats, amapiano and street pop.', shows: [[0, 6, 'Night Shift Jams', 'DJ Ope'], [6, 10, 'Wake Up Lagos', 'Toks & Femi'], [10, 14, 'Midday Gbedu', 'Ada Bee'], [14, 18, 'Traffic Banger Hour', 'DJ Kayode'], [18, 22, 'Owambe Countdown', 'MC Lolo'], [22, 24, 'Late Vibes', 'Smooth Seun']] },
+    { id: 'talk', name: 'Naija Talk Radio', freq: '102.5', style: 'pad', blurb: 'News, politics and phone-ins about the city.', shows: [[0, 6, 'Overnight News', 'Bisi Ade'], [6, 9, 'The Morning Paper', 'Chuka Obi'], [9, 13, 'Your Voice, Your Lagos', 'Halima Musa'], [13, 17, 'The Economy Desk', 'Dr Kunle'], [17, 20, 'Drive Time Debate', 'Ngozi & Wale'], [20, 24, 'Nightline', 'Tunde Akin']] },
+    { id: 'pidgin', name: 'Wazobia Wave', freq: '95.1', style: 'afro', blurb: 'Gist, comedy and music in pidgin.', shows: [[0, 6, 'Una Still Wake?', 'Oga Mike'], [6, 10, 'Morning Yarns', 'Mama Kpako'], [10, 15, 'Gist Corner', 'Baba Sule'], [15, 19, 'Laugh Wella', 'Okon Lagos'], [19, 24, 'Na So We See Am', 'Sisi Ronke']] },
+    { id: 'classics', name: 'Owambe Classics', freq: '96.9', style: 'fuji', blurb: 'Fuji, juju and highlife from the masters.', shows: [[0, 8, 'Juju Till Dawn', 'Pa Adeyemi'], [8, 13, 'Highlife Morning', 'Chief Okafor'], [13, 18, 'Fuji Garage', 'Alhaji Taiwo'], [18, 24, 'Saturday Night Owambe', 'Iya Basira']] },
+    { id: 'gospel', name: 'Light of Life FM', freq: '104.1', style: 'highlife', blurb: 'Gospel music, sermons and praise.', shows: [[0, 5, 'Night Vigil', 'Pastor Emeka'], [5, 9, 'Morning Devotion', 'Sister Grace'], [9, 15, 'Praise Hours', 'Bro. Dayo'], [15, 20, 'Family Matters', 'Mrs Adeola'], [20, 24, 'Quiet Worship', 'Pastor Femi']] },
+    { id: 'sports', name: 'Arena Sports Radio', freq: '97.7', style: 'pad', blurb: 'Football, boxing and the NPFL, live.', shows: [[0, 7, 'Highlights Replay', 'Coach Sola'], [7, 11, 'Sports Breakfast', 'Emeka & Yinka'], [11, 16, 'Transfer Talk', 'Aisha Bello'], [16, 21, 'Match Day Live', 'Commentator Jide'], [21, 24, 'Final Whistle', 'Kola Brown']] },
+    { id: 'traffic', name: 'Lagos Traffic Radio', freq: '96.1', style: 'pad', blurb: 'Where the go-slow is, all day.', shows: [[0, 6, 'Night Roads', 'Officer Bayo'], [6, 10, 'Morning Rush Report', 'Kemi on the Bridge'], [10, 16, 'Midday Roads', 'Danladi'], [16, 21, 'Evening Rush Report', 'Kemi on the Bridge'], [21, 24, 'Late Roads', 'Officer Bayo']] }
+  ];
+
   // ---- Rules 57: everyday life ----
   // Moodlets: short feelings that lift or drag your mood for a few hours (mood is the average of your needs, plus these).
   var MOODLETS = {
@@ -3352,7 +3363,7 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
   var DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   var DATA = {
-    MOODLETS: MOODLETS, GROCERIES: GROCERIES, RECIPES: RECIPES, WALLS: WALLS, FLOORS: FLOORS, WISHES: WISHES, PERKS: PERKS,
+    FM: FM, MOODLETS: MOODLETS, GROCERIES: GROCERIES, RECIPES: RECIPES, WALLS: WALLS, FLOORS: FLOORS, WISHES: WISHES, PERKS: PERKS,
     SHORT_COURSES: SHORT_COURSES, WORK_DILEMMAS: WORK_DILEMMAS, DISTRICTS: DISTRICTS, ROADS: ROADS, FERRY_STOPS: FERRY_STOPS, BRT_STOPS: BRT_STOPS, RAIL_LINES: RAIL_LINES,
     OKADA_BAN: OKADA_BAN, MODES: MODES, HOMES: HOMES, HOME_TYPES: HOME_TYPES, SKILLS: SKILLS, SKILL_XP: SKILL_XP,
     CAREERS: CAREERS, PLACE_ACTIONS: PLACE_ACTIONS, HOME_ACTIONS: HOME_ACTIONS, NPCS: NPCS,

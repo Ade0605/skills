@@ -115,7 +115,9 @@
   // 56 adds five dream cars at the dealers: a 6x6, a V12 roadster, a sharper hypercar, a V12 coupé and an electric coupé.
   // 57 adds everyday life: moodlets, groceries and home cooking from recipes, wall and floor finishes, daily wishes with
   // points and perks.
-  var RULES = 57;
+  // 58 adds minor offences: a tempting one-way shortcut when you drive, and car papers that need renewing yearly
+  // (checkpoints fine expired papers); a record of fines in your profile.
+  var RULES = 58;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -2292,6 +2294,10 @@
       if (lost) { post(s, 'cash', -lost, 'Phone snatched in traffic'); noteLoss(s, lost, 'Phone and cash snatched in traffic'); msg += ' Someone snatched your phone and cash on the way.'; }
     }
     if (s.rules >= 19 && STREET_BOYS[dest] && /^(trek|danfo|okada|keke)$/.test(mode) && !s.pending.length && rand(s) < 0.06) queueStreetBoys(s);
+    if (s.rules >= 58 && mode === 'car' && !s.pending.length) {
+      if (papersExpired(s) && rand(s) < 0.15) queue(s, { id: 'police', papers: true, title: 'Checkpoint: papers', text: '"Particulars, please." Your vehicle licence ran out. The fine for expired papers is ' + naira(price(s, 20000)) + '.', options: ['Pay the fine', 'Beg and explain'] });
+      else if (o.mins >= 30 && districtCity(dest) === 'lagos' && rand(s) < 0.15) queue(s, { id: 'oneway', title: 'Empty one-way', text: 'The go-slow is not moving, but the one-way beside you is empty. Drivers ahead are taking it. Traffic officers fine you ' + naira(price(s, 30000)) + ' and take you to the mobile court if they catch you.', options: ['Take the one-way', 'Wait in the traffic'] });
+    }
     if (s.rules >= 21) goalTick(s, 'travel', null, d0);
     return finish(s, ok(msg));
   }
@@ -2604,9 +2610,16 @@
         } else { applyFx(s, { stress: 5, fun: -5 }); msg = 'You stayed out of sight. The family group chat noticed.'; }
         break;
       case 'police':
+        if (s.rules >= 58 && ev.papers) { var pf = price(s, 20000); if (idx === 0) { if (payPartial(s, pf, 'Fine: expired car papers') >= pf) { offence(s, 'Expired car papers', pf); msg = 'You paid the ' + naira(pf) + ' fine. Renew your papers in the Cars app.'; } else { offence(s, 'Expired car papers (could not pay)', 0); holdOvernight(s); msg = 'You could not pay the fine. The car stays at the station overnight and so do you.'; } } else { advance(s, 60); applyFx(s, { stress: 12 }); if (rand(s) < 0.5) { offence(s, 'Expired car papers', pf); payPartial(s, pf, 'Fine: expired car papers'); msg = 'An hour of argument, then the fine anyway.'; } else msg = 'An hour of pleading. He lets you go with a warning: renew your papers.'; } break; }
         if (idx === 0) { payPartial(s, price(s, 2000), 'Checkpoint "settlement"'); msg = 'He waves you through.'; }
         else if (s.rules >= 19 && rand(s) < 0.2) { advance(s, 30); applyFx(s, { stress: 15 }); var bl = price(s, 5000); queue(s, { id: 'detained', title: 'Taken to the station', text: '"You are wandering." They drove you to the division and put you behind the counter. The cell is behind you.', bail: bl, options: ['Pay "bail" ' + naira(bl), 'Wait it out in the cell'], subs: ['Out in an hour', 'Out at 7 in the morning, no charge'] }); msg = 'The argument went badly.'; }
         else { advance(s, 45); applyFx(s, { stress: 10 }); msg = 'Forty-five minutes of argument, then he lets you go.'; }
+        break;
+      case 'oneway':
+        if (idx === 0) {
+          if (rand(s) < 0.35) { var of = price(s, 30000); advance(s, 120); applyFx(s, { stress: 18 }); if (payPartial(s, of, 'Fine: driving against traffic (mobile court)') >= of) { offence(s, 'Drove against traffic on a one-way', of); msg = 'Caught! Traffic officers took you to the mobile court: two hours and a ' + naira(of) + ' fine.'; } else { offence(s, 'Drove against traffic (could not pay)', 0); holdOvernight(s); msg = 'Caught, and you could not pay the fine. A night in the cell.'; } }
+          else { applyFx(s, { stress: -6, fun: 6 }); msg = 'Nobody saw. You beat the traffic, heart pounding.'; }
+        } else { applyFx(s, { stress: 4 }); msg = 'You stayed in the go-slow like a law-abiding citizen.'; }
         break;
       case 'golfhole':
         var gc = s.golfCup, go = ev.odds, gp = GOLF_PAR[gc.hole], got, gx = rand(s);
@@ -3720,6 +3733,17 @@
     return t;
   }
 
+  /* ---------- rules 58: minor offences and car papers ---------- */
+  var PAPERS_LIFE = 48 * 7 * 1440; // a game year
+  function offence(s, what, fine) { s.offences = (s.offences || []).concat([{ what: what, fine: fine, t: s.t }]).slice(-30); log(s, '🚔 Offence: ' + what + (fine ? ' (fined ' + naira(fine) + ')' : '') + '.', 'bad'); }
+  function holdOvernight(s) { var m = minuteOfDay(s), to = (m < 7 * 60 ? 7 * 60 - m : 24 * 60 - m + 7 * 60); advance(s, Math.max(STEP, Math.floor(to / STEP) * STEP)); applyFx(s, { stress: 25, hygiene: -30, social: -10 }); }
+  function papersExpired(s) { var v = drivenVehicle(s); return !!(s.rules >= 58 && v && v.papers != null && v.papers < s.t); }
+  function papersInfo(s) { if (!(s.rules >= 58)) return []; return (s.vehicles || []).map(function (v, i) { var V = D.VEHICLES[v.id]; return V && V.kind === 'car' && v.papers != null ? { i: i, name: V.name, until: v.papers, expired: v.papers < s.t, cost: price(s, 15000) } : null; }).filter(Boolean); }
+  function renewPapers(s, i) {
+    var v = (s.vehicles || [])[i]; if (!(s.rules >= 58) || !v || v.papers == null) return fail('No papers to renew.');
+    var c = price(s, 15000); s.alerts = []; if (!pay(s, c, 'Car papers renewed: ' + D.VEHICLES[v.id].name)) return fail('Renewing costs ' + naira(c) + '.');
+    v.papers = Math.max(v.papers, s.t) + PAPERS_LIFE; return ok('📄 Papers renewed for a year: vehicle licence, road worthiness and insurance.');
+  }
   /* ---------- rules 57: moodlets, groceries and cooking, decor, wishes and perks ---------- */
   function perkOn(s, id) { return s.rules >= 57 && !!s.perks && (id === 'rentcut' ? !!s.perks.rentcut : (s.perks[id] || 0) > s.t); }
   function addMoodlet(s, id) {
@@ -3966,7 +3990,7 @@
     var cost = price(s, V.price);
     s.alerts = [];
     if (!pay(s, cost, 'Bought ' + V.name)) return fail(V.name + ' costs ' + naira(cost) + '.');
-    s.vehicles.push({ id: id, paid: cost });
+    s.vehicles.push({ id: id, paid: cost }); if (s.rules >= 58 && V.kind === 'car') s.vehicles[s.vehicles.length - 1].papers = s.t + PAPERS_LIFE;
     log(s, 'You bought a ' + V.name + '. Upkeep is ' + naira(price(s, V.upkeep)) + ' a week.', 'good');
     return finish(s, ok('Congratulations on your ' + V.name + '!'));
   }
@@ -6046,7 +6070,7 @@
     buySeaPlots: recorded('sp', buySeaPlots), releaseSeaPlots: recorded('sx', releaseSeaPlots), seaCost: seaCost, rentSeaPlots: recorded('sr', rentSeaPlots), seaRentCost: seaRentCost,
     japaFly: recorded('jp', japaFly), japaBlock: japaBlock,
     haggleBuy: recorded('hg', haggleBuy), haggleAsk: haggleAsk, haggleOpen: haggleOpen,
-    adoptBaby: recorded('ab', adoptBaby), shortState: shortState, placeBet: recorded('bt', placeBet), highLow: recorded('hz', highLow), betInfo: betInfo, BET_LEAGUES: BET_LEAGUES, changeGoal: recorded('cg', changeGoal), giftOut: recorded('go', giftOut), giftMax: giftMax, giftOutAny: recorded('gq', giftOutAny), giftInAny: recorded('gj', giftInAny), startCashFor: startCashFor, originText: originText, drivenVehicle: drivenVehicle, moodlets: moodlets, wishesToday: wishesToday, redeemPerk: recorded('pk', redeemPerk), buyGroceries: recorded('gr', buyGroceries), cookRecipe: recorded('ck', cookRecipe), canCook: canCook, groceryShop: groceryShop, groceryPrice: groceryPrice, setDecor: recorded('dc', setDecor), decorPrice: decorPrice, life57Info: life57Info, perkOn: perkOn, giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
+    adoptBaby: recorded('ab', adoptBaby), shortState: shortState, placeBet: recorded('bt', placeBet), highLow: recorded('hz', highLow), betInfo: betInfo, BET_LEAGUES: BET_LEAGUES, changeGoal: recorded('cg', changeGoal), giftOut: recorded('go', giftOut), giftMax: giftMax, giftOutAny: recorded('gq', giftOutAny), giftInAny: recorded('gj', giftInAny), startCashFor: startCashFor, originText: originText, drivenVehicle: drivenVehicle, papersInfo: papersInfo, renewPapers: recorded('rp', renewPapers), moodlets: moodlets, wishesToday: wishesToday, redeemPerk: recorded('pk', redeemPerk), buyGroceries: recorded('gr', buyGroceries), cookRecipe: recorded('ck', cookRecipe), canCook: canCook, groceryShop: groceryShop, groceryPrice: groceryPrice, setDecor: recorded('dc', setDecor), decorPrice: decorPrice, life57Info: life57Info, perkOn: perkOn, giftIn: recorded('gi', giftIn), GIFT_MAX: GIFT_MAX, GIFT_DAY: GIFT_DAY, playerSocial: recorded('pz', playerSocial), PLAYER_SOCIAL: PLAYER_SOCIAL, adoptInfo: adoptInfo, nyscRegister: recorded('ny', nyscRegister), nyscCamp: recorded('nc', nyscCamp), nyscWork: recorded('np', nyscWork), nyscCDS: recorded('nd', nyscCDS), nyscInfo: nyscInfo, nyscPosting: nyscPosting, nyscRetain: recorded('nr', nyscRetain), treatMalaria: recorded('ml', treatMalaria), sickInfo: sickInfo, malariaOdds: malariaOdds, helpHomework: recorded('kh', helpHomework), kidOuting: recorded('ko', kidOuting), kidsInfo: kidsInfo, kidName: kidName, shootSkit: recorded('kt', shootSkit), goLive: recorded('gl', goLive), creatorInfo: creatorInfo, trendingTheme: trendingTheme, lagosLabels: lagosLabels, kidLabel: kidLabel,
     buildStage: recorded('bh', buildStage), buildInfo: buildInfo, interviewJob: recorded('iv', interviewJob), interviewQuestions: interviewQuestions, interviewBlock: interviewBlock, needsInterview: needsInterview,
     decRates: decRates, luxuryCar: luxuryCar, lodgingOptions: lodgingOptions, railLine: railLine, heirOffer: heirOffer, heirOffers: heirOffers, serviceCars: recorded('sv', serviceCars), serviceBlock: serviceBlock, serviceCost: serviceCost, wearInfo: wearInfo, breakdownOdds: breakdownOdds, sleepAway: recorded('ht', sleepAway),
     startMinigame: recorded('mg', startMinigame), stageShow: recorded('st', stageShow), miniStarts: miniStarts, quizShow: recorded('qz', quizShow), boleShift: recorded('bg', boleShift), hawkShift: recorded('hk', hawkShift), danceOff: recorded('df', danceOff), danfoShift: recorded('dr', danfoShift), setDanfoDriver: recorded('dd', setDanfoDriver), ownsDanfo: ownsDanfo,
