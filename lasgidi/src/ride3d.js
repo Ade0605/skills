@@ -54,7 +54,15 @@
     if (!air && !water) {
       var CITY = !HW;
       function vehicle(kind) {
-        var g = new T.Group(), c = [0xf4f3ec, 0x8a8d93, 0xc0392b, 0x2f6fa0, 0x17181a, 0x6b6f75][Math.floor(Math.random() * 6)];
+        var c = [0xf4f3ec, 0x8a8d93, 0xc0392b, 0x2f6fa0, 0x17181a, 0x6b6f75][Math.floor(Math.random() * 6)], MD = root.LasgidiModels3D;
+        // The shared detailed models (okada riders and keke drivers included), merged for speed; trucks keep the old boxes.
+        if (MD && kind !== 'truck' && !(LDN && kind === 'keke')) {
+          var who = function (i) { return { look: { skin: (i * 7) % 6, hair: (i * 3) % 8, shape: i % 3 }, outfit: [{ top: 'tee', bottom: 'jeans', shoes: 'slides' }, { top: 'shirt', bottom: 'trousers', shoes: 'loafers' }, { top: 'ankara_sh', bottom: 'jeans', shoes: 'sneakers' }][i % 3] }; }, seed = Math.floor(Math.random() * 1000);
+          var mg = MD.vehicle(T, kind === 'bus' ? 'brt' : kind, { color: kind === 'okada' ? [0xc0392b, 0x2f6fa0, 0x17181a][seed % 3] : kind === 'danfo' || kind === 'keke' ? undefined : c, london: LDN, lite: true, roll: false, rider: kind === 'okada' || kind === 'keke' ? who(seed) : null, seated: kind === 'okada' && seed % 2 ? [who(seed + 1)] : null });
+          if (kind === 'bus' && !LDN) { var stripe = new T.Mesh(new T.BoxGeometry(2.56, 0.3, 11.05), M(0xf2c200)); stripe.position.set(0, 0.9, 0); mg.add(stripe); }
+          world.add(mg); return mg;
+        }
+        var g = new T.Group();
         var wheels = function (zs, xw, r) { zs.forEach(function (zz) { [-xw, xw].forEach(function (xx) { var wh = new T.Mesh(new T.CylinderGeometry(r, r, 0.25, 10), M(0x111111)); wh.rotation.z = Math.PI / 2; wh.position.set(xx, r, zz); g.add(wh); }); }); };
         if (LDN && kind === 'danfo') { box3(g, 2.4, 4, 9, M(0xd8261c, 0.45), 0, 2.6, 0); box3(g, 2.45, 0.8, 8, M(0x1d2a33, 0.1, 0.6), 0, 1.9, 0); box3(g, 2.45, 0.8, 8, M(0x1d2a33, 0.1, 0.6), 0, 3.7, 0); wheels([-3, 3], 1.1, 0.5); }
         else if (LDN && kind === 'keke') { box3(g, 1.9, 1.1, 4.4, M(0x111214, 0.3, 0.5), 0, 1, 0); box3(g, 1.8, 0.7, 2.6, M(0x1d2a33, 0.05, 0.8), 0, 1.85, 0); wheels([-1.4, 1.4], 0.95, 0.42); }
@@ -78,7 +86,7 @@
         var person = function () { var g = new T.Group(), sk = [0x5a3a22, 0x6b4a33, 0x3d2817, 0x8a5a3c][Math.floor(Math.random() * 4)], cl = [0xc0392b, 0x2f6fa0, 0x16a34a, 0xf2c200, 0x7c3aed, 0xf4f3ec, 0x17181a][Math.floor(Math.random() * 7)];
           box3(g, 0.5, 0.75, 0.3, M(cl, 0.8), 0, 1.2, 0); var hd = new T.Mesh(new T.SphereGeometry(0.17, 8, 6), M(sk)); hd.position.y = 1.75; g.add(hd);
           var legs = [-0.12, 0.12].map(function (lx) { var l = new T.Group(); l.position.set(lx, 0.85, 0); box3(l, 0.13, 0.8, 0.13, M(0x2b2f36), 0, -0.4, 0); g.add(l); return l; }); g.userData.legs = legs; return g; };
-        for (var wk = 0; wk < 34; wk++) { var sdw = wk % 2 ? 1 : -1, pp = person(); world.add(pp); walkers.push({ g: pp, x: sdw * (6.8 + (wk % 3) * 0.5), z: -wk * 9, dir: wk % 3 ? 1 : -1, ph: wk }); }
+        for (var wk = 0; wk < 34; wk++) { var sdw = wk % 2 ? 1 : -1, pp = (wk < 14 && root.LasgidiModels3D && root.LasgidiModels3D.person(T, { look: { skin: wk % 6, hair: (wk * 3) % 8, shape: wk % 3 }, outfit: [{ top: 'tee', bottom: 'jeans', shoes: 'sneakers' }, { dress: 'iro_buba', head: 'gele', shoes: 'slides' }, { top: 'shirt', bottom: 'trousers', shoes: 'loafers' }, { dress: 'gown', shoes: 'heels' }, { top: 'ankara_sh', bottom: 'jeans', shoes: 'slides' }, { top: 'jersey', bottom: 'joggers', shoes: 'sneakers' }, { dress: 'kaftan', head: 'cap', shoes: 'slides' }][wk % 7] })) || person(); world.add(pp); walkers.push({ g: pp, x: sdw * (6.8 + (wk % 3) * 0.5), z: -wk * 9, dir: wk % 3 ? 1 : -1, ph: wk }); }
         for (var dc = 0; dc < 14; dc++) {
           var dg = new T.Group(), dsd = dc % 2 ? 1 : -1;
           if (dc % 3 === 0) { // a bus stop with people waiting
@@ -130,6 +138,11 @@
       for (var sr = 0; sr < 9; sr++) [-0.6, 0.6].forEach(function (x) { box3(V, 0.55, 0.9, 0.5, M(0x1f3b63, 0.8), x, 1.9, -4.5 + sr * 1.1); });
     }
     else if (mode === 'trek' && root.LasgidiAvatar3D) { var me = root.LasgidiAvatar3D.figure(T, o.look || { skin: 2, hair: 0, shape: 1 }, o.outfit || {}, null); me.rotation.y = Math.PI; V.add(me); V.userData.walker = me; }
+    else if (root.LasgidiModels3D && /^(okada|keke|car|cab|danfo|brt|coach)$/.test(mode) && !(LDN && mode === 'keke')) {
+      var me3 = { look: o.look || { skin: 2, hair: 0, shape: 1 }, outfit: o.outfit || {} }, drv = { look: { skin: 1, hair: 0, shape: 1 }, outfit: { top: 'shirt', bottom: 'trousers', shoes: 'loafers' } };
+      var mine = mode === 'car' && !o.chauffeur, D3 = root.LASGIDI_DATA, ownV = o.car && D3 && D3.VEHICLES[o.car], pv = ownV ? root.LasgidiModels3D.forVehicle(T, o.car, ownV, { rider: mine ? me3 : drv }) : root.LasgidiModels3D.vehicle(T, mode, { color: mode === 'car' ? col : undefined, london: LDN, rider: mode === 'okada' || mode === 'keke' || mode === 'cab' || mode === 'car' ? (mine ? me3 : drv) : null, seated: mode === 'okada' ? [me3] : mode === 'keke' ? [me3] : mode === 'danfo' ? [me3, drv] : null });
+      V.add(pv); V.userData.model = pv;
+    }
     else if (mode === 'okada') { box3(V, 0.3, 0.6, 1.8, body, 0, 0.7, 0); [-0.8, 0.8].forEach(function (zz) { var wh = new T.Mesh(new T.TorusGeometry(0.35, 0.1, 8, 16), M(0x111111)); wh.position.set(0, 0.4, zz); wh.rotation.y = Math.PI / 2; V.add(wh); }); var rider = new T.Mesh(new T.CapsuleGeometry(0.25, 0.6, 4, 8), M(0x2f6fa0)); rider.position.set(0, 1.4, 0.1); V.add(rider); }
     else { var long = mode === 'brt' || mode === 'rail' ? 9 : mode === 'danfo' ? 5 : mode === 'keke' ? 2.4 : 4.2, ht = mode === 'brt' || mode === 'rail' || mode === 'danfo' ? 2.2 : mode === 'keke' ? 1.5 : 1.0; box3(V, mode === 'keke' ? 1.3 : 2, ht, long, body, 0, ht / 2 + 0.4, 0); box3(V, mode === 'keke' ? 1.32 : 2.02, ht * 0.4, long * 0.8, glass, 0, ht * 0.8 + 0.4, -0.1); if (mode === 'danfo' && !LDN) box3(V, 2.04, 0.18, long + 0.04, M(0x17181a), 0, ht * 0.45 + 0.4, 0);
       if (LDN && mode === 'danfo') { box3(V, 2, 2, long, body, 0, ht + 1.4, 0); box3(V, 2.02, 0.8, long * 0.85, glass, 0, ht + 1.6, -0.1); }
@@ -161,6 +174,7 @@
       movers.forEach(function (g, i) { var z = (-i * 12 + run * SPEED) % 312; g.position.z = z > 20 ? z - 312 : z; });
       var dtt = Math.min(0.05, t - (frame.lt || t)); frame.lt = t;
       traffic.forEach(function (v) { if (!reduce) v.z += (SPEED + v.rel) * dtt * (v.onc ? 1 : 1); if (!v.onc && !reduce) v.z += 0; if (v.z > 30) v.z -= 330; if (v.z < -300) v.z += 330; v.g.position.set(v.x, 0, v.z); v.g.rotation.y = v.onc ? Math.PI : 0; });
+      if (V.userData.model && root.LasgidiModels3D && !reduce) root.LasgidiModels3D.roll(V.userData.model, SPEED * dtt);
       decor.forEach(function (d) { var z = (d.z + run * SPEED) % 310; d.g.position.z = z > 20 ? z - 310 : z; });
       walkers.forEach(function (w) { var z = (w.z + run * SPEED + run * 1.3 * w.dir) % 306; w.g.position.set(w.x, 0, z > 20 ? z - 306 : z); w.g.rotation.y = w.dir > 0 ? 0 : Math.PI; var a = Math.sin(t * 7 + w.ph) * 0.5; w.g.userData.legs[0].rotation.x = a; w.g.userData.legs[1].rotation.x = -a; });
       sights.forEach(function (s) { var dz = (t - s.at) * SPEED * 1.4; s.g.position.z = Math.min(40, -120 + dz * 1.6); });

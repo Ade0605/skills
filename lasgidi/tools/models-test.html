@@ -1,0 +1,22 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#cfd8e0">
+<script src="../src/data.js"></script><script src="../vendor/three.min.js"></script><script src="../src/avatar3d.js"></script><script src="../src/models3d.js"></script>
+<script>
+const T = THREE, r = new T.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); r.shadowMap.enabled = true; r.toneMapping = T.ACESFilmicToneMapping; document.body.appendChild(r.domElement);
+const sc = new T.Scene(); sc.background = new T.Color(0xcfd8e0); sc.add(new T.HemisphereLight(0xfff4e6, 0x707880, 1.2)); const sun = new T.DirectionalLight(0xffffff, 2); sun.position.set(6, 10, -6); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15 }); sc.add(sun);
+const ground = new T.Mesh(new T.PlaneGeometry(80, 80).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ color: 0x9aa0a6 })); ground.receiveShadow = true; sc.add(ground);
+const V = LasgidiModels3D.vehicle, ppl = (i) => ({ look: { skin: i % 6, hair: i % 8, shape: i % 3 }, outfit: [{ top: 'tee', bottom: 'jeans', shoes: 'sneakers' }, { dress: 'iro_buba', head: 'gele', shoes: 'slides' }, { top: 'shirt', bottom: 'trousers', shoes: 'loafers' }, { dress: 'gown', shoes: 'heels' }, { top: 'ankara_sh', bottom: 'jeans', shoes: 'sneakers' }, { dress: 'agbada', head: 'fila', shoes: 'slides' }][i % 6] });
+const mode = location.hash.slice(1) || 'all', cam = new T.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 200);
+if (mode === 'all') {
+  [['okada', { rider: ppl(0), seated: [ppl(1)] }], ['keke', { rider: ppl(2), seated: [ppl(3), ppl(4)] }], ['car', { color: 0x2f6fa0, rider: ppl(5) }], ['suv', { color: 0x17181a }], ['cab', {}], ['danfo', { seated: [ppl(1), ppl(2)] }]].forEach((q, i) => { const g = V(T, q[0], q[1]); g.position.set(-11 + i * 4.4, 0, 0); g.rotation.y = -0.6; sc.add(g); });
+  cam.position.set(0, 9, -22); cam.lookAt(0, 0.8, 0);
+} else if (mode === 'lux' || mode === 'lux2') {
+  const ids = mode === 'lux' ? ['lambo_revuelto', 'ferrari_812', 'bugatti_sport', 'bentley_gt'] : ['merc_g63', 'merc_g6x6', 'rr_phantom', 'lambo_roadster'];
+  ids.forEach((id, i) => { const g = LasgidiModels3D.forVehicle(T, id, LASGIDI_DATA.VEHICLES[id], {}); g.position.set(-8.4 + i * 5.6, 0, 0); g.rotation.y = -0.75; sc.add(g); });
+  cam.position.set(0, 5, -15); cam.lookAt(0, 0.9, 0);
+} else if (mode === 'people') {
+  for (let i = 0; i < 6; i++) { const f = LasgidiAvatar3D.figure(T, ppl(i).look, ppl(i).outfit, null); f.position.set(-2.5 + i, 0, 0); f.rotation.y = Math.PI + (i - 2.5) * 0.12; sc.add(f); }
+  cam.position.set(0, 1.4, -5.2); cam.lookAt(0, 1.0, 0);
+} else { const g = V(T, mode, { rider: ppl(0), seated: [ppl(1), ppl(3), ppl(4)] }); g.rotation.y = -0.7 + (location.search.includes('side') ? -0.9 : 0); sc.add(g); const far = /car|suv|cab|danfo/.test(mode) ? 2.1 : 1; cam.position.set(2.6 * far, 2.2 * far, -4.6 * far); cam.lookAt(0, 0.9, 0); }
+sc.traverse(o => { if (o.isMesh) { o.castShadow = true; } });
+r.render(sc, cam); window.calls = r.info.render.calls; window.done = true;
+</script>

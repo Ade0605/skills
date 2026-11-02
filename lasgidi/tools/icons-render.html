@@ -1,0 +1,23 @@
+<!doctype html><meta charset=utf-8><body style="margin:0">
+<script src="../src/data.js"></script><script src="../vendor/three.min.js"></script><script src="../src/avatar3d.js"></script><script src="../src/models3d.js"></script>
+<script>
+const T = THREE, S = 256, r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(S, S); r.toneMapping = T.ACESFilmicToneMapping; r.setClearColor(0, 0);
+const out = {}, small = document.createElement('canvas'); small.width = small.height = 64;
+const who = { look: { skin: 1, hair: 1, shape: 1 }, outfit: { top: 'shirt', bottom: 'jeans', shoes: 'sneakers' } }, her = { look: { skin: 2, hair: 2, shape: 1 }, outfit: { dress: 'iro_buba', head: 'gele', shoes: 'slides' } };
+function shot(key, build, dist, lookY) {
+  const sc = new T.Scene(); sc.add(new T.HemisphereLight(0xffffff, 0x8090a0, 1.6)); const k = new T.DirectionalLight(0xffffff, 2.2); k.position.set(-3, 5, -4); sc.add(k); const rim = new T.DirectionalLight(0xbcd4ff, 1); rim.position.set(4, 2, 3); sc.add(rim);
+  const g = build(); g.rotation.y = -0.65; sc.add(g);
+  g.rotation.y = -0.95; const box = new T.Box3().setFromObject(g), c = box.getCenter(new T.Vector3()), rad = box.getBoundingSphere(new T.Sphere()).radius;
+  const cam = new T.PerspectiveCamera(30, 1, 0.1, 100), dir = new T.Vector3(0.75, 0.42, -1).normalize(), d = rad / Math.sin(15 * Math.PI / 180) * 0.92 * (dist || 1); cam.position.copy(c).addScaledVector(dir, d); cam.lookAt(c);
+  r.render(sc, cam); const x = small.getContext('2d'); x.clearRect(0, 0, 64, 64); x.imageSmoothingQuality = 'high'; x.drawImage(r.domElement, 0, 0, 64, 64); out[key] = small.toDataURL('image/webp', 0.75);
+}
+const V = LasgidiModels3D.vehicle;
+shot('t_okada', () => V(T, 'okada', { rider: who, color: 0xc0392b }), 0.82);
+shot('t_keke', () => V(T, 'keke', { rider: who }), 0.72);
+shot('t_taxi', () => V(T, 'cab', {}), 0.62);
+shot('car', () => V(T, 'car', { color: 0x2f6fa0 }), 0.62);
+shot('bus', () => V(T, 'danfo', {}), 0.66);
+shot('t_brt', () => V(T, 'brt', {}), 0.78);
+shot('t_walk', () => { const f = LasgidiAvatar3D.figure(T, her.look, her.outfit, null); const u = f.userData; u.legs[0].rotation.x = 0.45; u.legs[1].rotation.x = -0.45; u.knees[1].rotation.x = 0.4; u.arms[0].rotation.x = -0.4; u.arms[1].rotation.x = 0.4; return f; }, 1.0);
+window.icons = out; window.done = true;
+</script>
