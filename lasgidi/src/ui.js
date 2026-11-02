@@ -6659,6 +6659,7 @@
     S = (data && data.state) ? L.migrate(data.state) : (prefs.mode === 'weekly' && (runFor(/^[MY]$/.test(prefs.run) ? prefs.run : 'W') || weeklyRun())) || load(SAVE_KEY);
     if (S && !(data && data.state) && !(navigator.webdriver && !/welcome/.test(location.hash))) ui.welcome = true; // welcome back on a saved life (automated test browsers skip it unless #welcome)
     if (data && data.ui) Object.assign(ui, data.ui, { toasts: [] });
+    if (S && /^#(dashboard|owner)$/i.test(location.hash || '')) { ui.welcome = false; ui.tab = 'phone'; ui.app = 'owner'; } // a direct link to the owner's Dashboard (it shows only to the owner)
     render();
     initOnline();
     initShop();
