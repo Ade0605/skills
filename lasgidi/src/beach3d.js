@@ -1037,6 +1037,40 @@
       for (var bg = 0; bg < 10; bg++) g.add(mesh(new T.BoxGeometry(0.8, 1, 0.4), mat('sfrBag', { color: 0xffe500 }), -30 + bg * 6, 0.5, -16 - (bg % 3)));
       plzG.add(g);
     }
+    // Rules 54: Trafalgar Square (the column, four lions, two fountains, the gallery) and St Paul's Cathedral.
+    function trafalgar(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var stone = mat('trfStone', { color: 0xe4dcc6, roughness: 0.75 }), bronze = mat('trfBronze', { color: 0x3d3326, metalness: 0.6, roughness: 0.45 });
+      ldnFacade(g, 130, 20, 16, stone, 0xfff2c8, 2, 20, 0, 0);
+      for (var c = 0; c < 8; c++) g.add(mesh(new T.CylinderGeometry(0.9, 1, 16, 12), stone, -14 + c * 4, 8, -10));
+      var ped = mesh(new T.CylinderGeometry(6, 6, 34, 3), stone, 0, 19.5, -10); ped.rotation.z = Math.PI / 2; ped.rotation.y = Math.PI / 2; ped.scale.set(1, 1, 0.5); g.add(ped);
+      g.add(mesh(new T.CylinderGeometry(5, 5, 4, 16), stone, 0, 22, -1)); g.add(mesh(new T.SphereGeometry(5, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat('trfDome', { color: 0x8a9a8a, roughness: 0.5, metalness: 0.3 }), 0, 24, -1));
+      for (var st = 0; st < 5; st++) g.add(mesh(new T.BoxGeometry(70, 0.6, 3), stone, 0, 0.3 + st * 0.6, -14 - st * 3));
+      var col = new T.Group(); col.position.set(18, 0, -44);
+      col.add(mesh(new T.BoxGeometry(11, 8, 11), stone, 0, 4, 0)); col.add(mesh(new T.CylinderGeometry(1.6, 1.9, 34, 16), stone, 0, 25, 0));
+      col.add(mesh(new T.BoxGeometry(4.6, 2.2, 4.6), bronze, 0, 43, 0)); col.add(mesh(new T.CylinderGeometry(0.7, 0.8, 3.2, 8), mat('trfStat', { color: 0x9a9483, roughness: 0.6 }), 0, 45.7, 0)); col.add(mesh(new T.SphereGeometry(0.6, 8, 6), mat('trfStat', {}), 0, 47.7, 0));
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { var ln = new T.Group(); ln.position.set(q[0] * 9, 0, q[1] * 9); ln.add(mesh(new T.BoxGeometry(4, 3, 7), stone, 0, 1.5, 0)); ln.add(mesh(new T.BoxGeometry(2.6, 1.8, 5.2), bronze, 0, 3.9, 0.3)); ln.add(mesh(new T.SphereGeometry(1.2, 10, 8), bronze, 0, 4.6, q[1] < 0 ? -2.6 : 2.6)); col.add(ln); });
+      g.add(col);
+      var water = new T.MeshStandardMaterial({ color: 0x5fb3cf, emissive: 0x2a6f8f, emissiveIntensity: 0.35, roughness: 0.15, metalness: 0.2 });
+      [-26, 52].forEach(function (fx) { g.add(mesh(new T.CylinderGeometry(8, 8.4, 1.4, 24), stone, fx, 0.7, -38)); var w = mesh(new T.CylinderGeometry(7.4, 7.4, 0.2, 24), water, fx, 1.35, -38); w.castShadow = false; g.add(w); g.add(mesh(new T.CylinderGeometry(1.4, 2, 3, 12), stone, fx, 2.5, -38)); var jet = mesh(new T.CylinderGeometry(0.15, 0.4, 6, 8), new T.MeshBasicMaterial({ color: 0xd8f1ff, transparent: true, opacity: 0.7 }), fx, 6.5, -38); jet.castShadow = false; g.add(jet); });
+      for (var p = 0; p < 26; p++) g.add(mesh(new T.SphereGeometry(0.3, 6, 4), mat('trfPigeon', { color: 0x8a8f99 }), -30 + (p * 37 % 60), 0.3, -60 + (p * 23 % 30)));
+      plzG.add(g);
+    }
+    function stPauls(x, z) {
+      var g = new T.Group(); g.position.set(x, 0, z); var stone = mat('stpStone', { color: 0xe8e2d2, roughness: 0.7 }), lead = mat('stpLead', { color: 0x7f8c86, roughness: 0.45, metalness: 0.35 }), gold = mat('stpGold', { color: 0xd4af37, metalness: 0.8, roughness: 0.25 });
+      g.add(mesh(new T.BoxGeometry(70, 24, 56), stone, 0, 12, 14));
+      for (var tier = 0; tier < 2; tier++) for (var c = 0; c < 8; c++) g.add(mesh(new T.CylinderGeometry(0.8, 0.9, 11, 12), stone, -14 + c * 4, 5.5 + tier * 12, -16.5));
+      g.add(mesh(new T.BoxGeometry(34, 1.2, 4), stone, 0, 11.6, -16.5));
+      var ped = mesh(new T.CylinderGeometry(5, 5, 34, 3), stone, 0, 26, -16); ped.rotation.z = Math.PI / 2; ped.rotation.y = Math.PI / 2; ped.scale.set(1, 1, 0.5); g.add(ped);
+      [-27, 27].forEach(function (tx) { g.add(mesh(new T.BoxGeometry(9, 38, 9), stone, tx, 19, -10)); g.add(mesh(new T.CylinderGeometry(3.4, 4, 6, 12), stone, tx, 41, -10)); g.add(mesh(new T.SphereGeometry(3.4, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), lead, tx, 44, -10)); g.add(mesh(new T.ConeGeometry(0.9, 4, 8), gold, tx, 49, -10)); });
+      g.add(mesh(new T.CylinderGeometry(17, 17, 12, 32), stone, 0, 30, 18));
+      for (var r = 0; r < 28; r++) { var an = r / 28 * Math.PI * 2; g.add(mesh(new T.CylinderGeometry(0.5, 0.55, 10, 8), stone, Math.cos(an) * 18.2, 29, 18 + Math.sin(an) * 18.2)); }
+      g.add(mesh(new T.CylinderGeometry(14.5, 15.5, 5, 32), stone, 0, 38.5, 18));
+      g.add(mesh(new T.SphereGeometry(15, 32, 18, 0, Math.PI * 2, 0, Math.PI / 2), lead, 0, 40.5, 18));
+      g.add(mesh(new T.CylinderGeometry(2.4, 2.6, 8, 12), stone, 0, 59, 18)); g.add(mesh(new T.ConeGeometry(2.6, 4, 12), lead, 0, 65, 18));
+      g.add(mesh(new T.SphereGeometry(1, 12, 8), gold, 0, 68, 18)); g.add(mesh(new T.BoxGeometry(0.4, 3, 0.4), gold, 0, 70.4, 18)); g.add(mesh(new T.BoxGeometry(1.8, 0.4, 0.4), gold, 0, 70.6, 18));
+      for (var st = 0; st < 6; st++) g.add(mesh(new T.BoxGeometry(40, 0.6, 2.4), stone, 0, 0.3 + st * 0.6, -19 - st * 2.4));
+      plzG.add(g);
+    }
     function oxfordCircus(x, z) {
       var g = new T.Group(); g.position.set(x, 0, z); var stone = mat('oxcStone', { color: 0xd9cfb4, roughness: 0.75 });
       // four curved corner buildings round the crossing
@@ -1178,7 +1212,7 @@
       else if (/abj_tower/.test(id)) millenniumTower(0, 80);
       else if (id === 'acc_blackstar') blackStarGate(0, 60);
       else if (id === 'dxb_burj') burjKhalifa(0, 110);
-      else if (id === 'cc_castle' || id === 'cc_elmina_castle') slaveCastle(0, 70, id === 'cc_elmina_castle');
+      else if (id === 'cc_castle' || id === 'cc_elmina_castle' || id === 'acc_osucastle') slaveCastle(0, 70, id === 'cc_elmina_castle');
       else if (id === 'dxb_safari') desertCamp();
       else if (id === 'ldn_bigben') bigBen(15, 175);
       else if (id === 'ldn_towerbridge') towerBridge(0, 70);
@@ -1188,6 +1222,8 @@
       else if (id === 'ldn_oxcircus') oxfordCircus(0, 40);
       else if (id === 'ldn_shoreditch') shoreditch(0, 60);
       else if (id === 'ldn_livst') liverpoolStreet(0, 60);
+      else if (id === 'ldn_trafalgar') trafalgar(0, 120);
+      else if (id === 'ldn_stpauls') stPauls(0, 80);
       else if (/mosque/.test(id)) mosque(0, 50, 1.15);
       else if (/ecumenical/.test(id)) cathedral(0, 50, 1.2);
       else if (/eagle|tbs/.test(id)) {
@@ -1197,7 +1233,7 @@
       } else if (/^(unilag|ph_uniport|abj_uni|abj_chu|ph_rsu|lag_lasu|lag_yabatech|acc_ug|kum_knust_uni|cc_ucc_uni)$/.test(id)) { campusBuild(); }
       else stateHouse(0, 60, /threearms/.test(id));
       // Flags along the plaza, a fountain at its heart, lamps, palms, and the city behind.
-      var gh = /^(acc|kum|cc)_/.test(id), uk = /^ldn_/.test(id), ae = /^dxb_/.test(id), za = /^ctn_/.test(id), castle = /^cc_.*castle$/.test(id), dune = id === 'dxb_safari' || castle, flagT = canvasTex(96, 64, function (c, w, h) { if (za) { c.fillStyle = '#e03c31'; c.fillRect(0, 0, w, h / 2); c.fillStyle = '#001489'; c.fillRect(0, h / 2, w, h / 2); c.fillStyle = '#fff'; c.fillRect(0, h * 0.3, w, h * 0.4); c.fillStyle = '#007749'; c.fillRect(0, h * 0.38, w, h * 0.24); c.fillStyle = '#ffb81c'; c.beginPath(); c.moveTo(0, h * 0.12); c.lineTo(w * 0.42, h / 2); c.lineTo(0, h * 0.88); c.fill(); c.fillStyle = '#000'; c.beginPath(); c.moveTo(0, h * 0.22); c.lineTo(w * 0.32, h / 2); c.lineTo(0, h * 0.78); c.fill(); return; } if (ae) { ['#00732f', '#ffffff', '#000000'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#ff0000'; c.fillRect(0, 0, w / 4, h); return; } if (uk) { c.fillStyle = '#012169'; c.fillRect(0, 0, w, h); c.strokeStyle = '#fff'; c.lineWidth = 12; c.beginPath(); c.moveTo(0, 0); c.lineTo(w, h); c.moveTo(w, 0); c.lineTo(0, h); c.stroke(); c.strokeStyle = '#c8102e'; c.lineWidth = 4; c.stroke(); c.fillStyle = '#fff'; c.fillRect(w / 2 - 9, 0, 18, h); c.fillRect(0, h / 2 - 9, w, 18); c.fillStyle = '#c8102e'; c.fillRect(w / 2 - 5, 0, 10, h); c.fillRect(0, h / 2 - 5, w, 10); return; } if (gh) { ['#ce1126', '#fcd116', '#006b3f'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#000'; c.font = '700 22px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('★', w / 2, h / 2 + 1); return; } c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
+      var gh = /^(acc|kum|cc)_/.test(id), uk = /^ldn_/.test(id), ae = /^dxb_/.test(id), za = /^ctn_/.test(id), castle = /^cc_.*castle$|^acc_osucastle$/.test(id), dune = id === 'dxb_safari' || castle, flagT = canvasTex(96, 64, function (c, w, h) { if (za) { c.fillStyle = '#e03c31'; c.fillRect(0, 0, w, h / 2); c.fillStyle = '#001489'; c.fillRect(0, h / 2, w, h / 2); c.fillStyle = '#fff'; c.fillRect(0, h * 0.3, w, h * 0.4); c.fillStyle = '#007749'; c.fillRect(0, h * 0.38, w, h * 0.24); c.fillStyle = '#ffb81c'; c.beginPath(); c.moveTo(0, h * 0.12); c.lineTo(w * 0.42, h / 2); c.lineTo(0, h * 0.88); c.fill(); c.fillStyle = '#000'; c.beginPath(); c.moveTo(0, h * 0.22); c.lineTo(w * 0.32, h / 2); c.lineTo(0, h * 0.78); c.fill(); return; } if (ae) { ['#00732f', '#ffffff', '#000000'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#ff0000'; c.fillRect(0, 0, w / 4, h); return; } if (uk) { c.fillStyle = '#012169'; c.fillRect(0, 0, w, h); c.strokeStyle = '#fff'; c.lineWidth = 12; c.beginPath(); c.moveTo(0, 0); c.lineTo(w, h); c.moveTo(w, 0); c.lineTo(0, h); c.stroke(); c.strokeStyle = '#c8102e'; c.lineWidth = 4; c.stroke(); c.fillStyle = '#fff'; c.fillRect(w / 2 - 9, 0, 18, h); c.fillRect(0, h / 2 - 9, w, 18); c.fillStyle = '#c8102e'; c.fillRect(w / 2 - 5, 0, 10, h); c.fillRect(0, h / 2 - 5, w, 10); return; } if (gh) { ['#ce1126', '#fcd116', '#006b3f'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#000'; c.font = '700 22px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('★', w / 2, h / 2 + 1); return; } c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
       for (var fp = 0; fp < (dune ? 0 : 10); fp++) { var fx = -45 + fp * 10, fz = 18; plzG.add(mesh(new T.CylinderGeometry(0.15, 0.18, 14, 6), mat('fpole2', { color: 0xdfe3e8, metalness: 0.6 }), fx, 7, fz)); var fg = new T.PlaneGeometry(4, 2.6, 12, 1); fg.translate(2, 0, 0); var flag = new T.Mesh(fg, new T.MeshStandardMaterial({ map: flagT, side: T.DoubleSide, roughness: 0.8 })); flag.position.set(fx, 12.6, fz); flag.userData.base = Float32Array.from(fg.attributes.position.array); plzG.add(flag); PZ.flags.push(flag); }
       if (!dune) plzG.add(mesh(new T.CylinderGeometry(9, 9.5, 1.2, 40), mat('basin', { color: 0xc9ccd1, roughness: 0.6 }), 0, 0.6, -4)); if (!dune) plzG.add(mesh(new T.CylinderGeometry(8.4, 8.4, 0.2, 40), new T.MeshPhysicalMaterial({ color: 0x5fb3cf, roughness: 0.05, clearcoat: 1 }), 0, 1.15, -4));
       PZ.spray = []; for (var sp2 = 0; sp2 < (dune ? 0 : 50); sp2++) { var d = mesh(new T.SphereGeometry(0.14, 6, 4), mat('sprayM', { color: 0xf4fbff, roughness: 0.2, transparent: true, opacity: 0.8 }), 0, 1, -4); d.castShadow = false; plzG.add(d); PZ.spray.push(d); }

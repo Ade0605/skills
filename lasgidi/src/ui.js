@@ -67,7 +67,7 @@
   }
   function backToLife() {
     if (S) save();
-    S = load(SAVE_KEY); ui.tab = 'map'; ui.sel = null; ui.place = null; ui.board = null;
+    S = load(SAVE_KEY); ui.tab = 'map'; ui.sel = null; ui.place = null; ui.board = null; subscribeWeekly();
     setMode('life'); render();
   }
 
@@ -1319,25 +1319,34 @@
   }
 
   /* ---------- Weekly Lagos board: same replay check, ranked by net worth ---------- */
-  var weeklyUnsub = null, weeklyFor = null, rawWeekly = [], wVerifying = false;
+  // One board per shared run (Weekly, Monthly, Yearly), each followed live. online.weekly mirrors the board of the
+  // run you are in (or Weekly in your main life). Entries count only once another player's browser replays them.
+  var BOARDS = { W: { unsub: null, id: null, raw: [], rows: [], pending: 0 }, M: { unsub: null, id: null, raw: [], rows: [], pending: 0 }, Y: { unsub: null, id: null, raw: [], rows: [], pending: 0 } };
+  var wVerifying = false;
   function runColl(id) { var k = L.challengeKind ? L.challengeKind(id) : 'W'; return k === 'M' ? 'monthly' : k === 'Y' ? 'yearly' : 'weekly'; }
+  function boardKind() { return S && S.challenge && L.challengeKind ? L.challengeKind(S.challenge.id) : 'W'; }
   function boardWeek() { return S && S.challenge ? S.challenge.id : thisWeek(); }
-  function subscribeWeekly() {
-    if (!online.db) return;
-    var id = boardWeek();
-    if (weeklyFor === id) return;
-    if (weeklyUnsub) weeklyUnsub();
-    weeklyFor = id; rawWeekly = []; online.weekly = [];
+  function boardIdFor(kind) { return S && S.challenge && boardKind() === kind ? S.challenge.id : runId(kind); }
+  function syncWeekly() { var B = BOARDS[boardKind()]; online.weekly = B.rows; online.wPending = B.pending; }
+  function subscribeBoard(kind) {
+    var B = BOARDS[kind], id = boardIdFor(kind);
+    if (!online.db || B.id === id) return;
+    if (B.unsub) { try { B.unsub(); } catch (e) {} }
+    B.id = id; B.raw = []; B.rows = []; B.pending = 0; B.unsub = null;
     try {
-      weeklyUnsub = online.db.collection(runColl(id)).where('challenge', '==', id).limit(500).onSnapshot(function (snap) {
-        rawWeekly = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
-        rankWeekly();
-      }, function () { online.weekly = []; scheduleRender(); });
-    } catch (e) { weeklyUnsub = null; online.weekly = []; }
+      B.unsub = online.db.collection(runColl(id)).where('challenge', '==', id).limit(500).onSnapshot(function (snap) {
+        if (B.id !== id) return;
+        B.raw = snap.docs.map(function (d) { return { id: d.id, raw: d.data() }; });
+        rankBoard(kind);
+      }, function () { B.rows = []; syncWeekly(); scheduleRender(); });
+    } catch (e) { B.unsub = null; }
   }
-  function rankWeekly() {
-    var id = weeklyFor, rows = [], pending = [];
-    rawWeekly.forEach(function (d) {
+  function subscribeWeekly() { if (!online.db) return; ['W', 'M', 'Y'].forEach(subscribeBoard); syncWeekly(); }
+  function rankWeekly() { rankBoard(boardKind()); }
+  function rankBoard(kind) {
+    var B = BOARDS[kind], id = B.id, rows = [], pending = [];
+    if (!id) return;
+    B.raw.forEach(function (d) {
       var r = d.raw;
       if (!r || r.challenge !== id || typeof r.worth !== 'number' || typeof r.seal !== 'string') return;
       var key = 'w:' + id + ':' + d.id + ':' + r.seal + ':' + r.lines, v = online.checked[key];
@@ -1345,11 +1354,13 @@
       else if (!v) pending.push({ id: d.id, raw: r, key: key });
     });
     rows.sort(function (a, b) { return b.worth - a.worth; });
-    online.weekly = rows.slice(0, 10);
-    online.wPending = pending.length;
-    if (online.user && online.weekly.length) online.user.profiles(online.weekly.map(function (r) { return r.id; })).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
+    var mineAt = -1; rows.forEach(function (r, i) { if (r.id === online.me) mineAt = i; });
+    B.rows = rows.slice(0, 10); B.myRank = mineAt >= 0 ? mineAt + 1 : 0; B.count = rows.length;
+    B.pending = pending.length;
+    syncWeekly();
+    if (online.user && B.rows.length) online.user.profiles(B.rows.map(function (r) { return r.id; })).then(function (ps) { Object.keys(ps).forEach(function (k) { online.names[k] = ps[k]; }); scheduleRender(); });
     scheduleRender();
-    if (wVerifying || !pending.length || Object.keys(online.checked).filter(function (k) { return k.indexOf('w:') === 0; }).length > 60) return;
+    if (wVerifying || !pending.length || Object.keys(online.checked).filter(function (k) { return k.indexOf('w:') === 0; }).length > 90) return;
     pending.sort(function (a, b) { return b.raw.worth - a.raw.worth; });
     var next = pending[0];
     wVerifying = true;
@@ -1357,14 +1368,14 @@
       var proof = snap.exists ? snap.data() : null;
       var v = proof && proof.seal === next.raw.seal ? L.verifyChallenge(Object.assign({}, next.raw, { replay: proof.replay }), id) : null;
       online.checked[next.key] = v && v.ok && v.entry ? 'ok' : 'bad'; if (v && v.ok && v.entry) { var en0 = Object.assign({}, v.entry); delete en0.replay; online.verified[next.key] = en0; }
-    }, function () { online.checked[next.key] = 'bad'; }).then(null, function () { online.checked[next.key] = 'bad'; }).then(function () { wVerifying = false; setTimeout(rankWeekly, 0); });
+    }, function () { online.checked[next.key] = 'bad'; }).then(null, function () { online.checked[next.key] = 'bad'; }).then(function () { wVerifying = false; setTimeout(function () { ['W', 'M', 'Y'].forEach(rankBoard); }, 0); });
   }
   function postWeekly() {
     if (!online.db || !online.me) return Promise.resolve('The weekly board works when the game is opened on claude.ai.');
     if (!S || !S.challenge || !S.over) return Promise.resolve('Finish all ' + (S && S.challenge ? S.challenge.weeks : 4) + ' weeks first.');
     if (S.tampered || !S.replay) return Promise.resolve('This run cannot be verified, so it cannot be posted.');
     var e = L.challengeEntry(S);
-    var mine = rawWeekly.filter(function (d) { return d.id === online.me; })[0];
+    var mine = BOARDS[L.challengeKind(e.challenge)].raw.filter(function (d) { return d.id === online.me; })[0];
     if (mine && mine.raw.challenge === e.challenge && mine.raw.worth >= e.worth) return Promise.resolve('Your best this ' + runPeriod(e.challenge) + ' (' + N(mine.raw.worth) + ') stays on the board.');
     var summary = { challenge: e.challenge, worth: e.worth, seal: e.seal, lines: e.lines, origin: e.origin, career: e.career, level: e.level, weeks: e.weeks, at: Date.now() };
     var coll = runColl(e.challenge);
@@ -1373,14 +1384,87 @@
       .then(function () { return 'Posted ' + N(e.worth) + ' to the ' + e.challenge + ' board. Other players will replay it to check.'; },
         function (err) { return err && err.code === 'invalid_argument' ? 'You need Contributor access to post.' : 'Could not post right now. Try again shortly.'; });
   }
-  function weeklyBoardView() {
-    if (!online.db) return '<p class="note">The weekly board appears when the game is opened on claude.ai.</p>';
-    var rows = online.weekly || [];
+  function weeklyBoardView() { return boardTable(BOARDS[boardKind()], boardWeek()); }
+  function boardTable(B, id) {
+    if (!online.db) return '<p class="note">The boards appear when the game is opened on claude.ai or a self-hosted copy.</p>';
+    var rows = B.rows || [];
     var html = rows.length ? '<div class="stmt-wrap"><table class="stmt lives"><thead><tr><th>#</th><th>Lagosian</th><th>Ended as</th><th class="n">Net worth</th></tr></thead><tbody>' + rows.map(function (r, i) {
       var mine = r.id === online.me, p = online.names[r.id];
       return '<tr' + (mine ? ' class="me"' : '') + '><td class="num">' + (i + 1) + '</td><td>' + esc(mine ? 'You' : (p && p.name) || 'Someone') + ' <span class="ver">✓ replayed</span></td><td>' + esc(r.career ? D.CAREERS[r.career].titles[r.level] : 'Jobless') + '</td><td class="n num"><b>' + N(r.worth) + '</b></td></tr>';
-    }).join('') + '</tbody></table></div>' : '<p class="note">No verified runs yet this ' + runPeriod(boardWeek()) + '. Be the first.</p>';
-    if (online.wPending) html += '<p class="note">Checking ' + online.wPending + ' more…</p>';
+    }).join('') + '</tbody></table></div>' : '<p class="note">No verified runs yet this ' + runPeriod(id) + '. Be the first.</p>';
+    if (B.myRank > 10) html += '<p class="note">You are #' + B.myRank + ' of ' + B.count + '.</p>';
+    if (B.pending) html += '<p class="note">Checking ' + B.pending + ' more…</p>';
+    return html;
+  }
+  // When the current shared run closes (real time, UTC): Weekly on Monday 00:00, Monthly on the 1st, Yearly on 1 January.
+  function runEnds(kind, now) {
+    var d = now || new Date(), y = d.getUTCFullYear(), m = d.getUTCMonth();
+    if (kind === 'Y') return Date.UTC(y + 1, 0, 1);
+    if (kind === 'M') return Date.UTC(y, m + 1, 1);
+    var day = d.getUTCDay() || 7; return Date.UTC(y, m, d.getUTCDate() + 8 - day);
+  }
+  function leftText(ms) { var h = Math.max(1, Math.round(ms / 3600000)); return h < 48 ? h + (h === 1 ? ' hour' : ' hours') : Math.round(h / 24) + ' days'; }
+  var REMIND_SOON = { W: 2 * 864e5, M: 4 * 864e5, Y: 14 * 864e5 };
+  // A reminder when a run you started closes soon and is not finished yet.
+  function runReminder(kind) {
+    var w = runFor(kind); if (!w || w.over) return null;
+    var left = runEnds(kind) - Date.now(); if (left > REMIND_SOON[kind] || left <= 0) return null;
+    var id = w.challenge.id, wk = Math.min(w.challenge.weeks, L.week(w) + 1);
+    return { kind: kind, id: id, left: left, text: '⏳ Your ' + runName(id) + ' closes in ' + leftText(left) + ': you are on week ' + wk + ' of ' + w.challenge.weeks + '. Finish it to get on the board.' };
+  }
+  function runReminders() { return ['W', 'M', 'Y'].map(runReminder).filter(Boolean); }
+  // Once per run: a toast when the game opens, and (if allowed on this device) a notification when the tab is in the background.
+  var REMIND_KEY = 'lasgidi.remind.v1';
+  function remindOnce(viaDevice) {
+    var seen = readJSON(REMIND_KEY) || {}, changed = false;
+    runReminders().forEach(function (r) {
+      var k = (viaDevice ? 'n:' : 't:') + r.id; if (seen[k]) return;
+      if (viaDevice) { if (!deviceNotify('Lasgidi: ' + runName(r.id), r.text.replace(/^⏳ /, ''))) return; }
+      else { ui.toasts.push({ msg: r.text, ok: true }); renderToasts(); }
+      seen[k] = Date.now(); changed = true;
+    });
+    if (changed) writeJSON(REMIND_KEY, seen);
+  }
+  function notifyOn() { return !!prefs.notify && typeof Notification !== 'undefined' && Notification.permission === 'granted'; }
+  function deviceNotify(title, body) {
+    if (!notifyOn()) return false;
+    try {
+      var opts = { body: body, icon: 'icon.svg', tag: 'lasgidi-run' };
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(function (r) { r.showNotification(title, opts); }, function () {});
+      else new Notification(title, opts);
+      return true;
+    } catch (e) { return false; }
+  }
+  function askNotify() {
+    if (typeof Notification === 'undefined') { ui.toasts.push({ msg: 'This browser cannot show notifications.', ok: false }); renderToasts(); return; }
+    try {
+      Promise.resolve(Notification.requestPermission()).then(function (p) {
+        prefs.notify = p === 'granted'; writeJSON(PREF_KEY, prefs);
+        ui.toasts.push({ msg: p === 'granted' ? '🔔 Run reminders are on for this device.' : 'Notifications are blocked here, so reminders stay in the game.', ok: p === 'granted' }); render();
+      }, function () {});
+    } catch (e) {}
+  }
+  function boardsWidget() {
+    var rem = runReminders()[0];
+    if (!online.db && !rem) return '';
+    var cols = online.db ? ['W', 'M', 'Y'].map(function (k) {
+      var B = BOARDS[k], top = B.rows[0], nm = top ? (top.id === online.me ? 'You' : (online.names[top.id] && online.names[top.id].name) || 'Someone') : '';
+      return '<span class="bw-col"><b>' + (k === 'W' ? 'Week' : k === 'M' ? 'Month' : 'Year') + '</b>' + (top ? '<span>👑 ' + esc(nm) + '</span><span class="bw-w">' + N(top.worth) + '</span>' : '<span>No runs yet</span>') + (B.myRank ? '<small>You: #' + B.myRank + '</small>' : '') + '</span>';
+    }).join('') : '';
+    return '<button type="button" class="ph-boards" id="ph-boards" data-app="boards" aria-label="Leaderboards: Weekly, Monthly and Yearly Lagos"><span class="bw-h">🏁 Shared Lagos boards</span>' + (cols ? '<span class="bw-cols">' + cols + '</span>' : '') + (rem ? '<span class="bw-rem">' + esc(rem.text) + '</span>' : '') + '</button>';
+  }
+  function boardsView() {
+    var html = '<div class="section"><h3>🏁 Leaderboards</h3><p class="note">Everyone in a run starts from the same Lagos. Entries count once another player\'s game replays them. Weekly runs last 4 game weeks, Monthly 12, Yearly 48.</p>';
+    runReminders().forEach(function (r) { html += '<p class="note bw-rem">' + esc(r.text) + '</p>'; });
+    if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') html += '<div class="inline"><button type="button" class="btn sm ghost" id="bd-notify" data-notifyask="1">' + (notifyOn() ? '🔔 Reminders on this device: on' : '🔔 Remind me on this device when a run is closing') + '</button></div>';
+    html += '</div>';
+    ['W', 'M', 'Y'].forEach(function (k) {
+      var id = boardIdFor(k), w = S && S.challenge && S.challenge.id === id ? S : runFor(k);
+      html += '<div class="section"><div class="inline" style="justify-content:space-between"><h3>' + esc(runName(id)) + ' · ' + esc(id) + '</h3>' +
+        (S && S.challenge && S.challenge.id === id ? '<span class="muted">Playing now</span>' : '<button type="button" class="btn sm go" id="bd-play-' + k + '" data-wplay="' + k + '">' + (w ? (w.over ? 'See result' : 'Resume') : 'Play') + '</button>') + '</div>' +
+        '<p class="note">Closes in ' + leftText(runEnds(k) - Date.now()) + '.' + (w ? ' Your run: ' + (w.over ? 'finished with ' + N(L.netWorth(w)) : 'week ' + Math.min(w.challenge.weeks, L.week(w) + 1) + ' of ' + w.challenge.weeks) + '.' : '') + '</p>' +
+        boardTable(BOARDS[k], id) + '</div>';
+    });
     return html;
   }
 
@@ -2830,7 +2914,7 @@
   var VENUE_BY_GLYPH = { wave: 'beach', umbrella: 'beach', boat: 'jetty', yacht: 'jetty', ball: 'stadium', stadium: 'stadium', film: 'mall', mosque: 'mosque', hall: 'church', cross: 'hospital', badge: 'govt', ballot: 'govt', gavel: 'govt', book: 'campus', hotel: 'nightlife', dice: 'nightlife', tower: 'tech', naira: 'bank', car: 'dealer', scissors: 'salon', dumbbell: 'gym', note: 'music', cap: 'campus', laptop: 'tech', phone: 'tech', estate: 'estate', club: 'jetty' };
   // Nightlife rooms drawn in 3D: the club strips, lounges and the members' house (not the harbour, which has its own scene).
   // Every other kind of place opens as a street scene or an interior hall in 3D; music venues use the club hall.
-  var PLACE3D = { canary: 'plaza', oxcircus: 'plaza', selfridges: 'plaza', harrods: 'plaza', shoreditch: 'plaza', livst: 'plaza', castle: 'plaza', burj: 'plaza', desert: 'plaza', bigben: 'plaza', towerbridge: 'plaza', londoneye: 'park', blackstar: 'plaza', shop: 'street', conference: 'hall', funpark: 'park', rail: 'street', polo: 'park', waterpark: 'park', bowling: 'hall', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
+  var PLACE3D = { trafalgar: 'plaza', stpauls: 'plaza', canary: 'plaza', oxcircus: 'plaza', selfridges: 'plaza', harrods: 'plaza', shoreditch: 'plaza', livst: 'plaza', castle: 'plaza', burj: 'plaza', desert: 'plaza', bigben: 'plaza', towerbridge: 'plaza', londoneye: 'park', blackstar: 'plaza', shop: 'street', conference: 'hall', funpark: 'park', rail: 'street', polo: 'park', waterpark: 'park', bowling: 'hall', eatery: 'street', workshop: 'street', motorpark: 'street', salon: 'street', bank: 'street', hospital: 'hall', police: 'hall', polling: 'hall', court: 'hall', library: 'hall', hotel: 'hall', casino: 'hall', office: 'hall', dealer: 'street', refinery: 'street', airport: 'street', tech: 'hall', gym: 'hall', cinema: 'hall', music: 'club', campus: 'plaza' };
   function NIGHT3D(pl) { return (pl.type === 'nightlife' && pl.glyph === 'glass' && !/^harbour_/.test(pl.id)) || pl.id === 'club_tidewater'; }
   function venueSet(pl) {
     if (/refinery|yards|docks|ph_port/.test(pl.id)) return 'refinery';
@@ -2892,7 +2976,7 @@
     }) : []).concat(S.rules >= 19 ? (D.CIVIC_ACTS[pl.id] || []).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
-    }) : []).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return !def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0; }).map(function (def) {
+    }) : []).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return (!def.minRules || S.rules >= def.minRules) && (!def.fw || S.rules >= 51) && (!def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0); }).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: '🎊', short: venueShort(def.label), off: !a || a.disabled, fest: true };
     }) : []).concat(S.rules >= 17 && !pl.club && !pl.civic ? (D.INSIDE[D.insideKind(pl)] || []).map(function (def) { // festivals (in season) come before the everyday inside acts, so they get a sign
@@ -3114,7 +3198,7 @@
     var ov = document.getElementById('venue-view'), pl = ui.venueOpen && S ? placeById(ui.venueOpen) : null;
     if (!pl || ui.cruiseOpen || ui.airportOpen || ui.roomOpen) { if (ov) ov.remove(); if (venueStage) venueStage.stop(); ambience(null); return; }
     // Beaches open in real 3D (three.js loads on first need); every other place uses the drawn yard. Fall back to the yard if 3D fails.
-    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling|shop|blackstar|bigben|towerbridge|londoneye|burj|desert|castle|canary|oxcircus|selfridges|harrods|shoreditch|livst)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
+    var want3d = (venueSet(pl) === 'beach' || pl.id === 'lekki_hyde_park' || /^harbour_/.test(pl.id) || NIGHT3D(pl) || venueSet(pl) === 'stadium' || D.insideKind(pl) === 'market' || D.insideKind(pl) === 'jetty' || D.insideKind(pl) === 'park' || /^(church|mosque|govt|culture|eatery|workshop|motorpark|salon|bank|hospital|dealer|refinery|tech|gym|cinema|music|campus|airport|police|polling|court|library|hotel|casino|office|conference|funpark|rail|polo|waterpark|bowling|shop|blackstar|bigben|towerbridge|londoneye|burj|desert|castle|canary|oxcircus|selfridges|harrods|shoreditch|livst|trafalgar|stpauls)$/.test(D.insideKind(pl)) || venueSet(pl) === 'airport') && !!window.LasgidiBeach3D; // beaches, the lakeside estate, the harbour and the clubs
     if (flat || venue3dBroken) want3d = false;
     if (want3d && threeState !== 'ready' && threeState !== 'failed') {
       if (!ov) { ov = document.createElement('div'); ov.id = 'venue-view'; ov.className = 'cruise-view venue-view venue-loading'; ov.setAttribute('data-kind', 'loading'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', pl.name); ov.innerHTML = '<div class="vl-box"><div class="vl-spin" aria-hidden="true"></div><p>Opening ' + esc(pl.name) + '…</p><button type="button" class="btn sm ghost" id="venue-close-loading" data-venueclose="1">Close</button></div>'; document.body.appendChild(ov); }
@@ -4637,7 +4721,7 @@
   // More apps: each opens a part of the game you already have, plus Pay Index (all salaries) and Invite. Names are made up.
   var MORE_APPS = [['support', '🎧', 'Support'], ['tickets', '🎫', 'TixLagos'], ['fixam', '🛠️', 'FixAm'], ['dokita', '🩹', 'Dokita'], ['linkup', '💞', 'LinkUp'], ['payindex', '💹', 'Pay Index'],
     ['flix', '🎬', 'NaijaFlix'], ['glow', '💄', 'Glow Beauty'], ['spaces', '🎙️', 'Spaces'], ['hangout', '🧺', 'Hangout'], ['contacts', '📞', 'Contacts'], ['chop', '🛵', 'ChopDash'],
-    ['boutique', '👠', 'Boutique'], ['gadgets', '📱', 'Gadgets'], ['richlist', '👑', 'Rich List'], ['invite', '🔗', 'Invite'], ['invest', '💼', 'Invest'], ['assurance', '🛡️', 'Assurance'],
+    ['boutique', '👠', 'Boutique'], ['gadgets', '📱', 'Gadgets'], ['richlist', '👑', 'Rich List'], ['boards', '🏁', 'Leaderboards'], ['invite', '🔗', 'Invite'], ['invest', '💼', 'Invest'], ['assurance', '🛡️', 'Assurance'],
     ['family', '👨‍👩‍👧', 'Family'], ['staff', '🧹', 'Staff'], ['hustle', '🧰', 'Hustle'], ['busco', '🚌', 'Bus Co.'], ['company', '🏢', 'Company'], ['give', '🤲', 'Give'], ['police', '🚓', 'Police'], ['court', '⚖️', 'Court'], ['ads', '📣', 'My Ads'], ['feed', '🌍', 'Feed'], ['gidibet', '⚽', 'Gidi Bet']];
   APPS.splice.apply(APPS, [APPS.length - 2, 0].concat(MORE_APPS));
   var NEW_APPS = { radio: 1, hunt: 1, news: 1, music: 1, calendar: 1, courses: 1, health: 1, ride: 1 };
@@ -4852,9 +4936,11 @@
     return '<button type="button" class="ph-promo" id="ph-promo" data-app="hunt" style="--hc:' + h.color + '"><span class="ph-promo-l">' + esc(h.title.charAt(0)) + '</span><span><b>' + esc(h.title) + ' is out now</b><small>' + esc(h.artist) + ' · find the five letters</small></span><span class="ph-promo-b">Hunt ' + st.found.length + '/' + h.pieces.length + '</span></button>';
   }
   // News: what has happened to you lately and what is on this month.
+  // A festival act this life can join, in this city (rules gates as the engine's festivalActions).
+  function festOk(a, pid) { var pl = D.PLACES.filter(function (x) { return x.id === pid; })[0]; return (!a.fw || S.rules >= 51) && (!a.minRules || S.rules >= a.minRules) && (!pl || L.districtCity(pl.district) === L.cityOf(S)); }
   function newsView() {
     var items = S.log.slice(0, 14), m = L.monthIndex(S), fest = [];
-    Object.keys(D.FESTIVALS).forEach(function (pid) { D.FESTIVALS[pid].forEach(function (a) { if (S.rules >= 18 && a.when && a.when.months && a.when.months.indexOf(m) >= 0) fest.push(a.label + ' · ' + placeName(pid)); }); });
+    Object.keys(D.FESTIVALS).forEach(function (pid) { D.FESTIVALS[pid].forEach(function (a) { if (S.rules >= 18 && festOk(a, pid) && a.when && a.when.months && a.when.months.indexOf(m) >= 0) fest.push(a.label + ' · ' + placeName(pid)); }); });
     return '<div class="section"><div class="inline" style="justify-content:space-between"><h3>📰 News</h3>' + (window.speechSynthesis ? '<button type="button" class="btn sm ghost" id="news-read" data-newsread="1">🔊 Read the news aloud</button>' : '') + '</div>' + (fest.length ? '<div class="gist-hot"><b>🔥 On this month</b>' + fest.slice(0, 4).map(function (f) { return '<p>' + esc(f) + '</p>'; }).join('') + '</div>' : '') +
       '<div class="list">' + items.map(function (l) { return '<div class="item gist-item"><div><h3>' + esc(l.text) + '</h3></div></div>'; }).join('') + '</div></div>';
   }
@@ -4870,7 +4956,7 @@
     var m = L.monthIndex(S), rows = [];
     var add = function (pid, a) { if (a.fw && (!(S.rules >= 51) || !a.event)) return; if (a.minRules && !(S.rules >= a.minRules)) return; if (!a.when || (a.when.months && a.when.months.indexOf(m) < 0) || !(a.event || a.fest || a.dec)) return; rows.push({ a: a, where: pid }); };
     Object.keys(D.PLACE_ACTIONS).forEach(function (d) { if (L.districtCity(d) !== L.cityOf(S)) return; D.PLACE_ACTIONS[d].forEach(function (a) { if (!a.retired) add(D.DISTRICTS[d].name, a); }); });
-    if (S.rules >= 18) Object.keys(D.FESTIVALS).forEach(function (pid) { D.FESTIVALS[pid].forEach(function (a) { add(placeName(pid), a); }); });
+    if (S.rules >= 18) Object.keys(D.FESTIVALS).forEach(function (pid) { D.FESTIVALS[pid].forEach(function (a) { if (festOk(a, pid)) add(placeName(pid), a); }); });
     var wk = function (w) { var p = []; if (w.wk) p.push(w.wk.map(function (k) { return ['1st', '2nd', '3rd', 'last'][k]; }).join('/') + ' week'); if (w.days) p.push(w.days.map(function (d) { return D.DAYS[d]; }).join('/')); if (w.from != null) p.push(pad(w.from) + ':00–' + pad(w.to) + ':00'); return p.join(' · '); };
     return '<div class="section"><h3>📅 ' + esc(D.MONTHS[m]) + ' in ' + esc(D.CITIES[L.cityOf(S)].name) + '</h3>' + (rows.length ? '<div class="list">' + rows.slice(0, 30).map(function (r) { return '<div class="item"><div><h3>' + esc(r.a.label) + '</h3><div class="meta"><span>' + esc(r.where) + '</span><span>' + esc(wk(r.a.when)) + '</span></div></div></div>'; }).join('') + '</div>' : '<p class="note">Nothing special this month. What\'s on has the weekly shows.</p>') + '</div>';
   }
@@ -5420,6 +5506,7 @@
       else if (app === 'town') body = '<div class="panel-b">' + townView() + '</div>';
       else if (app === 'govt') body = '<div class="panel-b">' + govtView() + '</div>';
       else if (app === 'owner') body = '<div class="panel-b">' + (online.isOwner ? ownerView() : '<p class="note">This page is only for the game\'s owner.</p>') + '</div>';
+      else if (app === 'boards') body = '<div class="panel-b">' + boardsView() + '</div>';
       else if (app === 'nysc') body = '<div class="panel-b">' + nyscView() + '</div>';
       else if (app === 'sports') body = '<div class="panel-b">' + sportsView() + '</div>';
       else if (app === 'sights') body = '<div class="panel-b">' + sightsView() + '</div>';
@@ -5471,7 +5558,7 @@
       '<div class="ph-lock"><b>' + pad(h) + ':' + pad(mins) + '</b><span>' + esc(L.dateLabel ? L.dateLabel(S) : L.clockLabel(S)) + ' · ' + esc(D.CITIES[L.cityOf(S)].name) + '</span>' +
       '<button type="button" class="ph-night" id="ph-night" data-nightmode="1">' + (themeDark() ? '☀️ Day mode' : '🌙 Night mode') + '</button></div>' +
       (news.length ? '<div class="ph-news" aria-label="Latest news"><span class="ph-news-h">📰 Latest</span><div class="ph-ticker"><div>' + news.map(function (l) { return '<span>' + esc(l.text) + '</span>'; }).join('') + '</div></div></div>' : '') +
-      huntBanner() + '<div class="apps ph-apps">' + APPS.filter(function (x) { return (x[0] !== 'style' || online.shop) && (x[0] !== 'owner' || online.isOwner) && !(x[0] === 'gidibet' && familyOn()); }).map(function (x, i) {
+      huntBanner() + boardsWidget() + '<div class="apps ph-apps">' + APPS.filter(function (x) { return (x[0] !== 'style' || online.shop) && (x[0] !== 'owner' || online.isOwner) && !(x[0] === 'gidibet' && familyOn()); }).map(function (x, i) {
       var n = badge[x[0]], fresh = NEW_APPS[x[0]] && !(appsSeen()[x[0]]);
       return '<button type="button" class="app" id="app-' + x[0] + '" data-app="' + x[0] + '"><span class="app-ic" style="--a1:' + APP_TINTS[i % APP_TINTS.length][0] + ';--a2:' + APP_TINTS[i % APP_TINTS.length][1] + '">' + x[1] + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : fresh ? '<span class="badge new">NEW</span>' : '') + '</span><span class="app-n">' + esc(x[2]) + '</span></button>';
     }).join('') + '</div><div class="ph-home" aria-hidden="true"></div></div>';
@@ -5716,7 +5803,7 @@
     b.click();
   }, true);
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok],[data-pinok],[data-pincancel],[data-pinset],[data-pinoff],[data-pinsetup],[data-shtask],[data-shskip],[data-shleave],[data-roompeer],[data-roomhome],[data-talkto],[data-voiceplay],[data-flyvia],[data-actgrp],[data-wkeep],[data-recapok]');
+    var t = e.target.closest('[data-need],[data-yfprog],[data-festprog],[data-theatrein],[data-racerun],[data-racevote],[data-huntfound],[data-welcomego],[data-signout],[data-venue],[data-venueclose],[data-venuefold],[data-venuetab],[data-venuesend],[data-tab],[data-go],[data-travel],[data-clear-sel],[data-act],[data-wait],[data-apply],[data-quit],[data-bank],[data-arrears],[data-move],[data-ajo],[data-loan],[data-repay],[data-buyb],[data-sellb],[data-visit],[data-buyp],[data-car],[data-choice],[data-copy],[data-new],[data-roll],[data-start],[data-import],[data-wonok],[data-repok],[data-copyshare],[data-sound],[data-postfame],[data-wed],[data-placecat],[data-place],[data-closeplace],[data-closeboard],[data-tripto],[data-ademoji],[data-adcolor],[data-adpost],[data-boardsel],[data-wplay],[data-wlife],[data-wclose],[data-wpost],[data-wrestart],[data-wresult],[data-homesel],[data-plotsel],[data-closepick],[data-buyplot],[data-irot],[data-istore],[data-isell],[data-idone],[data-iplace],[data-buyitem],[data-shopcat],[data-vehkind],[data-buyveh],[data-sellveh],[data-lookskin],[data-lookshape],[data-wear],[data-takeoff],[data-clothslot],[data-buycloth],[data-dealertab],[data-drive],[data-bondamt],[data-banktab],[data-buybond],[data-topup],[data-upb],[data-hmb],[data-fmb],[data-adplan],[data-adunsub],[data-picpay],[data-picsubmit],[data-picsponsor],[data-rvok],[data-rvno],[data-gem],[data-fly],[data-app],[data-wave],[data-visit2],[data-gift],[data-opengift],[data-tour],[data-quest],[data-famecity],[data-stock],[data-stockbuy],[data-stocksell],[data-streak],[data-party],[data-hirestaff],[data-firestaff],[data-buypet],[data-rehome],[data-hmo],[data-hmooff],[data-shopopen],[data-shoprestock],[data-shopads],[data-shopclose],[data-buyphone],[data-title],[data-partyplan],[data-joinparty],[data-partyact],[data-bell],[data-minigame],[data-danfodriver],[data-haggle],[data-hagoffer],[data-japa],[data-japaseen],[data-seaclose],[data-seaopen],[data-seago],[data-seapickfree],[data-seasize],[data-seabuy],[data-searelease],[data-srok],[data-srno],[data-setpref],[data-vote],[data-nysc],[data-lodge],[data-kid],[data-treat],[data-heir],[data-service],[data-interview],[data-ivsubmit],[data-build],[data-skit],[data-golive],[data-photooff],[data-phok],[data-phno],[data-govvote],[data-govmotto],[data-govrun],[data-govtab],[data-govplank],[data-govjoin],[data-govmate],[data-govprimary],[data-govcamp],[data-govconfirm],[data-ridemode],[data-shareplace],[data-deptab],[data-depcity],[data-depcabin],[data-flyclass],[data-flyjet],[data-chopper],[data-chopcity],[data-chatq],[data-chatopen],[data-chatsend],[data-chatmute],[data-closechat],[data-reportopen],[data-reportsend],[data-cvshare],[data-cvfor],[data-cvopen],[data-joinclub],[data-clubact],[data-hpbuild],[data-roomenter],[data-roomopen],[data-roomspot],[data-roomleave],[data-roomnight],[data-roomhang],[data-copytext],[data-shopbuy],[data-shopequip],[data-shopadult],[data-mappop],[data-mappopclose],[data-roomclose],[data-roomsend],[data-roomfold],[data-layer],[data-airportopen],[data-airportclose],[data-airportgo],[data-fidstab],[data-fishrod],[data-fishcast],[data-fishsell],[data-fishcook],[data-photo],[data-photoclose],[data-photosave],[data-photoretake],[data-cruisefold],[data-cruiseboard],[data-cruiseopen],[data-cruisespot],[data-cruiseleave],[data-cruiseclose],[data-decksend],[data-onb],[data-onbskin],[data-onbhair],[data-onbshape],[data-onbtrait],[data-onbgoal],[data-onbhome],[data-onbcity],[data-storysave],[data-newsread],[data-spsend],[data-spok],[data-spno],[data-spend],[data-spopen],[data-sfx],[data-ajocnew],[data-ajocjoin],[data-ajocleave],[data-pxsubmit],[data-gradok],[data-ideakind],[data-ideasend],[data-lagoon],[data-storyshare],[data-onbcloth],[data-wwset],[data-wwextra],[data-wwbook],[data-wwhold],[data-wwopen],[data-huntrow],[data-huntlisten],[data-citymenu],[data-moremenu],[data-metab],[data-musicplay],[data-radiostyle],[data-radion],[data-radiobook],[data-searent],[data-celebok],[data-nightmode],[data-course],[data-arcade],[data-btq],[data-btqtab],[data-btqclose],[data-btqclear],[data-btqbuy],[data-flix],[data-adsboard],[data-adopt],[data-bae],[data-unbae],[data-relok],[data-spacetab],[data-spaceform],[data-spacego],[data-spacejoin],[data-spaceleave],[data-spaceend],[data-spacesend],[data-chipsdd],[data-psoc],[data-talk],[data-talkopen],[data-talksend],[data-peace],[data-seg],[data-fullscreen],[data-tourreplay],[data-newconfirm],[data-pinvite],[data-paybox],[data-paysend],[data-giftok],[data-propclose],[data-stepout],[data-callmum],[data-crewpick],[data-crewadd],[data-crewdel],[data-goalset],[data-bettab],[data-betleague],[data-betpick],[data-betplace],[data-hilo],[data-scopen],[data-phoneopen],[data-phoneclose],[data-workok],[data-pinok],[data-pincancel],[data-pinset],[data-pinoff],[data-pinsetup],[data-shtask],[data-shskip],[data-shleave],[data-roompeer],[data-roomhome],[data-talkto],[data-voiceplay],[data-flyvia],[data-actgrp],[data-wkeep],[data-recapok],[data-notifyask]');
     if (!t || t.disabled) return;
     var ds = t.dataset;
     // Transaction PIN: money-out buttons ask for it first (then it stays unlocked for 5 minutes).
@@ -5786,6 +5873,7 @@
       } catch (err) { ui.importMsg = err.message; render(); }
       return;
     }
+    if (ds.notifyask) { askNotify(); return; }
     if (ds.wplay) { introState(); playWeekly(false, /^[WMY]$/.test(ds.wplay) ? ds.wplay : 'W'); return; }
     if (!S) return;
     if (ds.wlife) { backToLife(); return; }
@@ -6573,6 +6661,9 @@
     render();
     initOnline();
     initShop();
+    // Run-ending reminders: once in the game, and on this device while the tab is in the background (if allowed).
+    setTimeout(function () { if (S) remindOnce(false); }, 2500);
+    try { document.addEventListener('visibilitychange', function () { if (document.hidden && S) remindOnce(true); }); setInterval(function () { if (document.hidden && S) remindOnce(true); }, 1800000); } catch (e) {}
   }
   var hot = window.claude && window.claude.hot;
   if (hot && hot.snapshot) hot.snapshot(function () { return { state: S, ui: { tab: ui.tab, sel: ui.sel } }; });

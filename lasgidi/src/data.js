@@ -2730,6 +2730,38 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       act('lvs_coffee', 'Coffee and a croissant on the concourse', 15, gbp(6), 0, { hunger: 12, energy: 6 }, null, { from: 5, to: 23 }),
       act('lvs_city', 'Walk through the City: the Gherkin and the towers', 60, 0, 0, { fun: 12 }, null, { from: 7, to: 21 }),
       Object.assign(act('lvs_shift', 'A shift at a station coffee kiosk', 240, 0, 2600, { energy: -12 }, null, { from: 6, to: 20 }), { minRules: 26, permitted: true })
+    ]],
+    // Rules 54: more London and Accra.
+    ['ldn_trafalgar', '🦁', 'Trafalgar Square', 'outdoors', 'dome', 'ldn_westminster', 18.6, 10.6, 'trafalgar', 'Nelson\'s Column, the four bronze lions, the fountains and the National Gallery steps.', [
+      Object.assign(act('trf_lions', 'Sit by the bronze lions and watch London go by', 30, 0, 0, { fun: 8, stress: -6 }, null, { from: 7, to: 23 }), { minRules: 54 }),
+      Object.assign(act('trf_gallery', 'See the paintings in the National Gallery (free)', 120, 0, 0, { fun: 14, stress: -8 }, { charisma: 1 }, { from: 10, to: 18 }), { minRules: 54 }),
+      Object.assign(act('trf_tree', 'See the Christmas tree and the carol singers', 45, 0, 0, { fun: 16, social: 6 }, null, { months: [11], from: 16, to: 22 }), { minRules: 54 }),
+      Object.assign(act('trf_busker', 'Watch the street performers on the steps', 30, gbp(2), 0, { fun: 10 }, null, { from: 11, to: 21 }), { minRules: 54 })
+    ]],
+    ['ldn_stpauls', '⛪', 'St Paul\'s Cathedral', 'outdoors', 'dome', 'ldn_tower', 22.4, 12.4, 'stpauls', 'The great dome over the City: the Whispering Gallery, the Golden Gallery high above, and evensong at five.', [
+      Object.assign(act('stp_climb', 'Climb to the Golden Gallery (528 steps)', 90, gbp(25), 0, { fun: 18, energy: -12 }, { fitness: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 16 }), { minRules: 54 }),
+      Object.assign(act('stp_whisper', 'Try the Whispering Gallery with a friend', 30, gbp(25), 0, { fun: 14, social: 8 }, null, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 16 }), { minRules: 54 }),
+      Object.assign(act('stp_evensong', 'Sit in for evensong (free)', 60, 0, 0, { stress: -16, fun: 6 }, null, { from: 17, to: 18 }), { minRules: 54 })
+    ]],
+    ['ldn_borough', '🧀', 'Borough Market', 'food', 'basket', 'ldn_southbank', 20.0, 17.4, null, 'London\'s old food market under the railway arches: cheese, bread, oysters and steaming paella pans.', [
+      Object.assign(act('bor_lunch', 'Graze the stalls for lunch', 60, gbp(15), 0, { hunger: 42, fun: 10 }, null, { days: [1, 2, 3, 4, 5, 6], from: 10, to: 17 }), { minRules: 54 }),
+      Object.assign(act('bor_shop', 'Buy bread, cheese and fruit for the week', 45, gbp(30), 0, { hunger: 30 }, { cooking: 1 }, { days: [1, 2, 3, 4, 5, 6], from: 10, to: 17 }), { minRules: 54 }),
+      Object.assign(act('bor_coffee', 'A flat white under the arches', 15, gbp(4), 0, { energy: 8, fun: 4 }, null, { from: 8, to: 17 }), { minRules: 54 })
+    ]],
+    ['acc_osucastle', '🏰', 'Osu Castle (Christiansborg)', 'culture', 'frame', 'acc_osu', 16.6, 19.6, 'castle', 'The white castle on the shore at Osu: built for the slave trade, later the seat of government, now a museum.', [
+      Object.assign(act('osc_tour', 'A guided tour of the castle and its history', 90, 3000, 0, { fun: 6, stress: 4 }, { charisma: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 16 }), { minRules: 54 }),
+      Object.assign(act('osc_shore', 'Walk the shore below the castle walls', 30, 0, 0, { stress: -8, fun: 6 }, null, { from: 7, to: 18 }), { minRules: 54 }),
+      Object.assign(act('osc_drums', 'Watch the drummers and dancers on the Osu shore', 45, 0, 0, { fun: 12, social: 6 }, null, { days: [5, 6], from: 15, to: 19 }), { minRules: 54 })
+    ]],
+    ['acc_artscentre', '🪘', 'Arts Centre crafts market', 'food', 'basket', 'acc_jamestown', 8.8, 20.4, null, 'Kente, carved stools, drums and paintings in a maze of stalls behind the high street. Haggle with a smile.', [
+      Object.assign(act('art_kente', 'Buy a strip of kente from a weaver', 45, 12000, 0, { fun: 14 }, { craft: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 18 }), { minRules: 54 }),
+      Object.assign(act('art_drum', 'Try a djembe lesson at a drum stall', 60, 3000, 0, { fun: 18, social: 8 }, { music: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 10, to: 17 }), { minRules: 54 }),
+      Object.assign(act('art_browse', 'Browse the carvings and paintings', 45, 0, 0, { fun: 10 }, null, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 18 }), { minRules: 54 })
+    ]],
+    ['acc_botanic', '🌿', 'Legon Botanical Gardens', 'outdoors', 'frame', 'acc_legon', 22.6, 3.6, null, 'Shady trails under huge trees by the university: a canopy walk, a stream and picnic lawns.', [
+      Object.assign(act('bot_canopy', 'Do the canopy walk in the trees', 60, 4000, 0, { fun: 18, stress: -8 }, { fitness: 1 }, { from: 8, to: 17 }), { minRules: 54 }),
+      Object.assign(act('bot_walk', 'Walk the shady trails', 60, 1000, 0, { stress: -14, fun: 6 }, null, { from: 7, to: 18 }), { minRules: 54 }),
+      Object.assign(act('bot_picnic', 'A picnic on the lawns', 120, 5000, 0, { hunger: 26, social: 16, fun: 10 }, null, { days: [5, 6], from: 11, to: 17 }), { minRules: 54 })
     ]]
   ].forEach(function (q) {
     var p = { id: q[0], icon: q[1], name: q[2], type: q[3], glyph: q[4], district: q[5], x: q[6], y: q[7], acts: [], civic: q[8] || (/^ph_/.test(q[5]) ? 'ph' : /^abj_/.test(q[5]) ? 'abuja' : /^acc_/.test(q[5]) ? 'accra' : /^kum_/.test(q[5]) ? 'kumasi' : /^cc_/.test(q[5]) ? 'capecoast' : /^ldn_/.test(q[5]) ? 'london' : /^dxb_/.test(q[5]) ? 'dubai' : /^ctn_/.test(q[5]) ? 'capetown' : 'lagos'), text: q[9] };
@@ -3061,6 +3093,31 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     link_bridge: [
       { id: 'fest_marathon_water', label: 'Hand out water at a marathon station', mins: 240, fx: { social: 12, energy: -10 }, xp: { charisma: 1 }, fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 12 } },
       { id: 'fest_marathon_cheer', label: 'Cheer the runners on the bridge', mins: 60, fx: { fun: 6, social: 4 }, fest: true, when: { months: [1], wk: [1], days: [5], from: 6, to: 12 } }
+    ],
+    // Rules 54: festival weeks in Abuja and Port Harcourt (names made up or generic).
+    abj_eagle: [
+      { id: 'capc_durbar', label: 'Capital Carnival: watch the durbar horsemen ride into Eagle Square', mins: 120, fx: { fun: 24, social: 10 }, event: true, fest: true, minRules: 54, when: { months: [10], wk: [3], days: [4, 5, 6], from: 10, to: 16 } },
+      { id: 'capc_parade', label: 'Capital Carnival: the masquerade and dance troupe parade', mins: 180, cost: 2000, fx: { fun: 26, social: 14, energy: -10 }, event: true, fest: true, minRules: 54, when: { months: [10], wk: [3], days: [5, 6], from: 14, to: 21 } },
+      { id: 'capc_stall', label: 'Capital Carnival: sell cold drinks at a carnival stall', mins: 300, earn: 2500, fx: { energy: -16, social: 6 }, gig: true, fest: true, minRules: 54, when: { months: [10], wk: [3], days: [4, 5, 6], from: 10, to: 20 } }
+    ],
+    abj_jabi_lake: [
+      { id: 'jlf_food', label: 'Jabi Lake food fair: suya, kilishi and fura by the water', mins: 90, cost: 4000, fx: { hunger: 40, fun: 14, social: 8 }, event: true, fest: true, minRules: 54, when: { months: [3], wk: [2], days: [5, 6], from: 11, to: 21 } },
+      { id: 'jlf_boats', label: 'Jabi Lake food fair: watch the paddle-boat races', mins: 60, fx: { fun: 14, stress: -6 }, event: true, fest: true, minRules: 54, when: { months: [3], wk: [2], days: [5, 6], from: 13, to: 18 } }
+    ],
+    abj_millennium: [
+      { id: 'mpx_lights', label: 'Christmas lights in Millennium Park', mins: 90, fx: { fun: 16, stress: -10, social: 6 }, event: true, dec: true, fest: true, minRules: 54, when: { months: [11], wk: [2, 3], from: 18, to: 23 } }
+    ],
+    ph_waterfront: [
+      { id: 'sfd_eat', label: 'Waterfront seafood festival: grilled fish, periwinkle and live highlife', mins: 120, cost: 4000, fx: { hunger: 40, fun: 20, social: 12 }, event: true, fest: true, minRules: 54, when: { months: [7], wk: [1], days: [5, 6], from: 11, to: 18 } },
+      { id: 'sfd_grill', label: 'Waterfront seafood festival: work a grill stall', mins: 240, earn: 2800, fx: { energy: -16, hygiene: -8, social: 8 }, xp: { craft: 1 }, gig: true, fest: true, minRules: 54, when: { months: [7], wk: [1], days: [5, 6], from: 9, to: 17 } }
+    ],
+    ph_obiwali_pl: [
+      { id: 'gcb_talks', label: 'Garden City book week: writers\' talks and signings', mins: 120, fx: { fun: 10, stress: -6 }, xp: { charisma: 1 }, event: true, fest: true, minRules: 54, when: { months: [8], wk: [2], from: 10, to: 18 } },
+      { id: 'gcb_mic', label: 'Garden City book week: read at the open mic', mins: 60, fx: { fun: 12, social: 10, stress: 4 }, xp: { charisma: 1 }, fest: true, minRules: 54, when: { months: [8], wk: [2], days: [4, 5], from: 17, to: 21 } }
+    ],
+    ph_isaac: [
+      { id: 'rvc_parade', label: 'Garden City carnival: the street parade and floats', mins: 180, fx: { fun: 26, social: 14, energy: -12 }, event: true, fest: true, minRules: 54, when: { months: [11], wk: [3], days: [3, 4, 5], from: 12, to: 20 } },
+      { id: 'rvc_band', label: 'Garden City carnival: dance with a carnival band', mins: 120, cost: 3000, fx: { fun: 22, social: 16, energy: -14 }, fest: true, minRules: 54, when: { months: [11], wk: [3], days: [4, 5], from: 15, to: 22 } }
     ],
     shrine: [
       { id: 'felab_night', label: 'Felabration: Afrobeat all night at the Shrine', mins: 240, cost: 5000, fx: { fun: 30, social: 18, energy: -16 }, event: true, fest: true, minRules: 53, when: { months: [9], wk: [2], from: 20, to: 24 } },
