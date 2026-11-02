@@ -17,9 +17,9 @@
     var S3 = new T.Scene(), cam = new T.PerspectiveCamera(50, 2, 0.1, 900), sky = night ? 0x0d1733 : dusk ? 0xf0b98a : 0x9fd3ef; S3.background = new T.Color(sky); S3.fog = new T.Fog(sky, 60, 260);
     S3.add(new T.HemisphereLight(night ? 0x6070a0 : 0xfff4e6, 0x5a6a50, night ? 0.45 : 0.95)); var sun = new T.DirectionalLight(night ? 0x8fa8ff : dusk ? 0xffb070 : 0xffffff, night ? 0.25 : 1.5); sun.position.set(-20, 40, 10); sun.castShadow = true; S3.add(sun);
     // City roads get the detailed street (road3d.js): a sky dome, sun and clouds, asphalt, kerbs, Lagos blocks.
-    var ROAD = root.LasgidiRoad3D && !o.water && !o.air && !o.highway && mode !== 'trek' ? root.LasgidiRoad3D : null, RLITE = root.LasgidiGL ? root.LasgidiGL.lite() : false;
-    if (ROAD) {
-      var sdir = ROAD.sky(T, S3, { night: night, dusk: dusk, lite: RLITE }), hz = night ? 0x2b3b66 : dusk ? 0xf4c08a : 0xd5e6ee;
+    var HWR = root.LasgidiRoad3D && o.highway && !o.water && !o.air ? root.LasgidiRoad3D : null, ROAD = root.LasgidiRoad3D && !o.water && !o.air && !o.highway && mode !== 'trek' ? root.LasgidiRoad3D : null, RLITE = root.LasgidiGL ? root.LasgidiGL.lite() : false;
+    if (ROAD || HWR) {
+      var sdir = (ROAD || HWR).sky(T, S3, { night: night, dusk: dusk, lite: RLITE }), hz = night ? 0x2b3b66 : dusk ? 0xf4c08a : 0xd5e6ee;
       S3.background = new T.Color(hz); S3.fog = new T.Fog(hz, 70, RLITE ? 200 : 300);
       sun.position.copy(sdir).multiplyScalar(90); sun.intensity = night ? 0.25 : dusk ? 1.6 : 2.4; sun.color.set(night ? 0x8fa8ff : dusk ? 0xffb070 : 0xfff3e0);
       var sc0 = sun.shadow.camera; sc0.left = -40; sc0.right = 40; sc0.top = 40; sc0.bottom = -40; sc0.near = 1; sc0.far = 260; sun.shadow.mapSize.set(RLITE ? 1024 : 2048, RLITE ? 1024 : 2048); sun.shadow.bias = -0.0004;
@@ -33,16 +33,17 @@
     var world = new T.Group(); S3.add(world); var movers = [], sights = [], SPEED = air ? 40 : water ? 14 : mode === 'trek' ? 4 : mode === 'okada' || mode === 'keke' ? 16 : 20;
     // The ground: a road with moving lane lines, the lagoon, or the city far below.
     var groundTex = tex(256, 256, function (g, w, h) { if (water) { g.fillStyle = night ? '#1a4a68' : '#2a7896'; g.fillRect(0, 0, w, h); for (var i = 0; i < 60; i++) { g.fillStyle = 'rgba(255,255,255,' + (0.05 + (i % 5) * 0.03) + ')'; g.fillRect((i * 53) % w, (i * 97) % h, 30, 2); } } else if (air) { g.fillStyle = night ? '#141a24' : '#7a8a6a'; g.fillRect(0, 0, w, h); for (var b = 0; b < 140; b++) { g.fillStyle = night ? (b % 3 ? 'rgba(255,205,120,.9)' : 'rgba(255,240,200,.7)') : ['#c9c2b4', '#9aa0a6', '#b5603a', '#d8d2c4'][b % 4]; g.fillRect((b * 37) % w, (b * 61) % h, night ? 3 + (b % 3) : 8 + (b % 3) * 4, night ? 3 : 8 + (b % 4) * 3); } if (night) { g.strokeStyle = 'rgba(255,190,90,.8)'; g.lineWidth = 2; for (var rl = 0; rl < 6; rl++) { g.beginPath(); g.moveTo(0, rl * 47 % h); g.lineTo(w, (rl * 47 + 90) % h); g.stroke(); } } } else { g.fillStyle = '#3a3f46'; g.fillRect(0, 0, w, h); g.fillStyle = '#f2c200'; for (var y = 0; y < h; y += 64) g.fillRect(w / 2 - 3, y, 6, 36); g.fillStyle = '#f4f3ec'; g.fillRect(8, 0, 4, h); g.fillRect(w - 12, 0, 4, h); } });
-    if (ROAD) groundTex = ROAD.asphalt(T, RLITE, LDN);
+    if (ROAD || HWR) groundTex = (ROAD || HWR).asphalt(T, RLITE, LDN);
     groundTex.wrapS = groundTex.wrapT = T.RepeatWrapping; groundTex.repeat.set(air ? 6 : 1, air ? 30 : 12);
     var ground = new T.Mesh(new T.PlaneGeometry(air ? 600 : water ? 400 : 12, 400).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: groundTex, roughness: water ? 0.2 : 0.9, emissive: air && night ? 0xffffff : 0x000000, emissiveMap: air && night ? groundTex : null, emissiveIntensity: 0.9 })); ground.position.set(0, air ? -60 : 0, -150); ground.receiveShadow = true; world.add(ground);
-    if (!water && !air) { var side = new T.Mesh(new T.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), M(HW ? 0x6f8f3e : 0x9a9184, 0.95)); side.position.set(0, -0.02, -150); side.receiveShadow = true; world.add(side); }
+    if (!water && !air) { var side = new T.Mesh(new T.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), HWR ? new T.MeshStandardMaterial({ map: HWR.grass(T, RLITE), roughness: 1 }) : M(HW ? 0x6f8f3e : 0x9a9184, 0.95)); side.position.set(0, -0.02, -150); if (HWR) HWR.horizon(T, S3, { night: night }); side.receiveShadow = true; world.add(side); }
     // Things that stream past: blocks with lit windows, palms, lamps (or buoys and boats; or clouds).
     var winT = tex(32, 64, function (g, w, h) { g.fillStyle = '#5d7488'; g.fillRect(0, 0, w, h); for (var y = 2; y < h; y += 8) for (var x = 2; x < w; x += 7) { g.fillStyle = night ? ((x + y) % 3 ? 'rgba(255,214,140,.95)' : 'rgba(40,50,60,.9)') : 'rgba(200,215,225,.8)'; g.fillRect(x, y, 4, 4); } });
-    var SEG = ROAD ? 3 : 1, NMOV = ROAD ? (RLITE ? 6 : 8) : 26, LOOP = NMOV * 12 * SEG;
+    var SEG = ROAD || HWR ? 3 : 1, NMOV = ROAD || HWR ? (RLITE ? 6 : 8) : 26, LOOP = NMOV * 12 * SEG;
     for (var i = 0; i < NMOV; i++) {
       var sd = i % 2 ? 1 : -1, z = -i * 12, g = new T.Group();
       if (ROAD) { g = ROAD.strip(T, i * SEG, SEG, { lite: RLITE, night: night || dusk, london: LDN }); g.position.z = -i * 12 * SEG; world.add(g); movers.push(g); continue; }
+      if (HWR) { g = HWR.hwStrip(T, i * SEG, SEG, { lite: RLITE }); g.position.z = -i * 12 * SEG; world.add(g); movers.push(g); continue; }
       if (air) { var cl = new T.Mesh(new T.SphereGeometry(4 + (i % 3) * 2, 10, 8), new T.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, roughness: 1 })); cl.scale.set(2, 0.6, 1); g.add(cl); g.position.set(sd * (14 + (i * 7) % 20), -10 - (i % 4) * 6, z); }
       else if (water) { if (i % 3 === 0) { box3(g, 3, 0.6, 1.2, M(0xf4f3ec), 0, 0.2, 0); g.position.set(sd * (14 + (i * 5) % 12), 0, z); } else { var bu = new T.Mesh(new T.CylinderGeometry(0.3, 0.4, 1, 8), M(i % 2 ? 0xc0392b : 0xf2b600)); bu.position.y = 0.4; g.add(bu); g.position.set(sd * 8, 0, z); } var tw = box3(g, 8, 20 + (i * 13) % 40, 8, M(0xffffff, 0.3, 0.3, { map: winT, emissiveMap: winT, emissive: 0xffd28c, emissiveIntensity: night ? 0.9 : 0 }), sd * 46, 12, -30); }
       else if (HW) { // the open road: savanna trees, palms, the odd village with zinc roofs, road signs
