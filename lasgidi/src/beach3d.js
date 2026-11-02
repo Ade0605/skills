@@ -1451,6 +1451,11 @@
     function signTex(text, sub, bg, fg) { return canvasTex(1024, 192, function (g, w, h) { g.fillStyle = bg || '#1d5a3c'; g.fillRect(0, 0, w, h); g.fillStyle = fg || '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 78px system-ui, sans-serif'; g.fillText(text, w / 2, sub ? h * 0.4 : h / 2, w - 40); if (sub) { g.font = '700 36px system-ui, sans-serif'; g.fillText(sub, w / 2, h * 0.8, w - 40); } }); }
     function signBoard(grp, text, sub, bg, x, y, z, w, rotY) { var m = new T.Mesh(new T.PlaneGeometry(w, w * 0.1875), new T.MeshStandardMaterial({ map: signTex(text, sub, bg), emissive: 0xffffff, emissiveMap: null, roughness: 0.6 })); m.material.emissiveIntensity = 0; m.position.set(x, y, z); m.rotation.y = rotY || Math.PI; grp.add(m); SR.signs.push(m.material); return m; }
     function carModel(colr, len) {
+      // The shared detailed models: the celebrity car park (len 4.8) gets dream cars by colour, others an everyday saloon.
+      if (root.LasgidiModels3D && (len || 4.4) >= 4) {
+        var lux = len >= 4.8 ? { 0x17181a: 'lux:boxy', 0xf4f3ec: 'lux:limo', 0xd4af37: 'lux:hyper', 0xb3122a: 'lux:curvy' }[colr] || 'lux:wedge' : 'car';
+        var wrap = new T.Group(), m3 = root.LasgidiModels3D.vehicle(T, lux, { color: colr, lite: LITE, roll: false }); m3.rotation.y = Math.PI / 2; wrap.add(m3); return wrap;
+      }
       var L = len || 4.4, g = new T.Group(), body = mat('car' + colr, { color: colr, roughness: 0.3, metalness: 0.5 });
       g.add(mesh(new T.BoxGeometry(L, 0.9, 1.8), body, 0, 0.75, 0)); g.add(mesh(new T.BoxGeometry(L * 0.55, 0.7, 1.7), body, -L * 0.05, 1.5, 0)); g.add(mesh(new T.BoxGeometry(L * 0.56, 0.5, 1.72), glassM, -L * 0.05, 1.5, 0));
       [[-L * 0.32, 0.9], [L * 0.32, 0.9], [-L * 0.32, -0.9], [L * 0.32, -0.9]].forEach(function (w) { var wh = mesh(new T.CylinderGeometry(0.38, 0.38, 0.3, 14), mat('tyre', { color: 0x111111 }), w[0], 0.38, w[1]); wh.rotation.x = Math.PI / 2; g.add(wh); });

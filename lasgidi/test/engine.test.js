@@ -3859,6 +3859,13 @@ test('rules 55: festival days in Dubai, Cape Town, Kumasi and Cape Coast, more D
   }
 });
 
+test('rules 56: five dream cars, sold only to new lives, with made-up names', () => {
+  const ids = ['merc_g6x6', 'lambo_roadster', 'bugatti_sport', 'ferrari_812', 'rr_spectre'];
+  for (const id of ids) { const V = D.VEHICLES[id]; assert.ok(V && V.rules === 56 && V.kind === 'car' && V.price > 0 && V.fuel > 0, id); assert.ok(!/bugatti|lambo|ferrari|rolls|mercedes|bentley|maybach|porsche/i.test(V.name), V.name); }
+  const mk = (rules) => { const s = L.newGame({ seed: 5601, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); s.bank = 1e13; return s; };
+  assert.ok(!L.buyVehicle(mk(55), 'merc_g6x6').ok, 'not for a rules-55 life');
+});
+
 test('Monthly (12 weeks) and Yearly (48 weeks) Lagos: shared seeds, run to their end, verify, keep playing; weekly unchanged', () => {
   const d = new Date(Date.UTC(2026, 10, 1));
   assert.equal(L.monthChallengeId(d), '2026-M11'); assert.equal(L.yearChallengeId(d), '2026-Y');

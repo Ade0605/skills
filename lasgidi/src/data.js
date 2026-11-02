@@ -1398,9 +1398,16 @@
     lambo_revuelto: { name: 'Toro V12 supercar', icon: '🏎️', kind: 'car', tier: 'ultra', price: 1000000000, speed: 45, fuel: 460, upkeep: 700000, status: 42, color: '#2fa36b' },
     aston_dbx: { name: 'Albion luxury SUV', icon: '🚙', kind: 'car', tier: 'ultra', price: 380000000, speed: 38, fuel: 340, upkeep: 270000, status: 24, color: '#1f4d3c' },
     mclaren_750s: { name: 'Velocita 750 supercar', icon: '🏎️', kind: 'car', tier: 'ultra', price: 550000000, speed: 45, fuel: 380, upkeep: 380000, status: 30, color: '#e67e22' },
-    bugatti_chiron: { name: 'Hyperion W16 hypercar', icon: '🏎️', kind: 'car', tier: 'ultra', price: 5000000000, speed: 48, fuel: 700, upkeep: 3500000, status: 90, color: '#1f3a6b' },
+    bugatti_chiron: { name: 'Hyperion W16 hypercar', icon: '🏎️', kind: 'car', tier: 'ultra', price: 5000000000, speed: 48, fuel: 700, upkeep: 3500000, status: 90, color: '#1f3a6b', color2: '#0d1a33' },
     merc_s: { name: 'Kaiser executive saloon', icon: '🚘', kind: 'car', tier: 'premium', price: 220000000, speed: 35, fuel: 260, upkeep: 150000, status: 16, color: '#17181a' },
     merc_g63: { name: 'Kaiser Boxer 4x4', icon: '🚙', kind: 'car', tier: 'premium', price: 300000000, speed: 36, fuel: 320, upkeep: 210000, status: 20, color: '#4b4f55' },
+    // Rules 56: more dream cars (made-up names, after each class): a six-wheel 6x6, an open-top V12 roadster, a sharper
+    // hypercar, a twelve-cylinder front-engine coupé and an electric grand coupé.
+    merc_g6x6: { name: 'Kaiser Boxer 6×6', icon: '🛻', kind: 'car', tier: 'ultra', price: 1400000000, speed: 34, fuel: 520, upkeep: 900000, status: 55, color: '#8a7a5a', rules: 56 },
+    lambo_roadster: { name: 'Toro V12 Roadster', icon: '🏎️', kind: 'car', tier: 'ultra', price: 1150000000, speed: 45, fuel: 470, upkeep: 760000, status: 48, color: '#ff6a00', rules: 56 },
+    bugatti_sport: { name: 'Hyperion Sport hypercar', icon: '🏎️', kind: 'car', tier: 'ultra', price: 6200000000, speed: 49, fuel: 720, upkeep: 3800000, status: 100, color: '#17181a', color2: '#1f5fa0', rules: 56 },
+    ferrari_812: { name: 'Corsa V12 Superveloce', icon: '🏎️', kind: 'car', tier: 'ultra', price: 900000000, speed: 46, fuel: 480, upkeep: 640000, status: 40, color: '#b3122a', rules: 56 },
+    rr_spectre: { name: 'Sovereign Volt electric coupé', icon: '🚘', kind: 'car', tier: 'ultra', price: 780000000, speed: 42, fuel: 120, upkeep: 380000, status: 38, color: '#2f3e6b', rules: 56 },
     maybach_s680: { name: 'Kaiser grand limousine', icon: '🚘', kind: 'car', tier: 'premium', price: 400000000, speed: 35, fuel: 300, upkeep: 280000, status: 26, color: '#3d2b4f' },
     bmw_7: { name: 'Isar Seven saloon', icon: '🚘', kind: 'car', tier: 'premium', price: 190000000, speed: 35, fuel: 250, upkeep: 130000, status: 14, color: '#2b2b2f' },
     bmw_x7: { name: 'Isar X SUV', icon: '🚙', kind: 'car', tier: 'premium', price: 170000000, speed: 34, fuel: 280, upkeep: 120000, status: 13, color: '#f4f3ec' },

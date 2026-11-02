@@ -77,7 +77,8 @@
       }
       return g;
     }
-    function vehicleModel(V) {
+    function vehicleModel(V, id) {
+      if (root.LasgidiModels3D && (V.kind === 'car' || V.kind === 'bus')) { var mw = new T.Group(), mm = root.LasgidiModels3D.forVehicle(T, id || '', V, {}); mm.rotation.y = Math.PI / 2; mm.scale.setScalar(0.75); mw.add(mm); return mw; }
       var g = new T.Group(), c = hexN(V.color, '#c0392b'), body = M(c, 0.3, 0.5), glass = M(0x2c4a5c, 0.05, 0.8), k = V.kind;
       if (k === 'boat') { box(g, 4, 0.6, 1.4, M(0xf4f3ec, 0.4), 0, 0.3, 0); box(g, 1.6, 0.5, 1.1, glass, -0.4, 0.85, 0); }
       else if (k === 'heli') { var b2 = new T.Mesh(new T.SphereGeometry(0.7, 16, 12), body); b2.scale.set(1.4, 0.9, 0.9); b2.position.y = 0.9; g.add(b2); box(g, 2.4, 0.15, 0.15, body, -1.6, 1.0, 0); box(g, 4.2, 0.04, 0.2, M(0x17181a), 0, 1.65, 0); }
@@ -126,7 +127,7 @@
       }
       // Outside: a paved driveway with your rides.
       var drive = new T.Mesh(new T.PlaneGeometry(6, Math.max(d, 6)).rotateX(-Math.PI / 2), M(0x8a8d84, 0.9)); drive.position.set(w + 3.5, -0.05, d / 2); drive.receiveShadow = true; home.add(drive);
-      (view.vehicles || []).slice(0, 6).forEach(function (v, i) { var V = D.VEHICLES[v.id]; if (!V) return; var vm = vehicleModel(V); vm.position.set(w + 3.5, 0, 1.6 + i * 2.6); vm.rotation.y = Math.PI / 2 * (i % 2 ? 1 : -1) * 0 + Math.PI / 2; home.add(vm); });
+      (view.vehicles || []).slice(0, 6).forEach(function (v, i) { var V = D.VEHICLES[v.id]; if (!V) return; var vm = vehicleModel(V, v.id); vm.position.set(w + 3.5, 0, 1.6 + i * 2.6); vm.rotation.y = Math.PI / 2 * (i % 2 ? 1 : -1) * 0 + Math.PI / 2; home.add(vm); });
       // You, standing in the room.
       ME = null; if (root.LasgidiAvatar3D && view.look) { var me = root.LasgidiAvatar3D.figure(T, view.look, view.outfit || {}, null); me.scale.setScalar(0.95); var free = freeTile(), occ0 = occupied(), keep = WKH && !occ0[Math.floor(WKH.x) + ',' + Math.floor(WKH.z)] && WKH.x < HOMEW && WKH.z < HOMED; if (!keep) WKH = { x: free[0] + 0.5, z: free[1] + 0.5, yaw: 0.6 }; WKH.path = []; me.position.set(WKH.x, 0, WKH.z); me.rotation.y = WKH.yaw; home.add(me); ME = me; }
       HOMEW = w; HOMED = d; orbit.tx = w / 2 + 0.8; orbit.tz = d / 2; orbit.r = Math.max(7, Math.max(w, d) * 1.25); place();
