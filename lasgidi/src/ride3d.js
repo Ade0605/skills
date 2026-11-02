@@ -10,26 +10,39 @@
   function play(box, o) {
     var T = root.THREE; if (!T || !box) return false;
     var LDN = !!o.london; // London: TfL red buses, black cabs, the Tube
-    var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({ maxRatio: 1.5 }) : new T.WebGLRenderer({ antialias: true }); } catch (e) { return false; } if (!renderer) return false;
+    var renderer; try { renderer = root.LasgidiGL ? root.LasgidiGL.make({ maxRatio: 2 }) : new T.WebGLRenderer({ antialias: true }); } catch (e) { return false; } if (!renderer) return false;
     if (!root.LasgidiGL) renderer.setPixelRatio(Math.min(1.5, root.devicePixelRatio || 1)); renderer.toneMapping = T.ACESFilmicToneMapping; renderer.shadowMap.enabled = true;
     var cv = renderer.domElement; cv.className = 'rv-3d'; box.innerHTML = ''; box.appendChild(cv);
     var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches, secs = o.secs || 5.5, night = !!o.night, dusk = !!o.dusk, water = !!o.water, air = !!o.air, mode = o.mode || 'car', HW = !!o.highway;
     var S3 = new T.Scene(), cam = new T.PerspectiveCamera(50, 2, 0.1, 900), sky = night ? 0x0d1733 : dusk ? 0xf0b98a : 0x9fd3ef; S3.background = new T.Color(sky); S3.fog = new T.Fog(sky, 60, 260);
     S3.add(new T.HemisphereLight(night ? 0x6070a0 : 0xfff4e6, 0x5a6a50, night ? 0.45 : 0.95)); var sun = new T.DirectionalLight(night ? 0x8fa8ff : dusk ? 0xffb070 : 0xffffff, night ? 0.25 : 1.5); sun.position.set(-20, 40, 10); sun.castShadow = true; S3.add(sun);
-    function M(c, r, m, x) { return new T.MeshStandardMaterial(Object.assign({ color: c, roughness: r == null ? 0.7 : r, metalness: m || 0 }, x || {})); }
+    // City roads get the detailed street (road3d.js): a sky dome, sun and clouds, asphalt, kerbs, Lagos blocks.
+    var ROAD = root.LasgidiRoad3D && !o.water && !o.air && !o.highway && mode !== 'trek' ? root.LasgidiRoad3D : null, RLITE = root.LasgidiGL ? root.LasgidiGL.lite() : false;
+    if (ROAD) {
+      var sdir = ROAD.sky(T, S3, { night: night, dusk: dusk, lite: RLITE }), hz = night ? 0x2b3b66 : dusk ? 0xf4c08a : 0xd5e6ee;
+      S3.background = new T.Color(hz); S3.fog = new T.Fog(hz, 70, RLITE ? 200 : 300);
+      sun.position.copy(sdir).multiplyScalar(90); sun.intensity = night ? 0.25 : dusk ? 1.6 : 2.4; sun.color.set(night ? 0x8fa8ff : dusk ? 0xffb070 : 0xfff3e0);
+      var sc0 = sun.shadow.camera; sc0.left = -40; sc0.right = 40; sc0.top = 40; sc0.bottom = -40; sc0.near = 1; sc0.far = 260; sun.shadow.mapSize.set(RLITE ? 1024 : 2048, RLITE ? 1024 : 2048); sun.shadow.bias = -0.0004;
+      renderer.toneMappingExposure = night ? 1.25 : 1.05; if (night || dusk) S3.add(new T.AmbientLight(night ? 0x8a96c8 : 0xffd2a0, night ? 0.9 : 0.35));
+      if (night) { var glowM = new T.MeshBasicMaterial({ color: 0xffc870, transparent: true, opacity: 0.16, depthWrite: false }); [-1, 1].forEach(function (gs) { var gl2 = new T.Mesh(new T.PlaneGeometry(4, 400).rotateX(-Math.PI / 2), glowM); gl2.position.set(gs * 4.6, 0.02, -150); S3.add(gl2); }); }
+    }
+    var MC = {}; function M(c, r, m, x) { var plain = !x || !Object.keys(x).some(function (k) { return x[k] && x[k].isTexture; }), key = plain ? c + '|' + r + '|' + m + '|' + (x ? JSON.stringify(x) : '') : null; if (key && MC[key]) return MC[key]; var mm = new T.MeshStandardMaterial(Object.assign({ color: c, roughness: r == null ? 0.7 : r, metalness: m || 0 }, x || {})); if (key) MC[key] = mm; return mm; }
     function box3(g, w, h, d, m, x, y, z) { var b = new T.Mesh(new T.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; b.receiveShadow = true; g.add(b); return b; }
     function K0(g, rt, h, x, y, z) { var c = new T.Mesh(new T.CylinderGeometry(rt, rt, h, 10), M(0x2b2f36, 0.4, 0.6)); c.position.set(x, y, z); g.add(c); return c; }
     function tex(w, h, draw) { var c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t; }
     var world = new T.Group(); S3.add(world); var movers = [], sights = [], SPEED = air ? 40 : water ? 14 : mode === 'trek' ? 4 : mode === 'okada' || mode === 'keke' ? 16 : 20;
     // The ground: a road with moving lane lines, the lagoon, or the city far below.
     var groundTex = tex(256, 256, function (g, w, h) { if (water) { g.fillStyle = night ? '#1a4a68' : '#2a7896'; g.fillRect(0, 0, w, h); for (var i = 0; i < 60; i++) { g.fillStyle = 'rgba(255,255,255,' + (0.05 + (i % 5) * 0.03) + ')'; g.fillRect((i * 53) % w, (i * 97) % h, 30, 2); } } else if (air) { g.fillStyle = night ? '#141a24' : '#7a8a6a'; g.fillRect(0, 0, w, h); for (var b = 0; b < 140; b++) { g.fillStyle = night ? (b % 3 ? 'rgba(255,205,120,.9)' : 'rgba(255,240,200,.7)') : ['#c9c2b4', '#9aa0a6', '#b5603a', '#d8d2c4'][b % 4]; g.fillRect((b * 37) % w, (b * 61) % h, night ? 3 + (b % 3) : 8 + (b % 3) * 4, night ? 3 : 8 + (b % 4) * 3); } if (night) { g.strokeStyle = 'rgba(255,190,90,.8)'; g.lineWidth = 2; for (var rl = 0; rl < 6; rl++) { g.beginPath(); g.moveTo(0, rl * 47 % h); g.lineTo(w, (rl * 47 + 90) % h); g.stroke(); } } } else { g.fillStyle = '#3a3f46'; g.fillRect(0, 0, w, h); g.fillStyle = '#f2c200'; for (var y = 0; y < h; y += 64) g.fillRect(w / 2 - 3, y, 6, 36); g.fillStyle = '#f4f3ec'; g.fillRect(8, 0, 4, h); g.fillRect(w - 12, 0, 4, h); } });
+    if (ROAD) groundTex = ROAD.asphalt(T, RLITE, LDN);
     groundTex.wrapS = groundTex.wrapT = T.RepeatWrapping; groundTex.repeat.set(air ? 6 : 1, air ? 30 : 12);
     var ground = new T.Mesh(new T.PlaneGeometry(air ? 600 : water ? 400 : 12, 400).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: groundTex, roughness: water ? 0.2 : 0.9, emissive: air && night ? 0xffffff : 0x000000, emissiveMap: air && night ? groundTex : null, emissiveIntensity: 0.9 })); ground.position.set(0, air ? -60 : 0, -150); ground.receiveShadow = true; world.add(ground);
     if (!water && !air) { var side = new T.Mesh(new T.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), M(HW ? 0x6f8f3e : 0x9a9184, 0.95)); side.position.set(0, -0.02, -150); side.receiveShadow = true; world.add(side); }
     // Things that stream past: blocks with lit windows, palms, lamps (or buoys and boats; or clouds).
     var winT = tex(32, 64, function (g, w, h) { g.fillStyle = '#5d7488'; g.fillRect(0, 0, w, h); for (var y = 2; y < h; y += 8) for (var x = 2; x < w; x += 7) { g.fillStyle = night ? ((x + y) % 3 ? 'rgba(255,214,140,.95)' : 'rgba(40,50,60,.9)') : 'rgba(200,215,225,.8)'; g.fillRect(x, y, 4, 4); } });
-    for (var i = 0; i < 26; i++) {
+    var SEG = ROAD ? 3 : 1, NMOV = ROAD ? (RLITE ? 6 : 8) : 26, LOOP = NMOV * 12 * SEG;
+    for (var i = 0; i < NMOV; i++) {
       var sd = i % 2 ? 1 : -1, z = -i * 12, g = new T.Group();
+      if (ROAD) { g = ROAD.strip(T, i * SEG, SEG, { lite: RLITE, night: night || dusk, london: LDN }); g.position.z = -i * 12 * SEG; world.add(g); movers.push(g); continue; }
       if (air) { var cl = new T.Mesh(new T.SphereGeometry(4 + (i % 3) * 2, 10, 8), new T.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, roughness: 1 })); cl.scale.set(2, 0.6, 1); g.add(cl); g.position.set(sd * (14 + (i * 7) % 20), -10 - (i % 4) * 6, z); }
       else if (water) { if (i % 3 === 0) { box3(g, 3, 0.6, 1.2, M(0xf4f3ec), 0, 0.2, 0); g.position.set(sd * (14 + (i * 5) % 12), 0, z); } else { var bu = new T.Mesh(new T.CylinderGeometry(0.3, 0.4, 1, 8), M(i % 2 ? 0xc0392b : 0xf2b600)); bu.position.y = 0.4; g.add(bu); g.position.set(sd * 8, 0, z); } var tw = box3(g, 8, 20 + (i * 13) % 40, 8, M(0xffffff, 0.3, 0.3, { map: winT, emissiveMap: winT, emissive: 0xffd28c, emissiveIntensity: night ? 0.9 : 0 }), sd * 46, 12, -30); }
       else if (HW) { // the open road: savanna trees, palms, the odd village with zinc roofs, road signs
@@ -51,6 +64,7 @@
     // Busy roads: traffic both ways (danfos, cars, black SUVs, BRT buses, big trucks, okadas, kekes), people walking,
     // bus stops with people waiting, market umbrellas, tall towers and low shops.
     var traffic = [], walkers = [], decor = [];
+    if (root.__rideDebug) root.__rideDebug = { S3: S3, traffic: traffic, walkers: walkers, decor: decor, movers: movers };
     if (!air && !water) {
       var CITY = !HW;
       function vehicle(kind) {
@@ -60,7 +74,7 @@
           var who = function (i) { return { look: { skin: (i * 7) % 6, hair: (i * 3) % 8, shape: i % 3 }, outfit: [{ top: 'tee', bottom: 'jeans', shoes: 'slides' }, { top: 'shirt', bottom: 'trousers', shoes: 'loafers' }, { top: 'ankara_sh', bottom: 'jeans', shoes: 'sneakers' }][i % 3] }; }, seed = Math.floor(Math.random() * 1000);
           var mg = MD.vehicle(T, kind === 'bus' ? 'brt' : kind, { color: kind === 'okada' ? [0xc0392b, 0x2f6fa0, 0x17181a][seed % 3] : kind === 'danfo' || kind === 'keke' ? undefined : c, london: LDN, lite: true, roll: false, rider: kind === 'okada' || kind === 'keke' ? who(seed) : null, seated: kind === 'okada' && seed % 2 ? [who(seed + 1)] : null });
           if (kind === 'bus' && !LDN) { var stripe = new T.Mesh(new T.BoxGeometry(2.56, 0.3, 11.05), M(0xf2c200)); stripe.position.set(0, 0.9, 0); mg.add(stripe); }
-          world.add(mg); return mg;
+          if (RLITE) mg.traverse(function (q) { q.castShadow = false; }); world.add(mg); return mg;
         }
         var g = new T.Group();
         var wheels = function (zs, xw, r) { zs.forEach(function (zz) { [-xw, xw].forEach(function (xx) { var wh = new T.Mesh(new T.CylinderGeometry(r, r, 0.25, 10), M(0x111111)); wh.rotation.z = Math.PI / 2; wh.position.set(xx, r, zz); g.add(wh); }); }); };
@@ -76,7 +90,7 @@
         g.traverse(function (x) { x.castShadow = true; }); world.add(g); return g;
       }
       var KINDS = ['danfo', 'car', 'car', 'suv', 'danfo', 'bus', 'truck', 'okada', 'car', 'keke', 'okada', 'danfo'];
-      for (var tv = 0; tv < (CITY ? 22 : 12); tv++) {
+      for (var tv = 0; tv < (CITY ? (RLITE ? 12 : 20) : 12); tv++) {
         var kd = KINDS[tv % KINDS.length], onc = tv % 2 === 0, lane = (onc ? (tv % 4 === 0 ? -1.7 : -4.6) : 4.6) * (LDN ? -1 : 1); // London drives on the left
         traffic.push({ g: vehicle(kd), x: lane, z: -20 - tv * 14 - Math.random() * 6, rel: onc ? 14 + Math.random() * 6 : (Math.random() - 0.4) * 8, onc: onc });
       }
@@ -86,7 +100,7 @@
         var person = function () { var g = new T.Group(), sk = [0x5a3a22, 0x6b4a33, 0x3d2817, 0x8a5a3c][Math.floor(Math.random() * 4)], cl = [0xc0392b, 0x2f6fa0, 0x16a34a, 0xf2c200, 0x7c3aed, 0xf4f3ec, 0x17181a][Math.floor(Math.random() * 7)];
           box3(g, 0.5, 0.75, 0.3, M(cl, 0.8), 0, 1.2, 0); var hd = new T.Mesh(new T.SphereGeometry(0.17, 8, 6), M(sk)); hd.position.y = 1.75; g.add(hd);
           var legs = [-0.12, 0.12].map(function (lx) { var l = new T.Group(); l.position.set(lx, 0.85, 0); box3(l, 0.13, 0.8, 0.13, M(0x2b2f36), 0, -0.4, 0); g.add(l); return l; }); g.userData.legs = legs; return g; };
-        for (var wk = 0; wk < 34; wk++) { var sdw = wk % 2 ? 1 : -1, pp = (wk < 14 && root.LasgidiModels3D && root.LasgidiModels3D.person(T, { look: { skin: wk % 6, hair: (wk * 3) % 8, shape: wk % 3 }, outfit: [{ top: 'tee', bottom: 'jeans', shoes: 'sneakers' }, { dress: 'iro_buba', head: 'gele', shoes: 'slides' }, { top: 'shirt', bottom: 'trousers', shoes: 'loafers' }, { dress: 'gown', shoes: 'heels' }, { top: 'ankara_sh', bottom: 'jeans', shoes: 'slides' }, { top: 'jersey', bottom: 'joggers', shoes: 'sneakers' }, { dress: 'kaftan', head: 'cap', shoes: 'slides' }][wk % 7] })) || person(); world.add(pp); walkers.push({ g: pp, x: sdw * (6.8 + (wk % 3) * 0.5), z: -wk * 9, dir: wk % 3 ? 1 : -1, ph: wk }); }
+        for (var wk = 0; wk < (ROAD ? (RLITE ? 12 : 20) : 34); wk++) { var sdw = wk % 2 ? 1 : -1, pp = ((wk < 14 || ROAD) && root.LasgidiModels3D && root.LasgidiModels3D.person(T, { look: { skin: wk % 6, hair: (wk * 3) % 8, shape: wk % 3 }, outfit: [{ top: 'tee', bottom: 'jeans', shoes: 'sneakers' }, { dress: 'iro_buba', head: 'gele', shoes: 'slides' }, { top: 'shirt', bottom: 'trousers', shoes: 'loafers' }, { dress: 'gown', shoes: 'heels' }, { top: 'ankara_sh', bottom: 'jeans', shoes: 'slides' }, { top: 'jersey', bottom: 'joggers', shoes: 'sneakers' }, { dress: 'kaftan', head: 'cap', shoes: 'slides' }][wk % 7] }, { still: ROAD && wk >= (RLITE ? 4 : 8) })) || person(); if (RLITE) pp.traverse(function (q) { q.castShadow = false; }); world.add(pp); walkers.push({ g: pp, x: sdw * (6.8 + (wk % 3) * 0.5), z: -wk * 9, dir: wk % 3 ? 1 : -1, ph: wk }); }
         for (var dc = 0; dc < 14; dc++) {
           var dg = new T.Group(), dsd = dc % 2 ? 1 : -1;
           if (dc % 3 === 0) { // a bus stop with people waiting
@@ -99,10 +113,10 @@
             box3(dg, 1, 0.25, 21, M(0xa9a39a, 0.9), -0.1, 0.12, 0); box3(dg, 0.8, 0.05, 20.6, M(0x4f8a3a, 0.9), -0.1, 0.27, 0);
             var pt = new T.Mesh(new T.CylinderGeometry(0.15, 0.22, 5, 6), M(0x6b4a2b)); pt.position.set(-0.1, 2.5, 0); dg.add(pt); if (LDN) { var crown = new T.Mesh(new T.SphereGeometry(1.8, 10, 8), M(0x4f7d3a, 0.9)); crown.position.set(-0.1, 5.4, 0); dg.add(crown); } else for (var pf = 0; pf < 6; pf++) { var pfr = new T.Mesh(new T.BoxGeometry(2.4, 0.06, 0.5), M(0x3f8f3a, 0.8)); pfr.position.set(-0.1 + Math.cos(pf) * 1, 5, Math.sin(pf) * 1); pfr.rotation.y = pf; pfr.rotation.z = 0.3; dg.add(pfr); }
           }
-          world.add(dg); decor.push({ g: dg, z: -dc * 22 - 10 });
+          if (root.LasgidiModels3D) root.LasgidiModels3D.merge(T, dg); if (RLITE) dg.traverse(function (q) { q.castShadow = false; }); world.add(dg); decor.push({ g: dg, z: -dc * 22 - 10 });
         }
         // a few tall towers and low shops with awnings far back
-        for (var tw2 = 0; tw2 < 10; tw2++) { var tg = new T.Group(), tsd = tw2 % 2 ? 1 : -1, tall = tw2 % 3 === 0, th = tall ? 34 + (tw2 * 7) % 14 : 4; box3(tg, tall ? 9 : 7, th, tall ? 9 : 5, M(0xffffff, 0.5, 0.1, { map: winT, emissiveMap: winT, emissive: 0xffd28c, emissiveIntensity: night ? 0.35 : 0 }), tsd * (tall ? 24 : 11.5), th / 2, 0); if (!tall) box3(tg, 7.2, 0.15, 1.6, M([0xc0392b, 0x16a34a, 0x2f6fa0, 0xf2c200][tw2 % 4], 0.6), tsd * 9.4, 3, 0); world.add(tg); decor.push({ g: tg, z: -tw2 * 31 - 6 }); }
+        for (var tw2 = 0; tw2 < (ROAD ? 0 : 10); tw2++) { var tg = new T.Group(), tsd = tw2 % 2 ? 1 : -1, tall = tw2 % 3 === 0, th = tall ? 34 + (tw2 * 7) % 14 : 4; box3(tg, tall ? 9 : 7, th, tall ? 9 : 5, M(0xffffff, 0.5, 0.1, { map: winT, emissiveMap: winT, emissive: 0xffd28c, emissiveIntensity: night ? 0.35 : 0 }), tsd * (tall ? 24 : 11.5), th / 2, 0); if (!tall) box3(tg, 7.2, 0.15, 1.6, M([0xc0392b, 0x16a34a, 0x2f6fa0, 0xf2c200][tw2 % 4], 0.6), tsd * 9.4, 3, 0); world.add(tg); decor.push({ g: tg, z: -tw2 * 31 - 6 }); }
       }
     }
     // Your ride.
@@ -171,7 +185,7 @@
       var w = box.clientWidth || 320, h = box.clientHeight || 160; if (w !== W || h !== H) { W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cam.aspect = W / H; cam.updateProjectionMatrix(); }
       var t = (now - t0) / 1000, run = reduce ? 0 : t;
       groundTex.offset.y = -(run * SPEED / (air ? 13 : 33)) % 1;
-      movers.forEach(function (g, i) { var z = (-i * 12 + run * SPEED) % 312; g.position.z = z > 20 ? z - 312 : z; });
+      movers.forEach(function (g, i) { var z = (-i * 12 * SEG + run * SPEED) % LOOP; g.position.z = z > 20 + 12 * (SEG - 1) ? z - LOOP : z; });
       var dtt = Math.min(0.05, t - (frame.lt || t)); frame.lt = t;
       traffic.forEach(function (v) { if (!reduce) v.z += (SPEED + v.rel) * dtt * (v.onc ? 1 : 1); if (!v.onc && !reduce) v.z += 0; if (v.z > 30) v.z -= 330; if (v.z < -300) v.z += 330; v.g.position.set(v.x, 0, v.z); v.g.rotation.y = v.onc ? Math.PI : 0; });
       if (V.userData.model && root.LasgidiModels3D && !reduce) root.LasgidiModels3D.roll(V.userData.model, SPEED * dtt);

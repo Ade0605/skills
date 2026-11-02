@@ -201,7 +201,7 @@
     (function walk(o) {
       if (o !== root0 && keep.has(o)) return;
       if (o.isMesh && !Array.isArray(o.material) && o.geometry && o.geometry.attributes.position && o.geometry.attributes.normal) {
-        var sig = o.material.uuid + '|' + (o.geometry.attributes.uv ? 'uv' : ''); (groups[sig] = groups[sig] || []).push(o);
+        var sig = o.material.uuid + '|' + (o.geometry.attributes.uv ? 'uv' : '') + '|' + (o.castShadow ? 'c' : ''); (groups[sig] = groups[sig] || []).push(o);
       }
       o.children.slice().forEach(walk);
     })(root0);
@@ -218,17 +218,18 @@
         off += c; o.parent.remove(o); g.dispose();
       });
       var mg = new T.BufferGeometry(); mg.setAttribute('position', new T.BufferAttribute(pos, 3)); mg.setAttribute('normal', new T.BufferAttribute(nor, 3)); if (uvs) mg.setAttribute('uv', new T.BufferAttribute(uvs, 2)); mg.setIndex(new T.BufferAttribute(idx, 1)); mg.computeBoundingSphere();
-      var mm = new T.Mesh(mg, list[0].material); mm.castShadow = true; mm.receiveShadow = true; root0.add(mm);
+      var mm = new T.Mesh(mg, list[0].material); mm.castShadow = list[0].castShadow; mm.receiveShadow = true; root0.add(mm);
     });
   }
   // A walking person from LasgidiAvatar3D, merged by material: the body in one go, each leg and arm on its own so they swing.
-  function person(T, who) {
+  function person(T, who, opts) {
     var A = root.LasgidiAvatar3D; if (!A) return null;
     var f = A.figure(T, (who && who.look) || { skin: 2, hair: 0, shape: 1 }, (who && who.outfit) || {}, (who && who.extra) || null), u = f.userData, limbs = [].concat(u.legs || [], u.arms || []);
+    if (opts && opts.still) { merge(T, f); return f; } // far away: one piece, no swinging limbs
     merge(T, f, limbs); limbs.forEach(function (l) { merge(T, l); }); return f;
   }
   function vehicle(T, kind, opts) {
-    var o = opts || {}, g;
+    var o = {}, g; Object.keys(opts || {}).forEach(function (k) { if (opts[k] !== undefined && opts[k] !== null) o[k] = opts[k]; }); // unset options keep each model's defaults
     if (kind === 'okada' || kind === 'bike') g = okada(T, o);
     else if (kind === 'keke') g = keke(T, o);
     else if (kind === 'suv' || kind === 'jeep') g = car(T, o, 'suv');
