@@ -171,6 +171,60 @@
     }
     mesh(T, g, new T.SphereGeometry(0.32, 8, 6), M(T, 'coco', { color: 0x5a4a2a, roughness: 0.8 }), px, py - 0.2, z);
   }
+  // ---- The open highway between cities: laterite shoulders, savanna grass, acacia and baobab trees, palms, shrubs,
+  // villages of mud-brick houses with zinc roofs, roadside stalls, kilometre posts and the odd billboard.
+  function grassTex(T, lite) {
+    return C.grass || (C.grass = canvasTex(T, lite ? 128 : 256, lite ? 128 : 256, function (g, w, h) {
+      var r = rnd(23); g.fillStyle = '#8a9a4a'; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < (lite ? 1800 : 7000); i++) { var v = r(); g.fillStyle = v < 0.3 ? 'rgba(190,170,90,.5)' : v < 0.6 ? 'rgba(90,120,50,.5)' : v < 0.8 ? 'rgba(150,120,70,.35)' : 'rgba(60,90,40,.45)'; g.fillRect(r() * w, r() * h, 1 + r() * 2, 2 + r() * 4); }
+    }, [40, 40]));
+  }
+  function lateriteTex(T) { return C.lat || (C.lat = canvasTex(T, 128, 128, function (g, w, h) { var r = rnd(29); g.fillStyle = '#a5532e'; g.fillRect(0, 0, w, h); grain(g, w, h, 2500, 0.25, r); }, [1, 6])); }
+  function mudTex(T) { return C.mud || (C.mud = canvasTex(T, 128, 128, function (g, w, h) { var r = rnd(31); g.fillStyle = '#b77a4e'; g.fillRect(0, 0, w, h); grain(g, w, h, 1800, 0.2, r); g.fillStyle = 'rgba(80,45,25,.25)'; g.fillRect(0, h * 0.85, w, h * 0.15); g.fillStyle = '#3b2a1c'; g.fillRect(w * 0.38, h * 0.4, w * 0.24, h * 0.6); g.fillStyle = '#2b3a46'; g.fillRect(w * 0.08, h * 0.35, w * 0.18, h * 0.2); g.fillRect(w * 0.74, h * 0.35, w * 0.18, h * 0.2); })); }
+  function zincTex(T) { return C.zinc || (C.zinc = canvasTex(T, 64, 64, function (g, w, h) { for (var x = 0; x < w; x += 4) { g.fillStyle = x % 8 ? '#9aa0a6' : '#7c8288'; g.fillRect(x, 0, 4, h); } g.fillStyle = 'rgba(150,80,40,.35)'; g.fillRect(0, h * 0.6, w, h * 0.4); }, [3, 1])); }
+  function acacia(T, g, x, z, r) {
+    var tr = M(T, 'acTrunk', { color: 0x5a4632, roughness: 0.95 }), lf = M(T, 'acLeaf', { color: 0x5f7f34, roughness: 0.9, flatShading: true }), h = 3 + r() * 1.5;
+    var t1 = mesh(T, g, new T.CylinderGeometry(0.12, 0.2, h, 6), tr, x, h / 2, z); t1.rotation.z = (r() - 0.5) * 0.3;
+    for (var b = 0; b < 3; b++) { var br = mesh(T, g, new T.CylinderGeometry(0.06, 0.1, 1.6, 5), tr, x + Math.cos(b * 2.1) * 0.5, h + 0.4, z + Math.sin(b * 2.1) * 0.5); br.rotation.z = Math.cos(b * 2.1) * 0.7; br.rotation.x = Math.sin(b * 2.1) * 0.7; }
+    var cn = mesh(T, g, new T.SphereGeometry(2.4 + r(), 9, 5, 0, Math.PI * 2, 0, Math.PI / 2), lf, x, h + 0.6, z); cn.scale.y = 0.35;
+  }
+  function baobab(T, g, x, z, r) {
+    var tr = M(T, 'bbTrunk', { color: 0x8a7a6a, roughness: 0.95 }), lf = M(T, 'bbLeaf', { color: 0x6f8a3a, roughness: 0.9, flatShading: true }), h = 4 + r() * 1.5;
+    mesh(T, g, new T.CylinderGeometry(0.8, 1.3, h, 10), tr, x, h / 2, z);
+    for (var b = 0; b < 5; b++) { var a = b / 5 * Math.PI * 2, br = mesh(T, g, new T.CylinderGeometry(0.12, 0.3, 2.4, 6), tr, x + Math.cos(a) * 0.9, h + 0.6, z + Math.sin(a) * 0.9); br.rotation.z = Math.cos(a) * 0.9; br.rotation.x = Math.sin(a) * 0.9; mesh(T, g, new T.IcosahedronGeometry(0.9, 0), lf, x + Math.cos(a) * 1.9, h + 1.4, z + Math.sin(a) * 1.9); }
+  }
+  function shrub(T, g, x, z, r) { var m = mesh(T, g, new T.IcosahedronGeometry(0.6 + r() * 0.6, 0), M(T, 'shrub', { color: 0x58783a, roughness: 0.95, flatShading: true }), x, 0.4, z); m.scale.y = 0.7; }
+  function hut(T, g, x, z, r, sd) {
+    var w = 3.4 + r(), d = 3 + r(), h = 2.4;
+    var wall = mesh(T, g, new T.BoxGeometry(w, h, d), M(T, 'mud', { map: mudTex(T), roughness: 0.95 }), x, h / 2, z); wall.rotation.y = sd > 0 ? -Math.PI / 2 : Math.PI / 2;
+    var rf = mesh(T, g, new T.BoxGeometry(w + 0.6, 0.08, d + 0.6), M(T, 'zinc', { map: zincTex(T), roughness: 0.45, metalness: 0.55 }), x, h + 0.25, z); rf.rotation.y = wall.rotation.y; rf.rotation.x = 0.12;
+  }
+  function stall(T, g, x, z, r, sd) {
+    var wood = M(T, 'stallWood', { color: 0x8a6a3a, roughness: 0.9 });
+    mesh(T, g, new T.BoxGeometry(1.6, 0.8, 1.2), wood, x, 0.4, z); [-0.7, 0.7].forEach(function (q) { mesh(T, g, new T.CylinderGeometry(0.04, 0.04, 2.2, 5), wood, x + q, 1.1, z); });
+    var um = mesh(T, g, new T.ConeGeometry(1.4, 0.5, 10, 1, true), M(T, 'stUmb' + (Math.floor(r() * 3)), { color: [0xc0392b, 0x1f6fd0, 0xf2a900][Math.floor(r() * 3)], roughness: 0.8, side: 2 }), x, 2.3, z);
+    for (var k = 0; k < 6; k++) mesh(T, g, new T.SphereGeometry(0.1, 6, 4), M(T, 'fruit' + (k % 3), { color: [0xe67e22, 0xf2c200, 0x2fa36b][k % 3], roughness: 0.6 }), x - 0.5 + (k % 3) * 0.5, 0.88, z - 0.25 + Math.floor(k / 3) * 0.5);
+  }
+  function hwBlock(T, i, sd, o) {
+    var g = new T.Group(), r = rnd(i * 53 + (sd > 0 ? 7 : 0) + 3), lite = !!o.lite; NOSHADOW = lite;
+    mesh(T, g, new T.BoxGeometry(2.2, 0.04, 12), M(T, 'laterite', { map: lateriteTex(T), roughness: 1 }), sd * 7.1, 0.02, 0, false);
+    var kind = i % 7;
+    if (kind === 2 || kind === 5) { for (var hh = 0; hh < (lite ? 2 : 3); hh++) hut(T, g, sd * (15 + hh * 5 + r() * 2), -4 + hh * 4, r, sd); if (!lite) stall(T, g, sd * 9.2, 2, r, sd); }
+    else if (kind === 3) baobab(T, g, sd * (14 + r() * 8), r() * 8 - 4, r);
+    else if (kind === 6) { var ad = ADS[(i + (sd > 0 ? 3 : 0)) % ADS.length], bbx = sd * 11; [-1.8, 1.8].forEach(function (lz) { mesh(T, g, new T.CylinderGeometry(0.14, 0.14, 5, 8), M(T, 'bbleg', { color: 0x5a5f66, roughness: 0.5, metalness: 0.6 }), bbx, 2.5, lz); }); var bb = mesh(T, g, uvRow(new T.PlaneGeometry(6, 3), (i + (sd > 0 ? 3 : 0)) % ADS.length, ADS.length), M(T, 'ads', { map: adSheet(T), roughness: 0.6, side: 2 }), bbx, 6.4, 0); bb.rotation.y = -sd * Math.PI / 2 + sd * 0.4; }
+    else { for (var t = 0; t < (lite ? 1 : 2); t++) acacia(T, g, sd * (11 + r() * 14), r() * 10 - 5, r); }
+    if (!lite) for (var sb = 0; sb < 3; sb++) shrub(T, g, sd * (9 + r() * 16), r() * 12 - 6, r);
+    if (i % 4 === 0) palm(T, g, sd * (9.5 + r() * 3), r() * 6 - 3, r, lite);
+    if (i % 5 === 1) { mesh(T, g, new T.BoxGeometry(0.2, 0.9, 0.12), M(T, 'kmpost', { color: 0xf4f1e8, roughness: 0.7 }), sd * 6.5, 0.45, 0); mesh(T, g, new T.BoxGeometry(0.21, 0.25, 0.13), M(T, 'kmtop', { color: 0x1f6fd0, roughness: 0.7 }), sd * 6.5, 0.8, 0); }
+    return g;
+  }
+  function hwStrip(T, i0, n, o) { var g = new T.Group(); for (var k = 0; k < n; k++) { var a = hwBlock(T, i0 + k, -1, o), b = hwBlock(T, i0 + k + 70, 1, o); a.position.z = b.position.z = -k * 12; g.add(a); g.add(b); } if (root.LasgidiModels3D && root.LasgidiModels3D.merge) root.LasgidiModels3D.merge(T, g); return g; }
+  // Far hills and rock outcrops on the horizon (they stay put while the road streams past).
+  function horizon(T, scene, o) {
+    var g = new T.Group(), hm = M(T, 'hill' + (o.night ? 'N' : ''), { color: o.night ? 0x1d2433 : 0x7b8a62, roughness: 1, flatShading: true }), rk = M(T, 'rock', { color: o.night ? 0x262a33 : 0x8a7f74, roughness: 0.95, flatShading: true });
+    for (var h = 0; h < 14; h++) { var sd = h % 2 ? 1 : -1, hl = new T.Mesh(new T.ConeGeometry(30 + (h * 13) % 30, 18 + (h * 7) % 22, 7), h % 4 === 0 ? rk : hm); hl.position.set(sd * (110 + (h * 37) % 90), 6, -120 - h * 45); hl.scale.z = 0.6; g.add(hl); }
+    scene.add(g); return g;
+  }
   // Sky, sun and clouds for a ride scene; returns the sun's direction for the light.
   function sky(T, scene, o) {
     var d = skyDome(T, o.night, o.dusk); scene.add(d);
@@ -178,5 +232,5 @@
     if (!o.night) for (var c = 0; c < (o.lite ? 4 : 9); c++) { var cl = cloud(T, c); cl.position.set(-500 + c * 120 + (c % 2) * 40, 120 + (c % 3) * 40, -420 - (c % 4) * 50); scene.add(cl); }
     return dir;
   }
-  root.LasgidiRoad3D = { block: block, strip: strip, asphalt: asphalt, sky: sky, palm: palm };
+  root.LasgidiRoad3D = { block: block, strip: strip, hwStrip: hwStrip, horizon: horizon, grass: grassTex, asphalt: asphalt, sky: sky, palm: palm };
 })(typeof window !== 'undefined' ? window : globalThis);
