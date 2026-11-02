@@ -3830,6 +3830,21 @@ test('rules 53: five more Lagos places and two festivals (Felabration, Eyo), onl
   for (const list of [D.FESTIVALS.shrine, D.FESTIVALS.tbs]) for (const a of list) assert.ok(a.mins % 15 === 0, a.id);
 });
 
+test('rules 54: Abuja and Port Harcourt festival weeks, more London and Accra places, only in new lives', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 5401, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  // Each festival happens on some day of the year at its place (checked at noon and 18:00), and never in a rules-53 life.
+  const seenAt = (rules, place, id) => { const s = mk(rules), pl = D.PLACES.find(p => p.id === place); s.loc = pl.district; for (let d = 0; d < 48 * 7; d++) for (const h of [12, 19]) { s.t = d * 1440 + h * 60; if (L.availableActions(s).some(a => a.id === id && !a.disabled)) return true; } return false; };
+  for (const [place, id] of [['abj_eagle', 'capc_durbar'], ['abj_jabi_lake', 'jlf_food'], ['abj_millennium', 'mpx_lights'], ['ph_waterfront', 'sfd_eat'], ['ph_obiwali_pl', 'gcb_talks'], ['ph_isaac', 'rvc_parade']]) {
+    assert.ok(seenAt(undefined, place, id), id + ' happens in a new life');
+    assert.ok(!seenAt(53, place, id), id + ' never in a rules-53 life');
+  }
+  for (const k of ['abj_eagle', 'abj_jabi_lake', 'abj_millennium', 'ph_waterfront', 'ph_obiwali_pl', 'ph_isaac']) for (const a of D.FESTIVALS[k]) { assert.ok(a.mins % 15 === 0 && a.minRules === 54, a.id); if (a.earn) assert.ok(a.gig && a.earn <= 3000, a.id); }
+  for (const id of ['ldn_trafalgar', 'ldn_stpauls', 'ldn_borough', 'acc_osucastle', 'acc_artscentre', 'acc_botanic']) {
+    const p = D.PLACES.find(x => x.id === id); assert.ok(p && p.nogem, id);
+    for (const a of D.CIVIC_ACTS[id]) { assert.ok(a.minRules === 54 && a.mins % 15 === 0 && !a.earn, a.id); }
+  }
+});
+
 test('Monthly (12 weeks) and Yearly (48 weeks) Lagos: shared seeds, run to their end, verify, keep playing; weekly unchanged', () => {
   const d = new Date(Date.UTC(2026, 10, 1));
   assert.equal(L.monthChallengeId(d), '2026-M11'); assert.equal(L.yearChallengeId(d), '2026-Y');

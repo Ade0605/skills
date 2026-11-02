@@ -893,6 +893,18 @@ html.lite *, html.lite *::before, html.lite *::after { animation: none !importan
 .ph-lock span { font: 600 13px var(--font-body); opacity: .9; }
 .ph-news { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 16px; background: rgba(255,255,255,.18); backdrop-filter: blur(8px); margin-bottom: 12px; overflow: hidden; }
 .ph-news-h { font: 800 11px var(--font-body); white-space: nowrap; }
+/* Shared Lagos boards widget on the phone home screen */
+.ph-boards { display: grid; gap: 6px; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 16px; background: rgba(255,255,255,.2); backdrop-filter: blur(8px); color: inherit; font: inherit; margin-bottom: 12px; cursor: pointer; }
+.ph-boards:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.bw-h { font: 800 12px var(--font-body); }
+.bw-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.bw-col { display: grid; gap: 2px; min-width: 0; padding: 6px 8px; border-radius: 10px; background: rgba(0,0,0,.14); font-size: 11px; }
+.bw-col b { font-size: 11px; opacity: .85; }
+.bw-col span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.bw-col small { opacity: .85; }
+.bw-col .bw-w { font-weight: 600; font-variant-numeric: tabular-nums; opacity: .92; }
+.bw-rem { font: 600 12px var(--font-body); }
+.panel-b .bw-rem { color: var(--warn, #b45309); }
 .ph-ticker { overflow: hidden; white-space: nowrap; mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
 .ph-ticker > div { display: inline-flex; gap: 28px; animation: ph-tick 28s linear infinite; font-size: 12px; }
 @keyframes ph-tick { from { transform: translateX(40%); } to { transform: translateX(-100%); } }
