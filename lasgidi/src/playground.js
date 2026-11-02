@@ -41,6 +41,8 @@
       water: [[[30.7, 24.2], [30.6, 25.1], [29.6, 25.7], [28.6, 25.9], [27.5, 25.7], [26.7, 25.1], [26.6, 24.2], [26.9, 23.4], [27.5, 22.7], [28.6, 22.5], [29.6, 22.7], [30.4, 23.3]], [[9.2, -2], [9.8, -2], [10.6, 6], [10.4, 12], [11.0, 17], [12.4, 22], [13.0, 27], [12.4, 27], [11.8, 22], [10.4, 17], [9.8, 12], [10.0, 6]]], label: [['Lake Bosomtwe', 28.6, 24.4], ['Subin River', 10.2, 8.4]] },
     ibadan: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 27], [-2, 27]]],
       water: [[[1.0, 12.6], [3.0, 12.0], [3.8, 13.2], [2.8, 14.6], [1.2, 14.2]]], label: [['Eleyele Lake', 2.4, 15.4]] },
+    calabar: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 27], [-2, 27]]],
+      water: [[[-2, -2], [2.6, -2], [3.4, 8], [2.6, 16], [3.4, 26], [-2, 27]], [[28.6, -2], [32, -2], [32, 27], [29.4, 27], [28.8, 16], [29.2, 6]]], label: [['Calabar River', 0.4, 12], ['Great Kwa River', 30.2, 14]] },
     enugu: { box: [-2, 32, -2, 27], land: [[[-2, -2], [32, -2], [32, 27], [-2, 27]]],
       water: [[[24.2, 3.4], [26.0, 3.2], [26.6, 4.4], [25.4, 5.4], [24.0, 4.8]]], label: [['Nike Lake', 25.4, 2.6]] },
     capecoast: { box: [-2, 32, -2, 25], land: [[[-2, -2], [32, -2], [32, 18], [26, 19.2], [20, 20.2], [17, 20.0], [14, 19.6], [10, 20.4], [6, 20.2], [3, 19.4], [-2, 19.6]]],
@@ -95,6 +97,13 @@
     acc_central:  { h: [5, 16], dens: 0.8, r: 2.8, foot: [0.6, 0.85], roof: '#a87850', wall: '#d6c4a8' },
     acc_jamestown:{ h: [3, 7], dens: 0.85, r: 2.4, foot: [0.6, 0.9], roof: '#b06a40', wall: '#c8a888' },
     acc_korlebu:  { h: [4, 10], dens: 0.6, r: 2.4, foot: [0.6, 0.85], roof: '#c0b8a8', wall: '#e8e4dc', trees: 0.2 },
+    cb_tinapa:    { h: [2, 7], dens: 0.25, r: 3.0, foot: [0.55, 0.8], roof: '#8a8a8a', wall: '#ece6da', trees: 0.5 },
+    cb_airport:   { h: [2, 6], dens: 0.4, r: 3.0, foot: [0.55, 0.8], roof: '#a05a3a', wall: '#efe6d4', trees: 0.45 },
+    cb_akim:      { h: [2, 5], dens: 0.6, r: 2.6, foot: [0.55, 0.8], roof: '#8a5a3a', wall: '#ddd0b8', trees: 0.3 },
+    cb_unical:    { h: [2, 7], dens: 0.45, r: 2.8, foot: [0.55, 0.8], roof: '#9a6a44', wall: '#e8dcc4', trees: 0.5 },
+    cb_diamond:   { h: [2, 5], dens: 0.4, r: 3.0, foot: [0.55, 0.8], roof: '#7a5a40', wall: '#f2ead8', trees: 0.55 },
+    cb_watt:      { h: [2, 6], dens: 0.85, r: 2.4, foot: [0.6, 0.9], roof: '#7a4a2e', wall: '#cdbda4', trees: 0.1 },
+    cb_marina:    { h: [2, 6], dens: 0.5, r: 2.6, foot: [0.55, 0.85], roof: '#a0603e', wall: '#e4d8c0', trees: 0.3 },
     ib_ui:        { h: [2, 6], dens: 0.35, r: 3.0, foot: [0.5, 0.75], roof: '#9a6a44', wall: '#e8dcc4', trees: 0.6 },
     ib_bodija:    { h: [2, 6], dens: 0.55, r: 2.8, foot: [0.55, 0.8], roof: '#8a5a3a', wall: '#e2d4bc', trees: 0.3 },
     ib_agodi:     { h: [3, 9], dens: 0.5, r: 2.8, foot: [0.55, 0.8], roof: '#9a7050', wall: '#e8e0d0', trees: 0.4 },
@@ -153,6 +162,7 @@
     abj_kubwa: 0.5, abj_maitama: 0.92, abj_wuse: 0.75, abj_jabi: 0.75, abj_asokoro: 0.95, abj_garki: 0.85, abj_nyanya: 0.45, abj_airport: 0.8,
     ph_airport: 0.7, ph_choba: 0.45, ph_rumuokoro: 0.45, ph_gra: 0.75, ph_transamadi: 0.65, ph_dline: 0.4, ph_oldgra: 0.55, ph_borokiri: 0.45,
     acc_airport: 0.7, acc_legon: 0.5, acc_eastlegon: 0.65, acc_circle: 0.45, acc_osu: 0.5, acc_labadi: 0.5, acc_central: 0.45, acc_jamestown: 0.35, acc_korlebu: 0.5,
+    cb_tinapa: 0.6, cb_airport: 0.7, cb_akim: 0.5, cb_unical: 0.55, cb_diamond: 0.65, cb_watt: 0.45, cb_marina: 0.6,
     ib_ui: 0.5, ib_bodija: 0.55, ib_agodi: 0.65, ib_mapo: 0.35, ib_dugbe: 0.6, ib_ringroad: 0.5, ib_iwo: 0.4,
     en_nsukka: 0.45, en_independence: 0.65, en_emene: 0.6, en_gra: 0.7, en_ngwo: 0.35, en_ogbete: 0.45, en_newhaven: 0.55, en_uwani: 0.45,
     cc_kakum: 0.3, cc_ucc: 0.6, cc_town: 0.5, cc_elmina: 0.4,
@@ -639,6 +649,7 @@
       if (CITY === 'capecoast') drawCapeCoast(g, s);
       if (CITY === 'ibadan') drawIbadan(g, s);
       if (CITY === 'enugu') drawEnugu(g, s);
+      if (CITY === 'calabar') drawCalabar(g, s);
       if (CITY === 'ldn') drawLondon(g, s);
       if (CITY === 'ctn') drawCapeTown(g, s);
       if (CITY === 'ph') drawPH(g, s);
@@ -879,6 +890,12 @@
       // The old city of brown zinc roofs round Mapo hill, and the green campus at UI.
       poly(g, [[9, 12], [17, 11.6], [18.4, 17.6], [10, 18.6]], theme.dark ? '#4a3426' : '#b9845a'); // brown roofs
       poly(g, [[3, 1], [11, 0.6], [11.4, 6.4], [3.4, 6.8]], theme.dark ? '#24402a' : '#7fae6a'); // UI campus
+    }
+    function drawCalabar(g, s) {
+      // Green palms along the rivers and the lakes at Tinapa.
+      poly(g, [[3.4, -2], [6, -2], [5.6, 26], [3.4, 26]], theme.dark ? '#24402a' : '#6c9a5c');
+      poly(g, [[26.6, -2], [28.6, -2], [28.8, 26], [26.8, 26]], theme.dark ? '#24402a' : '#6c9a5c');
+      poly(g, [[5.4, 0.6], [8.6, 0.4], [8.8, 2.0], [5.6, 2.2]], theme.dark ? '#1d3b52' : '#7fb8d8'); // Tinapa lakes
     }
     function drawEnugu(g, s) {
       // The Udi escarpment and pines to the west, the coal hills behind Coal Camp.

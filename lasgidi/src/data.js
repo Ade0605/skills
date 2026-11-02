@@ -66,6 +66,14 @@
     en_ogbete:    { city: 'enugu', name: 'Ogbete and Coal Camp', x: 10, y: 16, side: 'mainland', blurb: "Ogbete Main Market, the Holy Ghost motor park and the old coal miners' quarters." },
     en_newhaven:  { city: 'enugu', name: 'New Haven and Ogui', x: 19, y: 16, side: 'mainland', blurb: 'Shops, the stadium and the busy Ogui road.' },
     en_uwani:     { city: 'enugu', name: 'Uwani',          x: 13, y: 22, side: 'mainland', blurb: 'Family houses, churches and the Uwani market.' },
+    // Calabar (rules 61): the Cross River capital between the Calabar River and the Great Kwa. An airport and coaches.
+    cb_tinapa:    { city: 'calabar', name: 'Tinapa and Adiabo', x: 7, y: 3, side: 'mainland', blurb: 'The Tinapa resort, its film studio and lakes, up the Calabar River.' },
+    cb_airport:   { city: 'calabar', name: 'Airport and State Housing', x: 18, y: 6, side: 'mainland', blurb: 'Margaret Ekpo International Airport and tidy housing estates under the trees.' },
+    cb_akim:      { city: 'calabar', name: 'Akim and Ikot Ansa', x: 12, y: 10, side: 'mainland', blurb: 'Family compounds, the U.J. Esuene Stadium and the road north.' },
+    cb_unical:    { city: 'calabar', name: 'UNICAL and Etta Agbor', x: 21, y: 13, side: 'mainland', blurb: 'The University of Calabar, its teaching hospital and student life.' },
+    cb_diamond:   { city: 'calabar', name: 'Diamond Hill', x: 9, y: 16, side: 'mainland', blurb: 'The Old Residency on its hill, the drill monkey sanctuary and quiet old streets.' },
+    cb_watt:      { city: 'calabar', name: 'Watt Market and Calabar South', x: 16, y: 20, side: 'mainland', blurb: 'The big Watt Market, the motor park and busy streets full of kekes.' },
+    cb_marina:    { city: 'calabar', name: 'Marina and Duke Town', x: 6, y: 23, side: 'mainland', blurb: "The riverfront, the Slave History Museum, Duke Town church and Mary Slessor's grave." },
     // Kumasi (rules 25): the Garden City, the seat of the Asante kingdom.
     kum_airport:  { city: 'kumasi', name: 'Airport Roundabout', x: 22, y: 5,  side: 'mainland', blurb: 'Kumasi airport, the Prempeh I Airport road and new hotels.' },
     kum_manhyia:  { city: 'kumasi', name: 'Manhyia',      x: 14, y: 5,  side: 'mainland', blurb: 'The Asantehene\'s palace, the museum and the festival grounds.' },
@@ -344,6 +352,7 @@
     capecoast: { name: 'Cape Coast', airport: 'cc_town', park: 'cc_town', hospital: 'cc_town', hospitalName: 'Cape Coast Teaching Hospital', rules: 28, country: 'Ghana', noAir: true },
     ibadan: { name: 'Ibadan', airport: 'ib_iwo', park: 'ib_iwo', hospital: 'ib_agodi', hospitalName: 'University College Hospital (UCH)', rules: 59, noAir: true },
     enugu: { name: 'Enugu', airport: 'en_emene', park: 'en_ogbete', hospital: 'en_gra', hospitalName: 'the teaching hospital at Park Lane', rules: 59 },
+    calabar: { name: 'Calabar', airport: 'cb_airport', park: 'cb_watt', hospital: 'cb_unical', hospitalName: 'the University of Calabar Teaching Hospital', rules: 61 },
     ctn:   { name: 'Cape Town', airport: 'ctn_airport', park: 'ctn_airport', hospital: 'ctn_obs', hospitalName: 'Groote Schuur Hospital', rules: 42, country: 'South Africa', visit: true },
     ldn:   { name: 'London', airport: 'ldn_heathrow', park: 'ldn_heathrow', hospital: 'ldn_southbank', hospitalName: 'St Thomas\' Hospital', rules: 23, country: 'UK', visit: true }
   };
@@ -358,6 +367,7 @@
     capecoast: { cur: 'GHS', sym: '₵', rate: 130, person: 'Cape Coaster', people: 'Cape Coasters', slogan: 'Oguaa: where history meets the sea.', terms: [['Oguaa', 'the old name for Cape Coast'], ['Fetu Afahye', 'the town festival'], ['Akwaaba', 'welcome']] },
     ibadan: { cur: 'NGN', sym: '₦', rate: 1, person: 'Ibadan person', people: 'Ibadan people', slogan: 'Ibadan: the city of seven hills.', terms: [['Ẹ ṣé', 'thank you'], ['Ẹ kú iṣẹ́', 'well done at work'], ['Amala, gbegiri and ewedu', 'the Ibadan plate'], ['Ilu Oluyole', 'Ibadan, the land of Oluyole']] },
     enugu: { cur: 'NGN', sym: '₦', rate: 1, person: 'Enugu resident', people: 'Enugu residents', slogan: 'The Coal City.', terms: [['Kedu?', 'how are you?'], ['Daalụ', 'thank you'], ['Nwanne', 'my brother, my sister'], ['Abacha and ugba', 'the African salad'], ['Coal City', 'Enugu, named for its coal mines']] },
+    calabar: { cur: 'NGN', sym: '₦', rate: 1, person: 'Calabarian', people: 'Calabarians', slogan: "Calabar: the people's paradise.", terms: [['Abadie?', 'how are you? (Efik)'], ['Sosongo', 'thank you'], ['Edikang ikong', 'the vegetable soup of kings'], ['Afang', 'a soup of afang leaves and waterleaf'], ['Canaan City', 'what some call Calabar']] },
     ldn: { cur: 'GBP', sym: '£', rate: 2000, dp: 2, person: 'Londoner', people: 'Londoners', slogan: 'Keep calm and carry on.', terms: [['Cheers', 'thanks'], ['Innit', 'isn\'t it'], ['The Tube', 'the Underground'], ['Fancy a cuppa?', 'tea?'], ['Mind the gap', 'step carefully']] },
     dxb: { cur: 'AED', sym: 'AED ', rate: 420, dp: 2, person: 'Dubai resident', people: 'Dubai residents', slogan: 'Where the future lives.', terms: [['Marhaba', 'hello'], ['Yalla', 'let\'s go'], ['Shukran', 'thank you'], ['Inshallah', 'God willing'], ['Habibi', 'my friend']] },
     ctn: { cur: 'ZAR', sym: 'R', rate: 85, dp: 2, person: 'Capetonian', people: 'Capetonians', slogan: 'The Mother City.', terms: [['Howzit', 'hello, how are you?'], ['Lekker', 'great'], ['Braai', 'a barbecue'], ['Now now', 'soon'], ['Eish', 'oh no']] }
@@ -418,7 +428,7 @@
       ] }
   };
   CLUBS.abjgolf.acts = CLUBS.golf.acts.map(function (a) { return JSON.parse(JSON.stringify(a)); });
-  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', enugu: 'ENU', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR', dxb: 'DXB', ctn: 'CPT' };
+  var CITY_CODES = { lagos: 'LOS', abuja: 'ABV', ph: 'PHC', enugu: 'ENU', calabar: 'CBQ', accra: 'ACC', kumasi: 'KMS', ldn: 'LHR', dxb: 'DXB', ctn: 'CPT' };
   // London (rules 23): prices are written in pounds and kept in naira at a fixed £1 = ₦2,000; the visa is a fee plus proof of funds.
   function gbp(p) { return Math.round(p * 2000); }
   var UK_VISA = { fee: 250000, funds: 3000000, wait: 5, days: 28, fare: 1200000, mins: 390 };
@@ -433,7 +443,7 @@
   // Flight and bus times (minutes) and base fares between cities.
   var INTERCITY = {
     flight: { name: 'Flight', mins: 180, fare: 150000 },
-    bus:    { name: 'Long-distance bus', fare: 30000, mins: { 'lagos-abuja': 720, 'abuja-lagos': 720, 'lagos-ph': 660, 'ph-lagos': 660, 'abuja-ph': 690, 'ph-abuja': 690, 'lagos-accra': 720, 'accra-lagos': 720, 'abuja-accra': 1200, 'accra-abuja': 1200, 'ph-accra': 1140, 'accra-ph': 1140, 'accra-kumasi': 300, 'kumasi-accra': 300, 'lagos-kumasi': 960, 'kumasi-lagos': 960, 'abuja-kumasi': 1380, 'kumasi-abuja': 1380, 'ph-kumasi': 1320, 'kumasi-ph': 1320, 'accra-capecoast': 180, 'capecoast-accra': 180, 'kumasi-capecoast': 240, 'capecoast-kumasi': 240, 'lagos-capecoast': 900, 'capecoast-lagos': 900, 'abuja-capecoast': 1380, 'capecoast-abuja': 1380, 'ph-capecoast': 1320, 'capecoast-ph': 1320, 'lagos-ibadan': 150, 'ibadan-lagos': 150, 'abuja-ibadan': 600, 'ibadan-abuja': 600, 'ph-ibadan': 600, 'ibadan-ph': 600, 'accra-ibadan': 840, 'ibadan-accra': 840, 'kumasi-ibadan': 1080, 'ibadan-kumasi': 1080, 'capecoast-ibadan': 1020, 'ibadan-capecoast': 1020, 'lagos-enugu': 600, 'enugu-lagos': 600, 'abuja-enugu': 360, 'enugu-abuja': 360, 'ph-enugu': 270, 'enugu-ph': 270, 'accra-enugu': 1260, 'enugu-accra': 1260, 'kumasi-enugu': 1500, 'enugu-kumasi': 1500, 'capecoast-enugu': 1440, 'enugu-capecoast': 1440, 'ibadan-enugu': 480, 'enugu-ibadan': 480 } }
+    bus:    { name: 'Long-distance bus', fare: 30000, mins: { 'lagos-abuja': 720, 'abuja-lagos': 720, 'lagos-ph': 660, 'ph-lagos': 660, 'abuja-ph': 690, 'ph-abuja': 690, 'lagos-accra': 720, 'accra-lagos': 720, 'abuja-accra': 1200, 'accra-abuja': 1200, 'ph-accra': 1140, 'accra-ph': 1140, 'accra-kumasi': 300, 'kumasi-accra': 300, 'lagos-kumasi': 960, 'kumasi-lagos': 960, 'abuja-kumasi': 1380, 'kumasi-abuja': 1380, 'ph-kumasi': 1320, 'kumasi-ph': 1320, 'accra-capecoast': 180, 'capecoast-accra': 180, 'kumasi-capecoast': 240, 'capecoast-kumasi': 240, 'lagos-capecoast': 900, 'capecoast-lagos': 900, 'abuja-capecoast': 1380, 'capecoast-abuja': 1380, 'ph-capecoast': 1320, 'capecoast-ph': 1320, 'lagos-ibadan': 150, 'ibadan-lagos': 150, 'abuja-ibadan': 600, 'ibadan-abuja': 600, 'ph-ibadan': 600, 'ibadan-ph': 600, 'accra-ibadan': 840, 'ibadan-accra': 840, 'kumasi-ibadan': 1080, 'ibadan-kumasi': 1080, 'capecoast-ibadan': 1020, 'ibadan-capecoast': 1020, 'lagos-enugu': 600, 'enugu-lagos': 600, 'abuja-enugu': 360, 'enugu-abuja': 360, 'ph-enugu': 270, 'enugu-ph': 270, 'accra-enugu': 1260, 'enugu-accra': 1260, 'kumasi-enugu': 1500, 'enugu-kumasi': 1500, 'capecoast-enugu': 1440, 'enugu-capecoast': 1440, 'ibadan-enugu': 480, 'enugu-ibadan': 480, 'lagos-calabar': 900, 'calabar-lagos': 900, 'abuja-calabar': 720, 'calabar-abuja': 720, 'ph-calabar': 300, 'calabar-ph': 300, 'accra-calabar': 1500, 'calabar-accra': 1500, 'kumasi-calabar': 1740, 'calabar-kumasi': 1740, 'capecoast-calabar': 1680, 'calabar-capecoast': 1680, 'ibadan-calabar': 900, 'calabar-ibadan': 900, 'enugu-calabar': 360, 'calabar-enugu': 360 } }
   };
 
   // Drawn on the map only; travel uses straight-line distance x 1.3.
@@ -451,6 +461,7 @@
     ['cc_kakum', 'cc_town'], ['cc_kakum', 'cc_ucc'], ['cc_ucc', 'cc_town'], ['cc_town', 'cc_elmina'],
     ['ib_ui', 'ib_bodija'], ['ib_bodija', 'ib_agodi'], ['ib_bodija', 'ib_mapo'], ['ib_agodi', 'ib_mapo'], ['ib_agodi', 'ib_iwo'], ['ib_mapo', 'ib_dugbe'], ['ib_mapo', 'ib_ringroad'], ['ib_dugbe', 'ib_ringroad'], ['ib_ringroad', 'ib_iwo'],
     ['en_nsukka', 'en_independence'], ['en_independence', 'en_emene'], ['en_independence', 'en_gra'], ['en_gra', 'en_ngwo'], ['en_gra', 'en_ogbete'], ['en_ogbete', 'en_newhaven'], ['en_newhaven', 'en_independence'], ['en_ogbete', 'en_uwani'], ['en_newhaven', 'en_uwani'],
+    ['cb_tinapa', 'cb_akim'], ['cb_akim', 'cb_airport'], ['cb_airport', 'cb_unical'], ['cb_akim', 'cb_diamond'], ['cb_unical', 'cb_watt'], ['cb_diamond', 'cb_watt'], ['cb_diamond', 'cb_marina'], ['cb_watt', 'cb_marina'],
     ['kum_airport', 'kum_manhyia'], ['kum_airport', 'kum_knust'], ['kum_manhyia', 'kum_kejetia'], ['kum_bantama', 'kum_kejetia'], ['kum_kejetia', 'kum_adum'], ['kum_kejetia', 'kum_knust'],
     ['kum_adum', 'kum_asokwa'], ['kum_adum', 'kum_ahodwo'], ['kum_bantama', 'kum_ahodwo'], ['kum_knust', 'kum_asokwa'], ['kum_asokwa', 'kum_bosomtwe'],
     ['dxb_marina', 'dxb_palm'], ['dxb_marina', 'dxb_jumeirah'], ['dxb_palm', 'dxb_jumeirah'], ['dxb_jumeirah', 'dxb_downtown'], ['dxb_downtown', 'dxb_creek'], ['dxb_creek', 'dxb_deira'],
@@ -515,6 +526,7 @@
     squat_capecoast: { name: "On a friend's sofa, Cape Coast", district: 'cc_town', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
     squat_ibadan: { name: "On a friend's sofa, Agbowo", district: 'ib_ui', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
     squat_enugu: { name: "On a friend's sofa, Uwani", district: 'en_uwani', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
+    squat_calabar: { name: "On a friend's sofa, Calabar South", district: 'cb_watt', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
     squat_ldn: { name: "On a friend's sofa, Peckham", district: 'ldn_peckham', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
     squat_dxb: { name: "On a friend's sofa, Deira", district: 'dxb_deira', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
     squat_ctn: { name: "On a friend's sofa, Observatory", district: 'ctn_obs', rent: 0, power: 0.5, sleep: 0.6, hidden: true, type: 'room', rules: 45 },
@@ -574,6 +586,10 @@
     en_ogui_miniflat:  { name: 'Mini flat off Ogui Road', district: 'en_newhaven', rent: 9000, power: 0.55, sleep: 0.95, type: 'miniflat', x: 19.6, y: 16.6 },
     en_independence_flat: { name: '3-bed flat, Independence Layout', district: 'en_independence', rent: 30000, power: 0.7, sleep: 1.05, type: 'flat3', x: 20.6, y: 7.6 },
     en_gra_bungalow:   { name: 'Colonial bungalow, GRA', district: 'en_gra', rent: 55000, power: 0.75, sleep: 1.1, type: 'duplex', x: 12.4, y: 9.4 },
+    cb_watt_room:      { name: 'Room in a family house, Calabar South', district: 'cb_watt', rent: 4000, power: 0.55, sleep: 0.85, type: 'room', x: 16.6, y: 20.6 },
+    cb_akim_sc:        { name: 'Self-contain in Ikot Ansa', district: 'cb_akim', rent: 7500, power: 0.6, sleep: 0.95, type: 'selfcon', x: 12.6, y: 10.6 },
+    cb_unical_flat:    { name: '2-bed flat near UNICAL', district: 'cb_unical', rent: 16000, power: 0.6, sleep: 1, type: 'flat2', x: 21.6, y: 12.4 },
+    cb_housing_duplex: { name: 'Duplex in State Housing', district: 'cb_airport', rent: 42000, power: 0.75, sleep: 1.1, type: 'duplex', x: 18.6, y: 6.6 },
     kum_bt_room:       { name: 'Room in a compound house, Bantama', district: 'kum_bantama', rent: 6000, power: 0.7, sleep: 0.9, type: 'room', x: 5.6, y: 10.6 },
     kum_ah_flat:       { name: '2-bed flat, Ahodwo', district: 'kum_ahodwo', rent: 34000, power: 0.85, sleep: 1, type: 'flat2', x: 9.6, y: 20.4 },
     ldn_pk_room:       { name: 'Room in a shared house, Peckham', district: 'ldn_peckham', rent: 50000, power: 1, sleep: 0.95, type: 'room', x: 21.4, y: 21.4, rules: 42 },
@@ -685,6 +701,12 @@
     acc_guide:   { name: 'Tour Guiding (Accra)', district: 'acc_jamestown', skill: 'charisma', start: 9, end: 17, days: [1,2,3,4,5,6],
       titles: ['Trainee Guide', 'Guide', 'Senior Guide', 'Tour Lead', 'Tour Company Owner'],
       pay: [4500, 7000, 11000, 18000, 30000], req: [0, 2, 4, 6, 9] },
+    cb_port:     { name: 'Calabar River Port Logistics (Marina)', district: 'cb_marina', skill: 'hustle', start: 7, end: 15, days: [0,1,2,3,4,5],
+      titles: ['Tally Clerk', 'Forwarding Agent', 'Clearing Officer', 'Port Manager', 'Shipping Line Owner'],
+      pay: [4400, 7000, 11500, 19000, 31000], req: [0, 2, 4, 6, 9] },
+    cb_catering: { name: 'Efik Pot Catering (Diamond Hill)', district: 'cb_diamond', skill: 'cooking', start: 9, end: 17, days: [0,1,2,3,4,5],
+      titles: ['Kitchen Hand', 'Cook', 'Head Cook', 'Events Chef', 'Catering House Owner'],
+      pay: [4000, 6400, 10200, 17000, 28500], req: [0, 2, 4, 6, 9] },
     ib_cocoa:    { name: 'Oluyole Cocoa Exporters (Dugbe)', district: 'ib_dugbe', skill: 'hustle', start: 8, end: 16, days: [0,1,2,3,4],
       titles: ['Bag Tallier', 'Buying Clerk', 'Produce Buyer', 'Export Manager', 'Cocoa Merchant'],
       pay: [4400, 7000, 11500, 19000, 31000], req: [0, 2, 4, 6, 9] },
@@ -892,6 +914,29 @@
     acc_korlebu: [
       { id: 'acc_kb_waakye', label: 'Waakye from the hospital gate', mins: 30, cost: 1300, fx: { hunger: 32 }, when: { from: 6, to: 14 } },
       { id: 'acc_kb_gig', label: 'Porter shift at the hospital', mins: 180, earn: 2000, fx: { energy: -12 }, gig: true, when: { from: 7, to: 19 } }
+    ],
+    // Calabar (rules 61).
+    cb_tinapa: [
+      { id: 'cb_tinapa_gig', label: 'Help set up for a film shoot at the Tinapa studio', mins: 180, earn: 2400, fx: { energy: -12, fun: 6 }, xp: { craft: 1 }, gig: true, when: { from: 8, to: 18 } }
+    ],
+    cb_airport: [
+      { id: 'cb_airport_gig', label: 'Help passengers with their bags at the airport', mins: 180, earn: 2200, fx: { energy: -14 }, xp: { fitness: 1 }, gig: true, when: { from: 6, to: 20 } }
+    ],
+    cb_akim: [
+      { id: 'cb_akim_gig', label: 'Wash cars at the Ikot Ansa junction', mins: 180, earn: 1900, fx: { energy: -14, hygiene: -10 }, xp: { fitness: 1 }, gig: true, when: { from: 7, to: 18 } }
+    ],
+    cb_unical: [
+      { id: 'cb_unical_gig', label: 'Type and print projects for UNICAL final-year students', mins: 120, earn: 1800, fx: { energy: -8 }, xp: { tech: 1 }, gig: true, when: { from: 9, to: 20 } }
+    ],
+    cb_diamond: [
+      { id: 'cb_diamond_gig', label: 'Garden work at an old Diamond Hill house', mins: 180, earn: 2000, fx: { energy: -14, hygiene: -8 }, xp: { craft: 1 }, gig: true, when: { from: 7, to: 16 } }
+    ],
+    cb_watt: [
+      { id: 'cb_watt_food', label: 'Buy foodstuff at Watt Market (7 meals)', mins: 60, cost: 4400, special: 'pantry7', when: { from: 7, to: 19 } },
+      { id: 'cb_watt_gig', label: 'Carry loads for traders at Watt Market', mins: 180, earn: 2000, fx: { energy: -16, hygiene: -8 }, xp: { fitness: 1 }, gig: true, when: { from: 6, to: 18 } }
+    ],
+    cb_marina: [
+      { id: 'cb_marina_gig', label: 'Sell cold zobo and water on the Marina', mins: 180, earn: 1900, fx: { energy: -10, social: 4 }, xp: { hustle: 1 }, gig: true, when: { from: 10, to: 20 } }
     ],
     // Ibadan and Enugu (rules 59).
     ib_ui: [
@@ -1729,7 +1774,7 @@
     ph_gra: { mult: 1.1, rent: 15000 }, ph_dline: { mult: 1.0, rent: 8000 }, ph_rumuokoro: { mult: 0.9, rent: 5000 },
     acc_osu: { mult: 1.1, rent: 15000 }, acc_central: { mult: 1.0, rent: 9000 }, acc_eastlegon: { mult: 1.15, rent: 26000 },
     cc_town: { mult: 0.95, rent: 7000 },
-    ib_dugbe: { mult: 1.0, rent: 9000, rules: 59 }, ib_bodija: { mult: 0.95, rent: 7000, rules: 59 }, en_ogbete: { mult: 1.0, rent: 8000, rules: 59 }, en_independence: { mult: 1.05, rent: 12000, rules: 59 },
+    ib_dugbe: { mult: 1.0, rent: 9000, rules: 59 }, cb_watt: { mult: 1.0, rent: 8000, rules: 61 }, cb_marina: { mult: 1.05, rent: 11000, rules: 61 }, ib_bodija: { mult: 0.95, rent: 7000, rules: 59 }, en_ogbete: { mult: 1.0, rent: 8000, rules: 59 }, en_independence: { mult: 1.05, rent: 12000, rules: 59 },
     kum_adum: { mult: 1.05, rent: 11000 }, kum_kejetia: { mult: 1.0, rent: 8000 }, kum_ahodwo: { mult: 1.1, rent: 20000 },
     // Rules 41: London and Dubai, with a business visa or trade licence (BIZ_LICENCES).
     ldn_tower: { mult: 1.6, rent: 150000, rules: 41 }, ldn_oxford: { mult: 1.5, rent: 120000, rules: 41 }, ldn_peckham: { mult: 1.3, rent: 60000, rules: 41 },
@@ -2239,6 +2284,7 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ['ph_library', '📚', 'Garden City Library, GRA', 'learn', 'book', 'ph_gra', 12.2, 10.6, 'library', 'Rows of shelves, reading tables, a computer room and a strict librarian.'],
     ['abj_office', '🏢', 'Garki Office Towers', 'services', 'tower', 'abj_garki', 14.2, 16.8, 'office', 'Glass towers by the business district: a co-working floor, meeting rooms and the canteen.'],
     ['acc_hospital', '🏥', 'Korle Bu Teaching Hospital', 'services', 'cross', 'acc_korlebu', 4.6, 16.4, 'hospital', 'Reception, the nurses\' station, the doctor, a ward and the pharmacy.'],
+    ['cb_hospital', '🏥', 'University of Calabar Teaching Hospital', 'services', 'cross', 'cb_unical', 22.4, 14.0, 'hospital', 'Reception, the nurses\' station, the doctor, a ward and the pharmacy.'],
     ['ib_uch', '🏥', 'University College Hospital (UCH)', 'services', 'cross', 'ib_agodi', 20.4, 11.0, 'hospital', 'Reception, the nurses\' station, the doctor, a ward and the pharmacy.'],
     ['en_hospital', '🏥', 'Teaching Hospital, Park Lane', 'services', 'cross', 'en_gra', 14.2, 11.2, 'hospital', 'Reception, the nurses\' station, the doctor, a ward and the pharmacy.'],
     ['acc_hotel', '🏨', 'Osu Grand Hotel', 'nightlife', 'hotel', 'acc_osu', 19.2, 17.0, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
@@ -2249,6 +2295,7 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ['cc_hotel', '🏨', 'Castle View Hotel', 'nightlife', 'hotel', 'cc_town', 17.0, 17.6, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
     ['ib_hotel', '🏨', 'Seven Hills Grand Hotel', 'nightlife', 'hotel', 'ib_agodi', 21.2, 13.0, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
     ['en_hotel', '🏨', 'Coal City Grand Hotel', 'nightlife', 'hotel', 'en_independence', 21.4, 8.4, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
+    ['cb_hotel', '🏨', 'Riverside Grand Hotel, Calabar', 'nightlife', 'hotel', 'cb_marina', 7.6, 22.2, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
     ['kum_hotel', '🏨', 'Garden City Hotel', 'nightlife', 'hotel', 'kum_ahodwo', 8.0, 19.0, 'hotel', 'Marble lobby, chandelier, a pool atrium, the spa and the buffet.'],
     ['ph_office', '🏢', 'Trans-Amadi Business Tower', 'services', 'tower', 'ph_transamadi', 22.6, 12.6, 'office', 'Glass towers on the industrial layout: a co-working floor, meeting rooms and the canteen.']
   ].forEach(function (q) {
@@ -2608,6 +2655,63 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['cc_station', '🚌', 'Kotokuraba Lorry Station', 'transport', 'bus', 'cc_town', 13.2, 16.6, null, 'Tro-tros to Elmina, Kakum and Takoradi, and coaches to Accra, Kumasi and Lagos.', [
       act('ccs_tea', 'Tea and bread at the station', 15, 700, 0, { hunger: 16 }, null, { from: 5, to: 22 })
+    ]],
+    // Calabar (rules 61): real landmarks keep their names; the businesses are made up.
+    ['cb_residency', '🏛️', 'Old Residency Museum', 'culture', 'frame', 'cb_diamond', 8.4, 15.2, 'landmark', 'The prefabricated colonial residency of 1884, shipped from Britain, now a museum of Calabar history.', [
+      act('ors_tour', 'Tour the Old Residency rooms', 60, 1000, 0, { fun: 10 }, { charisma: 1 }, { from: 9, to: 17 }),
+      act('ors_veranda', 'Look out from the veranda over the river', 30, 0, 0, { fun: 8, stress: -6 }, null, { from: 9, to: 17 }),
+      act('ors_trade', 'Read about the palm oil trade and the Efik kings', 30, 0, 0, { fun: 4 }, { charisma: 1 }, { from: 9, to: 17 })
+    ]],
+    ['cb_slave_museum', '🏚️', 'Slave History Museum', 'culture', 'frame', 'cb_marina', 5.2, 23.6, null, 'On the old trading beach: the story of the slave trade through Calabar, told room by room.', [
+      act('shm_tour', 'Walk through the museum, room by room', 60, 1000, 0, { stress: 8, social: 4 }, { charisma: 1 }, { from: 9, to: 17 }),
+      act('shm_silence', 'Stand on the old trading beach in silence', 30, 0, 0, { stress: 6, social: 4 }, null, { from: 9, to: 17 }),
+      act('shm_guide', 'Hear a guide tell the history', 30, 500, 0, { social: 6 }, { charisma: 1 }, { from: 10, to: 16 })
+    ]],
+    ['cb_marina_front', '🌊', 'Calabar Marina', 'outdoors', 'wave', 'cb_marina', 6.8, 24.4, null, 'The riverfront promenade with boats, a jetty and food stalls at sunset.', [
+      act('cmf_walk', 'Walk the riverfront at sunset', 45, 0, 0, { fun: 10, stress: -8 }, null, { from: 16, to: 20 }),
+      act('cmf_boat', 'A boat ride on the Calabar River', 60, 3000, 0, { fun: 16, stress: -6 }, null, { from: 9, to: 18 }),
+      act('cmf_fish', 'Grilled fish and plantain at the stalls', 30, 2200, 0, { hunger: 34, fun: 4 }, null, { from: 16, to: 22 })
+    ]],
+    ['cb_slessor', '🕊️', "Mary Slessor's grave", 'culture', 'frame', 'cb_marina', 8.2, 21.8, null, 'The missionary who fought to save twins, buried in the old Duke Town cemetery.', [
+      act('msg_visit', 'Visit the grave and read the stone', 30, 0, 0, { stress: -4, social: 2 }, null, { from: 8, to: 18 }),
+      act('msg_church', 'Look inside the old Duke Town church', 30, 0, 0, { stress: -6 }, null, { from: 8, to: 17 }),
+      act('msg_story', 'Read the story of the twins she saved', 15, 0, 0, { fun: 4 }, { charisma: 1 }, { from: 8, to: 18 })
+    ]],
+    ['cb_drill', '🐒', 'Drill Monkey Sanctuary', 'outdoors', 'tree', 'cb_diamond', 10.8, 17.2, null, 'Rescued drill monkeys and chimpanzees, cared for in a leafy yard in town.', [
+      act('dms_visit', 'Meet the rescued drill monkeys', 45, 1500, 0, { fun: 14, stress: -6 }, null, { from: 9, to: 16 }),
+      act('dms_talk', 'Hear the keepers talk about the forest', 30, 0, 0, { fun: 6, social: 4 }, null, { from: 10, to: 15 }),
+      act('dms_volunteer', 'Volunteer an hour cleaning the yards', 60, 0, 0, { energy: -10, social: 6, stress: -4 }, { fitness: 1 }, { from: 8, to: 12 })
+    ]],
+    ['cb_watt_mkt', '🧺', 'Watt Market', 'food', 'basket', 'cb_watt', 15.4, 19.6, null, 'Calabar\'s big market: periwinkles, afang leaves, crayfish, cloth and everything else.', [
+      act('wtm_cloth', 'Buy wrapper cloth for an outfit', 30, 8000, 0, { fun: 8 }, null, { from: 8, to: 18 }),
+      act('wtm_snack', 'Roasted plantain and groundnuts while you shop', 15, 600, 0, { hunger: 12 }, null, { from: 8, to: 18 }),
+      act('wtm_phone', 'Buy a phone case and a charger', 30, 3000, 0, { fun: 4 }, null, { from: 8, to: 18 })
+    ]],
+    ['cb_kitchen', '🍲', "Mma Affiong's Kitchen", 'food', 'bowl', 'cb_watt', 17.2, 21.0, null, 'Edikang ikong, afang soup and ekpang nkukwo, cooked the Calabar way.', [
+      act('maf_edikang', 'Edikang ikong with fufu', 30, 2600, 0, { hunger: 44, fun: 6 }, null, { from: 11, to: 21 }),
+      act('maf_afang', 'Afang soup with pounded yam', 30, 2400, 0, { hunger: 42 }, null, { from: 11, to: 21 }),
+      act('maf_ekpang', 'Ekpang nkukwo (cocoyam and periwinkle pottage)', 30, 2000, 0, { hunger: 38 }, null, { from: 11, to: 20 })
+    ]],
+    ['cb_park', '🚌', 'Calabar South Motor Park', 'transport', 'bus', 'cb_watt', 16.8, 18.6, null, 'Buses to Uyo, Port Harcourt, Enugu, Abuja and Lagos.', [
+      act('csp_snack', 'Moi moi and a cold drink at the park', 15, 800, 0, { hunger: 18 }, null, { from: 5, to: 21 }),
+      act('csp_eggs', 'Boiled eggs and groundnuts for the road', 15, 600, 0, { hunger: 10 }, null, { from: 6, to: 20 }),
+      act('csp_shade', 'Wait in the shade for the bus to fill', 30, 0, 0, { stress: -2, fun: 2 }, null, { from: 6, to: 20 })
+    ]],
+    ['cb_unical_uni', '🎓', 'University of Calabar', 'learn', 'cap', 'cb_unical', 20.4, 12.4, null, 'Lecture halls under the trees, the library, the hostels and the busy campus gate.', 'ucb_'],
+    ['cb_stadium', '🏟️', 'U.J. Esuene Stadium', 'outdoors', 'stadium', 'cb_akim', 13.0, 11.4, null, 'The city stadium, busy on match days and with joggers at dawn.', [
+      act('ujs_match', 'Watch the home side play on Sunday', 120, 1500, 0, { fun: 24, social: 10 }, null, { days: [6], from: 15, to: 19 }),
+      act('ujs_jog', 'Jog round the track in the morning', 45, 0, 0, { energy: -10, stress: -8 }, { fitness: 1 }, { from: 6, to: 9 }),
+      act('ujs_train', 'Watch the team train', 30, 0, 0, { fun: 6 }, null, { from: 16, to: 18 })
+    ]],
+    ['cb_airport_pl', '✈️', 'Margaret Ekpo International Airport', 'transport', 'plane', 'cb_airport', 18.8, 5.2, null, 'Flights to Lagos and Abuja from a calm terminal.', [
+      act('mea_snack', 'Meat pie and a soft drink at the terminal', 15, 1500, 0, { hunger: 14 }, null, { from: 6, to: 21 }),
+      act('mea_watch', 'Watch the planes from the terminal windows', 30, 0, 0, { fun: 8 }, null, { from: 7, to: 19 }),
+      act('mea_lounge', 'Charge your phone in the lounge', 30, 1000, 0, { stress: -6 }, null, { from: 6, to: 21 })
+    ]],
+    ['cb_tinapa_pl', '🎬', 'Tinapa', 'outdoors', 'tree', 'cb_tinapa', 6.2, 2.6, null, 'A big resort of empty shopfronts, lakes and a film studio: quiet, strange and good for a walk.', [
+      act('tnp_walk', 'Walk round the lakes and the empty arcades', 60, 0, 0, { fun: 10, stress: -8 }, null, { from: 8, to: 18 }),
+      act('tnp_studio', 'Peek into the film studio lot', 30, 1000, 0, { fun: 10 }, null, { from: 10, to: 16 }),
+      act('tnp_water', 'Splash in the water park pool', 60, 2500, 0, { fun: 16, energy: -8 }, null, { days: [5, 6], from: 10, to: 17 })
     ]],
     // Ibadan and Enugu (rules 59): real landmarks keep their names; the businesses are made up.
     ['ib_ui_uni', '🎓', 'University of Ibadan', 'learn', 'cap', 'ib_ui', 6.4, 3.4, null, "Nigeria's first university: Trenchard Hall, the Kenneth Dike Library and halls named after heroes.", 'uib_'],
@@ -3179,6 +3283,10 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
   var THEATRE_CREW = { id: 'th_crew', label: 'Work as stage crew at the National Theatre', mins: 240, earn: 2500, fx: { energy: -16, social: 4 }, xp: { craft: 1 }, gig: true, once: true, minRules: 31, when: { days: [2, 3, 4, 5, 6], from: 12, to: 20 } };
   // Rules 21: weekend events on a four-week rotation (when.wk is the week of the month), at their places.
   var EVENT_ACTS = {
+    cb_marina_front: [
+      { id: 'ev_cbcarnival', label: 'Christmas street carnival: the bands parade along the Marina', mins: 240, cost: 1000, fx: { fun: 32, social: 18, energy: -10 }, event: true, fest: true, minRules: 61, when: { months: [11], wk: [3], days: [4, 5, 6], from: 12, to: 20 } },
+      { id: 'ev_cbcarnival_sell', label: 'Christmas street carnival: sell chilled drinks to the crowd', mins: 240, earn: 2600, fx: { energy: -14, social: 6 }, gig: true, fest: true, minRules: 61, when: { months: [11], wk: [3], days: [4, 5, 6], from: 12, to: 20 } }
+    ],
     ib_mapo_hall: [
       { id: 'ev_okebadan', label: "Oke'badan festival: the procession to the hill and the drums in the streets", mins: 180, fx: { fun: 28, social: 18 }, event: true, fest: true, minRules: 59, when: { months: [2], wk: [1], days: [5], from: 10, to: 17 } },
       { id: 'ev_okebadan_sell', label: "Oke'badan festival: sell zobo and water to the crowds", mins: 180, earn: 2200, fx: { energy: -12, social: 6 }, gig: true, fest: true, minRules: 59, when: { months: [2], wk: [1], days: [5], from: 10, to: 18 } }
@@ -3256,7 +3364,7 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     // and the University of Port Harcourt, the same campus life under its own ids (Mama Ngozi runs the buka there).
     CIVIC_ACTS.ph_uniport = cloneActs(CIVIC_ACTS.unilag, 'uni_', 'uniport_').map(function (a) { a.label = a.label.replace(/Mama B/g, 'Mama Ngozi').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river'); return a; });
     // and the Abuja campuses (Mama Hauwa's buka; lawns and hills where Lagos has the lagoon).
-    CAMPUS_CLONES.forEach(function (c) { var ph = /^ph_/.test(c[0]), acc = /^acc_/.test(c[0]), kum = /^kum_/.test(c[0]), cc = /^cc_/.test(c[0]), ib = /^ib_/.test(c[0]), en = /^en_/.test(c[0]), lag = /^lag_/.test(c[0]), mama = c[0] === 'lag_lasu' ? 'Mama Toyin' : 'Mama Kemi'; CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = ib ? a.label.replace(/Mama B's/g, 'Iya Basira\'s buka').replace(/Mama B/g, 'Iya Basira').replace(/Lagoon front/g, 'Zoo gate').replace(/the lagoon/g, 'the Awba dam').replace(/lagoon/g, 'dam') : en ? a.label.replace(/Mama B's/g, 'Nne Ada\'s kitchen').replace(/Mama B/g, 'Nne Ada').replace(/Lagoon front/g, 'Lion statue lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn') : cc ? a.label.replace(/Mama B's/g, 'Auntie Efua\'s chop bar').replace(/Mama B/g, 'Auntie Efua').replace(/Lagoon front/g, 'Beach front').replace(/the lagoon/g, 'the sea').replace(/lagoon/g, 'sea') : kum ? a.label.replace(/Mama B's/g, 'Auntie Abena\'s chop bar').replace(/Mama B/g, 'Auntie Abena').replace(/Lagoon front/g, 'Great Hall lawn').replace(/the lagoon/g, 'the lawns').replace(/lagoon/g, 'lawn') : acc ? a.label.replace(/Mama B's/g, 'Auntie Akos\'s chop bar').replace(/Mama B/g, 'Auntie Akos').replace(/Lagoon front/g, 'Legon hill').replace(/the lagoon/g, 'the hill').replace(/lagoon/g, 'hill') : lag ? a.label.replace(/Mama B/g, mama).replace(/Lagoon front/g, 'Campus field').replace(/the lagoon/g, 'the campus').replace(/lagoon/g, 'campus') : ph ? a.label.replace(/Mama B/g, 'Mama Ibiere').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river') : a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
+    CAMPUS_CLONES.forEach(function (c) { var ph = /^ph_/.test(c[0]), acc = /^acc_/.test(c[0]), kum = /^kum_/.test(c[0]), cc = /^cc_/.test(c[0]), ib = /^ib_/.test(c[0]), en = /^en_/.test(c[0]), cbq = /^cb_/.test(c[0]), lag = /^lag_/.test(c[0]), mama = c[0] === 'lag_lasu' ? 'Mama Toyin' : 'Mama Kemi'; CIVIC_ACTS[c[0]] = cloneActs(CIVIC_ACTS.unilag, 'uni_', c[1]).map(function (a) { a.label = cbq ? a.label.replace(/Mama B's/g, 'Mma Affiong\'s kitchen').replace(/Mama B/g, 'Mma Affiong').replace(/Lagoon front/g, 'Campus gate').replace(/the lagoon/g, 'the river').replace(/lagoon/g, 'river') : ib ? a.label.replace(/Mama B's/g, 'Iya Basira\'s buka').replace(/Mama B/g, 'Iya Basira').replace(/Lagoon front/g, 'Zoo gate').replace(/the lagoon/g, 'the Awba dam').replace(/lagoon/g, 'dam') : en ? a.label.replace(/Mama B's/g, 'Nne Ada\'s kitchen').replace(/Mama B/g, 'Nne Ada').replace(/Lagoon front/g, 'Lion statue lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn') : cc ? a.label.replace(/Mama B's/g, 'Auntie Efua\'s chop bar').replace(/Mama B/g, 'Auntie Efua').replace(/Lagoon front/g, 'Beach front').replace(/the lagoon/g, 'the sea').replace(/lagoon/g, 'sea') : kum ? a.label.replace(/Mama B's/g, 'Auntie Abena\'s chop bar').replace(/Mama B/g, 'Auntie Abena').replace(/Lagoon front/g, 'Great Hall lawn').replace(/the lagoon/g, 'the lawns').replace(/lagoon/g, 'lawn') : acc ? a.label.replace(/Mama B's/g, 'Auntie Akos\'s chop bar').replace(/Mama B/g, 'Auntie Akos').replace(/Lagoon front/g, 'Legon hill').replace(/the lagoon/g, 'the hill').replace(/lagoon/g, 'hill') : lag ? a.label.replace(/Mama B/g, mama).replace(/Lagoon front/g, 'Campus field').replace(/the lagoon/g, 'the campus').replace(/lagoon/g, 'campus') : ph ? a.label.replace(/Mama B/g, 'Mama Ibiere').replace(/Lagoon front/g, 'Riverside').replace(/lagoon/g, 'river') : a.label.replace(/Mama B/g, 'Mama Hauwa').replace(/Lagoon front/g, 'Campus lawn').replace(/the lagoon/g, 'the hills').replace(/lagoon/g, 'lawn'); return a; }); });
   })();
   // Rules 19: Lekki Conservation Centre, close up.
   CIVIC_ACTS.lcc = [
