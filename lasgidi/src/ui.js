@@ -3853,6 +3853,7 @@
     var h = L.hour(S), night = h < 6 || h >= 19, dusk = h >= 17 && h < 19;
     var ic = icon3d(MODE_ICONS[mode] || (air ? 't_heli' : 'car'), name).replace('width="32" height="32"', 'width="64" height="64"');
     var veh = ic || '<span class="rv-emoji">' + (MODE_EMOJI[mode] || (mode === 'flight' || mode === 'jet' ? '✈️' : '🚗')) + '</span>';
+    if (mode === 'trek' && window.LasgidiAvatar && S) { try { var wc = document.createElement('canvas'); window.LasgidiAvatar.draw(wc, S.look || { skin: 2, hair: 0, shape: 1 }, S.outfit || {}); veh = '<img class="rv-walker" alt="" src="' + wc.toDataURL('image/png') + '">'; } catch (e) {} } // on foot: you, walking
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, secs = reduce ? 2.5 : air ? 8 : 12; // every road and water journey plays out in full, about 12 seconds
     var fromName = cf !== ctt && D.CITIES[cf] ? D.CITIES[cf].name : D.DISTRICTS[from].name, toName = cf !== ctt && D.CITIES[ctt] ? D.CITIES[ctt].name : D.DISTRICTS[to].name;
     var el = document.createElement('div');
@@ -3864,7 +3865,7 @@
       '<div class="rv-scene" aria-hidden="true"><div class="rv-sky"><i class="rv-sun"></i><i class="rv-cloud c1"></i><i class="rv-cloud c2"></i></div><div class="rv-far"></div><div class="rv-near"></div>' +
       '<div class="rv-road"><div class="rv-lines"></div></div>' +
       sights.map(function (s, i) { return '<div class="rv-sign" style="animation-delay:' + (secs * (0.12 + i * 0.8 / Math.max(1, sights.length))).toFixed(2) + 's"><small>Now passing</small><b>' + esc(s) + '</b></div>'; }).join('') +
-      '<div class="rv-veh' + (chauffeur ? ' vip' : '') + '">' + veh + '</div></div>' +
+      '<div class="rv-veh' + (chauffeur ? ' vip' : '') + (mode === 'trek' ? ' trek' : '') + '">' + veh + '</div></div>' +
       '<div class="rv-bar"><i></i></div>' +
       '<div class="rv-foot"><span>' + (sights.length ? '📍 ' + esc(sights.join(' · ')) : '☁️ Above the city') + '</span><button class="btn go" id="rv-arrive" type="button">Arrive</button></div></div>';
     var stopSound = rideSound(mode), shout = /^(danfo|brt|keke|coach|trotro)$/.test(mode), tc = L.districtCity(to), dn = (D.DISTRICTS[to].name || '').split(/[ ,(]/)[0];
@@ -3874,7 +3875,9 @@
     el.addEventListener('keydown', function (e) { if (e.key === 'Escape') done(); });
     document.body.appendChild(el);
     // In 3D when three.js is in: the same window, with the journey built in three.js (the 2D scene stays otherwise).
-    if (window.LasgidiRide3D && window.THREE && threeState === 'ready') { var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { london: L.districtCity(to) === 'ldn', mode: mode, highway: coach, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, subs: subs, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit, car: mode === 'car' && L.drivenVehicle ? (L.drivenVehicle(S) || {}).id : null })) el.classList.add('rv-3dmode'); } catch (e) {} }
+    // In 3D when three.js is in. If it is still loading (the first ride of a visit), the ride starts flat and switches to 3D as soon as it arrives.
+    var go3d = function () { if (!el.isConnected || el.classList.contains('rv-3dmode') || !(window.LasgidiRide3D && window.THREE && threeState === 'ready')) return; var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { london: L.districtCity(to) === 'ldn', mode: mode, highway: coach, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, subs: subs, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit, car: mode === 'car' && L.drivenVehicle ? (L.drivenVehicle(S) || {}).id : null })) el.classList.add('rv-3dmode'); } catch (e) {}  };
+    if (threeState === 'ready') go3d(); else if (window.LasgidiRide3D && threeState !== 'failed') loadThree(go3d);
     var b = document.getElementById('rv-arrive'); if (b) b.focus();
     setTimeout(done, secs * 1000 + 400);
   }

@@ -1791,3 +1791,14 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .wear-bar { height: 6px; border-radius: 99px; background: var(--sunk, #ebe9df); overflow: hidden; margin: 6px 0 2px; max-width: 180px; }
 .wear-bar i { display: block; height: 100%; background: linear-gradient(90deg, #2fa36b, #f2b600 70%, #d0435a); }
 .pw-h { font-size: 16px; margin: 0 0 6px; } /* Power app headings: not folded, so everything shows at once */
+/* Full-screen flat rides: a taller road, so the vehicle drives above the info card instead of hiding under it.
+   On foot you walk along the verge, stepping. */
+.ride-view .rv-road { height: 170px; }
+.ride-view .rv-far, .ride-view .rv-near { bottom: 170px; }
+.ride-view .rv-veh { bottom: 124px; }
+.ride-view .rv-sign { bottom: 228px; }
+.ride-view.air .rv-veh { bottom: 240px; }
+.ride-view .rv-veh.trek { bottom: 160px; animation: rv-walk .42s ease-in-out infinite alternate; }
+.rv-walker { display: block; height: 120px; width: auto; }
+@keyframes rv-walk { from { transform: translateX(-50%) translateY(0) rotate(-2deg); } to { transform: translateX(-50%) translateY(-5px) rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .ride-view .rv-veh.trek { animation: none; } }

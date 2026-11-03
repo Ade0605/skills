@@ -17,7 +17,7 @@
     var S3 = new T.Scene(), cam = new T.PerspectiveCamera(50, 2, 0.1, 900), sky = night ? 0x0d1733 : dusk ? 0xf0b98a : 0x9fd3ef; S3.background = new T.Color(sky); S3.fog = new T.Fog(sky, 60, 260);
     S3.add(new T.HemisphereLight(night ? 0x6070a0 : 0xfff4e6, 0x5a6a50, night ? 0.45 : 0.95)); var sun = new T.DirectionalLight(night ? 0x8fa8ff : dusk ? 0xffb070 : 0xffffff, night ? 0.25 : 1.5); sun.position.set(-20, 40, 10); sun.castShadow = true; S3.add(sun);
     // City roads get the detailed street (road3d.js): a sky dome, sun and clouds, asphalt, kerbs, Lagos blocks.
-    var HWR = root.LasgidiRoad3D && o.highway && !o.water && !o.air ? root.LasgidiRoad3D : null, ROAD = root.LasgidiRoad3D && !o.water && !o.air && !o.highway && mode !== 'trek' ? root.LasgidiRoad3D : null, RLITE = root.LasgidiGL ? root.LasgidiGL.lite() : false;
+    var HWR = root.LasgidiRoad3D && o.highway && !o.water && !o.air ? root.LasgidiRoad3D : null, ROAD = root.LasgidiRoad3D && !o.water && !o.air && !o.highway ? root.LasgidiRoad3D : null, RLITE = root.LasgidiGL ? root.LasgidiGL.lite() : false;
     if (ROAD || HWR) {
       var sdir = (ROAD || HWR).sky(T, S3, { night: night, dusk: dusk, lite: RLITE }), hz = night ? 0x2b3b66 : dusk ? 0xf4c08a : 0xd5e6ee;
       S3.background = new T.Color(hz); S3.fog = new T.Fog(hz, 70, RLITE ? 200 : 300);
@@ -164,7 +164,8 @@
       if (LDN && mode === 'danfo') { box3(V, 2, 2, long, body, 0, ht + 1.4, 0); box3(V, 2.02, 0.8, long * 0.85, glass, 0, ht + 1.6, -0.1); }
       if (LDN && mode === 'rail') { box3(V, 2.04, 0.3, long + 0.04, M(0xd8261c), 0, 0.75, 0); box3(V, 2.04, 0.14, long + 0.04, M(0x1f3a93), 0, ht + 0.35, 0); } if (mode === 'car' || mode === 'cab') box3(V, 1.8, 0.6, long * 0.5, body, 0, ht + 0.7, 0.2);
       [[-1, -long / 2 + 0.7], [1, -long / 2 + 0.7], [-1, long / 2 - 0.7], [1, long / 2 - 0.7]].forEach(function (q) { if (mode === 'keke' && q[1] < 0 && q[0] > 0) return; var wh = new T.Mesh(new T.CylinderGeometry(0.4, 0.4, 0.3, 12), M(0x111111)); wh.rotation.z = Math.PI / 2; wh.position.set(q[0] * (mode === 'keke' ? 0.65 : 1), 0.4, q[1]); V.add(wh); }); }
-    V.position.set(water || air ? 0 : LDN ? -1.6 : 1.6, air ? 0 : 0, 0); V.traverse(function (x) { x.castShadow = true; });
+    var WALK = mode === 'trek' && ROAD ? 0.18 : 0; // a walk goes along the pavement of the real street, not down the middle of the road
+    V.position.set(water || air ? 0 : WALK ? (LDN ? -7.6 : 7.6) : LDN ? -1.6 : 1.6, WALK, 0); V.traverse(function (x) { x.castShadow = true; });
     // The landmarks you pass, each with its green sign.
     (o.sights || []).forEach(function (name, i) {
       var g = new T.Group(), sd = i % 2 ? -1 : 1, h = air ? 34 + i * 6 : 14 + i * 4, y0 = air ? -60 : 0, lx = air ? sd * 24 : sd * 16; box3(g, 8, h, 8, M(0xe9e2d4, 0.6, 0, air && night ? { emissive: 0xffd28c, emissiveIntensity: 0.25 } : {}), lx, y0 + h / 2, 0); box3(g, 8.4, 1, 8.4, M(0x1d7a43), lx, y0 + h + 0.5, 0);
@@ -194,7 +195,7 @@
       decor.forEach(function (d) { var z = (d.z + run * SPEED) % 310; d.g.position.z = z > 20 ? z - 310 : z; });
       walkers.forEach(function (w) { var z = (w.z + run * SPEED + run * 1.3 * w.dir) % 306; w.g.position.set(w.x, 0, z > 20 ? z - 306 : z); w.g.rotation.y = w.dir > 0 ? 0 : Math.PI; var a = Math.sin(t * 7 + w.ph) * 0.5; w.g.userData.legs[0].rotation.x = a; w.g.userData.legs[1].rotation.x = -a; });
       sights.forEach(function (s) { var dz = (t - s.at) * SPEED * 1.4; s.g.position.z = Math.min(40, -120 + dz * 1.6); });
-      V.position.y = air ? Math.sin(t * 1.2) * 0.5 + (t < 1 ? -3 * (1 - t) : 0) : water ? Math.sin(t * 2) * 0.1 : Math.abs(Math.sin(t * 9)) * 0.03; V.rotation.z = water ? Math.sin(t * 1.6) * 0.03 : 0;
+      V.position.y = air ? Math.sin(t * 1.2) * 0.5 + (t < 1 ? -3 * (1 - t) : 0) : water ? Math.sin(t * 2) * 0.1 : WALK ? WALK + Math.abs(Math.sin(t * 7)) * 0.05 : Math.abs(Math.sin(t * 9)) * 0.03; V.rotation.z = water ? Math.sin(t * 1.6) * 0.03 : 0;
       if (V.userData.rotor) V.userData.rotor.rotation.y = t * 25; if (V.userData.tailRotor) V.userData.tailRotor.rotation.x = t * 40; if (V.userData.navs) V.userData.navs.forEach(function (l) { l.visible = Math.floor(t * 2) % 2 === 0; }); if (V.userData.wake) V.userData.wake.material.opacity = 0.35 + Math.sin(t * 5) * 0.1;
       if (V.userData.walker) { var lg = V.userData.walker.userData.legs, a = Math.sin(t * 7) * 0.5; lg[0].rotation.x = a; lg[1].rotation.x = -a; }
       var cm = box.dataset.cam || 'chase'; if (!air && !water) { if (cm === 'side') { cam.position.set(V.position.x + (LDN ? -14 : 14), 3, 1); cam.lookAt(V.position.x, 1.5, -1); } else if (cm === 'inside') { cam.position.set(V.position.x + 0.6, 2.4, mode === 'coach' ? -1 : 0); cam.lookAt(V.position.x + 0.3, 2.2, -30); } else { cam.position.set(LDN ? -6 : 6, 4.5, 11); cam.lookAt(0, 1, -6); } }
