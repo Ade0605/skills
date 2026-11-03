@@ -63,5 +63,10 @@
     else if (u.quick > 4000 && u.ratio < u.base) { u.ratio = Math.min(u.base, +(u.ratio * 1.25).toFixed(2)); r.setPixelRatio(u.ratio); u.quick = 0; }
   }
   function free(r) { if (!r) return; try { r.dispose(); if (r.forceContextLoss) r.forceContextLoss(); } catch (e) {} var i = made.indexOf(r); if (i >= 0) made.splice(i, 1); }
-  root.LasgidiGL = { make: make, shadow: shadow, live: live, covered: covered, pace: pace, free: free, lite: lite, ultra: ultra, lowEnd: lowEnd, count: function () { return made.length; }, all: function () { return made.slice(); } };
+  // Battery saver: when nobody has touched the screen (or a key) for 20 seconds, the map and place scenes draw about
+  // 8 frames a second instead of 30-60. The first touch brings them straight back to full speed.
+  var lastInput = Date.now();
+  if (root.addEventListener) ['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach(function (ev) { root.addEventListener(ev, function () { lastInput = Date.now(); }, { passive: true, capture: true }); });
+  function sleepy(last, now) { return !!last && Date.now() - lastInput > 20000 && now - last < 120; }
+  root.LasgidiGL = { make: make, sleepy: sleepy, poke: function () { lastInput = Date.now(); }, shadow: shadow, live: live, covered: covered, pace: pace, free: free, lite: lite, ultra: ultra, lowEnd: lowEnd, count: function () { return made.length; }, all: function () { return made.slice(); } };
 })(typeof window !== 'undefined' ? window : this);
