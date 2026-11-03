@@ -3998,3 +3998,12 @@ test('rules 62: first class on the Lagos–Ibadan train costs more and rests you
   }
   assert.ok(late > 0 && late < 15, 'some trains are late (' + late + '/30)');
 });
+
+test('rules 63: every civic place has at least 3 things to do; the new ones stay out of rules 62 lives', () => {
+  for (const p of D.PLACES) if (p.civic && !D.INSIDE[p.inside || '']) assert.ok((D.CIVIC_ACTS[p.id] || []).length >= 3, p.id);
+  const mk = (rules) => { const s = L.newGame({ seed: 6301, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); s.loc = 'acc_airport'; return s; };
+  const ids = (s) => L.availableActions(s).map(a => a.id);
+  assert.ok(!ids(mk(62)).includes('kia_watch'), 'not in rules 62');
+  assert.ok(ids(mk(63)).includes('kia_watch'), 'in rules 63');
+  for (const list of Object.values(D.CIVIC_ACTS)) for (const a of list) assert.ok(a.mins % 15 === 0, a.id);
+});

@@ -124,7 +124,8 @@
   // 61 opens Calabar, the Cross River capital: the Old Residency (in 3D), the Marina, the Slave History Museum,
   // Mary Slessor's grave, Watt Market, UNICAL, Tinapa and a drill monkey sanctuary; Efik food; a December carnival.
   // 62 adds first class on the Lagos–Ibadan train (a meal and a quiet carriage) and the odd late train.
-  var RULES = 62;
+  // 63 fills older places that had fewer than three things to do (London, Accra, Dubai, Kumasi, Cape Coast).
+  var RULES = 63;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -896,7 +897,8 @@
   var CIVIC_AT = {};
   function civicActions(s) {
     var d = s.loc;
-    return CIVIC_AT[d] || (CIVIC_AT[d] = D.PLACES.filter(function (p) { return p.district === d && D.CIVIC_ACTS[p.id]; }).reduce(function (o, p) { return o.concat(D.CIVIC_ACTS[p.id]); }, []));
+    var all = CIVIC_AT[d] || (CIVIC_AT[d] = D.PLACES.filter(function (p) { return p.district === d && D.CIVIC_ACTS[p.id]; }).reduce(function (o, p) { return o.concat(D.CIVIC_ACTS[p.id]); }, []));
+    return all.filter(function (a) { return !a.minRules || s.rules >= a.minRules; }); // rules 63: newer acts stay out of older lives
   }
   // Rules 21: weekend events at their places, on a fixed four-week rotation (when.wk), listed only in their week.
   var EVENT_AT = {};
