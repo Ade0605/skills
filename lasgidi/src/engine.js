@@ -123,7 +123,8 @@
   // 60 adds the Lagos–Ibadan standard-gauge train: Ebute-Metta (Yaba) to Moniya, morning and afternoon departures.
   // 61 opens Calabar, the Cross River capital: the Old Residency (in 3D), the Marina, the Slave History Museum,
   // Mary Slessor's grave, Watt Market, UNICAL, Tinapa and a drill monkey sanctuary; Efik food; a December carnival.
-  var RULES = 61;
+  // 62 adds first class on the Lagos–Ibadan train (a meal and a quiet carriage) and the odd late train.
+  var RULES = 62;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -1907,11 +1908,12 @@
     if (far) { if (city === 'ldn' && visaState(s).status !== 'valid') fl.disabled = 'You need a valid UK visa (Phone → Travel)'; else if (city === 'ldn' && !visaLasts(s, fl.mins)) fl.disabled = 'Your UK visa runs out before you land';
       else if (city !== 'ldn' && C.visit && visaState(s, city).status !== 'valid') fl.disabled = 'You need a valid ' + UV.name + ' (Phone → Travel)'; else if (city !== 'ldn' && C.visit && !visaLasts(s, fl.mins, city)) fl.disabled = 'Your ' + UV.name + ' runs out before you land'; return [fl].map(function (o) { if (!o.disabled) { if (s.loc !== o.from && !o.fromHere) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name; else if (s.pending.length) o.disabled = 'Decide on the open event first'; else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost); } return o; }); }
     var legs = C.noAir || from.noAir ? [bus] : [fl, bus]; // rules 28: Cape Coast has no airport, coaches only
-    if (s.rules >= 60 && ((here === 'lagos' && city === 'ibadan') || (here === 'ibadan' && city === 'lagos'))) { var tr = { mode: 'train', name: 'Standard-gauge train', mins: 165, cost: price(s, 6000), from: here === 'lagos' ? 'yaba' : 'ib_ui', to: here === 'lagos' ? 'ib_ui' : 'yaba' }; cabTo(tr); legs = legs.concat([tr]); }
+    if (s.rules >= 60 && ((here === 'lagos' && city === 'ibadan') || (here === 'ibadan' && city === 'lagos'))) { var tr = { mode: 'train', name: 'Standard-gauge train', mins: 165, cost: price(s, 6000), from: here === 'lagos' ? 'yaba' : 'ib_ui', to: here === 'lagos' ? 'ib_ui' : 'yaba' }; cabTo(tr); legs = legs.concat([tr]);
+      if (s.rules >= 62) { var t1 = { mode: 'train1', name: 'Standard-gauge train, first class', mins: 165, cost: price(s, 15000), from: tr.from, to: tr.to }; cabTo(t1); legs = legs.concat([t1]); } }
     legs.forEach(function (o) {
       if (s.loc !== o.from && !o.fromHere) o.disabled = 'Leaves from ' + D.DISTRICTS[o.from].name;
       else if (o.mode === 'bus' && (h >= 20 || h < 5)) o.disabled = 'No night buses: the roads are not safe after dark';
-      else if (o.mode === 'train' && !(h === 7 || h === 15)) o.disabled = 'Trains leave at 8:00 and 16:00 (board from 7:00 and 15:00)';
+      else if ((o.mode === 'train' || o.mode === 'train1') && !(h === 7 || h === 15)) o.disabled = 'Trains leave at 8:00 and 16:00 (board from 7:00 and 15:00)';
       else if (s.pending.length) o.disabled = 'Decide on the open event first';
       else if (s.over) o.disabled = 'This Weekly Lagos is over';
       else if (o.cost && !canAfford(s, o.cost)) o.disabled = 'Fare is ' + naira(o.cost);
@@ -1943,10 +1945,13 @@
         advance(s, mins);
         applyFx(s, { energy: -25, hygiene: -25, stress: 12, hunger: -20 });
       }
-    } else if (mode === 'train') {
+    } else if (mode === 'train' || mode === 'train1') {
       // Rules 60: on time, air-conditioned, with a snack trolley. No checkpoints and no breakdowns.
-      advance(s, mins); applyFx(s, { energy: -6, stress: -4, fun: 6 });
-      msg = 'Air-conditioned and right on time. You watched Ogun State roll past the window.';
+      // Rules 62: now and then a late start (signals at Abeokuta); first class brings a meal and a quiet carriage.
+      var late = s.rules >= 62 && rand(s) < 0.12 ? 30 : 0;
+      advance(s, mins + late);
+      applyFx(s, mode === 'train1' ? { energy: 4, stress: -12, fun: 10, hunger: 25 } : { energy: -6, stress: -4, fun: 6 });
+      msg = (mode === 'train1' ? 'First class: a wide seat, jollof and chicken from the trolley, and a quiet carriage.' : 'Air-conditioned and comfortable. You watched Ogun State roll past the window.') + (late ? ' The train waited 30 minutes for a signal at Abeokuta.' : ' Right on time.');
     } else {
       if (s.rules >= 24) s.transit = true; // already on the plane: the overstay check must not fly you home a second time
       advance(s, mins); delete s.transit;
