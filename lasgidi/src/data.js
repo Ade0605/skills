@@ -2750,7 +2750,7 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       act('tnp_water', 'Splash in the water park pool', 60, 2500, 0, { fun: 16, energy: -8 }, null, { days: [5, 6], from: 10, to: 17 })
     ]],
     // Rules 64: the Lagos end of the standard-gauge line (the place shows in every life; its acts only from rules 64).
-    ['lag_sgr', '🚆', 'Mobolaji Johnson Station, Ebute-Metta', 'transport', 'bus', 'yaba', 14.2, 14.2, null, 'The big new station for the train to Ibadan: a marble hall, ticket gates and long platforms.', [
+    ['lag_sgr', '🚆', 'Mobolaji Johnson Station, Ebute-Metta', 'transport', 'bus', 'yaba', 14.2, 14.2, 'landmark', 'The big new station for the train to Ibadan: a marble hall, ticket gates and long platforms.', [
       Object.assign(act('sgr_trolley', 'Push the snack trolley through the morning train (back by noon)', 240, 0, 2600, { energy: -14, social: 6 }, { hustle: 1 }, { from: 7, to: 8 }), { minRules: 64 }),
       Object.assign(act('sgr_desk', 'Help at the ticket desk in the rush', 120, 0, 1600, { energy: -8, social: 4 }, { charisma: 1 }, { from: 6, to: 16 }), { minRules: 64 }),
       Object.assign(act('sgr_watch', 'Watch the train pull in', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 19 }), { minRules: 64 })
@@ -2762,7 +2762,7 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       act('ibz_feed', 'Watch the lions at feeding time', 30, 0, 0, { fun: 10 }, null, { from: 10, to: 12 }),
       act('ibz_nuts', 'Groundnuts on a bench by the zoo lake', 30, 300, 0, { hunger: 6, fun: 4, stress: -4 }, null, { from: 9, to: 17 })
     ]],
-    ['ib_station', '🚆', 'Obafemi Awolowo Station (Moniya)', 'transport', 'bus', 'ib_ui', 4.6, 1.0, null, 'The station for the standard-gauge train to Lagos: a big hall, ticket gates and a long platform.', [
+    ['ib_station', '🚆', 'Obafemi Awolowo Station (Moniya)', 'transport', 'bus', 'ib_ui', 4.6, 1.0, 'landmark', 'The station for the standard-gauge train to Lagos: a big hall, ticket gates and a long platform.', [
       act('ibs_snack', 'Puff-puff and a cold drink at the station', 15, 700, 0, { hunger: 14 }, null, { from: 6, to: 20 }),
       act('ibs_watch', 'Watch the train pull in', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 19 }),
       act('ibs_wait', 'Read the paper in the cool station hall', 30, 500, 0, { fun: 4, stress: -4 }, null, { from: 6, to: 20 }),
