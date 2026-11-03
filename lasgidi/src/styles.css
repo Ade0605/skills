@@ -1811,3 +1811,4 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .news-item { display: flex; gap: 10px; align-items: flex-start; text-align: left; width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; background: var(--surface, #fff); color: var(--ink); font: inherit; cursor: pointer; }
 .news-item b { display: block; font-size: 14px; } .news-item small { display: block; color: var(--muted); font-size: 12px; line-height: 1.35; }
 .news-ic { font-size: 22px; line-height: 1; }
+.car-health { display: flex; align-items: center; gap: 8px; width: 100%; } .car-health .wear-bar { flex: 0 0 120px; margin: 0; } .car-health b { font-size: 12px; }

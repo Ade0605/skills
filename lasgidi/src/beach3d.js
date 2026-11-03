@@ -1209,7 +1209,8 @@
       g.add(mesh(new T.BoxGeometry(160, 0.5, 6), mat('tsBed', { color: 0x6b6258, roughness: 1 }), 0, 0.25, -9.5));
       [-0.9, 0.9].forEach(function (rz) { g.add(mesh(new T.BoxGeometry(160, 0.25, 0.18), steel, 0, 0.62, -9.5 + rz * 1.6)); });
       for (var sl = -78; sl <= 78; sl += 2) g.add(mesh(new T.BoxGeometry(0.4, 0.12, 4.6), mat('tsSleeper', { color: 0x5a4632 }), sl, 0.5, -9.5));
-      // The train: a locomotive and three coaches.
+      // The train: a locomotive and three coaches, in one group so it can pull in, wait and leave (plazaFrame).
+      var tg = new T.Group(); g.add(tg); PZ.train = tg;
       for (var c = 0; c < 4; c++) {
         var cx = -48 + c * 27, loco = c === 3, car = new T.Group(); car.position.set(cx, 0, -9.5);
         car.add(mesh(new T.BoxGeometry(25.6, 4.2, 3.6), white, 0, 3.1, 0));
@@ -1218,7 +1219,7 @@
         if (!loco) car.add(mesh(new T.BoxGeometry(24, 1.3, 3.7), glassD, 0, 3.4, 0)); else { car.add(mesh(new T.BoxGeometry(6, 1.3, 3.7), glassD, -8, 3.4, 0)); var nose = mesh(new T.BoxGeometry(3, 3.4, 3.4), white, 13.6, 2.8, 0); car.add(nose); car.add(mesh(new T.BoxGeometry(0.2, 1.4, 3), glassD, 15.15, 3.6, 0)); car.add(mesh(new T.BoxGeometry(0.2, 0.5, 3), green, 15.15, 1.9, 0)); }
         [-1, 1].forEach(function (d) { car.add(mesh(new T.BoxGeometry(1.6, 2.6, 0.1), mat('tsDoor', { color: 0x0f7a43 }), d * 7, 2.6, 1.86)); });
         [-9, 9].forEach(function (bx) { car.add(mesh(new T.BoxGeometry(3, 0.8, 3), dark, bx, 0.8, 0)); });
-        g.add(car);
+        tg.add(car);
       }
       // The canopy over the platform.
       for (var cl = -70; cl <= 70; cl += 14) g.add(mesh(new T.CylinderGeometry(0.25, 0.25, 5.4, 8), steel, cl, 3.9, 3.4));
@@ -1401,6 +1402,11 @@
       if (/^(unilag|ph_uniport|abj_uni|abj_chu|ph_rsu|lag_lasu|lag_yabatech|acc_ug|kum_knust_uni|cc_ucc_uni|ib_ui_uni|en_unn|cb_unical_uni)$/.test(id)) mergeStatic(plzG, [pave, gr].concat(PZ.spray || [], PZ.flags || [], PZ.ball ? [PZ.ball] : []));
     }
     function plazaFrame(t, night) {
+      if (PZ.train) { // a 70-second loop: the train glides in, waits at the platform, then pulls out towards the next station
+        var cyc = (t % 70) / 70, tx;
+        if (cyc < 0.14) { var e1 = 1 - cyc / 0.14; tx = -260 * e1 * e1; } else if (cyc < 0.78) tx = 0; else if (cyc < 0.94) { var e2 = (cyc - 0.78) / 0.16; tx = 260 * e2 * e2; } else tx = -600;
+        PZ.train.position.x = tx; PZ.train.visible = tx > -500;
+      }
       if (PZ.ball) { var bu = t * 0.7; PZ.ball.position.set(Math.sin(bu) * 7, 0.35 + Math.abs(Math.sin(t * 3)) * 0.6, Math.sin(bu * 1.7) * 3.5); (PZ.players || []).forEach(function (f, k) { var lg = f.userData.legs; f.position.x = -20 + (k - 1.5) * 4 + Math.sin(bu + k) * 1.5; if (lg && !reduce) { lg[0].rotation[f.userData.axis || 'z'] = Math.sin(t * 7 + k) * 0.5; lg[1].rotation[f.userData.axis || 'z'] = -Math.sin(t * 7 + k) * 0.5; } }); }
       var dw = ((sc.day || 0) % 7 + 7) % 7, busy = (/mosque|worship/.test(sc.placeId || '') && dw === 4) || (/ecumenical|worship/.test(sc.placeId || '') && dw === 6), W = PZ.walkers, n = night ? 18 : busy ? W.n : 60;
       var m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), one = new T.Vector3(1, 1, 1);
