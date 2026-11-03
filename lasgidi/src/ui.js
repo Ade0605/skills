@@ -141,6 +141,9 @@
     },
     debit: function () { tone(440, 0, 0.18, 'triangle', 0.08); },
     horn: function () { tone(370, 0, 0.12, 'square', 0.05); tone(370, 0.17, 0.2, 'square', 0.05); },
+    // The train: a deep two-note air horn as it pulls away, then the wheels clicking over the rail joints.
+    trainHorn: function () { [[311, 0, 0.55], [370, 0, 0.55], [277, 0.7, 0.9], [330, 0.7, 0.9]].forEach(function (h) { tone(h[0], h[1], h[2], 'sawtooth', 0.035); tone(h[0] * 2, h[1], h[2], 'triangle', 0.012); }); },
+    rails: function () { for (var i = 0; i < 18; i++) { var t0 = 1.6 + i * 0.62; noise(t0, 0.05, 900, 1.2, 0.07, 'bandpass'); noise(t0 + 0.13, 0.05, 750, 1.2, 0.06, 'bandpass'); tone(70, t0, 0.08, 'sine', 0.03); } },
     bad: function () { tone(330, 0, 0.2, 'triangle', 0.1); tone(247, 0.18, 0.35, 'triangle', 0.1); },
     good: function () { tone(784, 0, 0.12); tone(988, 0.1, 0.12); tone(1175, 0.2, 0.25); },
     // NEPA took light: the fridge hums down, then a generator coughs twice and catches.
@@ -349,7 +352,8 @@
   /* ---------- run an engine call, then render ---------- */
   function run(fn, kind) {
     var p0 = S ? S.power : null, a0 = S && S.ach ? Object.keys(S.ach).length : 0, q0 = S && S.quals ? Object.keys(S.quals).length : 0, c0 = S ? L.cityOf(S) : null, res = fn(), c1 = S ? L.cityOf(S) : null, lx = c1 !== c0 && localOf(c1);
-    if (res && res.ok && kind === 'travel') play('horn');
+    var wasTrain = ui.trainTrip; ui.trainTrip = false; // a train trip has its own horn (showRide), not the danfo's
+    if (res && res.ok && kind === 'travel' && !wasTrain) play('horn');
     else if (res && res.collapsed) play('bad');
     else if (res && (res.won || /Promoted/.test(res.msg || ''))) play('good');
     else if (S && S.alerts && S.alerts.length) {
@@ -3894,6 +3898,7 @@
     // In 3D when three.js is in. If it is still loading (the first ride of a visit), the ride starts flat and switches to 3D as soon as it arrives.
     var go3d = function () { if (!el.isConnected || el.classList.contains('rv-3dmode') || !(window.LasgidiRide3D && window.THREE && threeState === 'ready')) return; var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { london: L.districtCity(to) === 'ldn', mode: mode, highway: coach || (mode === 'rail' && cf !== ctt), train: mode === 'rail' && cf !== ctt, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, subs: subs, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit, car: mode === 'car' && L.drivenVehicle ? (L.drivenVehicle(S) || {}).id : null })) el.classList.add('rv-3dmode'); } catch (e) {}  };
     if (threeState === 'ready') go3d(); else if (window.LasgidiRide3D && threeState !== 'failed') loadThree(go3d);
+    if (railTrip) { play('trainHorn'); play('rails'); } // the horn as it pulls away, then the wheels on the rail joints
     var b = document.getElementById('rv-arrive'); if (b) b.focus();
     setTimeout(done, secs * 1000 + 400);
   }
@@ -6522,8 +6527,8 @@
       return;
     }
     if (ds.visa) { var vcity = ds.visa === '1' ? 'ldn' : ds.visa; run(function () { return vcity === 'ldn' ? L.applyVisa(S) : L.applyVisa(S, vcity); }); return; }
-    if (ds.flyvia) { var fv = ds.flyvia.split(':'), vf = S.loc, vt = S.t; run(function () { var c1 = L.travel(S, fv[2], 'cab'); if (!c1.ok) return c1; var r = L.intercity(S, fv[0], fv[1]); if (r.ok) { ui.sel = null; ui.place = null; ui.placeCat = null; showRide(vf, S.loc, fv[1] === 'bus' ? 'coach' : /^train/.test(fv[1]) ? 'rail' : 'flight', vt); } return r; }, 'travel'); return; }
-    if (ds.fly) { var fp = ds.fly.split(':'), ff = S.loc, ft = S.t; run(function () { var r = L.intercity(S, fp[0], fp[1]); if (r.ok) { ui.sel = null; ui.place = null; ui.placeCat = null; showRide(ff, S.loc, fp[1] === 'bus' ? 'coach' : /^train/.test(fp[1]) ? 'rail' : 'flight', ft); } return r; }, 'travel'); return; }
+    if (ds.flyvia) { var fv = ds.flyvia.split(':'), vf = S.loc, vt = S.t; ui.trainTrip = /^train/.test(fv[1]); run(function () { var c1 = L.travel(S, fv[2], 'cab'); if (!c1.ok) return c1; var r = L.intercity(S, fv[0], fv[1]); if (r.ok) { ui.sel = null; ui.place = null; ui.placeCat = null; showRide(vf, S.loc, fv[1] === 'bus' ? 'coach' : /^train/.test(fv[1]) ? 'rail' : 'flight', vt); } return r; }, 'travel'); return; }
+    if (ds.fly) { var fp = ds.fly.split(':'), ff = S.loc, ft = S.t; ui.trainTrip = /^train/.test(fp[1]); run(function () { var r = L.intercity(S, fp[0], fp[1]); if (r.ok) { ui.sel = null; ui.place = null; ui.placeCat = null; showRide(ff, S.loc, fp[1] === 'bus' ? 'coach' : /^train/.test(fp[1]) ? 'rail' : 'flight', ft); } return r; }, 'travel'); return; }
     if (ds.gem) { var gid = gemToday(), gn = +ds.gem; run(function () { return L.collectGem(S, gid, gn); }); return; }
     if (ds.picsubmit) {
       var draft = ui.picDraft, bid = ds.picsubmit, pl = ui.ad.plan || 'day';
