@@ -701,6 +701,9 @@
     acc_guide:   { name: 'Tour Guiding (Accra)', district: 'acc_jamestown', skill: 'charisma', start: 9, end: 17, days: [1,2,3,4,5,6],
       titles: ['Trainee Guide', 'Guide', 'Senior Guide', 'Tour Lead', 'Tour Company Owner'],
       pay: [4500, 7000, 11000, 18000, 30000], req: [0, 2, 4, 6, 9] },
+    rail_sgr:    { name: 'Lagos–Ibadan Rail Services (Ebute-Metta)', district: 'yaba', skill: 'charisma', start: 7, end: 15, days: [0,1,2,3,4,5], rules: 64,
+      titles: ['Platform Attendant', 'Ticket Inspector', 'Train Guard', 'Station Master', 'Operations Director'],
+      pay: [4400, 7000, 11500, 19000, 31000], req: [0, 2, 4, 6, 9] },
     cb_port:     { name: 'Calabar River Port Logistics (Marina)', district: 'cb_marina', skill: 'hustle', start: 7, end: 15, days: [0,1,2,3,4,5],
       titles: ['Tally Clerk', 'Forwarding Agent', 'Clearing Officer', 'Port Manager', 'Shipping Line Owner'],
       pay: [4400, 7000, 11500, 19000, 31000], req: [0, 2, 4, 6, 9] },
@@ -2742,6 +2745,12 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       act('tnp_studio', 'Peek into the film studio lot', 30, 1000, 0, { fun: 10 }, null, { from: 10, to: 16 }),
       act('tnp_water', 'Splash in the water park pool', 60, 2500, 0, { fun: 16, energy: -8 }, null, { days: [5, 6], from: 10, to: 17 })
     ]],
+    // Rules 64: the Lagos end of the standard-gauge line (the place shows in every life; its acts only from rules 64).
+    ['lag_sgr', '🚆', 'Mobolaji Johnson Station, Ebute-Metta', 'transport', 'bus', 'yaba', 14.2, 14.2, null, 'The big new station for the train to Ibadan: a marble hall, ticket gates and long platforms.', [
+      Object.assign(act('sgr_trolley', 'Push the snack trolley through the morning train (back by noon)', 240, 0, 2600, { energy: -14, social: 6 }, { hustle: 1 }, { from: 7, to: 8 }), { minRules: 64 }),
+      Object.assign(act('sgr_desk', 'Help at the ticket desk in the rush', 120, 0, 1600, { energy: -8, social: 4 }, { charisma: 1 }, { from: 6, to: 16 }), { minRules: 64 }),
+      Object.assign(act('sgr_watch', 'Watch the train pull in', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 19 }), { minRules: 64 })
+    ]],
     // Ibadan and Enugu (rules 59): real landmarks keep their names; the businesses are made up.
     ['ib_ui_uni', '🎓', 'University of Ibadan', 'learn', 'cap', 'ib_ui', 6.4, 3.4, null, "Nigeria's first university: Trenchard Hall, the Kenneth Dike Library and halls named after heroes.", 'uib_'],
     ['ib_zoo', '🦁', 'University of Ibadan Zoo', 'outdoors', 'tree', 'ib_ui', 8.6, 2.6, null, 'Lions, crocodiles, ostriches and a snake house under the campus trees.', [
@@ -2752,7 +2761,8 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ['ib_station', '🚆', 'Obafemi Awolowo Station (Moniya)', 'transport', 'bus', 'ib_ui', 4.6, 1.0, null, 'The station for the standard-gauge train to Lagos: a big hall, ticket gates and a long platform.', [
       act('ibs_snack', 'Puff-puff and a cold drink at the station', 15, 700, 0, { hunger: 14 }, null, { from: 6, to: 20 }),
       act('ibs_watch', 'Watch the train pull in', 15, 0, 0, { fun: 6 }, null, { from: 7, to: 19 }),
-      act('ibs_wait', 'Read the paper in the cool station hall', 30, 500, 0, { fun: 4, stress: -4 }, null, { from: 6, to: 20 })
+      act('ibs_wait', 'Read the paper in the cool station hall', 30, 500, 0, { fun: 4, stress: -4 }, null, { from: 6, to: 20 }),
+      Object.assign(act('ibs_trolley', 'Push the snack trolley through the afternoon train (back by evening)', 240, 0, 2600, { energy: -14, social: 6 }, { hustle: 1 }, { from: 15, to: 16 }), { minRules: 64 })
     ]],
     ['ib_mapo_hall', '🏛️', 'Mapo Hall', 'culture', 'frame', 'ib_mapo', 13.6, 14.2, 'landmark', 'The colonial town hall on Mapo hill, white columns above the old city.', [
       act('mph_view', 'Look out over the old city from the steps', 30, 0, 0, { fun: 8, stress: -6 }, null, { from: 8, to: 18 }),
