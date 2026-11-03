@@ -2433,11 +2433,13 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     // London (rules 23): visit only. Fun costs pounds; nothing here pays.
     ['ldn_lhr', '✈️', 'Heathrow Airport', 'transport', 'plane', 'ldn_heathrow', 2.6, 11.6, null, 'Terminal 5: flights home, duty free and a very long queue at the border.', [
       act('lhr_dutyfree', 'Browse duty free', 30, 0, 0, { fun: 6 }, null, null),
-      act('lhr_meal', 'An airport meal deal', 15, gbp(6), 0, { hunger: 20 }, null, null)
+      act('lhr_meal', 'An airport meal deal', 15, gbp(6), 0, { hunger: 20 }, null, null),
+      Object.assign(act('lhr_watch', 'Watch the planes from the terminal windows', 30, 0, 0, { fun: 8 }, null, { from: 6, to: 22 }), { minRules: 63 })
     ]],
     ['ldn_wembley_st', '🏟️', 'Wembley Stadium', 'outdoors', 'stadium', 'ldn_wembley', 8.6, 4.6, null, 'The arch over 90,000 seats.', [
       act('wem_match', 'Watch a match (Saturday)', 180, gbp(85), 0, { fun: 45, social: 20, energy: -10 }, null, { days: [5], from: 12, to: 20 }),
-      act('wem_tour', 'Stadium tour and the dressing room', 90, gbp(28), 0, { fun: 18 }, null, { from: 10, to: 17 })
+      act('wem_tour', 'Stadium tour and the dressing room', 90, gbp(28), 0, { fun: 18 }, null, { from: 10, to: 17 }),
+      Object.assign(act('wem_arch', 'Photo under the Wembley arch', 15, 0, 0, { fun: 6, social: 4 }, null, { from: 8, to: 20 }), { minRules: 63 })
     ]],
     ['ldn_carnival', '🎉', 'Notting Hill Carnival', 'outdoors', 'tree', 'ldn_notting', 10.6, 9.6, null, 'In August: steel bands, sound systems, jerk chicken and a million people.', [
       act('nhc_parade', 'Dance with the carnival parade (August)', 180, 0, 0, { fun: 50, social: 30, energy: -20 }, null, { months: [7], from: 11, to: 20 }),
@@ -2446,7 +2448,8 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['ldn_portobello', '🧺', 'Portobello Road Market', 'food', 'basket', 'ldn_notting', 12.2, 8.6, null, 'Antiques, vintage coats and street food on a Saturday.', [
       act('ptb_vintage', 'Buy a vintage coat for the cold', 45, gbp(40), 0, { fun: 10, stress: -4 }, null, { days: [5], from: 9, to: 17 }),
-      act('ptb_food', 'Street food at the market', 30, gbp(9), 0, { hunger: 30 }, null, { from: 9, to: 18 })
+      act('ptb_food', 'Street food at the market', 30, gbp(9), 0, { hunger: 30 }, null, { from: 9, to: 18 }),
+      Object.assign(act('ptb_antiques', 'Browse the antique stalls and the record shops', 45, 0, 0, { fun: 10 }, null, { days: [5], from: 9, to: 17 }), { minRules: 63 })
     ]],
     ['ldn_oxford_st', '🛍️', 'Oxford Street shops', 'culture', 'film', 'ldn_oxford', 15.6, 8.4, null, 'Flagship stores, crowds and sales that are still expensive.', [
       act('oxs_shop', 'A shopping spree (bags for everyone at home)', 120, gbp(450), 0, { fun: 30, social: 10 }, null, { from: 10, to: 21 }),
@@ -2511,7 +2514,8 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['ldn_church', '⛪', 'Grace Assembly, Peckham', 'services', 'dome', 'ldn_peckham', 22.8, 22.8, null, 'A Naija church in an old cinema: the choir, the pastor and jollof after.', [
       act('gap_service', 'Sunday service with the choir', 180, 0, 0, { social: 20, stress: -15, fun: 6 }, null, { days: [6], from: 9, to: 14 }),
-      act('gap_offering', 'Give an offering', 15, gbp(20), 0, { social: 6, stress: -4 }, null, { days: [6], from: 9, to: 14 })
+      act('gap_offering', 'Give an offering', 15, gbp(20), 0, { social: 6, stress: -4 }, null, { days: [6], from: 9, to: 14 }),
+      Object.assign(act('gap_fellow', 'Stay for fellowship: tea, puff-puff and gist after church', 45, 0, 0, { social: 12, hunger: 8, stress: -4 }, null, { days: [6], from: 12, to: 15 }), { minRules: 63 })
     ]],
     // Accra (rules 22).
     ['acc_makola', '🧺', 'Makola Market', 'food', 'basket', 'acc_central', 10.4, 19.6, null, 'Cloth, beads, tomatoes and dried fish in lanes so tight you walk sideways.', [
@@ -2526,7 +2530,8 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['acc_nkrumah', '🏛️', 'Kwame Nkrumah Memorial Park', 'outdoors', 'dome', 'acc_central', 12.6, 20.4, null, 'The mausoleum, the statue, fountains and a small museum.', [
       act('nkm_tour', 'Tour the mausoleum and the museum', 60, 1300, 0, { fun: 10 }, { charisma: 1 }, { from: 9, to: 17 }),
-      act('nkm_photo', 'Photo by the statue', 15, 0, 0, { fun: 5 }, null, { from: 9, to: 17 })
+      act('nkm_photo', 'Photo by the statue', 15, 0, 0, { fun: 5 }, null, { from: 9, to: 17 }),
+      Object.assign(act('nkm_garden', 'Sit by the fountains in the memorial garden', 30, 0, 0, { stress: -6, fun: 4 }, null, { from: 9, to: 17 }), { minRules: 63 })
     ]],
     ['acc_blackstar', '⭐', 'Independence Square and the Black Star Gate', 'outdoors', 'dome', 'acc_central', 13.6, 21.6, 'blackstar', 'The great square by the sea and the arch with the black star.', [
       act('bsg_walk', 'Walk the square to the Black Star Gate', 45, 0, 0, { fun: 10, stress: -4 }, null, { from: 7, to: 19 }),
@@ -2535,7 +2540,8 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['acc_lighthouse', '🗼', 'Jamestown Lighthouse', 'outdoors', 'tree', 'acc_jamestown', 6.4, 22.8, null, 'Climb the red and white tower for the view over the canoes and the old fort.', [
       act('jtl_climb', 'Climb the lighthouse for the view', 30, 1300, 0, { fun: 12, energy: -4 }, null, { from: 9, to: 17 }),
-      act('jtl_walk', 'Walk the old Jamestown streets', 60, 0, 0, { fun: 8, social: 4 }, null, { from: 8, to: 18 })
+      act('jtl_walk', 'Walk the old Jamestown streets', 60, 0, 0, { fun: 8, social: 4 }, null, { from: 8, to: 18 }),
+      Object.assign(act('jtl_boxing', 'Watch the young boxers train in a Jamestown gym', 30, 0, 0, { fun: 8 }, null, { from: 16, to: 19 }), { minRules: 63 })
     ]],
     ['acc_boxing', '🥊', 'Bukom Boxing Gym, Jamestown', 'services', 'dumbbell', 'acc_jamestown', 8.2, 21.2, null, 'A ring under a tin roof, heavy bags and young champions in training.', [
       act('box_train', 'Train with the boxers', 90, 1300, 0, { energy: -18, stress: -10, hygiene: -10 }, { fitness: 2 }, { from: 6, to: 19 }),
@@ -2544,15 +2550,19 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['acc_oxford', '🍸', 'Oxford Street lounges, Osu', 'nightlife', 'glass', 'acc_osu', 17.4, 18.6, null, 'Lounges, a DJ, kelewele outside and the late-night crowd.', [
       act('oxf_drinks', 'Drinks and highlife at a lounge', 120, 12000, 0, { fun: 26, social: 18, energy: -8 }, null, { from: 19, to: 24 }),
-      act('oxf_wait', 'Waiter shift at a lounge', 240, 0, 2600, { energy: -12 }, null, { from: 17, to: 24 })
+      act('oxf_wait', 'Waiter shift at a lounge', 240, 0, 2600, { energy: -12 }, null, { from: 17, to: 24 }),
+      Object.assign(act('oxf_kelewele', 'Kelewele from a street stall', 15, 800, 0, { hunger: 12, fun: 4 }, null, { from: 17, to: 23 }), { minRules: 63 })
     ]],
     ['acc_ug', '🎓', 'University of Ghana, Legon', 'learn', 'cap', 'acc_legon', 21.4, 2.6, null, 'The Balme Library tower, lecture halls, a canteen and the halls of residence.', 'ug_'],
     ['acc_kotoka', '✈️', 'Kotoka International Airport', 'transport', 'plane', 'acc_airport', 16.4, 6.8, null, 'Terminal 3: flights to Lagos, Abuja and PH.', [
-      act('kia_lounge', 'Wait in the departures lounge', 60, 6500, 0, { stress: -6, fun: 4 }, null, { from: 5, to: 24 })
+      act('kia_lounge', 'Wait in the departures lounge', 60, 6500, 0, { stress: -6, fun: 4 }, null, { from: 5, to: 24 }),
+      Object.assign(act('kia_snack', 'Meat pie and a malt at the terminal', 15, 1500, 0, { hunger: 14 }, null, { from: 6, to: 22 }), { minRules: 63 }),
+      Object.assign(act('kia_watch', 'Watch the planes from the viewing area', 30, 0, 0, { fun: 8 }, null, { from: 7, to: 19 }), { minRules: 63 })
     ]],
     ['acc_circle_station', '🚌', 'Circle Trotro Station', 'transport', 'bus', 'acc_circle', 11.6, 12.6, null, 'Trotros to every corner of the city, and coaches to Lomé, Cotonou and Lagos.', [
       act('crc_tea', 'Tea and bread at the station', 15, 700, 0, { hunger: 16 }, null, { from: 5, to: 22 }),
-      act('crc_mate', 'Work as a trotro mate for the morning', 180, 0, 2000, { energy: -12, social: 4 }, { hustle: 1 }, { from: 5, to: 13 })
+      act('crc_mate', 'Work as a trotro mate for the morning', 180, 0, 2000, { energy: -12, social: 4 }, { hustle: 1 }, { from: 5, to: 13 }),
+      Object.assign(act('crc_shade', 'Wait in the shade for the trotro to fill', 30, 0, 0, { stress: -2, fun: 2 }, null, { from: 6, to: 20 }), { minRules: 63 })
     ]],
     ['acc_chopbar', '🍲', 'Auntie Esi\'s Chop Bar, Osu', 'food', 'bowl', 'acc_osu', 18.8, 19.0, null, 'Banku and tilapia, fufu with light soup, waakye in the morning.', [
       act('chop_banku', 'Banku and grilled tilapia', 30, 3900, 0, { hunger: 42, fun: 6 }, null, { from: 11, to: 22 }),
@@ -2561,11 +2571,13 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['acc_mall', '🎞️', 'Ring Road Mall', 'culture', 'film', 'acc_airport', 14.2, 9.0, null, 'Shops, a cinema and a food court off the Ring Road.', [
       act('rrm_film', 'Catch a film', 150, 6000, 0, { fun: 30, social: 8 }, null, { from: 11, to: 23 }),
-      act('rrm_food', 'Food court lunch', 30, 3200, 0, { hunger: 30 }, null, { from: 11, to: 21 })
+      act('rrm_food', 'Food court lunch', 30, 3200, 0, { hunger: 30 }, null, { from: 11, to: 21 }),
+      Object.assign(act('rrm_window', 'Window-shop and enjoy the air conditioning', 45, 0, 0, { fun: 6, stress: -6 }, null, { from: 10, to: 21 }), { minRules: 63 })
     ]],
     ['acc_harbour', '🛶', 'Jamestown Fishing Harbour', 'outdoors', 'boat', 'acc_jamestown', 5.6, 23.6, null, 'Painted canoes, nets, fish-smoking ovens and the shouting of the auction.', [
       act('jth_canoes', 'Watch the canoes land the catch', 30, 0, 0, { fun: 8, stress: -4 }, null, { from: 6, to: 12 }),
-      act('jth_smoked', 'Buy smoked herring off the ovens', 15, 1300, 0, { hunger: 14 }, null, { from: 7, to: 17 })
+      act('jth_smoked', 'Buy smoked herring off the ovens', 15, 1300, 0, { hunger: 14 }, null, { from: 7, to: 17 }),
+      Object.assign(act('jth_nets', 'Watch the fishermen mend their nets', 30, 0, 0, { fun: 6, stress: -4 }, null, { from: 8, to: 16 }), { minRules: 63 })
     ]],
     // Dubai (rules 26): a visit; nothing here pays. Real landmarks keep their names; businesses are made up.
     ['dxb_burj', '🗼', 'Burj Khalifa and the Fountain', 'outdoors', 'tower', 'dxb_downtown', 17.6, 15.4, 'burj', 'The tallest building in the world, and the fountain that dances in front of it at night.', [
@@ -2582,31 +2594,38 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['dxb_gold', '💍', 'Deira Gold Souk', 'food', 'basket', 'dxb_deira', 25.4, 3.4, null, 'Lanes of windows full of gold: chains, bangles and wedding sets, sold by the gram.', [
       act('gs_window', 'Window-shop the gold lanes', 45, 0, 0, { fun: 10 }, null, { from: 10, to: 22 }),
-      act('gs_chain', 'Haggle for a thin gold chain', 30, aed(700), 0, { fun: 14 }, { charisma: 1 }, { from: 10, to: 22 })
+      act('gs_chain', 'Haggle for a thin gold chain', 30, aed(700), 0, { fun: 14 }, { charisma: 1 }, { from: 10, to: 22 }),
+      Object.assign(act('gs_karak', 'Karak tea from a corner café', 15, aed(3), 0, { hunger: 4, fun: 4 }, null, { from: 9, to: 23 }), { minRules: 63 })
     ]],
     ['dxb_spice', '🌶️', 'Spice Souk', 'food', 'basket', 'dxb_deira', 25.4, 6.2, null, 'Sacks of saffron, dried lemons, frankincense and dates.', [
       act('ss_buy', 'Buy saffron and dates to carry home', 30, aed(60), 0, { fun: 8, social: 4 }, null, { from: 9, to: 22 }),
-      act('ss_smell', 'Walk the spice lanes', 30, 0, 0, { fun: 6 }, null, { from: 9, to: 22 })
+      act('ss_smell', 'Walk the spice lanes', 30, 0, 0, { fun: 6 }, null, { from: 9, to: 22 }),
+      Object.assign(act('ss_oud', 'Try oud and perfume oils at a stall', 30, aed(40), 0, { fun: 8 }, null, { from: 10, to: 22 }), { minRules: 63 })
     ]],
     ['dxb_abra', '🛶', 'Abra station, Dubai Creek', 'outdoors', 'boat', 'dxb_creek', 21.6, 5.6, null, 'Wooden water taxis across the Creek for one dirham, as they have for a hundred years.', [
       act('ab_cross', 'Cross the Creek by abra', 15, aed(1), 0, { fun: 8 }, null, { from: 5, to: 24 }),
-      act('ab_dhow', 'Dinner cruise on a dhow', 120, aed(150), 0, { fun: 24, hunger: 34, social: 8 }, null, { from: 19, to: 23 })
+      act('ab_dhow', 'Dinner cruise on a dhow', 120, aed(150), 0, { fun: 24, hunger: 34, social: 8 }, null, { from: 19, to: 23 }),
+      Object.assign(act('ab_bench', 'Sit on the Creek wall and watch the dhows unload', 30, 0, 0, { fun: 6, stress: -6 }, null, { from: 7, to: 21 }), { minRules: 63 })
     ]],
     ['dxb_jbr', '🏖️', 'JBR Beach', 'outdoors', 'wave', 'dxb_marina', 2.4, 20.6, null, 'Soft sand under the Marina towers, warm water and a long beach walk.', [
       act('jbr_swim', 'Swim and sunbathe', 120, 0, 0, { fun: 22, stress: -12, hygiene: -4 }, null, { from: 7, to: 19 }),
-      act('jbr_walk', 'Evening walk along the beach front', 45, 0, 0, { fun: 8, stress: -6 }, null, { from: 17, to: 23 })
+      act('jbr_walk', 'Evening walk along the beach front', 45, 0, 0, { fun: 8, stress: -6 }, null, { from: 17, to: 23 }),
+      Object.assign(act('jbr_icecream', 'Ice cream on the beach front', 15, aed(15), 0, { fun: 6, hunger: 4 }, null, { from: 10, to: 23 }), { minRules: 63 })
     ]],
     ['dxb_marina_yacht', '🛥️', 'Dubai Marina walk', 'outdoors', 'yacht', 'dxb_marina', 4.2, 21.6, null, 'Yachts tied up under the towers, cafés along the water.', [
       act('mw_cruise', 'An hour on a shared yacht trip', 60, aed(120), 0, { fun: 22, social: 8 }, null, { from: 10, to: 22 }),
-      act('mw_shisha', 'Mint tea by the water', 45, aed(30), 0, { fun: 8, stress: -6 }, null, { from: 16, to: 24 })
+      act('mw_shisha', 'Mint tea by the water', 45, aed(30), 0, { fun: 8, stress: -6 }, null, { from: 16, to: 24 }),
+      Object.assign(act('mw_lights', 'Watch the towers light up at dusk', 30, 0, 0, { fun: 8, stress: -4 }, null, { from: 18, to: 21 }), { minRules: 63 })
     ]],
     ['dxb_kite', '🏄', 'Kite Beach, Jumeirah', 'outdoors', 'umbrella', 'dxb_jumeirah', 11.4, 12.8, null, 'Kite surfers, a running track and the sail-shaped hotel out on the water.', [
       act('kb_kite', 'A kite-surfing taster lesson', 90, aed(250), 0, { fun: 26, energy: -14 }, { fitness: 1 }, { from: 9, to: 17 }),
-      act('kb_run', 'Run the beach track at sunrise', 45, 0, 0, { energy: -10, stress: -8 }, { fitness: 1 }, { from: 5, to: 8 })
+      act('kb_run', 'Run the beach track at sunrise', 45, 0, 0, { energy: -10, stress: -8 }, { fitness: 1 }, { from: 5, to: 8 }),
+      Object.assign(act('kb_swim', 'Swim in the warm Gulf water', 45, 0, 0, { fun: 10, hygiene: -6, energy: -6 }, null, { from: 7, to: 19 }), { minRules: 63 })
     ]],
     ['dxb_palm_walk', '🌴', 'Palm boardwalk', 'outdoors', 'wave', 'dxb_palm', 5.6, 11.0, null, 'A boardwalk round the crescent, with the whole city skyline across the water.', [
       act('pb_walk', 'Walk the boardwalk at sunset', 60, 0, 0, { fun: 12, stress: -8 }, null, { from: 16, to: 21 }),
-      act('pb_view', 'Look back at the skyline', 15, 0, 0, { fun: 6 }, null, { from: 6, to: 23 })
+      act('pb_view', 'Look back at the skyline', 15, 0, 0, { fun: 6 }, null, { from: 6, to: 23 }),
+      Object.assign(act('pb_photo', 'Selfie with the Burj on the horizon', 15, 0, 0, { fun: 6, social: 4 }, null, { from: 8, to: 21 }), { minRules: 63 })
     ]],
     ['dxb_safari', '🐪', 'Al Sahra Dunes Camp', 'outdoors', 'tree', 'dxb_desert', 24.6, 22.4, 'desert', 'Dune bashing in a 4x4, camel rides, sandboarding and dinner in a camp under the stars.', [
       act('ds_dunes', 'Dune bashing in a 4x4', 60, aed(150), 0, { fun: 30, stress: 6 }, null, { from: 14, to: 19 }),
@@ -2616,10 +2635,13 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['dxb_kitchen', '🍲', 'Mama Ngozi\'s Kitchen, Deira', 'food', 'bowl', 'dxb_deira', 26.6, 5.4, null, 'Jollof, egusi and pepper soup for the traders and the homesick. Nollywood on the TV.', [
       act('mnk_jollof', 'Jollof rice and chicken', 30, aed(35), 0, { hunger: 40, fun: 6 }, null, { from: 11, to: 23 }),
-      act('mnk_gist', 'Gist with the traders about home', 45, 0, 0, { social: 16, fun: 6 }, null, { from: 12, to: 22 })
+      act('mnk_gist', 'Gist with the traders about home', 45, 0, 0, { social: 16, fun: 6 }, null, { from: 12, to: 22 }),
+      Object.assign(act('mnk_pepper', 'Goat meat pepper soup', 30, aed(30), 0, { hunger: 30, fun: 4 }, null, { from: 12, to: 23 }), { minRules: 63 })
     ]],
     ['dxb_dxb', '✈️', 'Dubai International Airport', 'transport', 'plane', 'dxb_airport', 28.4, 9.4, null, 'Duty free the size of a mall, open all night. Flights home to Lagos.', [
-      act('dxb_duty', 'Browse duty free', 60, 0, 0, { fun: 8 }, null, { from: 0, to: 24 })
+      act('dxb_duty', 'Browse duty free', 60, 0, 0, { fun: 8 }, null, { from: 0, to: 24 }),
+      Object.assign(act('dxb_food', 'Shawarma and juice at the food court', 30, aed(30), 0, { hunger: 30 }, null, null), { minRules: 63 }),
+      Object.assign(act('dxb_watch', 'Watch the planes from the terminal windows', 30, 0, 0, { fun: 8 }, null, null), { minRules: 63 })
     ]],
     // Cape Coast (rules 28). The castles are told as what they were: places where enslaved Africans were held and shipped.
     ['cc_castle', '🏰', 'Cape Coast Castle', 'culture', 'frame', 'cc_town', 15.6, 18.6, 'castle', 'The white castle on the rocks: the male and female dungeons, the governor\'s rooms and the Door of No Return.', [
@@ -2634,27 +2656,34 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['cc_kakum_park', '🌳', 'Kakum National Park', 'outdoors', 'tree', 'cc_kakum', 16.6, 2.4, null, 'Seven rope bridges hung between the treetops, and a rainforest full of birds and butterflies.', [
       act('kak_canopy', 'Cross the canopy walkway, forty metres up', 60, 7800, 0, { fun: 28, stress: 6, energy: -8 }, null, { from: 8, to: 16 }),
-      act('kak_trail', 'Walk the forest trail with a ranger', 90, 2600, 0, { fun: 14, stress: -10, energy: -10 }, { fitness: 1 }, { from: 8, to: 16 })
+      act('kak_trail', 'Walk the forest trail with a ranger', 90, 2600, 0, { fun: 14, stress: -10, energy: -10 }, { fitness: 1 }, { from: 8, to: 16 }),
+      Object.assign(act('kak_butterflies', 'Look for butterflies at the forest edge', 30, 0, 0, { fun: 8, stress: -6 }, null, { from: 8, to: 16 }), { minRules: 63 })
     ]],
     ['cc_market', '🧺', 'Kotokuraba Market', 'food', 'basket', 'cc_town', 14.0, 15.0, null, 'A new market hall: smoked fish, cassava, kenkey, cloth and phone accessories.', [
       act('kot_food', 'Buy smoked fish, gari and pepper for the week', 30, 4200, 0, { hunger: 24 }, null, { from: 6, to: 18 }),
-      act('kot_cloth', 'Buy wax-print cloth for a dress', 30, 7800, 0, { fun: 8 }, null, { from: 8, to: 18 })
+      act('kot_cloth', 'Buy wax-print cloth for a dress', 30, 7800, 0, { fun: 8 }, null, { from: 8, to: 18 }),
+      Object.assign(act('kot_kenkey', 'Kenkey and shito from a market seller', 15, 1200, 0, { hunger: 26 }, null, { from: 7, to: 18 }), { minRules: 63 })
     ]],
     ['cc_ucc_uni', '🎓', 'University of Cape Coast', 'learn', 'cap', 'cc_ucc', 25.4, 10.4, null, 'Lecture halls on the hill, the Sam Jonah Library, a canteen and the halls by the sea.', 'ucc_'],
     ['cc_harbour', '🛶', 'Elmina fishing harbour', 'outdoors', 'boat', 'cc_elmina', 4.4, 18.2, null, 'Hundreds of painted canoes on the Benya lagoon, nets everywhere and the fish auction.', [
       act('elh_auction', 'Watch the fish auction', 30, 0, 0, { fun: 8, social: 4 }, null, { from: 6, to: 12 }),
-      act('elh_fish', 'Buy fresh red snapper off a canoe', 15, 3900, 0, { hunger: 16 }, null, { from: 6, to: 13 })
+      act('elh_fish', 'Buy fresh red snapper off a canoe', 15, 3900, 0, { hunger: 16 }, null, { from: 6, to: 13 }),
+      Object.assign(act('elh_paint', 'Look at the painted canoes and their slogans', 30, 0, 0, { fun: 8 }, null, { from: 7, to: 17 }), { minRules: 63 })
     ]],
     ['cc_beach', '🏖️', 'Cape Coast beach front', 'outdoors', 'wave', 'cc_town', 18.4, 19.2, null, 'Fishing canoes on the sand, drummers on Sundays and a long walk to the Oguaa lagoon.', [
       act('ccb_walk', 'Walk the beach at sunset', 45, 0, 0, { fun: 10, stress: -8 }, null, { from: 16, to: 19 }),
-      act('ccb_drums', 'Join the Sunday drumming on the sand', 60, 0, 0, { fun: 16, social: 10 }, null, { days: [6], from: 14, to: 19 })
+      act('ccb_drums', 'Join the Sunday drumming on the sand', 60, 0, 0, { fun: 16, social: 10 }, null, { days: [6], from: 14, to: 19 }),
+      Object.assign(act('ccb_coconut', 'Fresh coconut from a beach seller', 15, 500, 0, { hunger: 6, fun: 4 }, null, { from: 9, to: 18 }), { minRules: 63 })
     ]],
     ['cc_chopbar', '🍲', 'Auntie Efua\'s Chop Bar', 'food', 'bowl', 'cc_town', 16.2, 15.6, null, 'Fante fante: fish light soup, banku with okro stew and kenkey with shito.', [
       act('aef_soup', 'Fante fante fish soup with banku', 30, 2600, 0, { hunger: 42, fun: 6 }, null, { from: 11, to: 21 }),
-      act('aef_okro', 'Banku and okro stew', 30, 2000, 0, { hunger: 38 }, null, { from: 11, to: 21 })
+      act('aef_okro', 'Banku and okro stew', 30, 2000, 0, { hunger: 38 }, null, { from: 11, to: 21 }),
+      Object.assign(act('aef_fufu', 'Fufu and light soup with goat', 30, 2400, 0, { hunger: 42 }, null, { from: 11, to: 21 }), { minRules: 63 })
     ]],
     ['cc_station', '🚌', 'Kotokuraba Lorry Station', 'transport', 'bus', 'cc_town', 13.2, 16.6, null, 'Tro-tros to Elmina, Kakum and Takoradi, and coaches to Accra, Kumasi and Lagos.', [
-      act('ccs_tea', 'Tea and bread at the station', 15, 700, 0, { hunger: 16 }, null, { from: 5, to: 22 })
+      act('ccs_tea', 'Tea and bread at the station', 15, 700, 0, { hunger: 16 }, null, { from: 5, to: 22 }),
+      Object.assign(act('ccs_shade', 'Wait in the shade for the tro-tro to fill', 30, 0, 0, { stress: -2, fun: 2 }, null, { from: 6, to: 20 }), { minRules: 63 }),
+      Object.assign(act('ccs_eggs', 'Boiled eggs and groundnuts for the road', 15, 600, 0, { hunger: 10 }, null, { from: 6, to: 20 }), { minRules: 63 })
     ]],
     // Calabar (rules 61): real landmarks keep their names; the businesses are made up.
     ['cb_residency', '🏛️', 'Old Residency Museum', 'culture', 'frame', 'cb_diamond', 8.4, 15.2, 'landmark', 'The prefabricated colonial residency of 1884, shipped from Britain, now a museum of Calabar history.', [
@@ -2819,7 +2848,8 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['kum_manhyia_pal', '👑', 'Manhyia Palace Museum', 'culture', 'mask', 'kum_manhyia', 14.6, 4.6, null, 'The old palace of the Asantehene: wax figures of past kings, the royal regalia and a guide with stories.', [
       act('mhp_tour', 'Guided tour of the palace museum', 60, 2600, 0, { fun: 12 }, { charisma: 1 }, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 17 }),
-      act('mhp_photo', 'Photo by the palace gates', 15, 0, 0, { fun: 5 }, null, { from: 9, to: 17 })
+      act('mhp_photo', 'Photo by the palace gates', 15, 0, 0, { fun: 5 }, null, { from: 9, to: 17 }),
+      Object.assign(act('mhp_kings', 'See the lifelike figures of the Asante kings', 30, 0, 0, { fun: 8 }, { charisma: 1 }, { from: 9, to: 17 }), { minRules: 63 })
     ]],
     ['kum_babayara', '🏟️', 'Baba Yara Sports Stadium', 'outdoors', 'stadium', 'kum_asokwa', 17.4, 18.0, null, 'Home of Asante Kotoko: drums, flags and the porcupine on every shirt.', [
       act('bys_match', 'Watch Kotoko play at home', 150, 3900, 0, { fun: 34, social: 18, stress: -6 }, null, { days: [6], from: 15, to: 19 }),
@@ -2833,11 +2863,14 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
       act('cnc_museum', 'Visit the Prempeh II Jubilee Museum', 45, 1300, 0, { fun: 10 }, { charisma: 1 }, { from: 9, to: 17 })
     ]],
     ['kum_sword', '🗡️', 'Okomfo Anokye Sword Site', 'culture', 'frame', 'kum_bantama', 6.2, 11.4, null, 'The sword stuck in the ground for three hundred years. Nobody can pull it out.', [
-      act('sws_see', 'See the sword and hear its story', 30, 1300, 0, { fun: 8 }, null, { from: 8, to: 17 })
+      act('sws_see', 'See the sword and hear its story', 30, 1300, 0, { fun: 8 }, null, { from: 8, to: 17 }),
+      Object.assign(act('sws_museum', 'Read the story of the Golden Stool', 30, 0, 0, { fun: 6 }, { charisma: 1 }, { from: 9, to: 17 }), { minRules: 63 }),
+      Object.assign(act('sws_pull', 'Join the crowd guessing who could pull the sword out', 15, 0, 0, { fun: 6, social: 4 }, null, { from: 9, to: 17 }), { minRules: 63 })
     ]],
     ['kum_rattray', '🌳', 'Rattray Park', 'outdoors', 'tree', 'kum_adum', 11.6, 14.2, null, 'Lawns, fountains and a children\'s play area in the middle of town.', [
       act('rat_walk', 'Walk round the fountains', 45, 600, 0, { fun: 8, stress: -8 }, null, { from: 8, to: 19 }),
-      act('rat_picnic', 'Picnic on the lawn', 60, 3000, 0, { hunger: 26, social: 8, fun: 6 }, null, { from: 10, to: 18 })
+      act('rat_picnic', 'Picnic on the lawn', 60, 3000, 0, { hunger: 26, social: 8, fun: 6 }, null, { from: 10, to: 18 }),
+      Object.assign(act('rat_jog', 'Jog round the park in the morning', 45, 0, 0, { energy: -10, stress: -8 }, { fitness: 1 }, { from: 6, to: 9 }), { minRules: 63 })
     ]],
     ['kum_chopbar', '🍲', 'Maame Afia\'s Chop Bar, Adum', 'food', 'bowl', 'kum_adum', 12.6, 16.2, null, 'Fufu pounded to order, palm nut soup, kontomire stew and ampesi.', [
       act('maf_fufu', 'Fufu and palm nut soup', 30, 2600, 0, { hunger: 42, fun: 6 }, null, { from: 11, to: 21 }),
@@ -2846,14 +2879,18 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['kum_lounge', '🍸', 'Ahodwo Garden Lounge', 'nightlife', 'glass', 'kum_ahodwo', 10.2, 19.4, null, 'A garden bar under fairy lights: highlife, grilled tilapia and a late crowd.', [
       act('agl_night', 'Drinks and highlife under the lights', 120, 10000, 0, { fun: 24, social: 16, energy: -8 }, null, { from: 19, to: 24 }),
-      act('agl_wait', 'Waiter shift at the lounge', 240, 0, 2400, { energy: -12 }, null, { from: 17, to: 24 })
+      act('agl_wait', 'Waiter shift at the lounge', 240, 0, 2400, { energy: -12 }, null, { from: 17, to: 24 }),
+      Object.assign(act('agl_kebab', 'Chichinga kebabs by the bar', 15, 1000, 0, { hunger: 14, fun: 4 }, null, { from: 17, to: 23 }), { minRules: 63 })
     ]],
     ['kum_airport_pl', '✈️', 'Kumasi Airport', 'transport', 'plane', 'kum_airport', 22.6, 4.4, null, 'A new terminal: flights to Accra, Lagos and Abuja.', [
-      act('kap_lounge', 'Wait in the departures lounge', 60, 5200, 0, { stress: -6, fun: 4 }, null, { from: 5, to: 22 })
+      act('kap_lounge', 'Wait in the departures lounge', 60, 5200, 0, { stress: -6, fun: 4 }, null, { from: 5, to: 22 }),
+      Object.assign(act('kap_snack', 'Meat pie and a malt at the terminal', 15, 1500, 0, { hunger: 14 }, null, { from: 6, to: 21 }), { minRules: 63 }),
+      Object.assign(act('kap_watch', 'Watch the planes from the terminal windows', 30, 0, 0, { fun: 8 }, null, { from: 7, to: 19 }), { minRules: 63 })
     ]],
     ['kum_lorrypark', '🚌', 'Kejetia Lorry Park', 'transport', 'bus', 'kum_kejetia', 11.2, 12.4, null, 'Tro-tros and coaches to Accra, Tamale, Lomé and Lagos. Everyone shouting a town name.', [
       act('klp_tea', 'Tea and bread at the station', 15, 700, 0, { hunger: 16 }, null, { from: 5, to: 22 }),
-      act('klp_mate', 'Work as a tro-tro mate for the morning', 180, 0, 2000, { energy: -12, social: 4 }, { hustle: 1 }, { from: 5, to: 13 })
+      act('klp_mate', 'Work as a tro-tro mate for the morning', 180, 0, 2000, { energy: -12, social: 4 }, { hustle: 1 }, { from: 5, to: 13 }),
+      Object.assign(act('klp_shade', 'Wait in the shade for the tro-tro to fill', 30, 0, 0, { stress: -2, fun: 2 }, null, { from: 6, to: 20 }), { minRules: 63 })
     ]],
     ['kum_lake', '🛶', 'Lake Bosomtwe landing', 'outdoors', 'boat', 'kum_bosomtwe', 26.4, 23.6, null, 'A sacred crater lake: fishermen paddle on wooden planks, not canoes.', [
       act('bos_plank', 'Paddle out on a fisherman\'s plank', 45, 2600, 0, { fun: 16, energy: -8 }, { fitness: 1 }, { from: 7, to: 17 }),
@@ -2927,7 +2964,8 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['ldn_abbey', '⛪', 'Westminster Abbey', 'culture', 'dome', 'ldn_westminster', 17.0, 13.4, null, 'The Gothic church where kings and queens are crowned, next to Big Ben and Parliament.', [
       Object.assign(act('wa_tour', 'Tour the Abbey and Poets\' Corner', 90, gbp(30), 0, { fun: 16, stress: -6 }, null, { days: [0, 1, 2, 3, 4, 5], from: 9, to: 15 }), { minRules: 41, sight: true }),
-      Object.assign(act('wa_evensong', 'Sit in for evensong', 60, 0, 0, { fun: 8, stress: -12 }, null, { from: 17, to: 18 }), { minRules: 41 })
+      Object.assign(act('wa_evensong', 'Sit in for evensong', 60, 0, 0, { fun: 8, stress: -12 }, null, { from: 17, to: 18 }), { minRules: 41 }),
+      Object.assign(act('wa_cloister', 'Walk the cloisters and the college garden', 30, 0, 0, { stress: -8, fun: 4 }, null, { from: 9, to: 16 }), { minRules: 63 })
     ]],
     ['ctn_table', '⛰️', 'Table Mountain Cableway', 'outdoors', 'tower', 'ctn_citybowl', 14.6, 11.6, null, 'A rotating cable car up the flat-topped mountain over the city, with the whole Cape below.', [
       Object.assign(act('tm_cable', 'Ride the cable car to the top', 120, zar(420), 0, { fun: 28, stress: -8 }, null, { from: 8, to: 19 }), { minRules: 42, sight: true }),
@@ -2976,7 +3014,8 @@ ctn_waterfront: { mult: 1.3, rent: 40000, rules: 42 }, ctn_citybowl: { mult: 1.2
     ]],
     ['dxb_frame', '🖼️', 'Dubai Frame', 'outdoors', 'frame', 'dxb_creek', 18.6, 9.4, null, 'A giant golden picture frame: old Dubai on one side, the new towers on the other, and a glass skybridge on top.', [
       Object.assign(act('df2_sky', 'Cross the glass skybridge', 60, aed(50), 0, { fun: 20, stress: 4 }, null, { from: 9, to: 21 }), { minRules: 41, sight: true }),
-      Object.assign(act('df2_park', 'Walk in Zabeel Park below', 45, 0, 0, { fun: 8, stress: -8 }, null, { from: 7, to: 22 }), { minRules: 41 })
+      Object.assign(act('df2_park', 'Walk in Zabeel Park below', 45, 0, 0, { fun: 8, stress: -8 }, null, { from: 7, to: 22 }), { minRules: 41 }),
+      Object.assign(act('df2_gallery', 'The old-and-new Dubai gallery inside the frame', 30, 0, 0, { fun: 8 }, null, { from: 9, to: 20 }), { minRules: 63 })
     ]],
     ['dxb_palm_resort', '🐬', 'Crescent Grand Resort, the Palm', 'outdoors', 'wave', 'dxb_palm', 6.4, 9.8, null, 'A pink palace of a hotel at the tip of the Palm, with a huge waterpark and an aquarium.', [
       Object.assign(act('pr_water', 'A day at the resort waterpark', 240, aed(330), 0, { fun: 40, energy: -18, stress: -10 }, { fitness: 1 }, { from: 10, to: 18 }), { minRules: 41, sight: true }),

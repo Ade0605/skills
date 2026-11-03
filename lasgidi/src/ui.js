@@ -3273,7 +3273,7 @@
     }).filter(Boolean)).concat(S.rules >= 18 ? (D.BRANCH_ACTS[pl.id] || []).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
-    }) : []).concat(S.rules >= 19 ? (D.CIVIC_ACTS[pl.id] || []).map(function (def) {
+    }) : []).concat(S.rules >= 19 ? (D.CIVIC_ACTS[pl.id] || []).filter(function (def) { return !def.minRules || S.rules >= def.minRules; }).map(function (def) {
       var a = avail.filter(function (x) { return x.id === def.id; })[0];
       return { id: def.id, def: def, a: a || null, icon: actIcon(def), short: venueShort(def.label), off: !a || a.disabled };
     }) : []).concat(S.rules >= 18 ? (D.FESTIVALS[pl.id] || []).filter(function (def) { return (!def.minRules || S.rules >= def.minRules) && (!def.fw || S.rules >= 51) && (!def.when || !def.when.months || def.when.months.indexOf(L.monthIndex(S)) >= 0); }).map(function (def) {
