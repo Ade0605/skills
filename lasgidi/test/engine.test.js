@@ -4007,3 +4007,14 @@ test('rules 63: every civic place has at least 3 things to do; the new ones stay
   assert.ok(ids(mk(63)).includes('kia_watch'), 'in rules 63');
   for (const list of Object.values(D.CIVIC_ACTS)) for (const a of list) assert.ok(a.mins % 15 === 0, a.id);
 });
+
+test('rules 64: railway career at Ebute-Metta and trolley gigs at both stations; none in rules 63 lives', () => {
+  const mk = (rules, loc) => { const s = L.newGame({ seed: 6401, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); s.loc = loc; return s; };
+  const ids = (s) => L.availableActions(s).map(a => a.id);
+  assert.ok(!ids(mk(63, 'yaba')).includes('sgr_desk'));
+  const s = mk(undefined, 'yaba'); while (Math.floor((s.t % 1440) / 60) !== 7) L.wait(s, 60);
+  assert.ok(ids(s).includes('sgr_trolley') && ids(s).includes('sgr_desk'));
+  assert.ok(!ids(mk(63, 'ib_ui')).includes('ibs_trolley'));
+  assert.ok(D.CAREERS.rail_sgr && D.CAREERS.rail_sgr.rules === 64);
+  for (const id of ['sgr_trolley', 'sgr_desk', 'ibs_trolley']) { const a = Object.values(D.CIVIC_ACTS).flat().find(x => x.id === id); assert.ok(a.earn <= 3000 && a.mins % 15 === 0, id); }
+});

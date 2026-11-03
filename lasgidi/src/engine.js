@@ -125,7 +125,8 @@
   // Mary Slessor's grave, Watt Market, UNICAL, Tinapa and a drill monkey sanctuary; Efik food; a December carnival.
   // 62 adds first class on the Lagos–Ibadan train (a meal and a quiet carriage) and the odd late train.
   // 63 fills older places that had fewer than three things to do (London, Accra, Dubai, Kumasi, Cape Coast).
-  var RULES = 63;
+  // 64 adds railway work: a career at the Ebute-Metta station and snack-trolley and ticket-desk gigs at both ends of the line.
+  var RULES = 64;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
