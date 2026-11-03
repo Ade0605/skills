@@ -1234,6 +1234,9 @@
       g.add(mesh(new T.BoxGeometry(94, 1.4, 18), green, 0, 16.6, 30));
       sign3d(g, label, 54, 19.6, 21.6, '#0f7a43', '#ffffff');
       g.add(mesh(new T.BoxGeometry(56, 7.4, 0.5), green, 0, 19.6, 21.9));
+      // Passengers waiting on the platform, some with bags.
+      var POUT = [{ top: 'tee', bottom: 'jeans', shoes: 'sneakers' }, { dress: 'iro_buba', head: 'gele', shoes: 'slides' }, { top: 'shirt', bottom: 'trousers', shoes: 'loafers' }, { dress: 'gown', shoes: 'heels' }, { top: 'ankara_sh', bottom: 'jeans', shoes: 'slides' }];
+      for (var pp = 0; pp < (LITE ? 6 : 12); pp++) { var pq = root.LasgidiModels3D && root.LasgidiModels3D.person(T, { look: { skin: pp % 6, hair: (pp * 3) % 8, shape: pp % 3 }, outfit: POUT[pp % POUT.length] }, { still: true }); if (!pq) break; pq.position.set(-60 + pp * 10.5 + (pp % 3) * 1.3, 1.2, -1.5 + (pp % 2) * 2.2); pq.rotation.y = Math.PI; g.add(pq); if (pp % 3 === 0) g.add(mesh(new T.BoxGeometry(0.6, 0.5, 0.35), mat('tsBag' + (pp % 2), { color: pp % 2 ? 0x2f6fa0 : 0x8a5a2b, roughness: 0.8 }), -59.2 + pp * 10.5, 1.45, -1.2)); }
       // A clock on the platform and the departures board.
       var clk = mesh(new T.CylinderGeometry(1.1, 1.1, 0.3, 24), white, -20, 5.4, -5.0); clk.rotation.x = Math.PI / 2; g.add(clk);
       var board = canvasTex(512, 128, function (cx2, w, h) { cx2.fillStyle = '#111'; cx2.fillRect(0, 0, w, h); cx2.fillStyle = '#f2c200'; cx2.font = '700 34px monospace'; cx2.fillText('08:00  IBADAN  ON TIME', 18, 52); cx2.fillText('16:00  LAGOS   ON TIME', 18, 104); });

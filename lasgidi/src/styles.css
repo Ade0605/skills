@@ -1812,3 +1812,5 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .news-item b { display: block; font-size: 14px; } .news-item small { display: block; color: var(--muted); font-size: 12px; line-height: 1.35; }
 .news-ic { font-size: 22px; line-height: 1; }
 .car-health { display: flex; align-items: center; gap: 8px; width: 100%; } .car-health .wear-bar { flex: 0 0 120px; margin: 0; } .car-health b { font-size: 12px; }
+/* The train's window seat: a window frame around the view when the Inside camera is on. */
+.rv-scene.rv-train[data-cam="inside"]::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2; border-radius: 34px; box-shadow: inset 0 0 0 26px #eceae3, inset 0 0 0 30px #c9c5bb, inset 0 0 40px 30px rgba(0,0,0,.35); }
