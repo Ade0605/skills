@@ -3982,3 +3982,19 @@ test('rules 61: Calabar opens to new lives (fly or coach), with places, homes, c
   assert.equal(L.cityOf(s), 'calabar');
   const rp = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.equal(rp.loc, s.loc); assert.equal(rp.t, s.t); assert.equal(rp.cash + rp.bank, s.cash + s.bank);
 });
+
+test('rules 62: first class on the Lagos–Ibadan train costs more and rests you; trains are sometimes 30 minutes late; replays', () => {
+  const mk = (rules, seed) => { const s = L.newGame({ seed: seed || 6201, origin: 'mid', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  assert.ok(!L.intercityOptions(mk(61), 'ibadan').some(o => o.mode === 'train1'), 'no first class before rules 62');
+  let late = 0;
+  for (let k = 0; k < 30; k++) {
+    const s = mk(undefined, 6300 + k); s.cash += 50000;
+    while (Math.floor((s.t % 1440) / 60) !== 7) L.wait(s, 60);
+    const o = L.intercityOptions(s, 'ibadan'), std = o.find(x => x.mode === 'train'), fc = o.find(x => x.mode === 'train1');
+    assert.ok(fc.cost > std.cost && !fc.disabled, fc.disabled);
+    const st0 = s.needs.stress, t0 = s.t; const r = L.intercity(s, 'ibadan', 'train1'); assert.ok(r.ok, r.msg);
+    if (s.t - t0 >= 195) late++;
+    if (k === 0) { const rp = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.equal(rp.t, s.t); assert.equal(rp.loc, 'ib_ui'); }
+  }
+  assert.ok(late > 0 && late < 15, 'some trains are late (' + late + '/30)');
+});
