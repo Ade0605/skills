@@ -1802,3 +1802,12 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .rv-walker { display: block; height: 120px; width: auto; }
 @keyframes rv-walk { from { transform: translateX(-50%) translateY(0) rotate(-2deg); } to { transform: translateX(-50%) translateY(-5px) rotate(2deg); } }
 @media (prefers-reduced-motion: reduce) { .ride-view .rv-veh.trek { animation: none; } }
+/* What's new card */
+.news-card { border: 2px solid var(--danfo, #f2b600); border-radius: 18px; padding: 12px 14px; background: color-mix(in srgb, var(--danfo, #f2b600) 10%, var(--surface, #fff)); }
+.news-h { display: flex; justify-content: space-between; align-items: center; }
+.news-h h4 { margin: 0; font-size: 16px; }
+.news-h .link-btn { min-width: 36px; min-height: 36px; font-size: 18px; color: var(--muted); }
+.news-list { display: grid; gap: 6px; margin: 8px 0 4px; }
+.news-item { display: flex; gap: 10px; align-items: flex-start; text-align: left; width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; background: var(--surface, #fff); color: var(--ink); font: inherit; cursor: pointer; }
+.news-item b { display: block; font-size: 14px; } .news-item small { display: block; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.news-ic { font-size: 22px; line-height: 1; }
