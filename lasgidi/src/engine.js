@@ -126,7 +126,9 @@
   // 62 adds first class on the Lagos–Ibadan train (a meal and a quiet carriage) and the odd late train.
   // 63 fills older places that had fewer than three things to do (London, Accra, Dubai, Kumasi, Cape Coast).
   // 64 adds railway work: a career at the Ebute-Metta station and snack-trolley and ticket-desk gigs at both ends of the line.
-  var RULES = 64;
+  // 65 adds power at home: generators wear out and need a technician's service (or they break), solar and inverters
+  // need installing, a bigger soundproof gen and a small solar kit, and the Power app (tap the light chip).
+  var RULES = 65;
 
   var LOANS = {
     lapo: { name: 'Microfinance loan', rate: 0.04, weeks: 8, max: 50000 },
@@ -588,6 +590,7 @@
     if (hd.daily) applyFx(s, hd.daily); // perks of homes added after v0.6
     var fd = furnitureDaily(s);
     if (fd) applyFx(s, fd);
+    powerWear(s);
     if (s.rules >= 57 && s.decor) { var dc = (D.WALLS[s.decor.wall] || {}).calm + (D.FLOORS[s.decor.floor] || {}).calm; if (dc) applyFx(s, { stress: -dc }); }
     (s.staff || []).forEach(function (id) { var St = D.STAFF[id]; if (!St.needsCar || rideCar(s)) applyFx(s, St.daily); });
     (s.pets || []).forEach(function (id) { applyFx(s, D.PETS[id].daily); });
@@ -3704,7 +3707,7 @@
   }
   function fxSum(s, key, cap) {
     var t = 0;
-    placed(s).forEach(function (it) { var f = D.FURNITURE[it.id]; if (f.fx && f.fx[key] && (!f.needsPower || s.power)) t += f.fx[key]; });
+    placed(s).forEach(function (it) { var f = D.FURNITURE[it.id]; if (f.fx && f.fx[key] && (!f.needsPower || s.power) && !broken(it)) t += f.fx[key]; });
     return cap == null ? t : Math.min(cap, t);
   }
   // Furniture (capped), plus a houseboat moored by an Island home.
@@ -3720,8 +3723,50 @@
   }
   function furnitureGen(s) {
     var t = 0;
-    placed(s).forEach(function (it) { var f = D.FURNITURE[it.id]; if (f.fx && f.fx.gen) t = Math.max(t, f.fx.gen); });
+    placed(s).forEach(function (it) { var f = D.FURNITURE[it.id]; if (f.fx && f.fx.gen && !broken(it)) t = Math.max(t, f.fx.gen); });
     return t;
+  }
+  /* ---------- rules 65: power at home (recorded calls pw and sg) ---------- */
+  function broken(it) { return (it.wear || 0) >= 100; }
+  var INSTALL_FEE = { solar: 150000, inverter: 60000, solar_kit: 80000 };
+  function serviceFee(s, it) { return price(s, Math.max(8000, Math.round(D.FURNITURE[it.id].price * 0.03 / 500) * 500)); }
+  function powerWear(s) {
+    if (!(s.rules >= 65)) return;
+    placed(s).forEach(function (it) {
+      var f = D.FURNITURE[it.id]; if (!(f.fx && f.fx.gen) || f.fx.power || broken(it)) return; // solar has no engine to wear
+      var was = it.wear || 0; it.wear = Math.min(100, was + (s.power ? 4 : 9)); // it runs more on days with cuts
+      if (it.wear >= 100) log(s, '⛽ Your ' + f.name + ' has packed up. Call a technician from the Power app.', 'bad');
+      else if (was < 80 && it.wear >= 80) log(s, '⛽ Your ' + f.name + ' is coughing and smoking. Book a service before it breaks.', 'info');
+    });
+  }
+  function powerInfo(s) {
+    if (!(s.rules >= 65)) return null;
+    var home = homeDef(s), share = Math.min(0.98, home.power + furniturePower(s));
+    return { light: !!s.power, atHome: s.loc === homeDistrict(s), share: share, homeShare: home.power, genCut: furnitureGen(s), runCost: genCost(s),
+      items: (s.items || []).map(function (it, i) { var f = D.FURNITURE[it.id]; return f.cat === 'Power' ? { i: i, id: it.id, name: f.name, icon: f.icon, placed: it.x != null, wear: it.wear || 0, broken: broken(it), needsInstall: !!it.needsInstall, isGen: !!(f.fx && f.fx.gen && !f.fx.power), fee: it.needsInstall ? price(s, INSTALL_FEE[it.id] || 60000) : serviceFee(s, it), sell: roundTo(it.paid * (broken(it) ? 0.15 : 0.4), 50) } : null; }).filter(Boolean),
+      shop: Object.keys(D.FURNITURE).filter(function (k) { var f = D.FURNITURE[k]; return f.cat === 'Power' && (!f.rules || s.rules >= f.rules); }).map(function (k) { var f = D.FURNITURE[k]; return { id: k, name: f.name, icon: f.icon, price: price(s, f.price), install: INSTALL_FEE[k] ? price(s, INSTALL_FEE[k]) : 0, fx: f.fx }; }) };
+  }
+  function installPower(s, idx) {
+    var it = s.items && s.items[idx]; if (!(s.rules >= 65) || !it || !it.needsInstall) return fail('Nothing to install.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.loc !== homeDistrict(s)) return fail('The installer comes to your home: go home first.');
+    var fee = price(s, INSTALL_FEE[it.id] || 60000); s.alerts = [];
+    if (!pay(s, fee, 'Installation: ' + D.FURNITURE[it.id].name)) return fail('Installing costs ' + naira(fee) + '.');
+    var spot = firstSpot(s, idx); if (!spot) { earn(s, fee, 'Installer refund'); return fail('There is no room for it in this home.'); }
+    delete it.needsInstall; it.x = spot.x; it.y = spot.y; it.r = spot.r; advance(s, 120);
+    log(s, '🔧 The installer fitted your ' + D.FURNITURE[it.id].name + ': panels, wiring and the changeover switch.', 'good');
+    return finish(s, ok(D.FURNITURE[it.id].name + ' installed. Your home gets more hours of light.'));
+  }
+  function serviceGen(s, idx) {
+    var it = s.items && s.items[idx], f = it && D.FURNITURE[it.id]; if (!(s.rules >= 65) || !it || !(f.fx && f.fx.gen && !f.fx.power)) return fail('No generator to service.');
+    if (s.pending.length) return fail('Decide on the open event first.');
+    if (s.loc !== homeDistrict(s)) return fail('The technician comes to your home: go home first.');
+    if (!(it.wear > 0)) return fail('It is running sweet. No service needed yet.');
+    var fee = serviceFee(s, it); s.alerts = [];
+    if (!pay(s, fee, 'Gen service: ' + f.name)) return fail('The service costs ' + naira(fee) + '.');
+    var was = broken(it); it.wear = 0; advance(s, was ? 120 : 60);
+    log(s, '🔧 The technician ' + (was ? 'fixed your gen: a new plug, carburettor cleaned and the oil changed.' : 'serviced your gen: oil, plugs and filter.'), 'good');
+    return finish(s, ok((was ? 'Fixed and running again: ' : 'Serviced: ') + f.name + '.'));
   }
   function furnitureDaily(s) {
     if (!(s.items && s.items.length)) return null;
@@ -3860,13 +3905,14 @@
   function life57Info(s) { return s.rules >= 57 ? { moodlets: moodlets(s), wishes: wishesToday(s), points: s.points || 0, perks: s.perks || {}, groc: s.groc || {}, shop: groceryShop(s), decor: s.decor || { wall: 'plain', floor: 'cement' } } : null; }
   function buyItem(s, id) {
     var f = D.FURNITURE[id];
-    if (!f) return fail('No such item.');
+    if (!f || (f.rules && !(s.rules >= f.rules))) return fail('No such item.');
     if (s.pending.length) return fail('Decide on the open event first.');
     if ((s.items || []).length >= 60) return fail('Your storage is full. Sell something first.');
     var cost = price(s, f.price);
     s.alerts = [];
     if (!pay(s, cost, 'Bought ' + f.name)) return fail(f.name + ' costs ' + naira(cost) + '.');
     s.items.push({ id: id, x: null, y: null, r: 0, paid: cost });
+    if (s.rules >= 65 && INSTALL_FEE[id]) { s.items[s.items.length - 1].needsInstall = true; return finish(s, ok(f.name + ' delivered. Book the installer in the Power app to fit it.')); }
     var spot = firstSpot(s, s.items.length - 1);
     if (spot) { var it = s.items[s.items.length - 1]; it.x = spot.x; it.y = spot.y; it.r = spot.r; }
     return finish(s, ok(spot ? f.name + ' is in your home. Drag it where you like.' : f.name + ' is in storage: there is no room for it here.'));
@@ -3875,6 +3921,7 @@
     var it = s.items && s.items[idx];
     if (!it) return fail('No such item.');
     x = x | 0; y = y | 0; r = r ? 1 : 0;
+    if (it.needsInstall) return fail('Book the installer first (Power app).');
     if (!fitsAt(s, idx, x, y, r)) return fail('It does not fit there.');
     it.x = x; it.y = y; it.r = r;
     return ok('Placed.');
@@ -3888,7 +3935,7 @@
   function sellItem(s, idx) {
     var it = s.items && s.items[idx];
     if (!it) return fail('No such item.');
-    var v = roundTo(it.paid * 0.4, 50);
+    var v = roundTo(it.paid * (broken(it) ? 0.15 : 0.4), 50); // rules 65: a broken gen sells for scrap
     s.alerts = [];
     s.items.splice(idx, 1);
     if (v) earn(s, v, 'Sold ' + D.FURNITURE[it.id].name);
@@ -6071,7 +6118,7 @@
     serialize: serialize, deserialize: deserialize, verifyLedger: verifyLedger,
     clockLabel: clockLabel, dateLabel: dateLabel, day: day, dow: dow, hour: hour, week: week,
     monthIndex: monthIndex, isDecember: isDecember, naira: naira, fmtMins: fmtMins, traffic: traffic,
-    buyItem: recorded('bi', buyItem), placeItem: recorded('pi', placeItem), storeItem: recorded('si', storeItem), sellItem: recorded('xi', sellItem),
+    buyItem: recorded('bi', buyItem), installPower: recorded('pw', installPower), serviceGen: recorded('sg', serviceGen), powerInfo: powerInfo, placeItem: recorded('pi', placeItem), storeItem: recorded('si', storeItem), sellItem: recorded('xi', sellItem),
     setLook: recorded('lk', setLook), buyClothes: recorded('bc2', buyClothes), wear: recorded('wr', wear), takeOff: recorded('to', takeOff), outfitTags: outfitTags,
     buyVehicle: recorded('bv', buyVehicle), sellVehicle: recorded('xv', sellVehicle), driveVehicle: recorded('dv', driveVehicle), vehicleUpkeep: vehicleUpkeep,
     payeTax: payeTax, savingsRate: savingsRate, billRate: billRate, loanRate: loanRate,
