@@ -1199,6 +1199,44 @@
       brownRoofs(g, 90, 58, 130, 36);
       plzG.add(g);
     }
+    // The standard-gauge line (Ebute-Metta and Moniya): a long platform under a canopy, a white-and-green train waiting
+    // at it with its locomotive at the front, and the station hall behind with its name across the top.
+    function trainStation(x, z, label) {
+      var g = new T.Group(); g.position.set(x, 0, z); g.scale.setScalar(1.25);
+      var conc = mat('tsConc', { color: 0xd9d4c7, roughness: 0.9 }), white = mat('tsWhite', { color: 0xf4f3ef, roughness: 0.45, metalness: 0.15 }), green = mat('tsGreen', { color: 0x0f7a43, roughness: 0.5 }), glassD = mat('tsGlass', { color: 0x22313d, roughness: 0.1, metalness: 0.5 }), steel = mat('tsSteel', { color: 0x8c949b, metalness: 0.7, roughness: 0.35 }), dark = mat('tsDark', { color: 0x2a2d31, roughness: 0.8 });
+      g.add(mesh(new T.BoxGeometry(150, 1.2, 10), conc, 0, 0.6, 0));
+      g.add(mesh(new T.BoxGeometry(150, 0.06, 0.5), mat('tsEdge', { color: 0xf2c200 }), 0, 1.24, -4.6)); // the yellow line, on the track side
+      g.add(mesh(new T.BoxGeometry(160, 0.5, 6), mat('tsBed', { color: 0x6b6258, roughness: 1 }), 0, 0.25, -9.5));
+      [-0.9, 0.9].forEach(function (rz) { g.add(mesh(new T.BoxGeometry(160, 0.25, 0.18), steel, 0, 0.62, -9.5 + rz * 1.6)); });
+      for (var sl = -78; sl <= 78; sl += 2) g.add(mesh(new T.BoxGeometry(0.4, 0.12, 4.6), mat('tsSleeper', { color: 0x5a4632 }), sl, 0.5, -9.5));
+      // The train: a locomotive and three coaches.
+      for (var c = 0; c < 4; c++) {
+        var cx = -48 + c * 27, loco = c === 3, car = new T.Group(); car.position.set(cx, 0, -9.5);
+        car.add(mesh(new T.BoxGeometry(25.6, 4.2, 3.6), white, 0, 3.1, 0));
+        car.add(mesh(new T.BoxGeometry(25.7, 1.6, 3.66), green, 0, 1.8, 0)); car.add(mesh(new T.BoxGeometry(25.4, 0.3, 3.4), steel, 0, 5.3, 0)); // a bold green skirt and a grey roof
+        car.add(mesh(new T.BoxGeometry(25.7, 0.25, 3.66), green, 0, 4.4, 0));
+        if (!loco) car.add(mesh(new T.BoxGeometry(24, 1.3, 3.7), glassD, 0, 3.4, 0)); else { car.add(mesh(new T.BoxGeometry(6, 1.3, 3.7), glassD, -8, 3.4, 0)); var nose = mesh(new T.BoxGeometry(3, 3.4, 3.4), white, 13.6, 2.8, 0); car.add(nose); car.add(mesh(new T.BoxGeometry(0.2, 1.4, 3), glassD, 15.15, 3.6, 0)); car.add(mesh(new T.BoxGeometry(0.2, 0.5, 3), green, 15.15, 1.9, 0)); }
+        [-1, 1].forEach(function (d) { car.add(mesh(new T.BoxGeometry(1.6, 2.6, 0.1), mat('tsDoor', { color: 0x0f7a43 }), d * 7, 2.6, 1.86)); });
+        [-9, 9].forEach(function (bx) { car.add(mesh(new T.BoxGeometry(3, 0.8, 3), dark, bx, 0.8, 0)); });
+        g.add(car);
+      }
+      // The canopy over the platform.
+      for (var cl = -70; cl <= 70; cl += 14) g.add(mesh(new T.CylinderGeometry(0.25, 0.25, 5.4, 8), steel, cl, 3.9, 3.4));
+      g.add(mesh(new T.BoxGeometry(150, 0.4, 4.4), mat('tsRoof', { color: 0xe9ecef, roughness: 0.5, metalness: 0.3 }), 0, 6.7, 2.8)); // a canopy over the back of the platform
+      for (var bn = -60; bn <= 60; bn += 30) g.add(mesh(new T.BoxGeometry(4, 0.5, 1), mat('tsBench', { color: 0x0f7a43 }), bn, 1.65, 2.5));
+      // The station hall behind the train.
+      g.add(mesh(new T.BoxGeometry(90, 16, 16), white, 0, 8, 30));
+      g.add(mesh(new T.BoxGeometry(70, 9, 0.4), glassD, 0, 7.5, 21.8));
+      for (var fn = -36; fn <= 36; fn += 6) g.add(mesh(new T.BoxGeometry(0.4, 9.4, 0.6), white, fn, 7.6, 21.6));
+      g.add(mesh(new T.BoxGeometry(94, 1.4, 18), green, 0, 16.6, 30));
+      sign3d(g, label, 54, 19.6, 21.6, '#0f7a43', '#ffffff');
+      g.add(mesh(new T.BoxGeometry(56, 7.4, 0.5), green, 0, 19.6, 21.9));
+      // A clock on the platform and the departures board.
+      var clk = mesh(new T.CylinderGeometry(1.1, 1.1, 0.3, 24), white, -20, 5.4, -5.0); clk.rotation.x = Math.PI / 2; g.add(clk);
+      var board = canvasTex(512, 128, function (cx2, w, h) { cx2.fillStyle = '#111'; cx2.fillRect(0, 0, w, h); cx2.fillStyle = '#f2c200'; cx2.font = '700 34px monospace'; cx2.fillText('08:00  IBADAN  ON TIME', 18, 52); cx2.fillText('16:00  LAGOS   ON TIME', 18, 104); });
+      var bd = new T.Mesh(new T.PlaneGeometry(10, 2.5), new T.MeshBasicMaterial({ map: board })); bd.position.set(20, 5.4, -4.9); bd.rotation.y = Math.PI; g.add(bd);
+      plzG.add(g);
+    }
     function okparaSquare(x, z) {
       var g = new T.Group(); g.position.set(x, 0, z); var st = mat('okStand', { color: 0xf1ece0, roughness: 0.7 }), grn = mat('okGreen', { color: 0x1f8a4c, roughness: 0.6 });
       g.add(mesh(new T.BoxGeometry(150, 0.2, 80), mat('okPave', { color: 0xcfc8b8, roughness: 0.9 }), 0, 0.1, 0));
@@ -1323,6 +1361,8 @@
       else if (id === 'ib_bowers') bowersTower(0, 90);
       else if (id === 'en_okpara') okparaSquare(0, 40);
       else if (id === 'cb_residency') oldResidency(0, 80);
+      else if (id === 'lag_sgr') trainStation(0, 26, 'MOBOLAJI JOHNSON STATION · EBUTE-METTA');
+      else if (id === 'ib_station') trainStation(0, 26, 'OBAFEMI AWOLOWO STATION · MONIYA');
       else if (id === 'dxb_burj') burjKhalifa(0, 110);
       else if (id === 'cc_castle' || id === 'cc_elmina_castle' || id === 'acc_osucastle' || id === 'ctn_goodhope') slaveCastle(0, 70, id === 'cc_elmina_castle');
       else if (id === 'dxb_safari') desertCamp();
@@ -1348,12 +1388,12 @@
       else stateHouse(0, 60, /threearms/.test(id));
       // Flags along the plaza, a fountain at its heart, lamps, palms, and the city behind.
       var gh = /^(acc|kum|cc)_/.test(id), uk = /^ldn_/.test(id), ae = /^dxb_/.test(id), za = /^ctn_/.test(id), castle = /^cc_.*castle$|^acc_osucastle$|^ctn_goodhope$/.test(id), dune = id === 'dxb_safari' || castle, flagT = canvasTex(96, 64, function (c, w, h) { if (za) { c.fillStyle = '#e03c31'; c.fillRect(0, 0, w, h / 2); c.fillStyle = '#001489'; c.fillRect(0, h / 2, w, h / 2); c.fillStyle = '#fff'; c.fillRect(0, h * 0.3, w, h * 0.4); c.fillStyle = '#007749'; c.fillRect(0, h * 0.38, w, h * 0.24); c.fillStyle = '#ffb81c'; c.beginPath(); c.moveTo(0, h * 0.12); c.lineTo(w * 0.42, h / 2); c.lineTo(0, h * 0.88); c.fill(); c.fillStyle = '#000'; c.beginPath(); c.moveTo(0, h * 0.22); c.lineTo(w * 0.32, h / 2); c.lineTo(0, h * 0.78); c.fill(); return; } if (ae) { ['#00732f', '#ffffff', '#000000'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#ff0000'; c.fillRect(0, 0, w / 4, h); return; } if (uk) { c.fillStyle = '#012169'; c.fillRect(0, 0, w, h); c.strokeStyle = '#fff'; c.lineWidth = 12; c.beginPath(); c.moveTo(0, 0); c.lineTo(w, h); c.moveTo(w, 0); c.lineTo(0, h); c.stroke(); c.strokeStyle = '#c8102e'; c.lineWidth = 4; c.stroke(); c.fillStyle = '#fff'; c.fillRect(w / 2 - 9, 0, 18, h); c.fillRect(0, h / 2 - 9, w, 18); c.fillStyle = '#c8102e'; c.fillRect(w / 2 - 5, 0, 10, h); c.fillRect(0, h / 2 - 5, w, 10); return; } if (gh) { ['#ce1126', '#fcd116', '#006b3f'].forEach(function (col, i) { c.fillStyle = col; c.fillRect(0, i * h / 3, w, h / 3 + 1); }); c.fillStyle = '#000'; c.font = '700 22px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('★', w / 2, h / 2 + 1); return; } c.fillStyle = '#008751'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(w / 3, 0, w / 3, h); });
-      for (var fp = 0; fp < (dune ? 0 : 10); fp++) { var fx = -45 + fp * 10, fz = 18; plzG.add(mesh(new T.CylinderGeometry(0.15, 0.18, 14, 6), mat('fpole2', { color: 0xdfe3e8, metalness: 0.6 }), fx, 7, fz)); var fg = new T.PlaneGeometry(4, 2.6, 12, 1); fg.translate(2, 0, 0); var flag = new T.Mesh(fg, new T.MeshStandardMaterial({ map: flagT, side: T.DoubleSide, roughness: 0.8 })); flag.position.set(fx, 12.6, fz); flag.userData.base = Float32Array.from(fg.attributes.position.array); plzG.add(flag); PZ.flags.push(flag); }
+      for (var fp = 0; fp < (dune || /^(lag_sgr|ib_station)$/.test(id) ? 0 : 10); fp++) { var fx = -45 + fp * 10, fz = 18; plzG.add(mesh(new T.CylinderGeometry(0.15, 0.18, 14, 6), mat('fpole2', { color: 0xdfe3e8, metalness: 0.6 }), fx, 7, fz)); var fg = new T.PlaneGeometry(4, 2.6, 12, 1); fg.translate(2, 0, 0); var flag = new T.Mesh(fg, new T.MeshStandardMaterial({ map: flagT, side: T.DoubleSide, roughness: 0.8 })); flag.position.set(fx, 12.6, fz); flag.userData.base = Float32Array.from(fg.attributes.position.array); plzG.add(flag); PZ.flags.push(flag); }
       if (!dune) plzG.add(mesh(new T.CylinderGeometry(9, 9.5, 1.2, 40), mat('basin', { color: 0xc9ccd1, roughness: 0.6 }), 0, 0.6, -4)); if (!dune) plzG.add(mesh(new T.CylinderGeometry(8.4, 8.4, 0.2, 40), new T.MeshPhysicalMaterial({ color: 0x5fb3cf, roughness: 0.05, clearcoat: 1 }), 0, 1.15, -4));
       PZ.spray = []; for (var sp2 = 0; sp2 < (dune ? 0 : 50); sp2++) { var d = mesh(new T.SphereGeometry(0.14, 6, 4), mat('sprayM', { color: 0xf4fbff, roughness: 0.2, transparent: true, opacity: 0.8 }), 0, 1, -4); d.castShadow = false; plzG.add(d); PZ.spray.push(d); }
       for (var lp = 0; lp < (dune ? 0 : 12); lp++) { var lx = (lp % 2 ? 1 : -1) * 22, lz = -36 + Math.floor(lp / 2) * 10; plzG.add(mesh(new T.CylinderGeometry(0.12, 0.14, 5, 6), frameM, lx, 2.5, lz)); var lb = new T.MeshBasicMaterial({ color: 0x6b6458 }), bl = new T.Mesh(new T.SphereGeometry(0.35, 8, 6), lb); bl.position.set(lx, 5.2, lz); plzG.add(bl); PZ.lamps.push(lb); }
       (dune ? [] : [[-34, -20], [34, -20], [-34, 0], [34, 0]]).forEach(function (q, i) { palm(q[0], q[1], 10 + i % 2, i % 2 ? -0.15 : 0.15); });
-      var rs = rnd(91); for (var tb = 0; tb < (dune || /^(ib_mapo_hall|ib_bowers|en_okpara|cb_residency)$/.test(id) ? 0 : 20); tb++) { var ta = -1.3 + rs() * 2.6, td = 190 + rs() * 120; towerBlock(Math.sin(ta) * td, Math.cos(ta) * td + 60, 14 + rs() * 12, 20 + rs() * 70, 14 + rs() * 10, plzG, 0, PZ.towers); }
+      var rs = rnd(91); for (var tb = 0; tb < (dune || /^(ib_mapo_hall|ib_bowers|en_okpara|cb_residency|ib_station)$/.test(id) ? 0 : 20); tb++) { var ta = -1.3 + rs() * 2.6, td = 190 + rs() * 120; towerBlock(Math.sin(ta) * td, Math.cos(ta) * td + 60, 14 + rs() * 12, 20 + rs() * 70, 14 + rs() * 10, plzG, 0, PZ.towers); }
       PZ.flood = []; [[-40, 12, 10], [40, 12, 10], [0, 12, 20]].forEach(function (q) { var L0 = new T.SpotLight(0xfff1d6, 0, 200, 0.7, 0.6, 1.2); L0.position.set(q[0], q[1], q[2]); L0.target.position.set(q[0] * 0.6, 20, 60); plzG.add(L0, L0.target); PZ.flood.push(L0); });
       // People crossing the plaza; a crowd on worship days (Friday at the mosque, Sunday at the church).
       var NW = 140, wr = rnd(43), wb = []; for (var w = 0; w < NW; w++) wb.push([-40 + wr() * 80, -36 + wr() * 70, (wr() - 0.5) * 2, (wr() - 0.5) * 2, wr() * 6]);
