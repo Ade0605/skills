@@ -3858,7 +3858,8 @@
     var chauffeur = mode === 'car' && (S.staff || []).some(function (x) { return x.id === 'driver' || x === 'driver'; });
     var cm = CITY_MODE_NAMES[L.cityOf(S)], name = chauffeur ? 'VIP chauffeur' : (cm && own(cm, mode) ? cm[mode] : RIDE_NAMES[mode] || 'Ride'), water = mode === 'ferry' || mode === 'boat', air = mode === 'heli' || mode === 'flight' || mode === 'jet';
     var cf = L.districtCity(from), ctt = L.districtCity(to), coach = mode === 'coach', route = coach ? (COACH_ROUTE[cf + '-' + ctt] || (COACH_ROUTE[ctt + '-' + cf] || []).slice().reverse()) : null;
-    var sights = coach ? route : passing(from, to).slice(0, 3);
+    var railTrip = mode === 'rail' && cf !== ctt, RAIL_STOPS = ['Agege', 'Agbado', 'Papalanto', 'Abeokuta', 'Olodo', 'Omi-Adio']; // the standard-gauge stations between Ebute-Metta and Moniya
+    var sights = railTrip ? (cf === 'lagos' ? RAIL_STOPS : RAIL_STOPS.slice().reverse()) : coach ? route : passing(from, to).slice(0, 3);
     // Road signs on the coach: each town shows how far you are from the city you left ("LAGOS 300 KM").
     var tot = coach ? (ROUTE_KM[cf + '-' + ctt] || ROUTE_KM[ctt + '-' + cf] || 0) : 0, subs = coach && tot ? route.map(function (x, i) { return D.CITIES[cf].name.toUpperCase() + ' ' + Math.round((i + 1) / (route.length + 1) * tot / 5) * 5 + ' KM'; }) : null;
     if (!air && !sights.length) {
@@ -3891,7 +3892,7 @@
     document.body.appendChild(el);
     // In 3D when three.js is in: the same window, with the journey built in three.js (the 2D scene stays otherwise).
     // In 3D when three.js is in. If it is still loading (the first ride of a visit), the ride starts flat and switches to 3D as soon as it arrives.
-    var go3d = function () { if (!el.isConnected || el.classList.contains('rv-3dmode') || !(window.LasgidiRide3D && window.THREE && threeState === 'ready')) return; var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { london: L.districtCity(to) === 'ldn', mode: mode, highway: coach, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, subs: subs, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit, car: mode === 'car' && L.drivenVehicle ? (L.drivenVehicle(S) || {}).id : null })) el.classList.add('rv-3dmode'); } catch (e) {}  };
+    var go3d = function () { if (!el.isConnected || el.classList.contains('rv-3dmode') || !(window.LasgidiRide3D && window.THREE && threeState === 'ready')) return; var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { london: L.districtCity(to) === 'ldn', mode: mode, highway: coach || (mode === 'rail' && cf !== ctt), train: mode === 'rail' && cf !== ctt, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, subs: subs, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit, car: mode === 'car' && L.drivenVehicle ? (L.drivenVehicle(S) || {}).id : null })) el.classList.add('rv-3dmode'); } catch (e) {}  };
     if (threeState === 'ready') go3d(); else if (window.LasgidiRide3D && threeState !== 'failed') loadThree(go3d);
     var b = document.getElementById('rv-arrive'); if (b) b.focus();
     setTimeout(done, secs * 1000 + 400);

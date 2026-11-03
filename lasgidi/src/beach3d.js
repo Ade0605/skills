@@ -1211,7 +1211,9 @@
       for (var sl = -78; sl <= 78; sl += 2) g.add(mesh(new T.BoxGeometry(0.4, 0.12, 4.6), mat('tsSleeper', { color: 0x5a4632 }), sl, 0.5, -9.5));
       // The train: a locomotive and three coaches, in one group so it can pull in, wait and leave (plazaFrame).
       var tg = new T.Group(); g.add(tg); PZ.train = tg;
-      for (var c = 0; c < 4; c++) {
+      var TM = root.LasgidiModels3D && root.LasgidiModels3D.train ? root.LasgidiModels3D.train(T, { coaches: 3, lite: LITE }) : null;
+      if (TM) { TM.rotation.y = -Math.PI / 2; TM.position.set(44, 0.62, -9.5); tg.add(TM); PZ.trainWheels = TM; } // the detailed model, front towards +x
+      for (var c = 0; c < (TM ? 0 : 4); c++) {
         var cx = -48 + c * 27, loco = c === 3, car = new T.Group(); car.position.set(cx, 0, -9.5);
         car.add(mesh(new T.BoxGeometry(25.6, 4.2, 3.6), white, 0, 3.1, 0));
         car.add(mesh(new T.BoxGeometry(25.7, 1.6, 3.66), green, 0, 1.8, 0)); car.add(mesh(new T.BoxGeometry(25.4, 0.3, 3.4), steel, 0, 5.3, 0)); // a bold green skirt and a grey roof
@@ -1405,6 +1407,7 @@
       if (PZ.train) { // a 70-second loop: the train glides in, waits at the platform, then pulls out towards the next station
         var cyc = (t % 70) / 70, tx;
         if (cyc < 0.14) { var e1 = 1 - cyc / 0.14; tx = -260 * e1 * e1; } else if (cyc < 0.78) tx = 0; else if (cyc < 0.94) { var e2 = (cyc - 0.78) / 0.16; tx = 260 * e2 * e2; } else tx = -600;
+        if (PZ.trainWheels && root.LasgidiModels3D) root.LasgidiModels3D.roll(PZ.trainWheels, (tx - (PZ.trainX == null ? tx : PZ.trainX)) * 0.8); PZ.trainX = tx;
         PZ.train.position.x = tx; PZ.train.visible = tx > -500;
       }
       if (PZ.ball) { var bu = t * 0.7; PZ.ball.position.set(Math.sin(bu) * 7, 0.35 + Math.abs(Math.sin(t * 3)) * 0.6, Math.sin(bu * 1.7) * 3.5); (PZ.players || []).forEach(function (f, k) { var lg = f.userData.legs; f.position.x = -20 + (k - 1.5) * 4 + Math.sin(bu + k) * 1.5; if (lg && !reduce) { lg[0].rotation[f.userData.axis || 'z'] = Math.sin(t * 7 + k) * 0.5; lg[1].rotation[f.userData.axis || 'z'] = -Math.sin(t * 7 + k) * 0.5; } }); }

@@ -34,7 +34,8 @@
     var world = new T.Group(); S3.add(world); var movers = [], sights = [], SPEED = air ? 40 : water ? 14 : mode === 'trek' ? 4 : mode === 'okada' || mode === 'keke' ? 16 : 20;
     // The ground: a road with moving lane lines, the lagoon, or the city far below.
     var groundTex = tex(256, 256, function (g, w, h) { if (water) { g.fillStyle = night ? '#1a4a68' : '#2a7896'; g.fillRect(0, 0, w, h); for (var i = 0; i < 60; i++) { g.fillStyle = 'rgba(255,255,255,' + (0.05 + (i % 5) * 0.03) + ')'; g.fillRect((i * 53) % w, (i * 97) % h, 30, 2); } } else if (air) { g.fillStyle = night ? '#141a24' : '#7a8a6a'; g.fillRect(0, 0, w, h); for (var b = 0; b < 140; b++) { g.fillStyle = night ? (b % 3 ? 'rgba(255,205,120,.9)' : 'rgba(255,240,200,.7)') : ['#c9c2b4', '#9aa0a6', '#b5603a', '#d8d2c4'][b % 4]; g.fillRect((b * 37) % w, (b * 61) % h, night ? 3 + (b % 3) : 8 + (b % 3) * 4, night ? 3 : 8 + (b % 4) * 3); } if (night) { g.strokeStyle = 'rgba(255,190,90,.8)'; g.lineWidth = 2; for (var rl = 0; rl < 6; rl++) { g.beginPath(); g.moveTo(0, rl * 47 % h); g.lineTo(w, (rl * 47 + 90) % h); g.stroke(); } } } else { g.fillStyle = '#3a3f46'; g.fillRect(0, 0, w, h); g.fillStyle = '#f2c200'; for (var y = 0; y < h; y += 64) g.fillRect(w / 2 - 3, y, 6, 36); g.fillStyle = '#f4f3ec'; g.fillRect(8, 0, 4, h); g.fillRect(w - 12, 0, 4, h); } });
-    if (ROAD || HWR) groundTex = (ROAD || HWR).asphalt(T, RLITE, LDN);
+    var TRAIN = !!o.train && !!HWR; // the standard-gauge train: the countryside, but a gravel bed with sleepers instead of asphalt
+    if (ROAD || HWR) groundTex = TRAIN ? tex(128, 256, function (g, w, h) { g.fillStyle = '#7a7268'; g.fillRect(0, 0, w, h); for (var i = 0; i < 900; i++) { g.fillStyle = 'rgba(' + (60 + (i * 37) % 80) + ',' + (55 + (i * 53) % 70) + ',' + (50 + (i * 29) % 60) + ',.6)'; g.fillRect((i * 71) % w, (i * 113) % h, 2, 2); } for (var y = 0; y < h; y += 21) { g.fillStyle = '#4e3b2a'; g.fillRect(14, y, w - 28, 8); } }) : (ROAD || HWR).asphalt(T, RLITE, LDN);
     groundTex.wrapS = groundTex.wrapT = T.RepeatWrapping; groundTex.repeat.set(air ? 6 : 1, air ? 30 : 12);
     var ground = new T.Mesh(new T.PlaneGeometry(air ? 600 : water ? 400 : 12, 400).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: groundTex, roughness: water ? 0.2 : 0.9, emissive: air && night ? 0xffffff : 0x000000, emissiveMap: air && night ? groundTex : null, emissiveIntensity: 0.9 })); ground.position.set(0, air ? -60 : 0, -150); ground.receiveShadow = true; world.add(ground);
     if (!water && !air) { var side = new T.Mesh(new T.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), HWR ? new T.MeshStandardMaterial({ map: HWR.grass(T, RLITE), roughness: 1 }) : M(HW ? 0x6f8f3e : 0x9a9184, 0.95)); side.position.set(0, -0.02, -150); if (HWR) HWR.horizon(T, S3, { night: night }); side.receiveShadow = true; world.add(side); }
@@ -67,7 +68,8 @@
     // bus stops with people waiting, market umbrellas, tall towers and low shops.
     var traffic = [], walkers = [], decor = [];
     if (root.__rideDebug) root.__rideDebug = { S3: S3, traffic: traffic, walkers: walkers, decor: decor, movers: movers };
-    if (!air && !water) {
+    if (TRAIN) { [-0.75, 0.75].forEach(function (rx) { box3(world, 0.12, 0.16, 400, M(0xb9bec4, 0.3, 0.8), rx + 1.6, 0.08, -150); }); } // the two steel rails
+    if (!air && !water && !TRAIN) {
       var CITY = !HW;
       function vehicle(kind) {
         var c = [0xf4f3ec, 0x8a8d93, 0xc0392b, 0x2f6fa0, 0x17181a, 0x6b6f75][Math.floor(Math.random() * 6)], MD = root.LasgidiModels3D;
@@ -160,6 +162,11 @@
       V.add(pv); V.userData.model = pv;
     }
     else if (mode === 'okada') { box3(V, 0.3, 0.6, 1.8, body, 0, 0.7, 0); [-0.8, 0.8].forEach(function (zz) { var wh = new T.Mesh(new T.TorusGeometry(0.35, 0.1, 8, 16), M(0x111111)); wh.position.set(0, 0.4, zz); wh.rotation.y = Math.PI / 2; V.add(wh); }); var rider = new T.Mesh(new T.CapsuleGeometry(0.25, 0.6, 4, 8), M(0x2f6fa0)); rider.position.set(0, 1.4, 0.1); V.add(rider); }
+    else if (TRAIN && root.LasgidiModels3D && root.LasgidiModels3D.train) { var TM = root.LasgidiModels3D.train(T, { coaches: 3, lite: RLITE }); TM.position.set(0, 0.16, -TM.userData.length); V.add(TM); V.userData.train = TM; } // the detailed train: locomotive leading, the last coach nearest the camera
+    else if (TRAIN) { // white coaches with a green skirt, like the trains at Ebute-Metta and Moniya
+      for (var tc = 0; tc < 3; tc++) { var cz = -tc * 21.5; box3(V, 2.9, 3.1, 21, M(0xf4f3ef, 0.4, 0.15), 0, 2.15, cz); box3(V, 2.94, 1.1, 21.02, M(0x0f7a43, 0.5), 0, 1.0, cz); box3(V, 2.96, 0.9, 19, M(0x22313d, 0.1, 0.5), 0, 2.7, cz); box3(V, 2.7, 0.25, 20.6, M(0x8c949b, 0.35, 0.6), 0, 3.8, cz); [-7, 7].forEach(function (bz) { box3(V, 2.2, 0.6, 2.6, M(0x2a2d31), 0, 0.3, cz + bz); }); }
+      box3(V, 2.9, 2.8, 2.4, M(0xf4f3ef, 0.4, 0.15), 0, 2.0, -64.5 + 0.2); box3(V, 2.92, 1.1, 2.42, M(0x0f7a43, 0.5), 0, 1.0, -64.3);
+    }
     else { var long = mode === 'brt' || mode === 'rail' ? 9 : mode === 'danfo' ? 5 : mode === 'keke' ? 2.4 : 4.2, ht = mode === 'brt' || mode === 'rail' || mode === 'danfo' ? 2.2 : mode === 'keke' ? 1.5 : 1.0; box3(V, mode === 'keke' ? 1.3 : 2, ht, long, body, 0, ht / 2 + 0.4, 0); box3(V, mode === 'keke' ? 1.32 : 2.02, ht * 0.4, long * 0.8, glass, 0, ht * 0.8 + 0.4, -0.1); if (mode === 'danfo' && !LDN) box3(V, 2.04, 0.18, long + 0.04, M(0x17181a), 0, ht * 0.45 + 0.4, 0);
       if (LDN && mode === 'danfo') { box3(V, 2, 2, long, body, 0, ht + 1.4, 0); box3(V, 2.02, 0.8, long * 0.85, glass, 0, ht + 1.6, -0.1); }
       if (LDN && mode === 'rail') { box3(V, 2.04, 0.3, long + 0.04, M(0xd8261c), 0, 0.75, 0); box3(V, 2.04, 0.14, long + 0.04, M(0x1f3a93), 0, ht + 0.35, 0); } if (mode === 'car' || mode === 'cab') box3(V, 1.8, 0.6, long * 0.5, body, 0, ht + 0.7, 0.2);
@@ -197,8 +204,9 @@
       sights.forEach(function (s) { var dz = (t - s.at) * SPEED * 1.4; s.g.position.z = Math.min(40, -120 + dz * 1.6); });
       V.position.y = air ? Math.sin(t * 1.2) * 0.5 + (t < 1 ? -3 * (1 - t) : 0) : water ? Math.sin(t * 2) * 0.1 : WALK ? WALK + Math.abs(Math.sin(t * 7)) * 0.05 : Math.abs(Math.sin(t * 9)) * 0.03; V.rotation.z = water ? Math.sin(t * 1.6) * 0.03 : 0;
       if (V.userData.rotor) V.userData.rotor.rotation.y = t * 25; if (V.userData.tailRotor) V.userData.tailRotor.rotation.x = t * 40; if (V.userData.navs) V.userData.navs.forEach(function (l) { l.visible = Math.floor(t * 2) % 2 === 0; }); if (V.userData.wake) V.userData.wake.material.opacity = 0.35 + Math.sin(t * 5) * 0.1;
+      if (V.userData.train) V.userData.train.userData.wheels.forEach(function (w) { w.rotation.x = -run * SPEED / 0.46; }); // the steel wheels turn with the run
       if (V.userData.walker) { var lg = V.userData.walker.userData.legs, a = Math.sin(t * 7) * 0.5; lg[0].rotation.x = a; lg[1].rotation.x = -a; }
-      var cm = box.dataset.cam || 'chase'; if (!air && !water) { if (cm === 'side') { cam.position.set(V.position.x + (LDN ? -14 : 14), 3, 1); cam.lookAt(V.position.x, 1.5, -1); } else if (cm === 'inside') { cam.position.set(V.position.x + 0.6, 2.4, mode === 'coach' ? -1 : 0); cam.lookAt(V.position.x + 0.3, 2.2, -30); } else { cam.position.set(LDN ? -6 : 6, 4.5, 11); cam.lookAt(0, 1, -6); } }
+      var cm = box.dataset.cam || 'chase'; if (!air && !water) { if (cm === 'side') { cam.position.set(V.position.x + (LDN ? -14 : 14), 3, 1); cam.lookAt(V.position.x, 1.5, -1); } else if (cm === 'inside') { cam.position.set(V.position.x + 0.6, 2.4, mode === 'coach' ? -1 : 0); cam.lookAt(V.position.x + 0.3, 2.2, -30); } else if (TRAIN) { cam.position.set(11, 8, 24); cam.lookAt(0, 2, -30); } else { cam.position.set(LDN ? -6 : 6, 4.5, 11); cam.lookAt(0, 1, -6); } }
       renderer.render(S3, cam); raf = root.requestAnimationFrame(frame);
     }
     raf = root.requestAnimationFrame(frame);
