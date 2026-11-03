@@ -469,8 +469,12 @@
     function rebuildTraffic() {
       vehicles = []; boats = [];
       cityRoads().forEach(function (r, i) {
-        for (var n = 0; n < 2; n++) vehicles.push({ a: r[0], b: r[1], t: hash(i, n, 21), dir: n ? -1 : 1, kind: hash(i, n, 22) < 0.7 ? 'danfo' : 'car' });
+        // Bridges (roads that cross the water) carry a steady stream both ways, spread evenly so cars are always crossing.
+        var rn = D.ROAD_NAMES && (D.ROAD_NAMES[r[0] + '-' + r[1]] || D.ROAD_NAMES[r[1] + '-' + r[0]]), br = D.DISTRICTS[r[0]].side !== D.DISTRICTS[r[1]].side || /Bridge/.test(rn || ''), cnt = br ? 8 : 2;
+        for (var n = 0; n < cnt; n++) vehicles.push({ a: r[0], b: r[1], t: br ? (n / cnt + hash(i, n, 21) * 0.08) % 1 : hash(i, n, 21), dir: n % 2 ? -1 : 1, kind: hash(i, n, 22) < 0.7 ? 'danfo' : 'car', bridge: br });
       });
+      // Harbour Live's three bridges get their own traffic too.
+      if (CITY === 'lagos') HARBOUR_BRIDGES.forEach(function (b, i) { for (var n = 0; n < 4; n++) vehicles.push({ pa: b[0], pb: b[1], t: n / 4 + hash(i, n, 24) * 0.1, dir: n % 2 ? -1 : 1, kind: n % 3 ? 'car' : 'danfo', bridge: true }); });
       if (CITY === 'lagos') FERRIES.forEach(function (r, i) { boats.push({ a: r[0], b: r[1], t: hash(i, 3, 23), dir: 1 }); });
     }
     rebuildTraffic();
@@ -687,7 +691,7 @@
       cityRoads().forEach(function (r) {
         var a = D.DISTRICTS[r[0]], b = D.DISTRICTS[r[1]];
         var p = toScreen(a.x, a.y, 0), q = toScreen(b.x, b.y, 0);
-        var bridge = a.side !== b.side;
+        var rnm = D.ROAD_NAMES && (D.ROAD_NAMES[r[0] + '-' + r[1]] || D.ROAD_NAMES[r[1] + '-' + r[0]]), bridge = a.side !== b.side || /Bridge/.test(rnm || '');
         g.strokeStyle = bridge ? (theme.dark ? '#5b5f66' : '#8d9198') : theme.road;
         g.lineWidth = Math.max(2, (bridge ? 4.2 : 3.4) * s);
         g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
@@ -1271,7 +1275,7 @@
     }
 
     function along(v) {
-      var a = D.DISTRICTS[v.a], b = D.DISTRICTS[v.b], t = v.dir > 0 ? v.t : 1 - v.t;
+      var a = v.pa ? { x: v.pa[0], y: v.pa[1] } : D.DISTRICTS[v.a], b = v.pb ? { x: v.pb[0], y: v.pb[1] } : D.DISTRICTS[v.b], t = v.dir > 0 ? v.t : 1 - v.t;
       return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
     }
 
@@ -1298,7 +1302,7 @@
       var rush = (scene.hour >= 6 && scene.hour < 10) || (scene.hour >= 16 && scene.hour < 21);
       var speed = (rush ? 0.012 : 0.04) * (scene.fuel ? 0.6 : 1);
       vehicles.forEach(function (v, i) {
-        if (night > 0.6 && i % 3) return;
+        if (night > 0.6 && i % 3 && !v.bridge) return; // fewer cars at night, but the bridges stay busy
         if (!reduce) { v.t += speed * dt; if (v.t > 1) v.t -= 1; }
         var p = along(v), q = toScreen(p.x, p.y, 1.5);
         var w = Math.max(3, 3.4 * s), h = Math.max(1.8, 1.9 * s);

@@ -449,6 +449,7 @@
   // Drawn on the map only; travel uses straight-line distance x 1.3.
   var ROADS = [
     ['ikeja', 'oshodi'], ['oshodi', 'mushin'], ['mushin', 'surulere'], ['mushin', 'yaba'],
+    ['surulere', 'island'], // Eko Bridge (drawn only: travel uses straight lines)
     ['surulere', 'festac'], ['surulere', 'yaba'], ['yaba', 'island'], ['ikeja', 'ikorodu'],
     ['oshodi', 'festac'], ['island', 'ikoyi'], ['ikoyi', 'vi'], ['island', 'vi'],
     ['ikoyi', 'lekki'], ['vi', 'lekki'], ['lekki', 'ajah'], ['ikorodu', 'yaba'],
@@ -1612,7 +1613,7 @@
   var ROAD_NAMES = {
     'ikeja-oshodi': 'Agege Motor Road', 'oshodi-mushin': 'Agege Motor Road', 'mushin-surulere': 'Funsho Williams Avenue',
     'mushin-yaba': 'Herbert Macaulay Way', 'surulere-festac': 'Badagry Expressway', 'surulere-yaba': 'Ojuelegba Road',
-    'yaba-island': 'Third Mainland Bridge', 'ikeja-ikorodu': 'Kudirat Abiola Way', 'oshodi-festac': 'Apapa–Oshodi Expressway',
+    'yaba-island': 'Third Mainland Bridge', 'surulere-island': 'Eko Bridge', 'ikeja-ikorodu': 'Kudirat Abiola Way', 'oshodi-festac': 'Apapa–Oshodi Expressway',
     'island-ikoyi': 'Awolowo Road', 'ikoyi-vi': 'Falomo Bridge', 'island-vi': 'Ahmadu Bello Way', 'ikoyi-lekki': 'Lekki–Ikoyi Link Bridge',
     'vi-lekki': 'Ozumba Mbadiwe Avenue', 'lekki-ajah': 'Lekki–Epe Expressway', 'ikorodu-yaba': 'Ikorodu Road'
   };
