@@ -316,5 +316,96 @@
   // Spin a vehicle's wheels by the distance it moved (metres).
   function roll(g, dist) { (g.userData.wheels || []).forEach(function (w) { w.rotation.x -= dist / 0.35; }); }
 
-  root.LasgidiModels3D = { vehicle: vehicle, forVehicle: forVehicle, person: person, roll: roll, merge: merge, rbox: rbox, tube: tube, wheel: wheel };
+  // The Lagos–Ibadan standard-gauge train: a diesel locomotive and passenger coaches in white with Nigerian green.
+  // Curved roofs, framed tinted windows, doors, roof air-conditioning, gangway bellows, bogies with steel wheels and
+  // an under-floor skirt. The front faces -z and the train runs back along +z; userData.length is its full length.
+  // opts: { coaches (default 3), lite }. Parts sharing a material are merged, so a whole train is a handful of draws.
+  var TRAIN_MATS = null;
+  function trainMats(T) {
+    if (TRAIN_MATS) return TRAIN_MATS;
+    var P = function (o) { return T.MeshPhysicalMaterial ? new T.MeshPhysicalMaterial(o) : new T.MeshStandardMaterial(o); };
+    return (TRAIN_MATS = {
+      white: P({ color: 0xf3f3ef, roughness: 0.28, metalness: 0.1, clearcoat: 0.7, clearcoatRoughness: 0.2 }),
+      green: P({ color: 0x0b7a3e, roughness: 0.32, metalness: 0.15, clearcoat: 0.6 }),
+      dgreen: P({ color: 0x075a2d, roughness: 0.4, metalness: 0.1, clearcoat: 0.4 }),
+      yellow: P({ color: 0xf2c200, roughness: 0.35, clearcoat: 0.5 }),
+      glass: P({ color: 0x14202a, roughness: 0.05, metalness: 0.6, clearcoat: 1 }),
+      frame: new T.MeshStandardMaterial({ color: 0x1b1d20, roughness: 0.5, metalness: 0.4 }),
+      steel: new T.MeshStandardMaterial({ color: 0x9aa1a8, roughness: 0.3, metalness: 0.85 }),
+      under: new T.MeshStandardMaterial({ color: 0x23262a, roughness: 0.8, metalness: 0.3 }),
+      rubber: new T.MeshStandardMaterial({ color: 0x0e0f11, roughness: 0.95 }),
+      roof: new T.MeshStandardMaterial({ color: 0xc9ced3, roughness: 0.45, metalness: 0.5 }),
+      lamp: new T.MeshStandardMaterial({ color: 0xfff6d0, emissive: 0xfff1b8, emissiveIntensity: 1.2 }),
+      red: new T.MeshStandardMaterial({ color: 0xa31414, emissive: 0x5a0000, emissiveIntensity: 0.6 })
+    });
+  }
+  function bodyShape(T, w, h, r) { // a flat floor and sides that curve into the roof
+    var s = new T.Shape(), x = w / 2; s.moveTo(-x, 0); s.lineTo(x, 0); s.lineTo(x, h - r); s.quadraticCurveTo(x, h, x - r, h); s.lineTo(-x + r, h); s.quadraticCurveTo(-x, h, -x, h - r); s.lineTo(-x, 0); return s;
+  }
+  function trainBox(T, g, w, h, d, m, x, y, z) { return mesh(T, g, new T.BoxGeometry(w, h, d), m, x, y, z); }
+  function bogie(T, g, z, M, lite, wheels) {
+    trainBox(T, g, 2.3, 0.42, 2.9, M.under, 0, 0.62, z);
+    [-1, 1].forEach(function (sx) { trainBox(T, g, 0.12, 0.3, 2.6, M.steel, sx * 1.12, 0.62, z); }); // side frames
+    [-0.95, 0.95].forEach(function (dz) {
+      var ax = new T.Group(); ax.position.set(0, 0.46, z + dz); g.add(ax); wheels.push(ax);
+      [-0.72, 0.72].forEach(function (sx) { var w = mesh(T, ax, new T.CylinderGeometry(0.46, 0.46, 0.14, lite ? 12 : 22), M.steel, sx, 0, 0); w.rotation.z = Math.PI / 2; var hb = mesh(T, ax, new T.CylinderGeometry(0.16, 0.16, 0.16, 8), M.under, sx, 0, 0); hb.rotation.z = Math.PI / 2; });
+      var axle = mesh(T, ax, new T.CylinderGeometry(0.07, 0.07, 1.5, 6), M.under, 0, 0, 0); axle.rotation.z = Math.PI / 2;
+    });
+  }
+  function coach(T, g, z0, L, M, lite, wheels, last) {
+    var c = new T.Group(); c.position.z = z0 + L / 2; g.add(c);
+    var body = new T.Mesh(new T.ExtrudeGeometry(bodyShape(T, 3.1, 3.35, 0.7), { depth: L, bevelEnabled: false, curveSegments: lite ? 4 : 8 }), M.white); body.geometry.translate(0, 0, -L / 2); body.position.y = 1.1; body.castShadow = body.receiveShadow = true; c.add(body);
+    trainBox(T, c, 3.14, 0.42, L, M.green, 0, 1.33, 0); // the green skirt
+    trainBox(T, c, 3.14, 0.16, L, M.green, 0, 2.06, 0); // the green line under the windows
+    trainBox(T, c, 3.14, 0.05, L, M.yellow, 0, 2.19, 0); // a thin yellow pinstripe
+    var nW = lite ? 6 : 9, span = L - 6.4;
+    [-1, 1].forEach(function (sx) {
+      for (var i = 0; i < nW; i++) { var wz = -span / 2 + (i + 0.5) * span / nW; trainBox(T, c, 0.04, 0.98, span / nW - 0.32, M.frame, sx * 1.565, 2.85, wz); trainBox(T, c, 0.04, 0.86, span / nW - 0.46, M.glass, sx * 1.585, 2.85, wz); }
+      [-1, 1].forEach(function (dz) { var dzz = dz * (L / 2 - 1.7); trainBox(T, c, 0.05, 2.25, 1.15, M.green, sx * 1.57, 2.4, dzz); trainBox(T, c, 0.05, 0.62, 0.62, M.glass, sx * 1.6, 2.95, dzz); trainBox(T, c, 0.05, 0.05, 1.15, M.steel, sx * 1.6, 1.3, dzz); });
+    });
+    trainBox(T, c, 2.6, 0.5, L - 6, M.under, 0, 0.92, 0); // under-floor equipment
+    if (!lite) for (var e = 0; e < 3; e++) trainBox(T, c, 2.1, 0.45, 1.6, M.frame, 0, 0.78, -L / 2 + 6 + e * (L - 12) / 2);
+    [-L / 4, L / 4].forEach(function (az) { var ac = new T.Mesh(rbox(T, 2.0, 0.34, 3.2, 0.12), M.roof); ac.position.set(0, 4.55, az); ac.castShadow = true; c.add(ac); }); // roof air-conditioning
+    trainBox(T, c, 0.9, 0.05, L - 0.4, M.roof, 0, 4.47, 0); // the roof walkway strip
+    bogie(T, c, -L / 2 + 3.2, M, lite, wheels); bogie(T, c, L / 2 - 3.2, M, lite, wheels);
+    if (!last) trainBox(T, c, 2.3, 2.7, 0.9, M.rubber, 0, 2.55, L / 2 + 0.45); // the gangway bellows to the next coach
+    else { // the tail end: a green end panel, the end door with its window, tail lights and a buffer beam
+      trainBox(T, c, 3.0, 1.0, 0.06, M.green, 0, 1.6, L / 2 + 0.03); trainBox(T, c, 0.95, 2.2, 0.06, M.dgreen, 0, 2.4, L / 2 + 0.05); trainBox(T, c, 0.6, 0.7, 0.07, M.glass, 0, 3.05, L / 2 + 0.06);
+      [-1, 1].forEach(function (sx) { trainBox(T, c, 0.62, 0.62, 0.06, M.glass, sx * 1.05, 3.0, L / 2 + 0.05); trainBox(T, c, 0.3, 0.2, 0.08, M.red, sx * 1.0, 1.55, L / 2 + 0.07); });
+      trainBox(T, c, 2.9, 0.25, 0.4, M.under, 0, 0.8, L / 2 + 0.15);
+    }
+    return c;
+  }
+  function locomotive(T, g, L, M, lite, wheels) {
+    var c = new T.Group(); c.position.z = L / 2; g.add(c);
+    // The long hood behind the cab, green with a white band, side grilles along it.
+    var hood = new T.Mesh(rbox(T, 2.9, 2.8, L - 5.4, 0.35), M.green); hood.position.set(0, 2.55, 2.4); hood.castShadow = true; c.add(hood);
+    trainBox(T, c, 2.94, 0.5, L - 5.4, M.white, 0, 2.9, 2.4);
+    if (!lite) for (var gi = 0; gi < 8; gi++) [-1, 1].forEach(function (sx) { trainBox(T, c, 0.04, 0.9, 1.1, M.frame, sx * 1.47, 2.2, -L / 2 + 6.5 + gi * 1.55); });
+    // The cab at the front: taller, with a raked windscreen and side windows.
+    var cab = new T.Mesh(new T.ExtrudeGeometry(bodyShape(T, 3.1, 3.6, 0.45), { depth: 4.2, bevelEnabled: false, curveSegments: 6 }), M.white); cab.geometry.translate(0, 0, -2.1); cab.position.set(0, 1.1, -L / 2 + 2.9); cab.castShadow = true; c.add(cab);
+    trainBox(T, c, 3.14, 0.9, 4.2, M.green, 0, 1.55, -L / 2 + 2.9);
+    var nose = trainBox(T, c, 3.0, 1.7, 1.2, M.yellow, 0, 1.95, -L / 2 + 0.5); // the yellow warning nose
+    var ws = trainBox(T, c, 2.7, 1.15, 0.08, M.glass, 0, 3.6, -L / 2 + 0.88); ws.rotation.x = -0.35; // raked windscreen
+    trainBox(T, c, 0.06, 1.25, 0.12, M.frame, 0, 3.6, -L / 2 + 0.86);
+    [-1, 1].forEach(function (sx) { trainBox(T, c, 0.05, 0.9, 1.6, M.glass, sx * 1.575, 3.5, -L / 2 + 2.4); trainBox(T, c, 0.05, 2.1, 0.8, M.dgreen, sx * 1.575, 2.3, -L / 2 + 3.9); }); // side windows, cab doors
+    [-0.95, 0.95].forEach(function (sx) { var hl = mesh(T, c, new T.CylinderGeometry(0.17, 0.17, 0.08, 14), M.lamp, sx, 1.75, -L / 2 - 0.12); hl.rotation.x = Math.PI / 2; });
+    var top = mesh(T, c, new T.CylinderGeometry(0.2, 0.2, 0.08, 14), M.lamp, 0, 4.25, -L / 2 + 0.95); top.rotation.x = Math.PI / 2 - 0.35;
+    trainBox(T, c, 0.9, 0.24, 0.05, M.white, 0, 2.55, -L / 2 - 0.12); // the number plate
+    [-0.25, 0.25].forEach(function (hx) { var h = mesh(T, c, new T.CylinderGeometry(0.06, 0.09, 0.45, 8), M.steel, hx, 4.85, -L / 2 + 3.2); h.rotation.x = Math.PI / 2; }); // air horns
+    trainBox(T, c, 2.9, 0.25, 0.5, M.under, 0, 0.75, -L / 2 - 0.1); // buffer beam
+    trainBox(T, c, 2.6, 0.55, L - 3, M.under, 0, 0.95, 0);
+    trainBox(T, c, 2.3, 0.9, 4, M.frame, 0, 0.75, 0); // the fuel tank between the bogies
+    bogie(T, c, -L / 2 + 3.4, M, lite, wheels); bogie(T, c, L / 2 - 3.4, M, lite, wheels);
+    return c;
+  }
+  function train(T, opts) {
+    opts = opts || {}; var M = trainMats(T), g = new T.Group(), wheels = [], lite = !!opts.lite, n = opts.coaches == null ? 3 : opts.coaches, LL = 20, CL = 24, GAP = 0.9;
+    locomotive(T, g, LL, M, lite, wheels);
+    for (var i = 0; i < n; i++) coach(T, g, LL + GAP + i * (CL + GAP), CL, M, lite, wheels, i === n - 1);
+    var keep = wheels.slice(); merge(T, g, keep);
+    g.userData.wheels = wheels; g.userData.length = LL + n * (CL + GAP);
+    return g;
+  }
+  root.LasgidiModels3D = { vehicle: vehicle, forVehicle: forVehicle, person: person, roll: roll, merge: merge, rbox: rbox, tube: tube, wheel: wheel, train: train };
 })(typeof window !== 'undefined' ? window : globalThis);
