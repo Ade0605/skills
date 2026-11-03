@@ -175,7 +175,13 @@
     V.position.set(water || air ? 0 : WALK ? (LDN ? -7.6 : 7.6) : LDN ? -1.6 : 1.6, WALK, 0); V.traverse(function (x) { x.castShadow = true; });
     // The landmarks you pass, each with its green sign.
     (o.sights || []).forEach(function (name, i) {
-      var g = new T.Group(), sd = i % 2 ? -1 : 1, h = air ? 34 + i * 6 : 14 + i * 4, y0 = air ? -60 : 0, lx = air ? sd * 24 : sd * 16; box3(g, 8, h, 8, M(0xe9e2d4, 0.6, 0, air && night ? { emissive: 0xffd28c, emissiveIntensity: 0.25 } : {}), lx, y0 + h / 2, 0); box3(g, 8.4, 1, 8.4, M(0x1d7a43), lx, y0 + h + 0.5, 0);
+      var g = new T.Group(), sd = i % 2 ? -1 : 1, h = air ? 34 + i * 6 : 14 + i * 4, y0 = air ? -60 : 0, lx = air ? sd * 24 : sd * 16;
+      if (TRAIN) { // a country halt on the line, not a tower: a low platform by the track, a small station house with a green roof, a bench
+        var px = sd > 0 ? 5.6 : -2.4; box3(g, 3.2, 0.9, 34, M(0xd2ccbf, 0.9), px, 0.45, 0); box3(g, 0.3, 0.05, 34, M(0xf2c200), px - sd * 1.45, 0.92, 0);
+        var hx = px + sd * 6; box3(g, 6, 3.6, 9, M(0xf1eee6, 0.6), hx, 1.8, 0); var rf = box3(g, 7, 0.4, 10, M(0x0f7a43, 0.5), hx, 3.8, 0); rf.rotation.z = sd * 0.08;
+        box3(g, 0.1, 1.2, 1.6, M(0x22313d, 0.1, 0.5), hx - sd * 3.02, 2.0, -2); box3(g, 0.1, 1.2, 1.6, M(0x22313d, 0.1, 0.5), hx - sd * 3.02, 2.0, 2); box3(g, 0.1, 2.2, 1.1, M(0x075a2d, 0.6), hx - sd * 3.02, 1.1, 0);
+        box3(g, 0.5, 0.45, 2.2, M(0x0f7a43), px + sd * 0.8, 1.15, 6);
+      } else { box3(g, 8, h, 8, M(0xe9e2d4, 0.6, 0, air && night ? { emissive: 0xffd28c, emissiveIntensity: 0.25 } : {}), lx, y0 + h / 2, 0); box3(g, 8.4, 1, 8.4, M(0x1d7a43), lx, y0 + h + 0.5, 0); }
       var st = tex(512, 160, function (c, w, hh) { c.fillStyle = '#1d7a43'; c.fillRect(0, 0, w, hh); c.strokeStyle = '#ffffff'; c.lineWidth = 6; c.strokeRect(8, 8, w - 16, hh - 16); var sub = o.subs && o.subs[i]; c.textAlign = 'center'; if (sub) { c.fillStyle = '#ffffff'; c.font = '900 56px system-ui, sans-serif'; c.fillText(String(name).toUpperCase().slice(0, 18), w / 2, 78, w - 30); c.fillStyle = '#cfe8d6'; c.font = '800 28px system-ui, sans-serif'; c.fillText(sub, w / 2, 128, w - 30); return; } c.fillStyle = '#cfe8d6'; c.font = '700 26px system-ui, sans-serif'; c.fillText('NOW PASSING', w / 2, 50); c.fillStyle = '#ffffff'; c.font = '900 44px system-ui, sans-serif'; c.fillText(String(name).slice(0, 26), w / 2, 112, w - 30); });
       // The River Niger: a steel truss bridge and the wide water under the road at Jebba, and at Onitsha or Asaba.
       if (o.highway && /Jebba|Onitsha|Asaba/.test(name)) {
