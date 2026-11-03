@@ -1772,3 +1772,15 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
 .decor-sw.on { outline: 2px solid var(--ok, #2fa36b); } .decor-sw small { opacity: .75; }
 .pantry { display: flex; flex-wrap: wrap; gap: 6px; }
 .wishes .item.done h3 { opacity: .65; }
+/* Phone pass: bigger tap areas without changing the look. The top-bar chips get an invisible 36px-tall hit area;
+   the power-cut bar's close button is a full 36px square. */
+.chip-btn { position: relative; }
+.chip-btn::after { content: ''; position: absolute; left: -2px; right: -2px; top: -6px; bottom: -6px; }
+.gen-bar .link-btn { min-width: 36px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; padding: 0; }
+/* Phone pass: on narrow screens the view switch (Above / Inside / Eye) drops under the camera buttons instead of
+   sitting on them, and a place's area, crowd and time go on their own line under its name. */
+@media (max-width: 520px) {
+  .b3-views, body:has(#venue-view) .b3-views { top: calc(52px + env(safe-area-inset-top)); left: 8px; transform: none; }
+  .ap-head { grid-template-columns: 1fr auto auto; }
+  .ap-head > .muted { grid-column: 1 / -1; grid-row: 2; }
+}
