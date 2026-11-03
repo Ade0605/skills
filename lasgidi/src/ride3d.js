@@ -68,6 +68,7 @@
     // bus stops with people waiting, market umbrellas, tall towers and low shops.
     var traffic = [], walkers = [], decor = [];
     if (root.__rideDebug) root.__rideDebug = { S3: S3, traffic: traffic, walkers: walkers, decor: decor, movers: movers };
+    if (TRAIN) box.classList.add('rv-train');
     if (TRAIN) { [-0.75, 0.75].forEach(function (rx) { box3(world, 0.12, 0.16, 400, M(0xb9bec4, 0.3, 0.8), rx + 1.6, 0.08, -150); }); } // the two steel rails
     if (!air && !water && !TRAIN) {
       var CITY = !HW;
@@ -181,6 +182,9 @@
         var hx = px + sd * 6; box3(g, 6, 3.6, 9, M(0xf1eee6, 0.6), hx, 1.8, 0); var rf = box3(g, 7, 0.4, 10, M(0x0f7a43, 0.5), hx, 3.8, 0); rf.rotation.z = sd * 0.08;
         box3(g, 0.1, 1.2, 1.6, M(0x22313d, 0.1, 0.5), hx - sd * 3.02, 2.0, -2); box3(g, 0.1, 1.2, 1.6, M(0x22313d, 0.1, 0.5), hx - sd * 3.02, 2.0, 2); box3(g, 0.1, 2.2, 1.1, M(0x075a2d, 0.6), hx - sd * 3.02, 1.1, 0);
         box3(g, 0.5, 0.45, 2.2, M(0x0f7a43), px + sd * 0.8, 1.15, 6);
+        // A few passengers waiting with their bags.
+        var OUT = [{ top: 'tee', bottom: 'jeans', shoes: 'sneakers' }, { dress: 'iro_buba', head: 'gele', shoes: 'slides' }, { top: 'shirt', bottom: 'trousers', shoes: 'loafers' }, { dress: 'gown', shoes: 'heels' }];
+        for (var pw = 0; pw < (RLITE ? 2 : 4); pw++) { var pq = root.LasgidiModels3D && root.LasgidiModels3D.person(T, { look: { skin: (i + pw) % 6, hair: (i * 3 + pw) % 8, shape: pw % 3 }, outfit: OUT[(i + pw) % OUT.length] }, { still: true }); if (!pq) break; pq.position.set(px + sd * (0.2 + (pw % 2) * 0.6), 0.9, -9 + pw * 5.5); pq.rotation.y = sd > 0 ? -Math.PI / 2 : Math.PI / 2; g.add(pq); if (pw % 2 === 0) box3(g, 0.5, 0.4, 0.3, M([0x8a5a2b, 0x2f6fa0, 0xc0392b][pw % 3], 0.8), px + sd * 0.7, 1.1, -8.4 + pw * 5.5); }
       } else { box3(g, 8, h, 8, M(0xe9e2d4, 0.6, 0, air && night ? { emissive: 0xffd28c, emissiveIntensity: 0.25 } : {}), lx, y0 + h / 2, 0); box3(g, 8.4, 1, 8.4, M(0x1d7a43), lx, y0 + h + 0.5, 0); }
       var st = tex(512, 160, function (c, w, hh) { c.fillStyle = '#1d7a43'; c.fillRect(0, 0, w, hh); c.strokeStyle = '#ffffff'; c.lineWidth = 6; c.strokeRect(8, 8, w - 16, hh - 16); var sub = o.subs && o.subs[i]; c.textAlign = 'center'; if (sub) { c.fillStyle = '#ffffff'; c.font = '900 56px system-ui, sans-serif'; c.fillText(String(name).toUpperCase().slice(0, 18), w / 2, 78, w - 30); c.fillStyle = '#cfe8d6'; c.font = '800 28px system-ui, sans-serif'; c.fillText(sub, w / 2, 128, w - 30); return; } c.fillStyle = '#cfe8d6'; c.font = '700 26px system-ui, sans-serif'; c.fillText('NOW PASSING', w / 2, 50); c.fillStyle = '#ffffff'; c.font = '900 44px system-ui, sans-serif'; c.fillText(String(name).slice(0, 26), w / 2, 112, w - 30); });
       // The River Niger: a steel truss bridge and the wide water under the road at Jebba, and at Onitsha or Asaba.
@@ -212,7 +216,8 @@
       if (V.userData.rotor) V.userData.rotor.rotation.y = t * 25; if (V.userData.tailRotor) V.userData.tailRotor.rotation.x = t * 40; if (V.userData.navs) V.userData.navs.forEach(function (l) { l.visible = Math.floor(t * 2) % 2 === 0; }); if (V.userData.wake) V.userData.wake.material.opacity = 0.35 + Math.sin(t * 5) * 0.1;
       if (V.userData.train) V.userData.train.userData.wheels.forEach(function (w) { w.rotation.x = -run * SPEED / 0.46; }); // the steel wheels turn with the run
       if (V.userData.walker) { var lg = V.userData.walker.userData.legs, a = Math.sin(t * 7) * 0.5; lg[0].rotation.x = a; lg[1].rotation.x = -a; }
-      var cm = box.dataset.cam || 'chase'; if (!air && !water) { if (cm === 'side') { cam.position.set(V.position.x + (LDN ? -14 : 14), 3, 1); cam.lookAt(V.position.x, 1.5, -1); } else if (cm === 'inside') { cam.position.set(V.position.x + 0.6, 2.4, mode === 'coach' ? -1 : 0); cam.lookAt(V.position.x + 0.3, 2.2, -30); } else if (TRAIN) { cam.position.set(11, 8, 24); cam.lookAt(0, 2, -30); } else { cam.position.set(LDN ? -6 : 6, 4.5, 11); cam.lookAt(0, 1, -6); } }
+      var cm = box.dataset.cam || 'chase'; if (!air && !water) { if (cm === 'side') { cam.position.set(V.position.x + (LDN ? -14 : 14), 3, 1); cam.lookAt(V.position.x, 1.5, -1); } else if (cm === 'inside' && TRAIN) { cam.position.set(V.position.x + 1.95, 3.0, -38); cam.lookAt(V.position.x + 40, 1.8, -52); } // a window seat: looking out at the countryside as it rolls by
+          else if (cm === 'inside') { cam.position.set(V.position.x + 0.6, 2.4, mode === 'coach' ? -1 : 0); cam.lookAt(V.position.x + 0.3, 2.2, -30); } else if (TRAIN) { cam.position.set(11, 8, 24); cam.lookAt(0, 2, -30); } else { cam.position.set(LDN ? -6 : 6, 4.5, 11); cam.lookAt(0, 1, -6); } }
       renderer.render(S3, cam); raf = root.requestAnimationFrame(frame);
     }
     raf = root.requestAnimationFrame(frame);
