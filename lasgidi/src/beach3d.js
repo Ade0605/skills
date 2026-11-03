@@ -2299,8 +2299,11 @@
 
     /* ---------- frame ---------- */
     function size() { var w = el.clientWidth || 360, h = el.clientHeight || 400; if (w === W && h === H) return; W = w; H = h; renderer.setSize(W, H, false); cv.style.width = W + 'px'; cv.style.height = H + 'px'; cam.aspect = W / H; cam.updateProjectionMatrix(); }
+    var b3Last = 0; // battery saver: when to draw next while nobody touches the screen
     function frame(now) {
       if (root.LasgidiGL && !root.LasgidiGL.live(el)) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; } // hidden or under another view: skip the frame
+      if (root.LasgidiGL && root.LasgidiGL.sleepy && root.LasgidiGL.sleepy(b3Last, now)) { raf = el.isConnected ? root.requestAnimationFrame(frame) : 0; return; }
+      b3Last = now;
       root.LasgidiGL && root.LasgidiGL.pace(renderer);
       size(); var t = reduce ? 3 : now / 1000, night = sc.night ? 1 : 0, rain = sc.weather === 'rain' || sc.weather === 'storm';
       var nv = night ? 0.85 : 0; if (Math.abs(skyU.night.value - nv) > 0.01) { skyU.night.value += (nv - skyU.night.value) * 0.1; if (Math.abs(skyU.night.value - nv) <= 0.01) { skyU.night.value = nv; bakeEnv(); } } hemi.intensity = night ? 0.25 : rain ? 0.6 : 0.85; sun.intensity = night ? 0.15 : rain ? 0.7 : 2.2; sun.color.set(night ? 0x8fa8ff : 0xffe2b8); hemi.color.set(0xfff1dd); hemi.groundColor.set(GAL ? 0xf4f1ea : 0x8a9a6a);

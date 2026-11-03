@@ -1739,7 +1739,9 @@
       if (!wrap.isConnected || !scene) return;
       if (wrap.classList.contains('pg-3d') || document.hidden) { last = 0; return; } // the 3D map is showing (or the tab is hidden): do not draw the flat map underneath; kick() starts it again
       var dt = last ? Math.min(0.1, (ts - last) / 1000) : 0;
-      if (dt && dt < 1 / 32) { schedule(); return; } // ~30 fps is plenty
+      // ~30 fps is plenty; lite and low-end phones get ~15, and when nobody has touched the screen for 20s, ~8 (battery saver).
+      var GLs = root.LasgidiGL, minDt = GLs && GLs.lite && GLs.lite() ? 1 / 15 : 1 / 32;
+      if (dt && (dt < minDt || (GLs && GLs.sleepy && GLs.sleepy(last, ts)))) { schedule(); return; }
       last = ts; clock += dt * 1000;
       if (resize()) staticKey = '';
       drawStatic();
