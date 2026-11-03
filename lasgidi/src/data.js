@@ -1441,6 +1441,9 @@
     inverter:  { name: 'Inverter and batteries', icon: '🔋', cat: 'Power', price: 1800000, w: 1, d: 1, h: 10, color: '#2f6fa0', shape: 'box', fx: { power: 0.25 }, status: 2 },
     solar:     { name: 'Solar system (roof panels)', icon: '☀️', cat: 'Power', price: 4500000, w: 1, d: 1, h: 6, color: '#1f3e5a', shape: 'box', fx: { power: 0.35, gen: 0.5 }, status: 4 },
     gen_small: { name: '"I better pass my neighbour" gen', icon: '⛽', cat: 'Power', price: 250000, w: 1, d: 1, h: 7, color: '#d9a520', shape: 'box', fx: { gen: 0.4 } },
+    // Rules 65: a quieter, bigger gen and a small solar kit. Solar and inverters need a technician to install them.
+    gen_big:   { name: 'Soundproof 7.5kVA generator', icon: '🔌', cat: 'Power', price: 1200000, w: 1, d: 1, h: 9, color: '#3a7d44', shape: 'box', fx: { gen: 0.7 }, status: 2, rules: 65 },
+    solar_kit: { name: 'Small solar kit (two panels and a battery)', icon: '🔆', cat: 'Power', price: 1500000, w: 1, d: 1, h: 5, color: '#24425e', shape: 'box', fx: { power: 0.15 }, status: 1, rules: 65 },
     art:       { name: 'Ankara art print', icon: '🖼️', cat: 'Decor', price: 60000, w: 1, d: 1, h: 12, color: '#d9822b', shape: 'wallbox', fx: { stress: -1 }, status: 1 },
     bronze:    { name: 'Benin-style bronze', icon: '🗿', cat: 'Decor', price: 1500000, w: 1, d: 1, h: 12, color: '#9a6a2a', shape: 'pole', status: 5 },
     aquarium:  { name: 'Aquarium', icon: '🐠', cat: 'Decor', price: 900000, w: 2, d: 1, h: 10, color: '#3fb6d8', shape: 'box', fx: { stress: -2 }, needsPower: true, status: 3 },

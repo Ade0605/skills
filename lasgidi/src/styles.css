@@ -1784,3 +1784,10 @@ body:has(#street-view) .fab-dock { left: auto; right: 112px; transform: none; bo
   .ap-head { grid-template-columns: 1fr auto auto; }
   .ap-head > .muted { grid-column: 1 / -1; grid-row: 2; }
 }
+/* Rules 65: the Power app */
+.power-now.off { background: #1f2430; color: #f4f1e8; border-radius: 16px; padding: 12px 14px; }
+.power-now.off .note { color: #d8d4c8; }
+.power-now.on { background: #fff6cf; border-radius: 16px; padding: 12px 14px; }
+.wear-bar { height: 6px; border-radius: 99px; background: var(--sunk, #ebe9df); overflow: hidden; margin: 6px 0 2px; max-width: 180px; }
+.wear-bar i { display: block; height: 100%; background: linear-gradient(90deg, #2fa36b, #f2b600 70%, #d0435a); }
+.pw-h { font-size: 16px; margin: 0 0 6px; } /* Power app headings: not folded, so everything shows at once */

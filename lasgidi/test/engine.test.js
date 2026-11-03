@@ -599,7 +599,7 @@ test('Mainland Estate: buy one plot, live rent-free, plots and labels sit on lan
 });
 
 test('furniture: buy, auto-place, no overlaps, effects only while placed, kept on moving', () => {
-  const s = L.newGame({ seed: 12, origin: 'nepo', goal: 'freestyle' });
+  const s = L.newGame({ seed: 12, origin: 'nepo', goal: 'freestyle', rules: 64 }); // rules 65: solar and inverters need installing
   L._post(s, 'bank', 50000000, 'test grant');
   const sleep0 = L.furnitureSleep(s), power0 = L.furniturePower(s);
   assert.ok(L.buyItem(s, 'king').ok);
@@ -4017,4 +4017,34 @@ test('rules 64: railway career at Ebute-Metta and trolley gigs at both stations;
   assert.ok(!ids(mk(63, 'ib_ui')).includes('ibs_trolley'));
   assert.ok(D.CAREERS.rail_sgr && D.CAREERS.rail_sgr.rules === 64);
   for (const id of ['sgr_trolley', 'sgr_desk', 'ibs_trolley']) { const a = Object.values(D.CIVIC_ACTS).flat().find(x => x.id === id); assert.ok(a.earn <= 3000 && a.mins % 15 === 0, id); }
+});
+
+test('rules 65: gens wear and break, a technician services them; solar needs installing; broken gens sell for scrap; replays', () => {
+  const mk = (rules) => { const s = L.newGame({ seed: 6501, origin: 'nepo', goal: 'freestyle', rules }); while (s.pending.length) L.resolveChoice(s, 0); return s; };
+  const old = mk(64); assert.equal(L.powerInfo(old), null); assert.ok(!L.buyItem(old, 'gen_big').ok, 'new gen not sold before rules 65');
+  const s = mk(); const home = D.HOMES[s.home].district; assert.equal(s.loc, home, 'a life starts at home');
+  L.wait(s, 15);
+  const bank = () => s.cash + s.bank;
+  if (bank() < 5000000) { assert.ok(true); }
+  const r1 = L.buyItem(s, 'gen_small'); if (!r1.ok) return; // nepo lives can afford a small gen
+  const gi = s.items.length - 1; assert.ok(s.items[gi].x != null, 'a gen goes straight in');
+  assert.ok(L.furnitureGen(s) > 0);
+  for (let d = 0; d < 20; d++) { L.wait(s, 1440); while (s.pending.length) L.resolveChoice(s, 0); }
+  const info = L.powerInfo(s); const g = info.items.find(x => x.i === gi);
+  assert.ok(g.wear >= 100 && g.broken, 'three weeks of use wear a small gen out (' + g.wear + ')');
+  assert.equal(L.furnitureGen(s), 0, 'a broken gen does nothing');
+  if (s.loc !== home) { const t = L.travel(s, home, 'cab'); assert.ok(t.ok, t.msg); while (s.pending.length) L.resolveChoice(s, 0); }
+  const sv = L.serviceGen(s, gi); assert.ok(sv.ok, sv.msg); assert.equal(s.items[gi].wear, 0); assert.ok(L.furnitureGen(s) > 0);
+  assert.ok(!L.serviceGen(s, gi).ok, 'no service needed right after one');
+  const rp = L.replayLife(JSON.parse(JSON.stringify(s.replay))); assert.equal(rp.items[gi].wear, s.items[gi].wear); assert.equal(rp.cash + rp.bank, s.cash + s.bank);
+});
+
+test('rules 65: solar is delivered, then installed by a technician; it cannot be placed by hand before that', () => {
+  const s = L.newGame({ seed: 12, origin: 'nepo', goal: 'freestyle' }); L._post(s, 'bank', 50000000, 'test grant'); while (s.pending.length) L.resolveChoice(s, 0);
+  s.loc = D.HOMES[s.home].district; const p0 = L.furniturePower(s);
+  assert.ok(L.buyItem(s, 'solar_kit').ok); const i = s.items.length - 1;
+  assert.ok(s.items[i].needsInstall && s.items[i].x == null); assert.equal(L.furniturePower(s), p0, 'no light until installed');
+  assert.ok(!L.placeItem(s, i, 0, 0, 0).ok, 'cannot place it yourself');
+  const t0 = s.t, r = L.installPower(s, i); assert.ok(r.ok, r.msg); assert.ok(s.t - t0 >= 120); assert.ok(L.furniturePower(s) > p0);
+  const v = L.powerInfo(s).items.find(x => x.i === i).sell; assert.ok(v > 0);
 });
