@@ -143,6 +143,10 @@
     horn: function () { tone(370, 0, 0.12, 'square', 0.05); tone(370, 0.17, 0.2, 'square', 0.05); },
     // The train: a deep two-note air horn as it pulls away, then the wheels clicking over the rail joints.
     trainHorn: function () { [[311, 0, 0.55], [370, 0, 0.55], [277, 0.7, 0.9], [330, 0.7, 0.9]].forEach(function (h) { tone(h[0], h[1], h[2], 'sawtooth', 0.035); tone(h[0] * 2, h[1], h[2], 'triangle', 0.012); }); },
+    // The coach: a diesel rumble that rises as it pulls out of the park, and the conductor's two-tone horn.
+    coachRun: function () { var a = ctx(); if (!a) return; var o = a.createOscillator(), g = a.createGain(), f = a.createBiquadFilter(), t = a.currentTime; o.type = 'sawtooth'; o.frequency.setValueAtTime(42, t); o.frequency.linearRampToValueAtTime(68, t + 3); f.type = 'lowpass'; f.frequency.value = 260; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.6); g.gain.setValueAtTime(0.05, t + 6); g.gain.exponentialRampToValueAtTime(0.0001, t + 9); o.connect(f); f.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 9.2); tone(392, 0.2, 0.25, 'square', 0.04); tone(330, 0.5, 0.35, 'square', 0.04); },
+    // The ferry: one long low blast of the boat horn, then the water slapping the hull.
+    ferryRun: function () { tone(147, 0, 1.4, 'sawtooth', 0.04); tone(220, 0, 1.4, 'triangle', 0.015); for (var i = 0; i < 9; i++) noise(1.8 + i * 1.1, 0.7, 500 + (i % 3) * 120, 0.6, 0.05, 'lowpass'); },
     rails: function () { for (var i = 0; i < 18; i++) { var t0 = 1.6 + i * 0.62; noise(t0, 0.05, 900, 1.2, 0.07, 'bandpass'); noise(t0 + 0.13, 0.05, 750, 1.2, 0.06, 'bandpass'); tone(70, t0, 0.08, 'sine', 0.03); } },
     bad: function () { tone(330, 0, 0.2, 'triangle', 0.1); tone(247, 0.18, 0.35, 'triangle', 0.1); },
     good: function () { tone(784, 0, 0.12); tone(988, 0.1, 0.12); tone(1175, 0.2, 0.25); },
@@ -1855,10 +1859,10 @@
   function tourStep() { try { var v = localStorage.getItem(TOUR_KEY); return v == null ? 0 : +v; } catch (e) { return TOUR.length; } }
   function setTour(n) { try { localStorage.setItem(TOUR_KEY, String(n)); } catch (e) {} }
   // What's new: shown once after an update (after the welcome tour), with a button straight to each new thing.
-  var NEWS_KEY = 'lasgidi.news.v1', NEWS = { id: '2026-11-power', items: [
+  var NEWS_KEY = 'lasgidi.news.v1', NEWS = { id: '2026-11-trains', items: [
     ['⚡', 'Power app', 'Tap the light chip ("NEPA took light") to buy a gen, get it serviced, install solar or sell.', 'data-tab="phone" data-app="power"'],
     ['🌉', 'Busy bridges', 'Third Mainland, Eko, Falomo and the Lekki–Ikoyi Link are full of traffic on the map.', 'data-tab="map"'],
-    ['🚆', 'Train to Ibadan', 'The standard-gauge train from Ebute-Metta, with first class and railway jobs.', 'data-tab="phone" data-app="travel"'],
+    ['🚆', 'Ride the train to Ibadan', 'A realistic train through the countryside, a window seat, the horn and the rails, first class and railway jobs.', 'data-tab="phone" data-app="travel"'],
     ['🏙️', 'New cities', 'Ibadan, Enugu and Calabar, each with landmarks, food, homes and jobs.', 'data-tab="phone" data-app="travel"'],
     ['🍳', 'Kitchen and wishes', 'Buy foodstuff at the market, cook at home, and earn points from daily wishes.', 'data-tab="phone" data-app="kitchen"'],
     ['📻', 'FM radio', 'Seven stations with shows; tune in and the music follows.', 'data-tab="phone" data-app="radio"']
@@ -3898,7 +3902,7 @@
     // In 3D when three.js is in. If it is still loading (the first ride of a visit), the ride starts flat and switches to 3D as soon as it arrives.
     var go3d = function () { if (!el.isConnected || el.classList.contains('rv-3dmode') || !(window.LasgidiRide3D && window.THREE && threeState === 'ready')) return; var scn = el.querySelector('.rv-scene'); try { if (window.LasgidiRide3D.play(scn, { london: L.districtCity(to) === 'ldn', mode: mode, highway: coach || (mode === 'rail' && cf !== ctt), train: mode === 'rail' && cf !== ctt, night: night, dusk: dusk, water: water, air: air, sights: air ? [] : sights, subs: subs, secs: secs, chauffeur: chauffeur, look: S.look, outfit: S.outfit, car: mode === 'car' && L.drivenVehicle ? (L.drivenVehicle(S) || {}).id : null })) el.classList.add('rv-3dmode'); } catch (e) {}  };
     if (threeState === 'ready') go3d(); else if (window.LasgidiRide3D && threeState !== 'failed') loadThree(go3d);
-    if (railTrip) { play('trainHorn'); play('rails'); } // the horn as it pulls away, then the wheels on the rail joints
+    if (railTrip) { play('trainHorn'); play('rails'); } else if (coach) play('coachRun'); else if (mode === 'ferry' || mode === 'boat') play('ferryRun'); // the horn as it pulls away, then the wheels on the rail joints
     var b = document.getElementById('rv-arrive'); if (b) b.focus();
     setTimeout(done, secs * 1000 + 400);
   }
@@ -6575,7 +6579,7 @@
       return;
     }
     if (ds.clearSel) { ui.sel = null; render(); return; }
-    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
+    if (ds.travel) { var from0 = S.loc, mode0 = ds.mode, t0 = S.t; ui.trainTrip = mode0 === 'ferry' || mode0 === 'boat'; run(function () { var r = L.travel(S, ds.travel, ds.mode); if (r.ok) { ui.sel = null; ui.trip = { from: from0, to: S.loc, mode: mode0, at: Date.now() }; showRide(from0, S.loc, mode0, t0); } return r; }, 'travel'); return; }
     if (ds.act === 'work_shift' && !ui.shiftLive && S.job && !t.hasAttribute('data-quick')) { startLiveShift(); return; }
     if (ds.act) { var aid0 = ds.act, alab0 = ((availMemo().filter(function (x) { return x.id === aid0; })[0]) || {}).label; run(function () { var r = L.doAction(S, aid0); if (r && r.ok && r.shift) ui.workCard = r.shift; if (r && r.ok) { try { actVoice(alab0); } catch (e) {} clubMoment(aid0); ui.activity = activityFor(aid0); ui.activityAt = Date.now(); if (aid0 === 'work_shift' && ui.venueOpen) ui.venueBubble = { place: ui.venueOpen, text: '💼 ' + String(r.msg || 'Shift done.').slice(0, 56), at: Date.now() }; } return r; }); return; }
     if (ds.wait) { run(function () { if (S.pending.length) return { ok: false, msg: 'Decide on the open event first.' }; return L.wait(S, 60); }); return; }
