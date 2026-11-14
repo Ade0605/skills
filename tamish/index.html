@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tamish — The family organizer that finds your benefits</title>
+<meta name="description" content="Tamish is the family organizer with a Benefits Finder built in: a shared calendar, lists and meals, plus a guide to the family support your country offers. No ads. One price for the whole household.">
+<meta name="theme-color" content="#0D3161">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tamish — Family life, organized. Benefits, found.">
+<meta property="og:description" content="A shared family calendar, lists and meals, plus a Benefits Finder that shows what support your family may be entitled to.">
+<meta property="og:image" content="assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+:root{
+  /* Brand colours sampled from the Tamish logo files */
+  --navy:#0D3161;
+  --navy-deep:#08234A;
+  --navy-soft:#1C4579;
+  --orange:#F99235;
+  --orange-hover:#FFA552;
+  --orange-ink:#A04E06;     /* orange for text on light backgrounds (AA) */
+  --ink:#1A2740;
+  --muted:#55627A;
+  --line:#ECE3D6;
+  --cream:#FFFAF3;
+  --peach:#FFF0E0;
+  --ice:#EAF1FA;
+  --rose:#FCEDEF;
+  --mint:#E6F5EE;
+  /* family-member colours used in the app mockups */
+  --m1:#F99235; --m2:#3D86D6; --m3:#E9679A; --m4:#2E9D6E; --m5:#8A6BD1;
+  --green:#21825A;
+  --radius:24px;
+  --shadow:0 10px 30px rgba(13,49,97,.10);
+  --font-display:'Outfit',system-ui,sans-serif;
+  --font-body:'Nunito Sans',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:96px}
+body{font-family:var(--font-body);background:var(--cream);color:var(--ink);font-size:17px;line-height:1.65;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--font-display);color:var(--navy);line-height:1.12;letter-spacing:-.02em}
+h2{font-size:clamp(30px,4vw,44px);font-weight:700}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+.wrap{max-width:1140px;margin:0 auto;padding:0 22px}
+section{padding:96px 0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;background:var(--navy);color:#fff;padding:10px 16px;border-radius:10px;z-index:100;font-weight:800}
+.skip:focus{top:12px}
+.icon{width:1em;height:1em;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.eyebrow{display:inline-flex;align-items:center;gap:9px;background:var(--peach);color:var(--navy);font-weight:800;font-size:13.5px;letter-spacing:.06em;text-transform:uppercase;padding:7px 15px;border-radius:999px;margin-bottom:18px}
+.eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--orange)}
+.section-head{text-align:center;max-width:680px;margin:0 auto 52px}
+.section-head p{color:var(--muted);margin-top:14px;font-size:18px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font-display);font-weight:600;font-size:17px;padding:15px 28px;border-radius:999px;border:none;cursor:pointer;text-decoration:none;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+.btn:focus-visible,.store:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid var(--m2);outline-offset:3px}
+.btn-primary{background:var(--orange);color:var(--navy-deep);box-shadow:0 8px 20px rgba(249,146,53,.35)}
+.btn-primary:hover{background:var(--orange-hover);transform:translateY(-2px)}
+.btn-ghost{background:#fff;color:var(--navy);box-shadow:inset 0 0 0 2px var(--line)}
+.btn-ghost:hover{box-shadow:inset 0 0 0 2px var(--navy);transform:translateY(-2px)}
+.btn:active{transform:translateY(0) scale(.98)}
+
+/* ---------- NAV ---------- */
+.nav{position:sticky;top:12px;z-index:50;margin:12px auto 0;max-width:1140px;padding:0 22px}
+.nav-inner{background:rgba(255,255,255,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:999px;padding:10px 10px 10px 24px;display:flex;align-items:center;gap:20px;box-shadow:0 6px 24px rgba(13,49,97,.10);position:relative}
+.logo{display:flex;align-items:center;text-decoration:none;border-radius:8px}
+.logo img{height:30px;width:auto}
+.nav-links{display:flex;gap:2px;margin-left:auto;align-items:center}
+.nav-links a{text-decoration:none;font-weight:700;font-size:15px;color:var(--muted);padding:9px 14px;border-radius:999px;transition:background .18s,color .18s}
+.nav-links a:hover{background:var(--peach);color:var(--navy)}
+.nav-links a.btn{color:var(--navy-deep);margin-left:8px;font-size:15px;padding:11px 22px}
+.nav-links a.btn:hover{background:var(--orange-hover)}
+.burger{display:none;background:none;border:none;cursor:pointer;padding:10px;border-radius:12px;color:var(--navy);margin-left:auto}
+.burger .icon{width:26px;height:26px}
+
+/* ---------- HERO ---------- */
+.hero{padding:72px 0 96px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;width:620px;height:620px;border-radius:50%;background:radial-gradient(circle,var(--peach) 0%,rgba(255,240,224,0) 70%);right:-160px;top:-120px;z-index:-1}
+.hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+.hero h1{font-size:clamp(40px,5.6vw,66px);font-weight:800}
+.hero h1 .hl{color:var(--orange-ink);position:relative;white-space:nowrap}
+.hero h1 .hl svg{position:absolute;left:0;bottom:-6px;width:100%;height:12px}
+.hero .lead{font-size:19.5px;color:var(--muted);margin:24px 0 32px;max-width:50ch}
+.hero .lead strong{color:var(--ink)}
+.hero-ctas{display:flex;gap:14px;flex-wrap:wrap}
+.trust{display:flex;gap:10px 22px;flex-wrap:wrap;margin-top:28px;list-style:none}
+.trust li{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;color:var(--navy)}
+.trust .icon{color:var(--green);font-size:18px}
+.hero-visual{position:relative;display:flex;justify-content:center;padding:44px 0}
+
+/* ---------- PHONE MOCKUP ---------- */
+.phone{text-align:left;width:300px;max-width:100%;background:#fff;border-radius:42px;border:8px solid var(--navy);box-shadow:0 34px 70px rgba(13,49,97,.25);overflow:hidden;position:relative}
+.phone .statusbar{display:flex;justify-content:space-between;padding:12px 22px 4px;font-size:12px;font-weight:800;color:var(--navy)}
+.phone .apphead{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 12px;border-bottom:2px solid #F3EDE3}
+.phone .apphead .title{font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--navy);display:flex;align-items:center;gap:8px}
+.phone .apphead .title img{height:18px;width:auto}
+.phone .apphead .act{width:28px;height:28px;border-radius:50%;background:var(--orange);color:var(--navy-deep);display:grid;place-items:center;font-weight:800}
+.phone .body{padding:14px 14px 20px}
+.avatars{display:flex;gap:6px;margin-bottom:12px}
+.avatars span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800}
+.mini-month{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:11.5px;font-weight:800}
+.mini-month .dow{font-size:10px;color:#8C97AB;padding-bottom:2px}
+.mini-month .day{padding:6px 0 9px;border-radius:10px;position:relative;color:var(--ink)}
+.mini-month .day.today{background:var(--navy);color:#fff}
+.mini-month .dots{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);display:flex;gap:2px}
+.mini-month .dots i{width:4px;height:4px;border-radius:50%;display:block}
+.event{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:10px 12px;margin-top:9px;box-shadow:0 4px 12px rgba(13,49,97,.09);font-size:13px}
+.event .bar{width:5px;align-self:stretch;border-radius:4px;flex:none}
+.event b{display:block;color:var(--navy);font-size:13.5px;line-height:1.3}
+.event span{color:var(--muted);font-size:12px}
+.event .end{margin-left:auto;font-size:17px}
+.event .tag{margin-left:auto;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:var(--mint);color:var(--green);white-space:nowrap}
+.float-card{position:absolute;background:#fff;border-radius:16px;padding:11px 15px;box-shadow:0 14px 30px rgba(13,49,97,.18);font-size:13.5px;font-weight:800;color:var(--navy);display:flex;gap:10px;align-items:center;animation:bob 6s ease-in-out infinite;max-width:250px;line-height:1.35;text-align:left;z-index:2}
+.float-card small{display:block;font-weight:700;color:var(--muted);font-size:11.5px}
+.float-card .badge-ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;font-size:17px}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+/* ---------- PROMISES STRIP ---------- */
+.promises{background:var(--navy);border-radius:34px;color:#fff;padding:44px 34px;display:grid;grid-template-columns:repeat(4,1fr);gap:28px}
+.promises .num{font-family:var(--font-display);font-size:clamp(30px,3.6vw,42px);font-weight:800;color:var(--orange);line-height:1.1}
+.promises .lbl{font-size:15px;color:#C9D5EA;margin-top:8px}
+
+/* ---------- FEATURE ROWS ---------- */
+.feat-row{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;margin:84px 0}
+.feat-row:first-of-type{margin-top:0}
+.feat-row:last-child{margin-bottom:0}
+.feat-row.flip .feat-visual{order:2}
+.feat-copy .kicker{display:inline-flex;align-items:center;gap:10px;font-weight:800;color:var(--navy);font-size:15px;margin-bottom:12px}
+.feat-copy .kicker .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:19px}
+.feat-copy h3{font-size:clamp(27px,3.3vw,38px);font-weight:700;margin-bottom:14px}
+.feat-copy p{color:var(--muted);max-width:48ch;font-size:17.5px}
+.ticks{margin-top:22px;display:grid;gap:12px;list-style:none}
+.ticks li{display:flex;gap:12px;align-items:flex-start;font-weight:700;color:var(--ink);font-size:16px}
+.ticks li .icon{margin-top:4px;color:var(--green);font-size:18px}
+.feat-visual{display:flex;justify-content:center}
+.band{border-radius:40px;padding:48px 26px;width:100%;display:flex;justify-content:center;position:relative;overflow:hidden}
+.band.ice{background:var(--ice)} .band.peach{background:var(--peach)} .band.rose{background:var(--rose)}
+.band::after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.6);top:-70px;right:-60px}
+.band .phone{width:268px;z-index:1}
+
+.todo{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1.5px dashed #EFE7DA;font-size:13.5px;font-weight:700;color:var(--navy)}
+.todo .box{flex:none;width:20px;height:20px;border-radius:7px;border:2.5px solid #C9D0DC;display:grid;place-items:center;color:#fff}
+.todo .box .icon{font-size:12px;stroke-width:3.5}
+.todo.done .box{background:var(--m4);border-color:var(--m4)}
+.todo.done span.t{text-decoration:line-through;color:#97A2B5}
+.todo .who{margin-left:auto;font-size:11px;padding:3px 9px;border-radius:999px;font-weight:800}
+
+/* ---------- BENEFITS SPOTLIGHT ---------- */
+.spotlight{background:var(--navy);border-radius:48px;padding:80px 48px;color:#fff;position:relative;overflow:hidden}
+.spotlight::before{content:"";position:absolute;inset:auto -120px -220px auto;width:520px;height:520px;background:url(assets/tamish-mark-white.png) center/contain no-repeat;opacity:.05;pointer-events:none}
+.spotlight h2{color:#fff}
+.spotlight .eyebrow{background:rgba(249,146,53,.16);color:#FFD2A6}
+.spotlight .section-head p{color:#C9D5EA}
+.countries{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:-20px 0 52px;list-style:none}
+.countries li{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18);padding:8px 16px;border-radius:999px;font-weight:700;font-size:14.5px;display:flex;gap:8px;align-items:center}
+.countries li b{font-family:var(--font-display);font-size:12px;background:#fff;color:var(--navy);padding:1px 7px;border-radius:6px;letter-spacing:.04em}
+.countries li.more{border-style:dashed;color:#C9D5EA}
+.spot-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;max-width:1000px;margin:0 auto;position:relative}
+.spot-list{display:grid;gap:26px;list-style:none}
+.spot-list li{display:flex;gap:16px;align-items:flex-start}
+.spot-list .n{flex:none;width:46px;height:46px;border-radius:14px;background:rgba(249,146,53,.16);color:var(--orange);display:grid;place-items:center;font-size:21px}
+.spot-list h3{color:#fff;font-size:19px;font-weight:600;letter-spacing:0}
+.spot-list p{color:#C9D5EA;font-size:15.5px;margin-top:3px}
+
+.check-card{background:#fff;color:var(--ink);border-radius:28px;padding:26px;box-shadow:0 28px 60px rgba(0,0,0,.28)}
+.check-card .label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.check-card .head{display:flex;align-items:flex-start;gap:12px;margin-top:10px}
+.check-card .head h3{font-size:20px;letter-spacing:0}
+.check-card .head .val{color:var(--green);font-weight:800;font-size:14.5px}
+.check-card .pill{margin-left:auto;background:var(--mint);color:var(--green);font-weight:800;font-size:12px;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.check-card ul{list-style:none;margin-top:16px;display:grid;gap:9px}
+.check-card li{display:flex;gap:10px;align-items:center;font-size:14.5px;font-weight:700}
+.check-card li .icon{color:var(--green);font-size:17px}
+.check-card .reminder{margin-top:18px;background:var(--peach);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center;font-size:14px;font-weight:700;color:var(--navy)}
+.check-card .reminder .icon{font-size:20px;color:var(--orange-ink)}
+.check-card .reminder small{display:block;color:var(--muted);font-weight:600}
+.check-card .src{margin-top:14px;font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.disclaimer{text-align:center;color:#AFC0DB;font-size:13.5px;margin-top:44px;max-width:70ch;margin-left:auto;margin-right:auto}
+
+/* ---------- COMPARE ---------- */
+.compare-wrap{max-width:900px;margin:0 auto;border-radius:26px;box-shadow:var(--shadow);background:#fff;overflow:hidden}
+.compare-table{width:100%;border-collapse:collapse;font-size:15.5px}
+.compare-table th,.compare-table td{padding:17px 20px;text-align:center;border-bottom:1.5px solid #F3EDE3}
+.compare-table thead th{font-family:var(--font-display);font-size:17px;color:var(--navy);font-weight:700}
+.compare-table th[scope=row]{text-align:left;font-weight:700;color:var(--ink)}
+.compare-table tr:last-child th,.compare-table tr:last-child td{border-bottom:none}
+.compare-table .us{background:var(--peach);font-weight:800;color:var(--navy)}
+.compare-table thead .us{background:var(--navy);color:#fff}
+.compare-table thead .us img{height:24px;width:auto;margin:0 auto}
+.compare-table .yes .icon{color:var(--green);font-size:20px;vertical-align:-4px;margin-right:4px}
+.compare-table .typ{color:var(--muted)}
+.legend-note{font-size:14px;color:var(--muted);margin-top:16px;text-align:center}
+
+/* ---------- PRICING ---------- */
+.price-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:26px;max-width:900px;margin:0 auto;align-items:stretch}
+.price-card{background:#fff;border-radius:30px;padding:38px 34px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.price-card h3{font-size:24px;font-weight:700}
+.price-card .amount{font-family:var(--font-display);font-size:48px;font-weight:800;color:var(--navy);margin:10px 0 0;line-height:1.1}
+.price-card .amount small{font-size:20px;font-weight:600}
+.price-card .per{font-size:14.5px;color:var(--muted);font-weight:700;margin-top:4px}
+.price-card ul{margin:24px 0 28px;display:grid;gap:11px;flex:1;list-style:none}
+.price-card li{display:flex;gap:11px;font-size:15.5px;font-weight:600;align-items:flex-start}
+.price-card li .icon{margin-top:4px;color:var(--green);font-size:17px}
+.price-card.pro{background:var(--navy);color:#fff;position:relative;box-shadow:0 26px 54px rgba(13,49,97,.32)}
+.price-card.pro h3,.price-card.pro .amount{color:#fff}
+.price-card.pro .per{color:#C9D5EA}
+.price-card.pro li{color:#E1E9F6}
+.price-card.pro li .icon{color:var(--orange)}
+.price-card .ribbon{position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:var(--orange);color:var(--navy-deep);font-family:var(--font-display);font-weight:700;font-size:14px;padding:6px 18px;border-radius:999px;white-space:nowrap}
+.price-note{text-align:center;color:var(--muted);font-size:15px;margin-top:26px;max-width:62ch;margin-left:auto;margin-right:auto}
+.full-list{max-width:900px;margin:24px auto 0;background:#fff;border-radius:22px;box-shadow:0 6px 18px rgba(13,49,97,.07);overflow:hidden}
+.full-list summary{cursor:pointer;list-style:none;text-align:center;padding:18px 22px;font-family:var(--font-display);font-weight:600;font-size:17px;color:var(--navy)}
+.full-list summary::-webkit-details-marker{display:none}
+.full-list summary::after{content:"";display:inline-block;width:8px;height:8px;border-right:2.5px solid var(--orange-ink);border-bottom:2.5px solid var(--orange-ink);transform:rotate(45deg);margin-left:12px;vertical-align:4px;transition:transform .2s}
+.full-list[open] summary::after{transform:rotate(-135deg);vertical-align:0}
+.full-list ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 30px;padding:4px 34px 30px;font-size:15px;font-weight:600}
+.full-list li{display:flex;gap:10px;align-items:flex-start}
+.full-list li .icon{margin-top:4px;color:var(--green)}
+
+/* ---------- FAQ ---------- */
+.faq{max-width:780px;margin:0 auto}
+.faq details{background:#fff;border-radius:18px;margin-bottom:12px;box-shadow:0 4px 12px rgba(13,49,97,.06)}
+.faq summary{cursor:pointer;list-style:none;padding:20px 24px;font-family:var(--font-display);font-weight:600;font-size:18px;color:var(--navy);display:flex;justify-content:space-between;align-items:center;gap:16px;border-radius:18px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:26px;line-height:1;color:var(--orange-ink);transition:transform .2s;flex:none}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{padding:0 24px 22px;color:var(--muted);font-size:16px}
+
+/* ---------- WAITLIST ---------- */
+.cta{background:linear-gradient(135deg,var(--peach),var(--rose));border-radius:48px;padding:76px 30px;text-align:center;position:relative;overflow:hidden}
+.cta .mark{width:72px;height:auto;margin:0 auto 22px}
+.cta p.sub{color:var(--muted);max-width:52ch;margin:14px auto 0;font-size:18px}
+.waitlist{max-width:480px;margin:30px auto 0;display:flex;gap:10px}
+.waitlist input{flex:1;border:2.5px solid #E7D7C2;border-radius:999px;padding:14px 22px;font-family:var(--font-body);font-size:16px;color:var(--ink);background:#fff;min-width:0}
+.waitlist input:focus{border-color:var(--navy);outline:none}
+.waitlist button{flex:none}
+.waitlist button[disabled]{opacity:.7;cursor:progress}
+.form-msg{margin-top:14px;font-weight:700;font-size:15.5px;min-height:26px}
+.form-msg.ok{color:var(--green)} .form-msg.err{color:#B3261E} .form-msg.info{color:var(--navy)}
+.consent{font-size:13px;color:var(--muted);margin-top:4px}
+.stores{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+.store{display:inline-flex;align-items:center;gap:11px;background:var(--navy);color:#fff;border-radius:14px;padding:10px 20px;text-align:left;opacity:.9}
+.store svg{width:24px;height:24px;fill:#fff}
+.store small{display:block;font-size:11px;font-weight:700;color:#C9D5EA}
+.store b{font-size:16px;font-weight:800;font-family:var(--font-display)}
+
+/* ---------- FOOTER ---------- */
+footer{padding:60px 0 42px;color:var(--muted);font-size:15px}
+.foot-grid{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;align-items:flex-start}
+.foot-grid img{height:28px;width:auto}
+.foot-links{display:flex;gap:6px 22px;flex-wrap:wrap;list-style:none}
+.foot-links a{text-decoration:none;font-weight:700}
+.foot-links a:hover{color:var(--navy)}
+.foot-bottom a{color:inherit;font-weight:700}
+.foot-bottom a:hover{color:var(--navy)}
+.foot-bottom{margin-top:32px;padding-top:22px;border-top:1.5px solid var(--line);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:14px}
+
+/* ---------- REVEAL (only when JS runs) ---------- */
+.js .reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.js .reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .js .reveal{opacity:1;transform:none;transition:none}
+  .float-card{animation:none}
+  *{transition-duration:.01ms!important}
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width:980px){
+  .hero .wrap{grid-template-columns:1fr;text-align:center}
+  .hero .lead{margin-left:auto;margin-right:auto}
+  .hero-ctas,.trust{justify-content:center}
+  .feat-row{grid-template-columns:1fr;gap:36px;margin:64px 0}
+  .feat-row.flip .feat-visual{order:0}
+  .feat-copy{text-align:center}
+  .feat-copy p{margin:0 auto}
+  .ticks{max-width:440px;margin:22px auto 0;text-align:left}
+  .spot-grid{grid-template-columns:1fr;gap:44px}
+  .spotlight{padding:64px 26px}
+  .price-grid{grid-template-columns:1fr;max-width:480px}
+  .promises{grid-template-columns:1fr 1fr}
+}
+@media (max-width:760px){
+  .burger{display:block}
+  .nav-inner{padding:8px 8px 8px 20px}
+  .nav-links{display:none;position:absolute;top:calc(100% + 10px);left:0;right:0;background:#fff;border-radius:24px;flex-direction:column;padding:14px;box-shadow:0 18px 40px rgba(13,49,97,.18);align-items:stretch;text-align:center}
+  .nav-links.open{display:flex}
+  .nav-links a{padding:13px}
+  .nav-links a.btn{margin:6px 0 0}
+  section{padding:68px 0}
+  .hero{padding:44px 0 64px}
+  .hero-visual{flex-direction:column;align-items:center;gap:12px}
+  .float-card{position:static;animation:none;max-width:300px;width:100%}
+  .float-card.top{order:-1}
+  .promises{grid-template-columns:1fr;text-align:center;padding:38px 24px}
+  .spotlight,.cta{border-radius:32px}
+  .compare-table{font-size:14px}
+  .compare-table th,.compare-table td{padding:14px 10px}
+  .full-list ul{grid-template-columns:1fr;padding:4px 22px 26px}
+  .waitlist{flex-direction:column}
+  .waitlist button{width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- Icon sprite (simple stroke icons, drawn for this site) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M10 6h11M10 12h11M10 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 7.5h3l1.8-2.5h6.4L17 7.5h3a1.5 1.5 0 0 1 1.5 1.5v9.5A1.5 1.5 0 0 1 20 20H4a1.5 1.5 0 0 1-1.5-1.5V9A1.5 1.5 0 0 1 4 7.5Z"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21.5s-7-6.2-7-11.5a7 7 0 0 1 14 0c0 5.3-7 11.5-7 11.5Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5c2.4 0 4 1.4 4.5 4"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2H4.5Z"/><path d="M10 21a2.2 2.2 0 0 0 4 0"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 4.5 5.5v6c0 4.6 3.1 8.3 7.5 10 4.4-1.7 7.5-5.4 7.5-10v-6Z"/><path d="m8.8 12 2.3 2.3 4.2-4.3"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.5L4 8.5M4 13a8 8 0 0 0 14.3 4.5L20 15.5"/><path d="M4 3.5v5h5M20 20.5v-5h-5"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m5.3 5.3 13.4 13.4"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1-1"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24"><rect x="4.5" y="2.5" width="15" height="19" rx="2.5"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></symbol>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- ================= NAV ================= -->
+<nav class="nav" aria-label="Main">
+  <div class="nav-inner">
+    <a class="logo" href="#top"><img src="assets/tamish-wordmark-navy.png" alt="Tamish home" width="800" height="176"></a>
+    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"><svg class="icon"><use href="#i-menu"/></svg></button>
+    <div class="nav-links" id="navLinks">
+      <a href="#features">Features</a>
+      <a href="#benefits">Benefits Finder</a>
+      <a href="#compare">Why Tamish</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="#waitlist" class="btn btn-primary">Join the waitlist</a>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+<!-- ================= HERO ================= -->
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="eyebrow">For busy families</span>
+      <h1>Family life, organized. Benefits,
+        <span class="hl">found.<svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 9 Q 50 2 100 7 T 198 6" stroke="#F99235" stroke-width="5" fill="none" stroke-linecap="round"/></svg></span></h1>
+      <p class="lead">One shared calendar, lists and meal plan for the whole family. Plus a <strong>Benefits Finder built in</strong>: Tamish checks the family support your country offers against your household, and puts every deadline on the calendar.</p>
+      <div class="hero-ctas">
+        <a href="#waitlist" class="btn btn-primary">Join the waitlist</a>
+        <a href="#benefits" class="btn btn-ghost">See the Benefits Finder</a>
+      </div>
+      <ul class="trust">
+        <li><svg class="icon"><use href="#i-check-circle"/></svg>No ads, on any plan</li>
+        <li><svg class="icon"><use href="#i-check-circle"/></svg>One price for the household</li>
+        <li><svg class="icon"><use href="#i-check-circle"/></svg>Free plan, forever</li>
+      </ul>
+    </div>
+
+    <div class="hero-visual reveal">
+      <div class="phone" role="img" aria-label="The Tamish app showing a shared family calendar for November 2026, with soccer practice today, Mia's birthday on Saturday and a childcare reconfirmation due in three days">
+        <div class="statusbar" aria-hidden="true"><span>9:41</span><span>5G</span></div>
+        <div class="apphead" aria-hidden="true">
+          <span class="title"><img src="assets/tamish-mark-navy.png" alt="">November</span>
+          <span class="act">+</span>
+        </div>
+        <div class="body" aria-hidden="true">
+          <div class="avatars">
+            <span style="background:var(--m1)">M</span><span style="background:var(--m2)">D</span><span style="background:var(--m3)">Mi</span><span style="background:var(--m4)">L</span>
+          </div>
+          <div class="mini-month">
+            <span class="dow">M</span><span class="dow">T</span><span class="dow">W</span><span class="dow">T</span><span class="dow">F</span><span class="dow">S</span><span class="dow">S</span>
+            <span class="day">9<span class="dots"><i style="background:var(--m1)"></i></span></span>
+            <span class="day">10</span>
+            <span class="day">11<span class="dots"><i style="background:var(--m2)"></i><i style="background:var(--m3)"></i></span></span>
+            <span class="day today">12<span class="dots"><i style="background:#fff"></i></span></span>
+            <span class="day">13</span>
+            <span class="day">14<span class="dots"><i style="background:var(--m3)"></i></span></span>
+            <span class="day">15<span class="dots"><i style="background:var(--m4)"></i></span></span>
+            <span class="day">16</span>
+            <span class="day">17<span class="dots"><i style="background:var(--m2)"></i></span></span>
+            <span class="day">18</span>
+            <span class="day">19<span class="dots"><i style="background:var(--m5)"></i></span></span>
+            <span class="day">20</span>
+            <span class="day">21<span class="dots"><i style="background:var(--m1)"></i><i style="background:var(--m4)"></i></span></span>
+            <span class="day">22</span>
+          </div>
+          <div class="event"><i class="bar" style="background:var(--m4)"></i><div><b>Soccer practice</b><span>Today · 16:00 · Leo</span></div><span class="end">⚽</span></div>
+          <div class="event"><i class="bar" style="background:var(--m3)"></i><div><b>Mia's birthday</b><span>Sat 14 Nov · All day</span></div><span class="end">🎂</span></div>
+          <div class="event"><i class="bar" style="background:var(--m1)"></i><div><b>Reconfirm childcare code</b><span>Due Sun 15 Nov</span></div><span class="tag">Benefit</span></div>
+        </div>
+      </div>
+      <div class="float-card top" style="top:0;right:-6%"><span class="badge-ic" style="background:var(--mint);color:var(--green)"><svg class="icon"><use href="#i-check-circle"/></svg></span><div>Likely eligible: 30 hours childcare<small>Example from the UK guide</small></div></div>
+      <div class="float-card" style="bottom:-6px;left:-8%;animation-delay:1.6s"><span class="badge-ic" style="background:var(--ice);color:var(--m2)"><svg class="icon"><use href="#i-list"/></svg></span><div>Dad added milk to Groceries<small>Just now</small></div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= PROMISES ================= -->
+<section style="padding-top:0" aria-label="Our promises">
+  <div class="wrap">
+    <div class="promises reveal">
+      <div><div class="num">0 ads</div><div class="lbl">On every plan, free included. A family app should never sell your attention.</div></div>
+      <div><div class="num">1 price</div><div class="lbl">Premium covers every member and every device in the household.</div></div>
+      <div><div class="num">4 questions</div><div class="lbl">Is all it takes to check a benefit. Tamish already knows your children's ages.</div></div>
+      <div><div class="num">∞ planning</div><div class="lbl">Plan as far ahead as you like on the free plan. No 30-day wall.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEATURES ================= -->
+<section id="features" style="padding-top:16px">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Features</span>
+      <h2>Everything you expect from a family calendar. Then the part nobody else does.</h2>
+    </div>
+
+    <div class="feat-row">
+      <div class="feat-copy reveal">
+        <div class="kicker"><span class="ic" style="background:var(--ice);color:var(--m2)"><svg class="icon"><use href="#i-calendar"/></svg></span>Shared calendar</div>
+        <h3>A calendar everyone actually sees</h3>
+        <p>A colour for every family member, updated in real time on iPhone and Android. No missing events, and no more “you never told me”.</p>
+        <ul class="ticks">
+          <li><svg class="icon"><use href="#i-check"/></svg>Changes reach every phone within seconds</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Two-way sync with Google, Apple and Outlook calendars</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Free child profiles, with picture icons for pre-readers</li>
+        </ul>
+      </div>
+      <div class="feat-visual reveal">
+        <div class="band ice">
+          <div class="phone" role="img" aria-label="A week view with colour-coded events for each family member">
+            <div class="statusbar" aria-hidden="true"><span>9:41</span><span>5G</span></div>
+            <div class="apphead" aria-hidden="true"><span class="title">This week</span><span class="act">+</span></div>
+            <div class="body" aria-hidden="true">
+              <div class="event"><i class="bar" style="background:var(--m2)"></i><div><b>School run</b><span>Mon–Fri · 8:30 · Dad</span></div><span class="end">🎒</span></div>
+              <div class="event"><i class="bar" style="background:var(--m3)"></i><div><b>Ballet class</b><span>Tue · 17:00 · Mia</span></div><span class="end">🩰</span></div>
+              <div class="event"><i class="bar" style="background:var(--m5)"></i><div><b>Dentist</b><span>Thu · 15:30 · Leo &amp; Mia</span></div><span class="end">🦷</span></div>
+              <div class="event"><i class="bar" style="background:var(--m1)"></i><div><b>Date night</b><span>Fri · 19:30 · Grandma sits</span></div><span class="end">💛</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feat-row flip">
+      <div class="feat-copy reveal">
+        <div class="kicker"><span class="ic" style="background:var(--peach);color:var(--orange-ink)"><svg class="icon"><use href="#i-list"/></svg></span>Lists &amp; chores</div>
+        <h3>Lists and chores with real owners</h3>
+        <p>Shopping lists that tick off live while someone is in the shop, and chores that belong to someone, so the remembering isn't always on you.</p>
+        <ul class="ticks">
+          <li><svg class="icon"><use href="#i-check"/></svg>Shared lists that update as items are bought</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Hand a task over and its reminders follow the new owner</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Grandparents and sitters can reply by text, no app needed</li>
+        </ul>
+      </div>
+      <div class="feat-visual reveal">
+        <div class="band peach">
+          <div class="phone" role="img" aria-label="A shared grocery list where each item has an owner">
+            <div class="statusbar" aria-hidden="true"><span>9:41</span><span>5G</span></div>
+            <div class="apphead" aria-hidden="true"><span class="title">Groceries</span><span class="act">+</span></div>
+            <div class="body" aria-hidden="true">
+              <div class="todo"><span class="box"></span><span class="t">Milk</span><span class="who" style="background:var(--ice);color:#2A6CB5">Dad</span></div>
+              <div class="todo"><span class="box"></span><span class="t">Birthday candles</span><span class="who" style="background:var(--peach);color:var(--orange-ink)">Mum</span></div>
+              <div class="todo done"><span class="box"><svg class="icon"><use href="#i-check"/></svg></span><span class="t">Nappies</span><span class="who" style="background:var(--ice);color:#2A6CB5">Dad</span></div>
+              <div class="todo done"><span class="box"><svg class="icon"><use href="#i-check"/></svg></span><span class="t">Apples</span><span class="who" style="background:var(--mint);color:var(--green)">Leo</span></div>
+              <div class="todo"><span class="box"></span><span class="t">Party hats</span><span class="who" style="background:var(--peach);color:var(--orange-ink)">Mum</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feat-row">
+      <div class="feat-copy reveal">
+        <div class="kicker"><span class="ic" style="background:var(--rose);color:#B23C6C"><svg class="icon"><use href="#i-camera"/></svg></span>Smart capture</div>
+        <h3>Never type up the school newsletter again</h3>
+        <p>Forward a school email or snap the letter on the fridge. Tamish finds every date, deadline and permission slip and suggests calendar entries.</p>
+        <ul class="ticks">
+          <li><svg class="icon"><use href="#i-check"/></svg>Forward school and club emails to your family address</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Photos of flyers, letters and term dates become events</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>You approve every entry before it's added</li>
+        </ul>
+      </div>
+      <div class="feat-visual reveal">
+        <div class="band rose">
+          <div class="phone" role="img" aria-label="Tamish reading a school newsletter and suggesting three calendar events">
+            <div class="statusbar" aria-hidden="true"><span>9:41</span><span>5G</span></div>
+            <div class="apphead" aria-hidden="true"><span class="title">Import</span><span class="act">✓</span></div>
+            <div class="body" aria-hidden="true">
+              <div class="event" style="background:var(--ice)"><span class="end" style="margin:0">📄</span><div><b>Autumn newsletter.pdf</b><span>12 dates found</span></div></div>
+              <div class="event"><i class="bar" style="background:var(--m1)"></i><div><b>Non-uniform day</b><span>Fri 20 Nov</span></div><span class="tag">Add</span></div>
+              <div class="event"><i class="bar" style="background:var(--m2)"></i><div><b>Parents' evening</b><span>Tue 24 Nov · 17:00</span></div><span class="tag">Add</span></div>
+              <div class="event"><i class="bar" style="background:var(--m4)"></i><div><b>Nativity play</b><span>Thu 10 Dec · 14:00</span></div><span class="tag">Add</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BENEFITS SPOTLIGHT ================= -->
+<section id="benefits" style="padding-top:8px">
+  <div class="wrap">
+    <div class="spotlight reveal">
+      <div class="section-head">
+        <span class="eyebrow">Benefits Finder</span>
+        <h2>What is your family entitled to?</h2>
+        <p>Every country supports families: funded childcare, child payments, tax credits, parental leave. The rules are scattered and the deadlines are easy to miss. Tamish brings them into the app you already use every day.</p>
+      </div>
+      <ul class="countries" aria-label="Countries covered at launch">
+        <li><b>UK</b>United Kingdom</li>
+        <li><b>US</b>United States</li>
+        <li><b>CA</b>Canada</li>
+        <li><b>AU</b>Australia</li>
+        <li><b>DE</b>Germany</li>
+        <li class="more">More coming</li>
+      </ul>
+      <div class="spot-grid">
+        <ul class="spot-list">
+          <li><span class="n"><svg class="icon"><use href="#i-pin"/></svg></span><div><h3>Matched to where you live</h3><p>Down to the nation, state or region, because support differs between England and Scotland, or California and Texas. Move, and the guide moves with you.</p></div></li>
+          <li><span class="n"><svg class="icon"><use href="#i-users"/></svg></span><div><h3>Checked against your family</h3><p>Tamish already knows your children's ages. Answer a few quick questions and see “likely”, “possibly” or “unlikely”, with the reasons.</p></div></li>
+          <li><span class="n"><svg class="icon"><use href="#i-bell"/></svg></span><div><h3>Deadlines on the family calendar</h3><p>Renewals, reconfirmations and application windows land on the calendar with a reminder, like any other family event.</p></div></li>
+          <li><span class="n"><svg class="icon"><use href="#i-link"/></svg></span><div><h3>Linked to the official source</h3><p>Every entry links to the government page and shows the date it was last checked.</p></div></li>
+        </ul>
+        <div class="check-card reveal">
+          <div class="label">Example · UK guide (England)</div>
+          <div class="head">
+            <div><h3>30 hours funded childcare</h3><div class="val">Illustrative value: up to ≈ £7,500 a year</div></div>
+            <span class="pill">Likely</span>
+          </div>
+          <ul>
+            <li><svg class="icon"><use href="#i-check-circle"/></svg>Child aged 9 months to school age</li>
+            <li><svg class="icon"><use href="#i-check-circle"/></svg>Both parents working</li>
+            <li><svg class="icon"><use href="#i-check-circle"/></svg>Each parent earns under £100k</li>
+          </ul>
+          <div class="reminder"><svg class="icon"><use href="#i-bell"/></svg><div>Reconfirm your code every 3 months<small>Next reminder added to the family calendar</small></div></div>
+          <div class="src"><svg class="icon"><use href="#i-link"/></svg>Source: gov.uk · last checked by the Tamish team</div>
+        </div>
+      </div>
+      <p class="disclaimer">The Benefits Finder is guidance, not advice. Eligibility is always decided by the official body that runs each scheme, and figures shown on this page are illustrative.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMPARE ================= -->
+<section id="compare">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Why Tamish</span>
+      <h2>More than a family calendar</h2>
+      <p>The organizing you already rely on, without the ads, and with the support your family may be missing.</p>
+    </div>
+    <div class="compare-wrap reveal">
+      <table class="compare-table">
+        <caption class="sr-only">Tamish compared with a typical family organizer app</caption>
+        <thead>
+          <tr><th scope="col"><span class="sr-only">Feature</span></th><th scope="col" class="us"><img src="assets/tamish-wordmark-white.png" alt="Tamish" width="800" height="176"></th><th scope="col">Typical family app</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Benefits guide for your country</th><td class="us yes"><svg class="icon"><use href="#i-check-circle"/></svg>Built in</td><td class="typ">Not offered</td></tr>
+          <tr><th scope="row">Benefit deadlines on the calendar</th><td class="us yes"><svg class="icon"><use href="#i-check-circle"/></svg>Automatic</td><td class="typ">Not offered</td></tr>
+          <tr><th scope="row">Ads</th><td class="us yes"><svg class="icon"><use href="#i-check-circle"/></svg>Never</td><td class="typ">Often on free plans</td></tr>
+          <tr><th scope="row">Email and photo to calendar</th><td class="us yes"><svg class="icon"><use href="#i-check-circle"/></svg>Included</td><td class="typ">Sometimes, as an add-on</td></tr>
+          <tr><th scope="row">Two-way Google, Apple and Outlook sync</th><td class="us yes"><svg class="icon"><use href="#i-check-circle"/></svg>All three</td><td class="typ">Often partial</td></tr>
+          <tr><th scope="row">Child profiles</th><td class="us yes"><svg class="icon"><use href="#i-check-circle"/></svg>Free</td><td class="typ">Often limited</td></tr>
+          <tr><th scope="row">Pricing</th><td class="us yes"><svg class="icon"><use href="#i-check-circle"/></svg>One per household</td><td class="typ">Varies</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="legend-note">Moving from another app? Import any calendar that exports a feed (ICS) in one step.</p>
+  </div>
+</section>
+
+<!-- ================= PRICING ================= -->
+<section id="pricing" style="padding-top:16px">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Pricing</span>
+      <h2>One price. The whole family.</h2>
+      <p>Start free and stay free as long as you like. Upgrade when you want the Benefits Finder working for you.</p>
+    </div>
+    <div class="price-grid">
+      <div class="price-card reveal">
+        <h3>Free</h3>
+        <div class="amount">$0</div>
+        <div class="per">Forever · no ads · unlimited members</div>
+        <ul>
+          <li><svg class="icon"><use href="#i-check"/></svg>Shared calendar, lists and real-time sync</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Unlimited family members and child profiles</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Chores with star rewards, meals and budget</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Benefits guide and eligibility check for your country</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>20 email or photo captures a month</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Encrypted family vault for documents</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Offline mode, widgets and calendar import</li>
+        </ul>
+        <a href="#waitlist" class="btn btn-ghost">Join the waitlist</a>
+      </div>
+      <div class="price-card pro reveal">
+        <span class="ribbon">Covers everyone at home</span>
+        <h3>Tamish Premium</h3>
+        <div class="amount">$49.99<small>/year</small></div>
+        <div class="per">Per household, or $5.99 a month · 30-day free trial</div>
+        <ul>
+          <li><svg class="icon"><use href="#i-check"/></svg>Everything in Free</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Yearly value estimate for each benefit</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Deadline, renewal and age-milestone reminders</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Claim tracking, with paperwork kept beside each benefit</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Unlimited captures, plus voice capture</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Two-way Apple, Google and Outlook sync</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Meal planner and the “Ask Tamish” assistant</li>
+          <li><svg class="icon"><use href="#i-check"/></svg>Kitchen wall display</li>
+        </ul>
+        <a href="#waitlist" class="btn btn-primary">Join the waitlist</a>
+      </div>
+    </div>
+    <details class="full-list reveal">
+      <summary>See everything Premium adds</summary>
+      <ul>
+        <li><svg class="icon"><use href="#i-check"/></svg>Unlimited photo and email captures</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Apple, Google and Outlook two-way sync</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Yearly value estimate for each benefit</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Deadline, renewal and age-milestone reminders</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Claim tracking for every benefit</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Paperwork stored beside each benefit</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Second-country guide for families abroad</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Kitchen wall display and photo screensaver</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Meal planner and recipe ideas</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Voice capture</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>“Ask Tamish” family assistant</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Fairness view: who carries what</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Sunday “Week ahead” digest</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Change alerts (“Dad moved the dentist to Thursday”)</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>School timetable planner (week A / week B)</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Birthday and gift tracker</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Stars to real pocket-money payouts</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Passport and insurance expiry alerts</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Co-parenting mode with custody templates</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Travel and holiday planner</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Location alerts, privacy first</li>
+        <li><svg class="icon"><use href="#i-check"/></svg>Watch apps and priority human support</li>
+      </ul>
+    </details>
+    <p class="price-note">We never sell your data, we never show ads, and we never move a feature you already have behind a paywall.</p>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section id="faq" style="padding-top:16px">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">FAQ</span>
+      <h2>Questions, answered</h2>
+    </div>
+    <div class="faq reveal">
+      <details>
+        <summary>When does Tamish launch?</summary>
+        <p>We're getting ready for launch on iPhone and Android. Join the waitlist and we'll email you once, on the day the app is available in your country.</p>
+      </details>
+      <details>
+        <summary>How does the Benefits Finder know what applies to us?</summary>
+        <p>You choose your country and region, and Tamish matches the schemes there against your family profile: children's ages, household income band and work status. Each scheme shows “likely”, “possibly” or “unlikely”, with the reasons and a link to the official source. It's guidance, not a decision: the official body that runs the scheme always makes the final call.</p>
+      </details>
+      <details>
+        <summary>Is the benefits information kept up to date?</summary>
+        <p>Every entry links to its official government source and shows when it was last checked. Entries are reviewed on a regular schedule and after budget announcements, and each page has a button to report anything that looks wrong.</p>
+      </details>
+      <details>
+        <summary>What's free, and what needs Premium?</summary>
+        <p>The calendar, lists, chores and the benefits guide with eligibility checks are free, with no ads and no member limit. Premium adds value estimates, deadline and renewal reminders, claim tracking, unlimited captures and calendar sync, for one price that covers the whole household.</p>
+      </details>
+      <details>
+        <summary>Does everyone in the family need to install the app?</summary>
+        <p>No. Grandparents, sitters and co-parents can receive tasks and confirm events from a text-message link, with no app and no account.</p>
+      </details>
+      <details>
+        <summary>What do you do with our family's data?</summary>
+        <p>We use it to run Tamish for you, and nothing else. We don't show ads, and we never sell or share your family's information. Tamish is paid for by the optional Premium subscription.</p>
+      </details>
+      <details>
+        <summary>Can we bring our calendar from another app?</summary>
+        <p>Yes. Any app that exports a calendar feed (ICS) can be imported in one step, and lists can be brought over with a guided import.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WAITLIST ================= -->
+<section id="waitlist" style="padding-top:16px">
+  <div class="wrap">
+    <div class="cta reveal">
+      <img class="mark" src="assets/tamish-mark-navy.png" alt="" width="312" height="256">
+      <h2>Ready for a calmer family life?</h2>
+      <p class="sub">Tamish is coming soon to iPhone and Android. Leave your email and we'll tell you the day it launches.</p>
+      <!--
+        To collect sign-ups, set data-endpoint to a form service URL that accepts a JSON POST
+        (for example a Formspree, Basin or Getform endpoint, or your own API). See README.md.
+      -->
+      <form class="waitlist" id="waitlistForm" data-endpoint="" novalidate>
+        <label class="sr-only" for="waitlistEmail">Email address</label>
+        <input type="email" id="waitlistEmail" name="email" placeholder="you@example.com" autocomplete="email" required>
+        <button type="submit" class="btn btn-primary">Notify me</button>
+      </form>
+      <p class="consent">One email at launch. No spam, and you can unsubscribe at any time. See our <a href="privacy.html">privacy policy</a>.</p>
+      <p class="form-msg" id="formMsg" role="status" aria-live="polite"></p>
+      <div class="stores" aria-label="Coming soon to the App Store and Google Play">
+        <span class="store"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.2-1.2 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.8-1.1-2.8-4.3ZM13.9 5.2c.7-.8 1.2-2 1-3.2-1 0-2.3.7-3 1.5-.7.7-1.2 1.9-1.1 3.1 1.2.1 2.3-.6 3.1-1.4Z"/></svg><span><small>Coming soon to the</small><b>App Store</b></span></span>
+        <span class="store"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2.6c-.3.3-.4.7-.4 1.2v16.4c0 .5.1.9.4 1.2l9.2-9.4L4 2.6Zm10.4 8.2 2.6-2.6L6.3 2.1c-.4-.2-.8-.3-1.1-.2l9.2 8.9Zm0 2.4-9.2 8.9c.3.1.7 0 1.1-.2L17 15.8l-2.6-2.6Zm6.6-2.9-2.8-1.6-2.8 2.9 2.8 2.9 2.8-1.6c.9-.5.9-2.1 0-2.6Z"/></svg><span><small>Coming soon to</small><b>Google Play</b></span></span>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <img src="assets/tamish-wordmark-navy.png" alt="Tamish" width="800" height="176">
+        <p style="margin-top:12px;max-width:40ch">The family organizer that finds your benefits. Made for busy families everywhere.</p>
+      </div>
+      <ul class="foot-links" aria-label="Footer">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#benefits">Benefits Finder</a></li>
+        <li><a href="#compare">Why Tamish</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#waitlist">Waitlist</a></li>
+      </ul>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Tamish · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
+      <span>Launching in the UK, US, Canada, Australia and Germany</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // Mobile menu
+  var burger=document.getElementById('burger'),links=document.getElementById('navLinks'),use=burger.querySelector('use');
+  function setMenu(open){
+    links.classList.toggle('open',open);
+    burger.setAttribute('aria-expanded',open?'true':'false');
+    burger.setAttribute('aria-label',open?'Close menu':'Open menu');
+    use.setAttribute('href',open?'#i-close':'#i-menu');
+  }
+  burger.addEventListener('click',function(){setMenu(!links.classList.contains('open'));});
+  links.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){setMenu(false);});});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&links.classList.contains('open')){setMenu(false);burger.focus();}
+  });
+  document.addEventListener('click',function(e){
+    if(links.classList.contains('open')&&!e.target.closest('.nav-inner'))setMenu(false);
+  });
+
+  // Waitlist: posts to data-endpoint when one is configured; never pretends to save otherwise
+  var form=document.getElementById('waitlistForm'),email=document.getElementById('waitlistEmail'),msg=document.getElementById('formMsg'),btn=form.querySelector('button');
+  function say(text,kind){msg.textContent=text;msg.className='form-msg '+kind;}
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var v=email.value.trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){
+      say('That email address doesn’t look right. Could you check it?','err');
+      email.setAttribute('aria-invalid','true');email.focus();return;
+    }
+    email.removeAttribute('aria-invalid');
+    var endpoint=form.getAttribute('data-endpoint');
+    if(!endpoint){
+      say('Thanks! Sign-ups open very soon. Please check back shortly.','info');
+      return;
+    }
+    btn.disabled=true;say('Adding you to the list…','info');
+    fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email:v,source:'tamish-website'})})
+      .then(function(r){
+        if(!r.ok)throw new Error(r.status);
+        say('You’re on the list. We’ll email you the day Tamish launches.','ok');form.reset();
+      })
+      .catch(function(){say('Sorry, something went wrong. Please try again in a moment.','err');})
+      .then(function(){btn.disabled=false;});
+  });
+
+  // Scroll reveal
+  var els=document.querySelectorAll('.reveal');
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches||!('IntersectionObserver' in window)){
+    els.forEach(function(el){el.classList.add('in');});
+  }else{
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}});
+    },{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+    els.forEach(function(el){io.observe(el);});
+  }
+})();
+</script>
+</body>
+</html>

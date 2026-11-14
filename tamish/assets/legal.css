@@ -1,0 +1,31 @@
+/* Shared styles for the privacy policy and terms pages */
+:root{
+  --navy:#0D3161;--orange:#F99235;--orange-ink:#A04E06;
+  --ink:#1A2740;--muted:#55627A;--line:#ECE3D6;--cream:#FFFAF3;--peach:#FFF0E0;
+  --font-display:'Outfit',system-ui,sans-serif;--font-body:'Nunito Sans',system-ui,sans-serif;
+  color-scheme:light;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body);background:var(--cream);color:var(--ink);font-size:17px;line-height:1.7;-webkit-font-smoothing:antialiased}
+img{max-width:100%;height:auto;display:block}
+a{color:var(--navy);font-weight:700}
+a:focus-visible{outline:3px solid #3D86D6;outline-offset:3px;border-radius:4px}
+.top{background:#fff;border-bottom:1.5px solid var(--line)}
+.top .in{max-width:780px;margin:0 auto;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.top img{height:28px;width:auto}
+.top a.back{font-size:15px;text-decoration:none;color:var(--muted)}
+.top a.back:hover{color:var(--navy)}
+main{max-width:780px;margin:0 auto;padding:56px 22px 72px}
+h1{font-family:var(--font-display);color:var(--navy);font-size:clamp(34px,5vw,46px);line-height:1.1;letter-spacing:-.02em}
+.updated{color:var(--muted);margin-top:10px;font-weight:600}
+.draft{background:var(--peach);border-left:4px solid var(--orange);border-radius:12px;padding:14px 18px;margin:28px 0 8px;font-size:15.5px;color:var(--navy)}
+h2{font-family:var(--font-display);color:var(--navy);font-size:24px;line-height:1.25;margin:40px 0 10px;letter-spacing:-.01em}
+p,ul{margin-top:12px}
+ul{padding-left:22px}
+li{margin-top:6px}
+.ph{background:#FFF4D6;border-radius:4px;padding:0 4px;font-weight:700}
+.toc{list-style:none;padding:0;margin-top:24px;display:flex;flex-wrap:wrap;gap:8px}
+.toc a{display:inline-block;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:5px 14px;font-size:14.5px;text-decoration:none}
+.toc a:hover{border-color:var(--navy)}
+footer{border-top:1.5px solid var(--line);max-width:780px;margin:0 auto;padding:24px 22px 40px;color:var(--muted);font-size:14.5px;display:flex;gap:18px;flex-wrap:wrap}
+footer a{color:var(--muted)}
