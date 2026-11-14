@@ -14,4 +14,9 @@ regexes = [
 paths = [
   # The website's public Supabase anon key (meant to be public: the database rules protect the data).
   '''^src/online-config\.js$''',
+  # Vendored, minified third-party library (Supabase JS): minified code such as
+  # 'fetchWithAuth=t.resolveHeadersConstructor=...' trips generic-api-key; it holds no secrets.
+  # lasgidi/vendor/ on main; vendor/ at the root of the gh-pages branch (built from lasgidi/).
+  '''^lasgidi/vendor/supabase\.js$''',
+  '''^vendor/supabase\.js$''',
 ]
